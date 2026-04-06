@@ -34,8 +34,8 @@ pyasc kernel implementation for the $KERNEL_NAME operation.
 ## Usage
 
 \`\`\`bash
-python kernel.py -r Model        # Run with simulator
-python kernel.py -r NPU          # Run with NPU hardware
+python3.10 kernel.py -r Model -v Ascend910B1   # Run with simulator
+python3.10 kernel.py -r NPU                    # Run with NPU hardware
 \`\`\`
 EOF
 

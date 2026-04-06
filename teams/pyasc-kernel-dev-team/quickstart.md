@@ -2,10 +2,13 @@
 
 ## Prerequisites
 
-1. Python 3.9-3.12
-2. pyasc installed (`pip install pyasc`)
-3. CANN Toolkit (`source /usr/local/Ascend/ascend-toolkit/set_env.sh`)
+1. Python 3.10.x (pyasc and torch are installed under this version)
+2. pyasc >= 1.1.1 (`pip install pyasc`)
+3. CANN Toolkit (`source $HOME/Ascend/cann/set_env.sh`)
 4. numpy < 2.0 (`pip install "numpy<2"`)
+5. pytest >= 7.0 (`pip3.10 install "pytest>=7.0"`)
+
+See [docs/cann-setup.md](../../docs/cann-setup.md) for detailed CANN environment setup.
 
 ## Verify environment
 
@@ -38,7 +41,9 @@ bash skills/pyasc-codegen-workflow/scripts/verify_environment.sh my_kernel
 ### Step 4: Verify
 
 ```bash
-python kernels/my_kernel/kernel.py -r Model
+source $HOME/Ascend/cann/set_env.sh
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+python3.10 kernels/my_kernel/kernel.py -r Model -v Ascend910B1
 ```
 
 ## Example: vector add
@@ -46,5 +51,7 @@ python kernels/my_kernel/kernel.py -r Model
 See the completed example at `kernels/add/`:
 
 ```bash
-python kernels/add/kernel.py -r Model
+source $HOME/Ascend/cann/set_env.sh
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+python3.10 kernels/add/kernel.py -r Model -v Ascend910B1
 ```

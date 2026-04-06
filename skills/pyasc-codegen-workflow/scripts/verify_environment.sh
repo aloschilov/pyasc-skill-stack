@@ -14,30 +14,61 @@ if [ ! -d "$KERNEL_DIR" ]; then
     exit 1
 fi
 
+# Auto-detect the correct Python: prefer whichever has pyasc installed
+if [ -z "${PYTHON:-}" ]; then
+    for candidate in python3.10 python3.11 python3.12 python3.9 python3; do
+        if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import asc" 2>/dev/null; then
+            PYTHON="$candidate"
+            break
+        fi
+    done
+    PYTHON="${PYTHON:-python3}"
+fi
+
 echo "[INFO] Verifying environment for kernel: $KERNEL_NAME"
+echo "[INFO] Using Python: $PYTHON ($(command -v "$PYTHON" 2>/dev/null || echo 'not found'))"
 
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}' || echo "not found")
+PYTHON_VERSION=$($PYTHON --version 2>&1 | awk '{print $2}' || echo "not found")
 
-PYASC_VERSION=$(python3 -c "import asc; print(getattr(asc, '__version__', 'installed'))" 2>/dev/null || echo "not installed")
+PYASC_VERSION=$($PYTHON -c "import asc; print(getattr(asc, '__version__', 'installed'))" 2>/dev/null || echo "not installed")
 
-NUMPY_VERSION=$(python3 -c "import numpy; print(numpy.__version__)" 2>/dev/null || echo "not installed")
+NUMPY_VERSION=$($PYTHON -c "import numpy; print(numpy.__version__)" 2>/dev/null || echo "not installed")
 
-TORCH_VERSION=$(python3 -c "import torch; print(torch.__version__)" 2>/dev/null || echo "not installed")
+TORCH_VERSION=$($PYTHON -c "import torch; print(torch.__version__)" 2>/dev/null || echo "not installed")
 
-TORCH_NPU=$(python3 -c "import torch_npu; print('available')" 2>/dev/null || echo "not available")
+TORCH_NPU=$($PYTHON -c "import torch_npu; print('available')" 2>/dev/null || echo "not available")
 
 CANN_PATH="${ASCEND_HOME_PATH:-not set}"
+CANN_VERSION="unknown"
 if [ "$CANN_PATH" != "not set" ] && [ -d "$CANN_PATH" ]; then
     CANN_STATUS="found"
+    for vinfo in "$CANN_PATH/compiler/version.info" "$CANN_PATH/version.info"; do
+        if [ -f "$vinfo" ]; then
+            CANN_VERSION=$(grep -m1 '^Version=' "$vinfo" 2>/dev/null | cut -d= -f2 || echo "unknown")
+            break
+        fi
+    done
 else
     CANN_STATUS="not found"
+fi
+
+SIM_LIB_PATH="$CANN_PATH/tools/simulator/Ascend910B1/lib"
+if [ -d "$SIM_LIB_PATH" ]; then
+    SIMULATOR_STATUS="found"
+else
+    SIM_LIB_PATH="$CANN_PATH/tools/simulator/Ascend910B/lib"
+    if [ -d "$SIM_LIB_PATH" ]; then
+        SIMULATOR_STATUS="found (Ascend910B)"
+    else
+        SIMULATOR_STATUS="not found"
+    fi
 fi
 
 NPU_AVAILABLE=$(npu-smi info 2>/dev/null | head -1 || echo "not available")
 
 MODEL_BACKEND="unknown"
 if [ "$PYASC_VERSION" != "not installed" ]; then
-    MODEL_BACKEND=$(python3 -c "
+    MODEL_BACKEND=$($PYTHON -c "
 import asc.runtime.config as config
 try:
     print('available')
@@ -65,7 +96,9 @@ cat > "$ENV_FILE" << EOF
   },
   "cann": {
     "ascend_home_path": "$CANN_PATH",
-    "status": "$CANN_STATUS"
+    "version": "$CANN_VERSION",
+    "status": "$CANN_STATUS",
+    "simulator": "$SIMULATOR_STATUS"
   },
   "npu": {
     "available": "$NPU_AVAILABLE"
@@ -84,7 +117,8 @@ echo "  pyasc:      $PYASC_VERSION"
 echo "  numpy:      $NUMPY_VERSION"
 echo "  torch:      $TORCH_VERSION"
 echo "  torch_npu:  $TORCH_NPU"
-echo "  CANN:       $CANN_STATUS ($CANN_PATH)"
+echo "  CANN:       $CANN_STATUS ($CANN_PATH) v$CANN_VERSION"
+echo "  Simulator:  $SIMULATOR_STATUS"
 echo "  NPU:        $NPU_AVAILABLE"
 
 ERRORS=0

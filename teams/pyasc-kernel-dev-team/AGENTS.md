@@ -11,7 +11,14 @@ skills:
   - pyasc-env-check
   - pyasc-task-focus
 permission:
-  external_directory: allow
+  read: allow
+  edit: allow
+  bash: allow
+  glob: allow
+  grep: allow
+  list: allow
+  skill: allow
+  task: allow
 ---
 
 # AGENTS.md
@@ -127,14 +134,27 @@ pyasc-kernel-dev-team/
 
 ## Development resources
 
+> **Priority**: Always check the local golden set first. Use external pyasc source tree only as a fallback.
+
+### Local golden set (always accessible, inside this project)
+
+| Resource type | Path | Description |
+|---------------|------|-------------|
+| Golden tutorials | `golden/tutorials/` | 5 tutorial kernels (01_add through 05_matmul) |
+| API docs (language) | `golden/docs/python-api/language/` | basic, core, adv, fwk API indexes |
+| API docs (generated) | `golden/docs/python-api/language/generated/` | 277 individual API reference pages |
+| API docs (lib) | `golden/docs/python-api/lib/` | Runtime library API docs |
+| Architecture docs | `golden/docs/architecture_introduction.md` | JIT pipeline and module overview |
+| Syntax support | `golden/docs/python_syntax_support.md` | Supported/unsupported syntax reference |
+| Developer guide | `golden/docs/developer_guide.md` | Extension and contribution guide |
+
+### External pyasc source tree (requires external_directory permission)
+
 | Resource type | Path | Description |
 |---------------|------|-------------|
 | pyasc tutorials | `~/workspace/pyasc/python/tutorials/` | 5 tutorial examples (01_add through 05_matmul) |
 | pyasc API docs | `~/workspace/pyasc/docs/python-api/` | API documentation |
 | pyasc tests | `~/workspace/pyasc/python/test/` | Unit, kernel, and generalization tests |
-| Architecture docs | `~/workspace/pyasc/docs/architecture_introduction.md` | JIT pipeline and module overview |
-| Syntax support | `~/workspace/pyasc/docs/python_syntax_support.md` | Supported/unsupported syntax reference |
-| Developer guide | `~/workspace/pyasc/docs/developer_guide.md` | Extension and contribution guide |
 
 ---
 

@@ -16,7 +16,7 @@ description: pyasc kernel development standard workflow. Contains 4 phases with 
 - There is output verification (`torch.allclose` or numpy comparison)
 - The kernel runs successfully (on NPU or Model backend)
 
-**Golden reference**: `~/workspace/pyasc/python/tutorials/01_add/add.py`
+**Golden reference**: `golden/tutorials/01_add.py` (local) or `~/workspace/pyasc/python/tutorials/01_add/add.py` (external)
 
 ---
 
@@ -119,17 +119,32 @@ bash <skills_path>/pyasc-codegen-workflow/scripts/verify_environment.sh {kernel_
 
 ```
 Main Agent
- |-- Task: Design -> Steps 1-5 -> Design document
- |-- Task: Evaluation -> Score >= 8.5
+ |-- Task 1: Design -> Steps 1-6 -> Design document
+ |-- Task 2: Evaluation -> Score >= 8.5 -> Write score into design.md footer
 ```
 
-### Design steps
+### Design steps (ALL MANDATORY)
 
 1. **Understand the operation**: What mathematical/logical operation does this kernel perform?
-2. **Retrieve documentation**: Use `pyasc-docs-search` to find relevant tutorials and API docs
+2. **Retrieve documentation**: Read the golden API reference for the target operation.
+   - **MANDATORY READ**: `golden/docs/python-api/language/generated/asc.language.basic.{operation}.md`
+   - Also read the closest tutorial: `golden/tutorials/01_add.py` or another relevant golden tutorial
 3. **Select APIs**: Choose from `asc.language.basic`, `asc.language.core`, etc.
-4. **Check syntax constraints**: Use `pyasc-syntax-constraints` to verify all constructs are supported
+   - **MANDATORY READ**: Load skill `pyasc-api-patterns` to check correct API usage patterns
+4. **Check syntax constraints**: Verify all constructs you plan to use are supported.
+   - **MANDATORY READ**: Load skill `pyasc-syntax-constraints` — confirm every construct is in the supported set
 5. **Write design document**: Use [templates/design-template.md](templates/design-template.md)
+   - Check all boxes in "Syntax compliance check" section — every box must be checked `[x]`
+6. **Evaluate design**: Rate the design on a 10-point scale. Write a "## Design Score" section at the bottom of design.md with a numeric rating.
+   - Rating must be >= 8.5 to pass CP-1
+
+### CP-1 Exit Conditions
+
+- [ ] design.md exists in `kernels/{name}/docs/`
+- [ ] "## Design Score" section present with numeric rating >= 8.5
+- [ ] All syntax compliance checkboxes are `[x]`
+- [ ] Evidence of reading `pyasc-syntax-constraints` and `pyasc-api-patterns` skills
+- [ ] Evidence of reading the golden API reference for the target operation
 
 **Detailed guide**: [references/phase1-design.md](references/phase1-design.md)
 
@@ -137,40 +152,47 @@ Main Agent
 
 ## Phase 2: Kernel implementation
 
-### Execution process
+### Execution process — TWO SEPARATE TASKS REQUIRED
+
+> **PROHIBITED**: Writing kernel.py and acceptance_review.md in the same uninterrupted sequence.
+> Task 1 must be complete (kernel written + self-review) BEFORE starting Task 2 (acceptance).
 
 ```
-for each branch:
-    |-- Task 1: Implementation + self-review
-    |   -> Implement kernel.py
-    |   -> Self-check (syntax constraints, API correctness, sync flags)
-    |   -> Run verification
-    |   -> Return report
-    |
-    |-- Task 2: Acceptance review
-    |   -> Code review (pyasc-code-review)
-    |   -> Re-run verification
-    |   -> Rating (10-point scale)
+Task 1: Implementation + self-review
+    -> Read kernel template: templates/kernel-template.py
+    -> Implement kernel.py
+    -> Self-check against pyasc-syntax-constraints (re-read the skill)
+    -> Self-check against pyasc-api-patterns (re-read the skill)
+    -> Write self_review.md with pass/fail for each check item
+    -> Return report
 
-    Rating >= 8.5? -> Next phase / Fix and re-accept
+Task 2: Acceptance review (MUST be a separate step after Task 1)
+    -> MANDATORY: Load skill pyasc-code-review
+    -> Review kernel.py using the pyasc-code-review checklist
+    -> Rate on 10-point scale
+    -> Write acceptance_review.md with "## Total Score" section
+    -> Score >= 8.5? -> Proceed to Phase 3
+    -> Score < 8.5? -> Fix issues, re-do Task 2
 ```
 
-### Phase 2 exit conditions (all must be met)
+### Phase 2 mandatory tool calls
+
+| Step | What to do | Artifact |
+|------|-----------|----------|
+| Read template | Read `templates/kernel-template.py` | — |
+| Implement | Write `kernel.py` | `kernels/{name}/kernel.py` |
+| Self-review | Re-read `pyasc-syntax-constraints` + `pyasc-api-patterns`, check kernel against them | `kernels/{name}/docs/self_review.md` |
+| Acceptance | Load `pyasc-code-review` skill, apply its checklist to kernel.py | `kernels/{name}/docs/acceptance_review.md` |
+
+### CP-2 Exit Conditions (all must be met)
 
 | Condition | Check method | When not met |
 |-----------|-------------|--------------|
-| 2 Tasks executed | Check Task records | Execute acceptance Task |
-| Acceptance score returned | Check "Total Score" field | Re-execute acceptance |
+| kernel.py written | File exists | Implement kernel |
+| self_review.md written | File exists | Write self-review |
+| acceptance_review.md written | File exists with "## Total Score" | Run acceptance |
 | Score >= 8.5 | Check score value | Fix and re-accept |
-| Kernel runs without error | Run kernel.py | Fix implementation |
-| Output verified | Check torch.allclose / numpy | Fix computation |
-
-**Key acceptance checklist items**:
-1. All syntax inside `@asc.jit` is in the supported set
-2. `@asc.jit` decorator used correctly (kernel vs device function)
-3. Proper sync flags (`set_flag`/`wait_flag`) between pipelines
-4. Output verification present and passing
-5. No unsupported constructs (no `print`, `break`, `continue`, `lambda`, etc.)
+| `pyasc-code-review` skill was loaded/read | Evidence in session | Load the skill |
 
 **Detailed guide**: [references/phase2-implementation.md](references/phase2-implementation.md)
 
@@ -178,11 +200,46 @@ for each branch:
 
 ## Phase 3: Verification and delivery
 
-| Step | Content |
-|------|---------|
-| Verification | Run kernel on Model backend and/or NPU; verify output correctness |
-| Limitation statement | If NPU unavailable, state limitation explicitly |
-| Delivery | Provide kernel.py + design.md + verification results |
+> **PROHIBITED**: Skipping Phase 3. Even if runtime is unavailable, you MUST produce a verification record.
+
+### Phase 3 steps (ALL MANDATORY)
+
+> **TIME BUDGET**: Phase 3 should take at most 2-3 tool calls. If runtime fails on the first attempt,
+> do NOT debug the runtime environment. Record the error and proceed to static verification immediately.
+
+Verification has three layers:
+
+1. **Layer 1 — Simulator execution** (use `python3.10` — the python with pyasc and torch installed):
+   ```bash
+   export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+   cd kernels/{name}
+   python3.10 kernel.py -r Model -v Ascend910B1
+   ```
+   - **IMPORTANT**: Do NOT use bare `python` or `python3` — those may resolve to a different version without pyasc/torch.
+   - **IMPORTANT**: The `LD_LIBRARY_PATH` export and `-v Ascend910B1` platform flag are required for the CANN simulator.
+   - If this succeeds, record the output in `kernels/{name}/docs/verification.md`
+   - If runtime fails for ANY reason (missing lib, platform error, timeout, etc.): record the error message and **immediately proceed to Layer 2**. Do NOT attempt to debug or fix the runtime environment.
+
+2. **Layer 2 — Static AST verification** (always do this even if runtime works):
+   - Parse kernel.py with Python `ast` module to verify it is valid Python
+   - Verify `@asc.jit` decorator is present
+   - Verify no banned constructs (`print`, `try/except`, `break`, `continue`, `lambda`, `import` inside JIT)
+   - Verify `set_flag`/`wait_flag` sync pairs present
+   - Verify `data_copy` usage present
+   - Verify `allclose` or numpy verification present in host code
+
+3. **Layer 3 — Write verification record** — `kernels/{name}/docs/verification.md`:
+   - Runtime result (PASS / FAIL / SKIP with reason and error message)
+   - Static verification results (each check: PASS/FAIL)
+   - Limitation statement if runtime was skipped or failed
+
+### CP-3 Exit Conditions
+
+| Condition | Check method | When not met |
+|-----------|-------------|--------------|
+| Kernel execution attempted | Evidence of running `python3.10 kernel.py` OR documented skip reason | Run or document |
+| verification.md written | File exists | Write verification record |
+| Static checks passed | All checks listed in verification.md | Fix kernel |
 
 **Detailed guide**: [references/phase3-testing.md](references/phase3-testing.md)
 
@@ -198,9 +255,16 @@ for each branch:
 - `init_kernel_project.sh` — initialize kernel directory
 - `verify_environment.sh` — environment verification
 
-### Related skills
-- `pyasc-syntax-constraints` — Python syntax support reference
-- `pyasc-api-patterns` — API best practices
-- `pyasc-docs-search` — Documentation search
-- `pyasc-build-run-verify` — Build and verify
-- `pyasc-code-review` — Code review
+### Mandatory skills (must be loaded during workflow)
+
+| Skill | When to load | Phase |
+|-------|-------------|-------|
+| `pyasc-syntax-constraints` | Before writing any kernel code | Phase 1 step 4, Phase 2 self-review |
+| `pyasc-api-patterns` | Before selecting APIs | Phase 1 step 3, Phase 2 self-review |
+| `pyasc-code-review` | During acceptance review | Phase 2 Task 2 |
+
+### Recommended skills
+- `pyasc-docs-search` — Documentation search (Phase 1 step 2)
+- `pyasc-build-run-verify` — Build and verify (Phase 3)
+- `pyasc-env-check` — Environment check (Phase 0)
+- `pyasc-task-focus` — Task tracking for long workflows

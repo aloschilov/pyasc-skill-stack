@@ -7,8 +7,21 @@ echo ""
 ERRORS=0
 WARNINGS=0
 
+# Auto-detect the correct Python: prefer whichever has pyasc installed
+if [ -z "${PYTHON:-}" ]; then
+    for candidate in python3.10 python3.11 python3.12 python3.9 python3; do
+        if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import asc" 2>/dev/null; then
+            PYTHON="$candidate"
+            break
+        fi
+    done
+    PYTHON="${PYTHON:-python3}"
+fi
+echo "[INFO] Using Python: $PYTHON ($(command -v "$PYTHON" 2>/dev/null || echo 'not found'))"
+echo ""
+
 # Python version
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}' || echo "not found")
+PYTHON_VERSION=$($PYTHON --version 2>&1 | awk '{print $2}' || echo "not found")
 PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
 PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
 
@@ -23,7 +36,7 @@ else
 fi
 
 # pyasc
-PYASC_VERSION=$(python3 -c "import asc; print(getattr(asc, '__version__', 'installed'))" 2>/dev/null || echo "not installed")
+PYASC_VERSION=$($PYTHON -c "import asc; print(getattr(asc, '__version__', 'installed'))" 2>/dev/null || echo "not installed")
 if [ "$PYASC_VERSION" = "not installed" ]; then
     echo "[FAIL] pyasc not installed (pip install pyasc)"
     ERRORS=$((ERRORS + 1))
@@ -32,7 +45,7 @@ else
 fi
 
 # numpy
-NUMPY_VERSION=$(python3 -c "import numpy; print(numpy.__version__)" 2>/dev/null || echo "not installed")
+NUMPY_VERSION=$($PYTHON -c "import numpy; print(numpy.__version__)" 2>/dev/null || echo "not installed")
 if [ "$NUMPY_VERSION" = "not installed" ]; then
     echo "[FAIL] numpy not installed (pip install 'numpy<2')"
     ERRORS=$((ERRORS + 1))
@@ -47,7 +60,7 @@ else
 fi
 
 # torch (optional)
-TORCH_VERSION=$(python3 -c "import torch; print(torch.__version__)" 2>/dev/null || echo "not installed")
+TORCH_VERSION=$($PYTHON -c "import torch; print(torch.__version__)" 2>/dev/null || echo "not installed")
 if [ "$TORCH_VERSION" = "not installed" ]; then
     echo "[INFO] torch: not installed (optional)"
 else
@@ -55,7 +68,7 @@ else
 fi
 
 # torch_npu (optional)
-TORCH_NPU=$(python3 -c "import torch_npu; print('available')" 2>/dev/null || echo "not available")
+TORCH_NPU=$($PYTHON -c "import torch_npu; print('available')" 2>/dev/null || echo "not available")
 if [ "$TORCH_NPU" = "not available" ]; then
     echo "[INFO] torch_npu: not available (optional, for NPU tensors)"
 else
@@ -66,13 +79,37 @@ fi
 CANN_PATH="${ASCEND_HOME_PATH:-not set}"
 if [ "$CANN_PATH" = "not set" ]; then
     echo "[WARN] ASCEND_HOME_PATH not set"
-    echo "       Run: source /usr/local/Ascend/ascend-toolkit/set_env.sh"
+    echo "       Run: source \$HOME/Ascend/cann/set_env.sh"
     WARNINGS=$((WARNINGS + 1))
 elif [ -d "$CANN_PATH" ]; then
-    echo "[PASS] CANN: $CANN_PATH"
+    CANN_VERSION="unknown"
+    for vinfo in "$CANN_PATH/compiler/version.info" "$CANN_PATH/version.info"; do
+        if [ -f "$vinfo" ]; then
+            CANN_VERSION=$(grep -m1 '^Version=' "$vinfo" 2>/dev/null | cut -d= -f2 || echo "unknown")
+            break
+        fi
+    done
+    echo "[PASS] CANN: $CANN_PATH (v$CANN_VERSION)"
 else
     echo "[FAIL] CANN path does not exist: $CANN_PATH"
     ERRORS=$((ERRORS + 1))
+fi
+
+# CANN Simulator
+if [ "$CANN_PATH" != "not set" ] && [ -d "$CANN_PATH" ]; then
+    SIM_PATH="$CANN_PATH/tools/simulator/Ascend910B1/lib"
+    if [ -d "$SIM_PATH" ]; then
+        echo "[PASS] Simulator: Ascend910B1 libs found"
+        if echo "$LD_LIBRARY_PATH" 2>/dev/null | grep -q "simulator"; then
+            echo "[PASS] Simulator: LD_LIBRARY_PATH includes simulator path"
+        else
+            echo "[WARN] Simulator: LD_LIBRARY_PATH missing simulator path"
+            echo "       Run: export LD_LIBRARY_PATH=\$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:\$LD_LIBRARY_PATH"
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    else
+        echo "[INFO] Simulator: Ascend910B1 libs not found (Model backend requires this)"
+    fi
 fi
 
 # NPU (optional)

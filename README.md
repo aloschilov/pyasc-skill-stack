@@ -158,11 +158,14 @@ bash tests/run-tests.sh --test integration/test-simple-kernel.sh
 ## Requirements
 
 - Bash 4.0+
-- Python 3.9-3.12
-- pyasc (`pip install pyasc`) — for kernel execution
-- CANN Toolkit — for NPU/Model backend
+- Python 3.10.x (pyasc and torch are installed under this version)
+- pyasc >= 1.1.1 (`pip install pyasc`) — for kernel execution
+- CANN Toolkit >= 8.5.0 — for NPU/Model backend
+- pytest >= 7.0 — for pyasc kernel integration tests
 - numpy < 2.0
 - (Optional) torch, torch_npu — for tensor management and NPU support
+
+See [docs/cann-setup.md](docs/cann-setup.md) for detailed CANN environment setup.
 
 ## License
 

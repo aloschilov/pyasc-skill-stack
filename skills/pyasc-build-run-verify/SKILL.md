@@ -35,16 +35,20 @@ Kernel implementation complete
 
 ### Basic execution
 
+> **IMPORTANT**: Use `python3.10` (not `python` or `python3`). The pyasc and torch packages are installed under python3.10.
+
 ```bash
-# Run with Model backend (simulator)
-python kernel.py -r Model
+# Set up simulator environment (required for Model backend)
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+
+# Run with Model backend (simulator) — specify platform explicitly
+python3.10 kernel.py -r Model -v Ascend910B1
 
 # Run with NPU backend (requires hardware)
-python kernel.py -r NPU
-
-# Run with specific platform/SoC
-python kernel.py -r NPU -v Ascend910B
+python3.10 kernel.py -r NPU -v Ascend910B1
 ```
+
+> The `-v Ascend910B1` flag is required. Do NOT use `-v Ascend910B` (missing version suffix).
 
 ### Script tool
 

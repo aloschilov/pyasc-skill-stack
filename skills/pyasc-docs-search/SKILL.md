@@ -11,15 +11,28 @@ This skill provides local-first documentation search for pyasc kernel developmen
 - **Local resources**: API docs, 5 tutorial examples, unit/kernel/generalization tests
 - **pyasc source tree**: Complete Python API surface at `~/workspace/pyasc/python/asc/`
 
-## Official resource paths
+## Resource paths
+
+### Local golden set (always accessible — use first)
 
 | Resource type | Path | Description |
 |---------------|------|-------------|
-| Tutorials | `~/workspace/pyasc/python/tutorials/` | 5 tutorial examples |
-| API documentation | `~/workspace/pyasc/docs/python-api/` | Generated API docs |
-| Architecture | `~/workspace/pyasc/docs/architecture_introduction.md` | JIT pipeline overview |
-| Syntax support | `~/workspace/pyasc/docs/python_syntax_support.md` | Supported/unsupported syntax |
-| Developer guide | `~/workspace/pyasc/docs/developer_guide.md` | Extension guide |
+| Tutorials | `golden/tutorials/` | 5 golden tutorial kernels |
+| API docs (basic) | `golden/docs/python-api/language/basic.md` | Basic API index (add, sub, mul, abs, data_copy, etc.) |
+| API docs (core) | `golden/docs/python-api/language/core.md` | Core types (GlobalTensor, LocalTensor, etc.) |
+| API docs (adv) | `golden/docs/python-api/language/adv.md` | Advanced API index (matmul, etc.) |
+| API docs (fwk) | `golden/docs/python-api/language/fwk.md` | Framework API index (TPipe, TQue, etc.) |
+| Generated API refs | `golden/docs/python-api/language/generated/` | 277 individual API reference pages |
+| Lib API docs | `golden/docs/python-api/lib/` | Runtime library API docs |
+| Architecture | `golden/docs/architecture_introduction.md` | JIT pipeline overview |
+| Syntax support | `golden/docs/python_syntax_support.md` | Supported/unsupported syntax |
+| Developer guide | `golden/docs/developer_guide.md` | Extension guide |
+
+### External pyasc source (fallback — requires external_directory permission)
+
+| Resource type | Path | Description |
+|---------------|------|-------------|
+| Tutorials source | `~/workspace/pyasc/python/tutorials/` | 5 tutorial examples |
 | Unit tests | `~/workspace/pyasc/python/test/unit/` | Per-API unit tests |
 | Kernel tests | `~/workspace/pyasc/python/test/kernels/` | End-to-end kernel tests |
 | Generalization tests | `~/workspace/pyasc/python/test/generalization/` | Cross-API generalization tests |
@@ -28,26 +41,35 @@ This skill provides local-first documentation search for pyasc kernel developmen
 ## Search priority
 
 ```
-1. Golden set (golden/tutorials/, golden/docs/)
+1. Golden set (golden/tutorials/, golden/docs/) — ALWAYS CHECK FIRST
        | Not found
-2. ~/workspace/pyasc/python/tutorials/ (5 tutorials)
+2. golden/docs/python-api/language/generated/ (individual API references)
        | Not found
-3. ~/workspace/pyasc/docs/python-api/ (API documentation)
+3. ~/workspace/pyasc/python/tutorials/ (5 tutorials, external)
        | Not found
-4. ~/workspace/pyasc/python/asc/language/ (API source code)
+4. ~/workspace/pyasc/python/asc/language/ (API source code, external)
        | Not found
-5. ~/workspace/pyasc/python/test/ (test examples)
+5. ~/workspace/pyasc/python/test/ (test examples, external)
 ```
 
 ## Tutorial catalog
 
-| Tutorial | Path | Description |
-|----------|------|-------------|
-| 01_add | `~/workspace/pyasc/python/tutorials/01_add/` | Manual sync vector add |
-| 02_add_framework | `~/workspace/pyasc/python/tutorials/02_add_framework/` | Framework-managed sync add |
-| 03_matmul_mix | `~/workspace/pyasc/python/tutorials/03_matmul_mix/` | MIX mode matmul (cube + vector) |
-| 04_matmul_cube_only | `~/workspace/pyasc/python/tutorials/04_matmul_cube_only/` | Pure cube mode matmul |
-| 05_matmul_leakyrelu | `~/workspace/pyasc/python/tutorials/05_matmul_leakyrelu/` | Matmul + LeakyReLU fusion |
+| Tutorial | Golden path | External path | Description |
+|----------|-------------|---------------|-------------|
+| 01_add | `golden/tutorials/01_add.py` | `~/workspace/pyasc/python/tutorials/01_add/` | Manual sync vector add |
+| 02_add_framework | `golden/tutorials/02_add_framework.py` | `~/workspace/pyasc/python/tutorials/02_add_framework/` | Framework-managed sync add |
+| 03_matmul_mix | `golden/tutorials/03_matmul_mix.py` | `~/workspace/pyasc/python/tutorials/03_matmul_mix/` | MIX mode matmul (cube + vector) |
+| 04_matmul_cube_only | `golden/tutorials/04_matmul_cube_only.py` | `~/workspace/pyasc/python/tutorials/04_matmul_cube_only/` | Pure cube mode matmul |
+| 05_matmul_leakyrelu | `golden/tutorials/05_matmul_leakyrelu.py` | `~/workspace/pyasc/python/tutorials/05_matmul_leakyrelu/` | Matmul + LeakyReLU fusion |
+
+### Quick API lookup
+
+To find the API reference for a specific function (e.g., `asc.abs`):
+```
+Read: golden/docs/python-api/language/generated/asc.language.basic.abs.md
+```
+
+The naming pattern is: `golden/docs/python-api/language/generated/asc.language.{module}.{function}.md`
 
 ## API module index
 

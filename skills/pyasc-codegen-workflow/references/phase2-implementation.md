@@ -29,7 +29,8 @@ Implement the kernel based on the Phase 1 design, review it, and verify output c
 
 3. **Run verification**:
    ```bash
-   python kernel.py -r Model
+   export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+   python3.10 kernel.py -r Model -v Ascend910B1
    ```
 
 4. **Return report** with "Review Code Result" field

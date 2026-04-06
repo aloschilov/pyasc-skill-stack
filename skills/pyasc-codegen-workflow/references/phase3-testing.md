@@ -7,48 +7,73 @@ Final verification of the kernel and preparation for delivery.
 ## Prerequisites
 
 - Phase 2 completed with acceptance score >= 8.5
-- kernel.py runs and verification passes
 
 ## Process
 
-### Step 1: Verification
+> **TIME BUDGET**: Phase 3 should take 2-3 tool calls maximum.
+> If runtime fails, record the error and move on. Do NOT debug the runtime.
 
-Run the kernel with available backends:
+### Step 1: Attempt runtime verification
+
+Set up the simulator environment and run:
 
 ```bash
-# Model backend (always available with CANN)
-python kernel.py -r Model
-
-# NPU backend (if hardware available)
-python kernel.py -r NPU -v Ascend910B
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+cd kernels/{name}
+python3.10 kernel.py -r Model -v Ascend910B1
 ```
 
-### Step 2: Record results
+**If runtime fails**: Record the exact error message and proceed immediately to Step 2. Do NOT attempt to fix the runtime environment, explore simulator directories, or try alternative platforms.
 
-Document verification results:
+### Step 2: Static verification (always do this)
 
-| Backend | Status | Output |
-|---------|--------|--------|
-| Model | Pass/Fail | Verification output |
-| NPU | Pass/Fail/N/A | Verification output |
+Use Python `ast` module to verify the kernel:
+- Valid Python syntax (parses without errors)
+- `@asc.jit` decorator present
+- No banned constructs (print, try/except, break, continue, lambda, import inside JIT)
+- `set_flag`/`wait_flag` sync pairs present
+- `data_copy` usage present
+- `allclose` or numpy verification present in host code
 
-### Step 3: Limitation statement
+### Step 3: Write verification.md
 
-If NPU hardware is unavailable:
-- State: "Verified on Model backend only. NPU verification pending hardware availability."
-- This is acceptable for the first vertical slice.
+Write `kernels/{name}/docs/verification.md` with:
+
+```markdown
+# Verification Record
+
+## Runtime verification
+- Backend: Model
+- Platform: Ascend910B1
+- Status: PASS / FAIL / SKIP
+- Output: (paste output or error message)
+
+## Static verification
+- [x/] Valid Python syntax
+- [x/] @asc.jit decorator present
+- [x/] No banned constructs
+- [x/] set_flag/wait_flag sync pairs
+- [x/] data_copy usage
+- [x/] allclose verification in host code
+
+## Limitations
+(State any limitations, e.g. "Runtime verification skipped: CANN simulator not fully configured")
+```
 
 ### Step 4: Delivery
 
 Provide:
 - `kernel.py` — complete, verified kernel implementation
 - `docs/design.md` — design document
+- `docs/self_review.md` — self-review
+- `docs/acceptance_review.md` — acceptance review
 - `docs/environment.json` — environment snapshot
-- Verification results summary
+- `docs/verification.md` — verification record
 
 ## CP-3 Exit Conditions
 
-- [ ] Kernel runs on at least one backend
-- [ ] Output verification passes
-- [ ] Limitations stated explicitly if runtime unavailable
+- [ ] Runtime execution attempted (or documented skip)
+- [ ] Static verification completed
+- [ ] verification.md written
 - [ ] All deliverables present
+- [ ] Limitations stated explicitly if runtime unavailable

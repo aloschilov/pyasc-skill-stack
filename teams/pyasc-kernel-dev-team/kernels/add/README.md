@@ -12,8 +12,12 @@ pyasc kernel implementation for element-wise vector addition: z = x + y.
 ## Usage
 
 ```bash
-python kernel.py -r Model        # Run with simulator
-python kernel.py -r NPU          # Run with NPU hardware
+# Set up CANN env first — see docs/cann-setup.md
+source $HOME/Ascend/cann/set_env.sh
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+
+python3.10 kernel.py -r Model -v Ascend910B1   # Run with simulator
+python3.10 kernel.py -r NPU                    # Run with NPU hardware
 ```
 
 ## Verification

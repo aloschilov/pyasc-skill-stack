@@ -6,7 +6,8 @@
 
 ```bash
 export PYASC_DUMP_PATH=/tmp/pyasc_dump
-python kernel.py -r Model
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+python3.10 kernel.py -r Model -v Ascend910B1
 ```
 
 Check `$PYASC_DUMP_PATH` for:

@@ -1,0 +1,111 @@
+#!/usr/bin/env python3.10
+"""
+Golden reference: abs_f16 kernel
+Element-wise absolute value for float16 tensors.
+Verified on CANN 9.0.0 simulator with Ascend910B1 platform.
+"""
+
+import logging
+import argparse
+import torch
+try:
+    import torch_npu
+except ModuleNotFoundError:
+    pass
+
+import asc
+import asc.runtime.config as config
+import asc.lib.runtime as rt
+
+BUFFER_NUM = 2
+TILE_NUM = 8
+MIN_TILE_LENGTH = 32
+
+logging.basicConfig(level=logging.INFO)
+
+
+@asc.jit
+def abs_kernel(x: asc.GlobalAddress, y: asc.GlobalAddress, block_length: int):
+    offset = asc.get_block_idx() * block_length
+    x_gm = asc.GlobalTensor()
+    y_gm = asc.GlobalTensor()
+    x_gm.set_global_buffer(x + offset, block_length)
+    y_gm.set_global_buffer(y + offset, block_length)
+
+    tile_length = block_length // TILE_NUM // BUFFER_NUM
+    data_type = x.dtype
+    buffer_size = tile_length * BUFFER_NUM * data_type.sizeof()
+
+    x_local = asc.LocalTensor(data_type, asc.TPosition.VECIN, 0, tile_length * BUFFER_NUM)
+    y_local = asc.LocalTensor(data_type, asc.TPosition.VECOUT, buffer_size, tile_length * BUFFER_NUM)
+
+    for i in range(TILE_NUM * BUFFER_NUM):
+        buf_id = i % BUFFER_NUM
+
+        asc.data_copy(x_local[buf_id * tile_length:], x_gm[i * tile_length:], tile_length)
+
+        asc.set_flag(asc.HardEvent.MTE2_V, buf_id)
+        asc.wait_flag(asc.HardEvent.MTE2_V, buf_id)
+
+        asc.abs(y_local[buf_id * tile_length:], x_local[buf_id * tile_length:], tile_length)
+
+        asc.set_flag(asc.HardEvent.V_MTE3, buf_id)
+        asc.wait_flag(asc.HardEvent.V_MTE3, buf_id)
+
+        asc.data_copy(y_gm[i * tile_length:], y_local[buf_id * tile_length:], tile_length)
+
+        asc.set_flag(asc.HardEvent.MTE3_MTE2, buf_id)
+        asc.wait_flag(asc.HardEvent.MTE3_MTE2, buf_id)
+
+
+def _compute_core_num(total_length: int) -> int:
+    """Pick a core count that keeps tile_length >= MIN_TILE_LENGTH."""
+    for cores in (8, 4, 2, 1):
+        block = total_length // cores
+        tile = block // TILE_NUM // BUFFER_NUM
+        if tile >= MIN_TILE_LENGTH and total_length % cores == 0:
+            return cores
+    return 1
+
+
+def abs_launch(x: torch.Tensor) -> torch.Tensor:
+    y = torch.zeros_like(x)
+    total_length = y.numel()
+    core_num = _compute_core_num(total_length)
+    block_length = total_length // core_num
+    abs_kernel[core_num, rt.current_stream()](x, y, block_length)
+    return y
+
+
+def run_kernel(backend: config.Backend, platform: config.Platform):
+    config.set_platform(backend, platform)
+    device = "npu" if config.Backend(backend) == config.Backend.NPU else "cpu"
+
+    test_shapes = [[2, 256], [4, 2048], [32, 4096]]
+
+    for shape in test_shapes:
+        x = torch.randn(shape, dtype=torch.float16, device=device)
+        y = abs_launch(x)
+        expected = torch.abs(x)
+        assert torch.allclose(y, expected, atol=1e-5), f"Output mismatch for shape {shape}! Max diff: {(y - expected).abs().max()}"
+        logging.info(f"[PASS] Kernel output verified for shape {shape}.")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-r", type=str, default="Model", help="backend: Model or NPU")
+    parser.add_argument("-v", type=str, default=None, help="platform/SoC version")
+    args = parser.parse_args()
+    backend = args.r
+    platform = args.v
+    if backend not in config.Backend.__members__:
+        raise ValueError(f"Unsupported Backend! Supported: {list(config.Backend.__members__.keys())}")
+    backend = config.Backend(backend)
+    if platform is not None:
+        platform_values = [p.value for p in config.Platform]
+        if platform not in platform_values:
+            raise ValueError(f"Unsupported Platform! Supported: {platform_values}")
+        platform = config.Platform(platform)
+    logging.info(f"[INFO] Running kernel with backend={backend}, platform={platform}")
+    run_kernel(backend, platform)
+    logging.info("[INFO] Kernel run complete.")

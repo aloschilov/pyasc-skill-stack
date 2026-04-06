@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # =============================================================================
-# L2 Behavior Test: Skill trigger correctness
-# Verifies that skills contain appropriate trigger keywords and conditions
+# L2 Behavior Test: Trigger Correctness (Agent-in-the-Loop)
+# =============================================================================
+# Runs OpenCode with domain-specific prompts and verifies the response
+# contains pyasc-relevant content, demonstrating that the skills are
+# influencing the agent's output.
+#
+# Requires: opencode CLI on PATH
+# Estimated time: 2-5 minutes
 # =============================================================================
 
 set -euo pipefail
@@ -9,47 +15,147 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/test-helpers.sh"
 
-echo "=== Test: Skill Trigger Correctness ==="
+echo "========================================"
+echo -e " ${BOLD}L2 Behavior: Trigger Correctness${NC}"
+echo "========================================"
+echo ""
+echo "Tests that OpenCode responds with pyasc-relevant content."
+echo "Requires: opencode CLI"
+echo ""
 
-ERRORS=0
-TESTED=0
+if ! check_opencode; then
+    echo -e "${RED}[ERROR]${NC} opencode CLI not found on PATH"
+    exit 1
+fi
 
-# Expected trigger patterns for each skill
-declare -A SKILL_TRIGGERS=(
-    ["pyasc-codegen-workflow"]="workflow|development|kernel|operator"
-    ["pyasc-docs-search"]="search|documentation|resource|tutorial|API"
-    ["pyasc-api-patterns"]="API|usage|pattern|best.practice"
-    ["pyasc-syntax-constraints"]="syntax|constraint|support|restrict"
-    ["pyasc-build-run-verify"]="build|run|verify|JIT|diagnostic"
-    ["pyasc-code-review"]="review|code|security|syntax"
-    ["pyasc-env-check"]="environment|check|install|CANN|Python"
-    ["pyasc-task-focus"]="task|focus|attention|todo"
-)
+pass_count=0
+fail_count=0
+skip_count=0
 
-for skill_name in "${!SKILL_TRIGGERS[@]}"; do
-    skill_file="$SKILLS_DIR/skills/$skill_name/SKILL.md"
-    if [ -f "$skill_file" ]; then
-        TESTED=$((TESTED + 1))
-        description=$(grep "^description:" "$skill_file" | head -1 | cut -d: -f2-)
-        expected_pattern="${SKILL_TRIGGERS[$skill_name]}"
+# ============================================
+# Positive domain prompts
+# ============================================
 
-        if echo "$description" | grep -qiE "$expected_pattern"; then
-            print_pass "$skill_name: trigger keywords present"
+print_section_header "Positive Domain Prompts"
+
+run_behavior_test \
+    "Vector add kernel query" \
+    "How do I implement a vector add kernel in pyasc?" \
+    "@asc\.jit|kernel|data_copy|GlobalTensor|pyasc|asc\." \
+    60
+
+run_behavior_test \
+    "Supported syntax query" \
+    "What Python syntax is supported inside @asc.jit functions in pyasc?" \
+    "for.*range|supported|unsupported|ConstExpr|syntax|jit" \
+    60
+
+run_behavior_test \
+    "Verification query" \
+    "How do I verify my pyasc kernel output is correct?" \
+    "torch\.allclose|numpy|allclose|verification|Model|verify" \
+    60
+
+run_behavior_test \
+    "Data copy API query" \
+    "How do I use asc.data_copy in pyasc to transfer data?" \
+    "data_copy|LocalTensor|GlobalTensor|TPosition|copy" \
+    60
+
+run_behavior_test \
+    "Sync primitives query" \
+    "How do set_flag and wait_flag work in pyasc pipeline sync?" \
+    "set_flag|wait_flag|HardEvent|MTE2|sync|pipeline" \
+    60
+
+run_behavior_test \
+    "pyasc-api-patterns skill trigger" \
+    "What are the best practices for using asc.data_copy API?" \
+    "data_copy|LocalTensor|GlobalTensor|TPosition|copy|tensor|pyasc|asc\." \
+    60
+
+run_behavior_test \
+    "pyasc-syntax-constraints skill trigger" \
+    "What Python constructs are banned inside @asc.jit?" \
+    "syntax|unsupported|forbidden|jit|@asc|lambda|print|try" \
+    60
+
+run_behavior_test \
+    "pyasc-code-review skill trigger" \
+    "Review my pyasc kernel for syntax constraint violations" \
+    "review|syntax|constraint|jit|pyasc|kernel|check|violat" \
+    60
+
+# ============================================
+# Negative / off-topic prompts
+# ============================================
+
+print_section_header "Negative Prompts"
+
+run_behavior_test \
+    "Off-topic: weather" \
+    "What is the weather today?" \
+    "weather|temperature|forecast|sorry|cannot|don.t" \
+    30
+
+run_behavior_test \
+    "Off-topic: cooking" \
+    "Give me a recipe for chocolate cake." \
+    "cake|chocolate|recipe|sorry|cannot|baking|flour" \
+    30
+
+run_behavior_test_negative_no_pyasc() {
+    local name="$1"
+    local prompt="$2"
+    local timeout_val="${3:-45}"
+    local drift='@asc\.jit|GlobalTensor|LocalTensor|pyasc.*kernel|Ascend|NPU|data_copy.*pyasc'
+
+    echo "Testing: $name"
+
+    local output
+    if output=$(run_opencode "$prompt Answer in 1 line." "$timeout_val" 2>&1); then
+        if echo "$output" | grep -qiE "$drift"; then
+            print_fail "Response drifted into pyasc/kernel-specific content"
+            fail_count=$((fail_count + 1))
         else
-            print_fail "$skill_name: missing trigger keywords (expected: $expected_pattern)"
-            ERRORS=$((ERRORS + 1))
+            print_pass "Response avoided pyasc/kernel-specific drift"
+            pass_count=$((pass_count + 1))
         fi
     else
-        print_skip "$skill_name: SKILL.md not found"
+        local ec=$?
+        if [ "$ec" -eq 124 ]; then
+            print_skip "OpenCode timed out after ${timeout_val}s"
+        else
+            print_skip "OpenCode exited with code $ec"
+        fi
+        skip_count=$((skip_count + 1))
     fi
-done
+    echo ""
+}
 
+run_behavior_test_negative_no_pyasc \
+    "Off-topic: web scraper (no pyasc)" \
+    "Write me a Python web scraper" \
+    45
+
+# ============================================
+# Summary
+# ============================================
+
+echo "========================================"
+echo -e " ${BOLD}Trigger Correctness Results${NC}"
+echo "========================================"
 echo ""
-echo "Tested: $TESTED skills"
+total=$((pass_count + fail_count + skip_count))
+echo -e "  ${GREEN}Passed:${NC}  $pass_count / $total"
+echo -e "  ${RED}Failed:${NC}  $fail_count / $total"
+echo -e "  ${YELLOW}Skipped:${NC} $skip_count / $total"
+echo ""
 
-if [ $ERRORS -gt 0 ]; then
-    echo "[FAIL] $ERRORS skill(s) have trigger issues"
+if [ "$fail_count" -gt 0 ]; then
+    print_status_failed
     exit 1
 else
-    echo "[PASS] All $TESTED skills have correct triggers"
+    print_status_passed
+    exit 0
 fi

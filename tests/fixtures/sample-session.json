@@ -1,0 +1,115 @@
+{
+  "id": "test-session-001",
+  "model": "claude-sonnet-4-20250514",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Help me develop an abs operator that supports float16 data type."
+    },
+    {
+      "role": "assistant",
+      "content": "I'll follow the pyasc-codegen-workflow to develop this kernel.",
+      "parts": [
+        {
+          "type": "tool_use",
+          "name": "skill",
+          "input": {"name": "pyasc-codegen-workflow"}
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "Phase 0: Checking environment.",
+      "parts": [
+        {
+          "type": "tool_use",
+          "name": "skill",
+          "input": {"name": "pyasc-env-check"}
+        },
+        {
+          "type": "tool_use",
+          "name": "Read",
+          "input": {"path": "skills/pyasc-codegen-workflow/SKILL.md"}
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "Phase 1: Designing the abs kernel for float16.",
+      "parts": [
+        {
+          "type": "tool_use",
+          "name": "skill",
+          "input": {"name": "pyasc-docs-search"}
+        },
+        {
+          "type": "tool_use",
+          "name": "skill",
+          "input": {"name": "pyasc-api-patterns"}
+        },
+        {
+          "type": "tool_use",
+          "name": "skill",
+          "input": {"name": "pyasc-syntax-constraints"}
+        },
+        {
+          "type": "tool_use",
+          "name": "Read",
+          "input": {"path": "golden/tutorials/01_add.py"}
+        },
+        {
+          "type": "tool_use",
+          "name": "Write",
+          "input": {"path": "kernels/abs_f16/docs/design.md"}
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "Phase 2: Implementing the kernel.",
+      "parts": [
+        {
+          "type": "tool_use",
+          "name": "Write",
+          "input": {"path": "kernels/abs_f16/kernel.py"}
+        },
+        {
+          "type": "tool_use",
+          "name": "Write",
+          "input": {"path": "kernels/abs_f16/docs/self_review.md"}
+        },
+        {
+          "type": "tool_use",
+          "name": "skill",
+          "input": {"name": "pyasc-code-review"}
+        },
+        {
+          "type": "tool_use",
+          "name": "Write",
+          "input": {"path": "kernels/abs_f16/docs/acceptance_review.md"}
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "Phase 3: Running verification. export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH && python3.10 kernel.py -r Model -v Ascend910B1",
+      "parts": [
+        {
+          "type": "tool_use",
+          "name": "Shell",
+          "input": {"command": "python3.10 kernels/abs_f16/kernel.py -r Model -v Ascend910B1"}
+        },
+        {
+          "type": "tool_use",
+          "name": "Write",
+          "input": {"path": "kernels/abs_f16/docs/verification.md"}
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 45000,
+    "output_tokens": 8500,
+    "cache_read_input_tokens": 12000
+  }
+}
