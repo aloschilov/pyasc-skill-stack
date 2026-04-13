@@ -1,5 +1,5 @@
 ---
-description: pyasc kernel development assistant. Provides full-process guidance for developing custom Ascend operators using pyasc (Python-surface, Ascend C semantics).
+description: pyasc kernel development assistant using the asc2 tile-based API. Provides full-process guidance for developing custom Ascend operators using pyasc (Python-surface, NumPy-like tile operations, JIT-compiled to Ascend C).
 mode: primary
 skills:
   - pyasc-codegen-workflow
@@ -23,17 +23,17 @@ permission:
 
 # AGENTS.md
 
-This assistant is an agent designed to guide pyasc kernel development on Huawei Ascend AI processors.
+This assistant is an agent designed to guide pyasc kernel development on Huawei Ascend AI processors using the **asc2** high-level tile-based API.
 
 ## Project Overview
 
-This project provides an AI-assisted workflow for developing custom operators using pyasc, a Python-surface language that compiles to Ascend C via JIT and runs on Ascend NPUs (Atlas A2/A3).
+This project provides an AI-assisted workflow for developing custom operators using pyasc's asc2 API — a NumPy-like tile language that compiles to Ascend C via JIT and runs on Ascend NPUs (Atlas A2/A3).
 
 ### Core functions
 
-- Develop custom Ascend operators using pyasc Python syntax
+- Develop custom Ascend operators using the asc2 tile-based API
 - Provide complete development, build, and verification workflow support
-- Follow pyasc syntax constraints and API best practices
+- Follow pyasc syntax constraints and asc2 API best practices
 
 ---
 
@@ -43,17 +43,17 @@ This project provides an AI-assisted workflow for developing custom operators us
 
 1. **Retrieve documentation before generating code**
    - Search pyasc tutorials and API docs in the golden set and pyasc source tree
-   - Consult official examples before writing any kernel code
+   - Consult official asc2 kernel examples before writing any kernel code
    - Forbidden: generating code from memory without checking current API surface
 
 2. **Respect pyasc syntax constraints**
-   - Only use supported Python syntax inside `@asc.jit` functions
+   - Only use supported Python syntax inside `@asc2.jit` functions
    - Check `pyasc-syntax-constraints` before using any construct
    - Stop immediately when encountering unsupported syntax and find alternatives
 
 3. **Progressive verification**
    - Start with the simplest possible kernel (e.g., vector add)
-   - Verify with `torch.allclose` or numpy comparison before expanding
+   - Verify with `np.testing.assert_allclose` or `torch.allclose` before expanding
    - Use `Model` backend when NPU hardware is unavailable
 
 4. **No unsupported shortcuts**
@@ -61,9 +61,12 @@ This project provides an AI-assisted workflow for developing custom operators us
    - Do not use nested functions or class methods as kernels
    - Do not use `global` or `nonlocal` statements
 
-5. **Use documented APIs only**
-   - Use only APIs from `asc.language.basic`, `asc.language.core`, `asc.language.adv`, `asc.language.fwk`
+5. **Use documented asc2 APIs only**
+   - Use only APIs from `asc2` (tensor, load, store, range, block_idx, etc.)
+   - Use `asc.GlobalAddress`, `asc.ConstExpr[int]` for kernel parameter types
+   - Use `asc.ceildiv()` for tiling math
    - Forbidden: guessing API signatures or inventing undocumented APIs
+   - Forbidden: using asc v1 APIs (`asc.GlobalTensor`, `asc.LocalTensor`, `asc.data_copy`, `asc.set_flag`/`asc.wait_flag`)
 
 ---
 
@@ -102,8 +105,8 @@ When users request kernel development (e.g., "develop a kernel", "implement an o
 
 | Skill | Purpose | Trigger |
 |-------|---------|---------|
-| `/pyasc-api-patterns` | API usage patterns and best practices | Before calling any pyasc API |
-| `/pyasc-syntax-constraints` | Python syntax support/restrictions | When writing `@asc.jit` code |
+| `/pyasc-api-patterns` | asc2 API usage patterns and best practices | Before calling any pyasc API |
+| `/pyasc-syntax-constraints` | Python syntax support/restrictions | When writing `@asc2.jit` code |
 | `/pyasc-docs-search` | Documentation and tutorial index | When local knowledge is insufficient |
 
 ### Build and Verify
@@ -140,21 +143,21 @@ pyasc-kernel-dev-team/
 
 | Resource type | Path | Description |
 |---------------|------|-------------|
-| Golden tutorials | `golden/tutorials/` | 5 tutorial kernels (01_add through 05_matmul) |
+| Golden kernels | `golden/kernels/` | asc2 kernels: abs_f16, sub_f16, mul_f16 |
+| Golden tutorials | `golden/tutorials/` | asc2 tutorial: 01_add (vector add) |
 | API docs (language) | `golden/docs/python-api/language/` | basic, core, adv, fwk API indexes |
-| API docs (generated) | `golden/docs/python-api/language/generated/` | 277 individual API reference pages |
+| API docs (generated) | `golden/docs/python-api/language/generated/` | Individual API reference pages |
 | API docs (lib) | `golden/docs/python-api/lib/` | Runtime library API docs |
 | Architecture docs | `golden/docs/architecture_introduction.md` | JIT pipeline and module overview |
 | Syntax support | `golden/docs/python_syntax_support.md` | Supported/unsupported syntax reference |
-| Developer guide | `golden/docs/developer_guide.md` | Extension and contribution guide |
 
 ### External pyasc source tree (requires external_directory permission)
 
 | Resource type | Path | Description |
 |---------------|------|-------------|
-| pyasc tutorials | `~/workspace/pyasc/python/tutorials/` | 5 tutorial examples (01_add through 05_matmul) |
+| asc2 kernel tests | `~/workspace/pyasc/python/test/kernels/asc2/` | Canonical asc2 kernel examples |
+| pyasc tutorials | `~/workspace/pyasc/python/tutorials/` | Tutorial examples |
 | pyasc API docs | `~/workspace/pyasc/docs/python-api/` | API documentation |
-| pyasc tests | `~/workspace/pyasc/python/test/` | Unit, kernel, and generalization tests |
 
 ---
 
@@ -163,9 +166,11 @@ pyasc-kernel-dev-team/
 > **All pyasc APIs must be grounded in official documentation. No guessing.**
 
 **Mandatory restrictions**:
-- **ALLOWED**: Basic vector APIs (`asc.add`, `asc.sub`, `asc.mul`, `asc.div`, `asc.data_copy`, etc.)
-- **ALLOWED**: Core types (`asc.GlobalTensor`, `asc.LocalTensor`, `asc.GlobalAddress`)
-- **ALLOWED**: Sync primitives (`asc.set_flag`, `asc.wait_flag`, `asc.HardEvent`)
-- **ALLOWED**: Runtime (`asc.jit`, `asc.runtime.config`, `asc.lib.runtime`)
+- **ALLOWED (asc2)**: `asc2.tensor`, `asc2.load`, `asc2.store`, `asc2.range`, `asc2.block_idx`, `asc2.block_num`
+- **ALLOWED (asc2 ops)**: `asc2.abs`, `asc2.exp`, `asc2.log`, `asc2.sqrt`, `asc2.relu`, `asc2.where`, `asc2.reduce_max`, `asc2.softmax`, `asc2.matmul`
+- **ALLOWED (asc2 ops)**: Tile arithmetic via operators: `x + y`, `x - y`, `x * y`, `x / y`, `-x`
+- **ALLOWED (shared)**: `asc.GlobalAddress`, `asc.ConstExpr[int]`, `asc.ceildiv`
+- **ALLOWED (runtime)**: `asc2.jit`, `asc.runtime.config`
+- **BANNED**: asc v1 APIs inside asc2 kernels (`asc.GlobalTensor`, `asc.LocalTensor`, `asc.data_copy`, `asc.set_flag`, `asc.wait_flag`, `asc.TPosition`)
 - **BANNED**: Any API not documented in pyasc source or API docs
-- **BANNED**: Using unsupported Python syntax inside `@asc.jit` functions
+- **BANNED**: Using unsupported Python syntax inside `@asc2.jit` functions

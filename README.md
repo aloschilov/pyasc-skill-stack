@@ -1,6 +1,6 @@
 # pyasc-skill-stack
 
-Reusable Agent skill modules for pyasc kernel development on Huawei Ascend NPUs.
+Reusable Agent skill modules for pyasc kernel development on Huawei Ascend NPUs using the **asc2** high-level tile-based API.
 
 With skills installed, a short prompt like _"Develop an abs operator for float16, shapes [1,128], [4,2048], [32,4096]"_ is enough — the agent handles environment setup, design, implementation, review, and verification autonomously.
 
@@ -17,7 +17,7 @@ With skills installed, a short prompt like _"Develop an abs operator for float16
 These must be available before starting:
 
 - `opencode` CLI installed
-- Python 3.10.x with `pyasc >= 1.1.1` and `torch`
+- Python 3.10.x with `pyasc` (asc2 API) and `numpy`
 - CANN Toolkit (see [docs/cann-setup.md](docs/cann-setup.md))
 - Simulator libraries for `Ascend910B1`
 
@@ -38,8 +38,7 @@ export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIB
 Quick check:
 
 ```bash
-python3.10 -c "import asc; print('pyasc OK')"
-python3.10 -c "import torch; print('torch OK')"
+python3.10 -c "import asc; import asc2; print('pyasc OK')"
 ```
 
 ### Step 3. Start OpenCode
@@ -77,9 +76,9 @@ When skills are discovered correctly, the agent:
 
 1. Loads `pyasc-codegen-workflow` and follows a 4-phase workflow (Phase 0 → 1 → 2 → 3)
 2. Initializes the kernel project directory
-3. Retrieves documentation from the golden set and API references
-4. Writes a design document with API selection and syntax checks
-5. Implements `kernel.py` using the kernel template and reviewed patterns
+3. Retrieves documentation from the golden set and asc2 kernel references
+4. Writes a design document with asc2 API selection and syntax checks
+5. Implements `kernel.py` using the asc2 kernel template and reviewed patterns
 6. Conducts self-review and acceptance review against pyasc constraints
 7. Runs verification (simulator or JIT fallback) and writes a verification record
 8. Delivers a runnable kernel with all workflow artifacts
@@ -101,9 +100,9 @@ If the agent requires any of the above, there is likely a problem with skill dis
 ```
 pyasc-skill-stack/
 ├── skills/                           # Skill modules (agent reads these)
-│   ├── pyasc-codegen-workflow/       # Core 4-phase workflow
-│   ├── pyasc-api-patterns/           # API usage patterns
-│   ├── pyasc-syntax-constraints/     # Supported syntax inside @asc.jit
+│   ├── pyasc-codegen-workflow/       # Core 4-phase workflow (asc2)
+│   ├── pyasc-api-patterns/           # asc2 API usage patterns
+│   ├── pyasc-syntax-constraints/     # Supported syntax inside @asc2.jit
 │   ├── pyasc-docs-search/            # Documentation index
 │   ├── pyasc-build-run-verify/       # Build, run, verification
 │   ├── pyasc-code-review/            # Code review checklist
@@ -115,8 +114,8 @@ pyasc-skill-stack/
 │       ├── quickstart.md             # Manual development guide
 │       └── kernels/                  # Generated kernel workspace
 ├── golden/
-│   ├── tutorials/                    # Golden reference kernels
-│   ├── kernels/                      # Verified golden kernels (abs, sub, mul)
+│   ├── tutorials/                    # Golden reference tutorial (asc2 vadd)
+│   ├── kernels/                      # Verified golden kernels (abs, sub, mul — asc2)
 │   └── docs/                         # Local pyasc API documentation
 ├── tests/                            # Automated test pyramid
 │   ├── run-tests.sh                  # Test runner
@@ -134,12 +133,12 @@ pyasc-skill-stack/
 | Skill | Purpose |
 |-------|---------|
 | `pyasc-codegen-workflow` | 4-phase workflow: environment → design → implementation + review → verification |
-| `pyasc-api-patterns` | API usage patterns, dynamic tiling, `ConstExpr` guidance |
-| `pyasc-syntax-constraints` | Python syntax support/restrictions inside `@asc.jit` |
+| `pyasc-api-patterns` | asc2 API usage patterns, tiling with ceildiv, `ConstExpr` guidance |
+| `pyasc-syntax-constraints` | Python syntax support/restrictions inside `@asc2.jit` |
 | `pyasc-docs-search` | Local-first documentation and tutorial search |
 | `pyasc-build-run-verify` | JIT compilation, simulator execution, output verification |
 | `pyasc-code-review` | Code review against pyasc constraints |
-| `pyasc-env-check` | Python, pyasc, CANN, torch environment checks |
+| `pyasc-env-check` | Python, pyasc, CANN, numpy environment checks |
 | `pyasc-task-focus` | Task focus and attention management |
 
 ## Testing

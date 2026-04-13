@@ -8,86 +8,53 @@
 
 import logging
 import argparse
-import torch
-try:
-    import torch_npu
-except ModuleNotFoundError:
-    pass
+import numpy as np
 
 import asc
 import asc.runtime.config as config
-import asc.lib.runtime as rt
-
-USE_CORE_NUM = 8
-BUFFER_NUM = 2  # BUFFER_NUM should be 1 or 2
-TILE_NUM = 8
-
+import asc2
 
 logging.basicConfig(level=logging.INFO)
 
 
-@asc.jit
-def vadd_kernel(x: asc.GlobalAddress, y: asc.GlobalAddress, z: asc.GlobalAddress, block_length: int):
-
-    offset = asc.get_block_idx() * block_length
-    x_gm = asc.GlobalTensor()
-    y_gm = asc.GlobalTensor()
-    z_gm = asc.GlobalTensor()
-    x_gm.set_global_buffer(x + offset, block_length)
-    y_gm.set_global_buffer(y + offset, block_length)
-    z_gm.set_global_buffer(z + offset, block_length)
-
-    tile_length = block_length // TILE_NUM // BUFFER_NUM
-
-    data_type = x.dtype
-    buffer_size = tile_length * BUFFER_NUM * data_type.sizeof()
-
-    # Init a Tensor based on the specified logical position/address/length
-    x_local = asc.LocalTensor(data_type, asc.TPosition.VECIN, 0, tile_length * BUFFER_NUM)
-    y_local = asc.LocalTensor(data_type, asc.TPosition.VECIN, buffer_size, tile_length * BUFFER_NUM)
-    z_local = asc.LocalTensor(data_type, asc.TPosition.VECOUT, buffer_size + buffer_size, tile_length * BUFFER_NUM)
-
-    for i in range(TILE_NUM * BUFFER_NUM):
-        buf_id = i % BUFFER_NUM
-
-        # Operator[] return a new LocalTensor/GlobalTensor with offset from the original starting address
-        asc.data_copy(x_local[buf_id * tile_length:], x_gm[i * tile_length:], tile_length)
-        asc.data_copy(y_local[buf_id * tile_length:], y_gm[i * tile_length:], tile_length)
-
-        # Synchronization instructions between different pipelines in the same core
-        asc.set_flag(asc.HardEvent.MTE2_V, buf_id)
-        asc.wait_flag(asc.HardEvent.MTE2_V, buf_id)
-
-        asc.add(z_local[buf_id * tile_length:], x_local[buf_id * tile_length:], y_local[buf_id * tile_length:],
-                tile_length)
-
-        asc.set_flag(asc.HardEvent.V_MTE3, buf_id)
-        asc.wait_flag(asc.HardEvent.V_MTE3, buf_id)
-
-        asc.data_copy(z_gm[i * tile_length:], z_local[buf_id * tile_length:], tile_length)
-
-        asc.set_flag(asc.HardEvent.MTE3_MTE2, buf_id)
-        asc.wait_flag(asc.HardEvent.MTE3_MTE2, buf_id)
+@asc2.jit(always_compile=True)
+def vadd_kernel(x_ptr: asc.GlobalAddress, y_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
+                size: int, tile_size: asc.ConstExpr[int], tile_per_block: asc.ConstExpr[int]):
+    x_gm = asc2.tensor(x_ptr, [size])
+    y_gm = asc2.tensor(y_ptr, [size])
+    out_gm = asc2.tensor(out_ptr, [size])
+    base_offset = asc2.block_idx() * tile_size * tile_per_block
+    for i in asc2.range(tile_per_block):
+        tile_offset = base_offset + i * tile_size
+        x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
+        y = asc2.load(y_gm, [tile_size], offsets=[tile_offset])
+        out = x + y
+        asc2.store(out, out_gm, offsets=[tile_offset])
 
 
-def vadd_launch(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    z = torch.zeros_like(x)
-
-    total_length = z.numel()
-    block_length = total_length // USE_CORE_NUM
-
-    vadd_kernel[USE_CORE_NUM, rt.current_stream()](x, y, z, block_length)
-    return z
+def vadd_launch(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    out = np.empty_like(x)
+    size = out.size
+    core_num = 16
+    tile_size = 128
+    num_tiles = asc.ceildiv(size, tile_size)
+    vadd_kernel[core_num](x, y, out, size, tile_size, asc.ceildiv(num_tiles, core_num))
+    return out
 
 
 def vadd_custom(backend: config.Backend, platform: config.Platform):
     config.set_platform(backend, platform)
-    device = "npu" if config.Backend(backend) == config.Backend.NPU else "cpu"
-    size = 8 * 2048
-    x = torch.rand(size, dtype=torch.float32, device=device)
-    y = torch.rand(size, dtype=torch.float32, device=device)
-    z = vadd_launch(x, y)
-    assert torch.allclose(z, x + y)
+    rng = np.random.default_rng(seed=2026)
+    size = 8192
+    x = rng.random(size, dtype=np.float32) * 10
+    y = rng.random(size, dtype=np.float32) * 10
+    out = vadd_launch(x, y)
+    np.testing.assert_allclose(out, x + y)
+
+
+def test_vadd(backend: config.Backend, platform: config.Platform):
+    """pytest entry point."""
+    vadd_custom(backend, platform)
 
 
 if __name__ == "__main__":
@@ -98,10 +65,10 @@ if __name__ == "__main__":
     backend = args.r
     platform = args.v
     if backend not in config.Backend.__members__:
-        raise ValueError("Unsupported Backend! Supported: ['Model', 'NPU']")
+        raise ValueError(f"Unsupported Backend! Supported: {list(config.Backend.__members__.keys())}")
     backend = config.Backend(backend)
     if platform is not None:
-        platform_values = [platform.value for platform in config.Platform]
+        platform_values = [p.value for p in config.Platform]
         if platform not in platform_values:
             raise ValueError(f"Unsupported Platform! Supported: {platform_values}")
         platform = config.Platform(platform)

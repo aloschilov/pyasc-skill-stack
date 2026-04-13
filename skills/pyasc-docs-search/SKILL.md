@@ -98,9 +98,9 @@ Provide clear search objectives and scope
 ```
 
 **Example prompts**:
-- "Search for usage examples of asc.data_copy in pyasc tutorials"
-- "Find how manual sync is implemented with set_flag/wait_flag"
-- "Search for LocalTensor initialization patterns in pyasc tests"
+- "Search for usage examples of asc2.load/asc2.store in pyasc asc2 kernel tests"
+- "Find how tiling is implemented with asc.ceildiv in asc2 kernels"
+- "Search for asc2.tensor initialization patterns in pyasc test/kernels/asc2/"
 
 ## References
 

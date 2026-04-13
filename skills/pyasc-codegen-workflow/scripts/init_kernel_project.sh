@@ -22,7 +22,7 @@ mkdir -p "$KERNEL_DIR/test"
 cat > "$KERNEL_DIR/README.md" << EOF
 # $KERNEL_NAME kernel
 
-pyasc kernel implementation for the $KERNEL_NAME operation.
+pyasc kernel implementation for the $KERNEL_NAME operation using the asc2 tile-based API.
 
 ## Files
 
@@ -36,7 +36,28 @@ pyasc kernel implementation for the $KERNEL_NAME operation.
 \`\`\`bash
 python3.10 kernel.py -r Model -v Ascend910B1   # Run with simulator
 python3.10 kernel.py -r NPU                    # Run with NPU hardware
+pytest kernel.py --backend Model --platform Ascend910B1
 \`\`\`
+EOF
+
+cat > "$KERNEL_DIR/conftest.py" << 'EOF'
+import pytest
+from asc.runtime import config
+
+
+def pytest_addoption(parser):
+    parser.addoption("--backend", type=config.Backend, default=config.Backend.Model)
+    parser.addoption("--platform", type=config.Platform, default=config.Platform.Ascend910B1)
+
+
+@pytest.fixture
+def backend(request):
+    return request.config.getoption("--backend")
+
+
+@pytest.fixture
+def platform(request):
+    return request.config.getoption("--platform")
 EOF
 
 echo "[PASS] Kernel project initialized: $KERNEL_DIR"
@@ -44,6 +65,7 @@ echo "[INFO] Directory structure:"
 echo "  $KERNEL_DIR/"
 echo "  ├── docs/"
 echo "  ├── test/"
+echo "  ├── conftest.py"
 echo "  └── README.md"
 echo ""
 echo "[NEXT] Run verify_environment.sh to save environment.json"

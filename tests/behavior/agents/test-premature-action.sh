@@ -36,7 +36,7 @@ print_section_header "Scenario: Kernel Dev Team Prompt"
 
 PROMPT="You are helping via the pyasc kernel development team agent.
 Implement a pyasc vector add kernel for two float32 tensors of size 1024.
-Use @asc.jit and manual sync with set_flag/wait_flag.
+Use @asc2.jit and asc2.load/asc2.store for GM–UB data movement and synchronization.
 Follow the pyasc-codegen-workflow phases and load skills before editing files."
 
 TEST_PROJECT=$(create_test_project "agent-premature-test")

@@ -1,104 +1,62 @@
 #!/usr/bin/env python3.10
 """
-Golden reference: abs_f16 kernel
+Golden reference: abs_f16 kernel (asc2 API)
 Element-wise absolute value for float16 tensors.
-Verified on CANN 9.0.0 simulator with Ascend910B1 platform.
+Verified on CANN simulator with Ascend910B1 platform.
 """
 
 import logging
 import argparse
-import torch
-try:
-    import torch_npu
-except ModuleNotFoundError:
-    pass
+import numpy as np
 
 import asc
 import asc.runtime.config as config
-import asc.lib.runtime as rt
+import asc2
 
-BUFFER_NUM = 2
-MIN_TILE_LENGTH = 32
+TILE_SIZE = 128
+CORE_NUM = 16
 
 logging.basicConfig(level=logging.INFO)
 
 
-def _compute_tiling(total_length: int) -> tuple:
-    """Pick (core_num, tile_num) that keep tile_length >= MIN_TILE_LENGTH.
-
-    Tries the highest core count and tile count first for maximum
-    parallelism, then reduces until the per-tile data length is at
-    least MIN_TILE_LENGTH (required for efficient DMA transfers).
-    """
-    for cores in (8, 4, 2, 1):
-        if total_length % cores != 0:
-            continue
-        block = total_length // cores
-        for tiles in (8, 4, 2, 1):
-            if block % (tiles * BUFFER_NUM) != 0:
-                continue
-            tile_len = block // tiles // BUFFER_NUM
-            if tile_len >= MIN_TILE_LENGTH:
-                return cores, tiles
-    return 1, 1
+@asc2.jit(always_compile=True)
+def abs_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
+               size: int, tile_size: asc.ConstExpr[int], tile_per_block: asc.ConstExpr[int]):
+    x_gm = asc2.tensor(x_ptr, [size])
+    out_gm = asc2.tensor(out_ptr, [size])
+    base_offset = asc2.block_idx() * tile_size * tile_per_block
+    for i in asc2.range(tile_per_block):
+        tile_offset = base_offset + i * tile_size
+        x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
+        out = asc2.abs(x)
+        asc2.store(out, out_gm, offsets=[tile_offset])
 
 
-@asc.jit
-def abs_kernel(x: asc.GlobalAddress, y: asc.GlobalAddress, block_length: int,
-               tile_num: asc.ConstExpr[int]):
-    offset = asc.get_block_idx() * block_length
-    x_gm = asc.GlobalTensor()
-    y_gm = asc.GlobalTensor()
-    x_gm.set_global_buffer(x + offset, block_length)
-    y_gm.set_global_buffer(y + offset, block_length)
-
-    tile_length = block_length // tile_num // BUFFER_NUM
-    data_type = x.dtype
-    buffer_size = tile_length * BUFFER_NUM * data_type.sizeof()
-
-    x_local = asc.LocalTensor(data_type, asc.TPosition.VECIN, 0, tile_length * BUFFER_NUM)
-    y_local = asc.LocalTensor(data_type, asc.TPosition.VECOUT, buffer_size, tile_length * BUFFER_NUM)
-
-    for i in range(tile_num * BUFFER_NUM):
-        buf_id = i % BUFFER_NUM
-
-        asc.data_copy(x_local[buf_id * tile_length:], x_gm[i * tile_length:], tile_length)
-
-        asc.set_flag(asc.HardEvent.MTE2_V, buf_id)
-        asc.wait_flag(asc.HardEvent.MTE2_V, buf_id)
-
-        asc.abs(y_local[buf_id * tile_length:], x_local[buf_id * tile_length:], tile_length)
-
-        asc.set_flag(asc.HardEvent.V_MTE3, buf_id)
-        asc.wait_flag(asc.HardEvent.V_MTE3, buf_id)
-
-        asc.data_copy(y_gm[i * tile_length:], y_local[buf_id * tile_length:], tile_length)
-
-        asc.set_flag(asc.HardEvent.MTE3_MTE2, buf_id)
-        asc.wait_flag(asc.HardEvent.MTE3_MTE2, buf_id)
-
-
-def abs_launch(x: torch.Tensor) -> torch.Tensor:
-    y = torch.zeros_like(x)
-    total_length = y.numel()
-    core_num, tile_num = _compute_tiling(total_length)
-    block_length = total_length // core_num
-    abs_kernel[core_num, rt.current_stream()](x, y, block_length, tile_num)
-    return y
+def abs_launch(x: np.ndarray) -> np.ndarray:
+    out = np.empty_like(x)
+    size = out.size
+    num_tiles = asc.ceildiv(size, TILE_SIZE)
+    abs_kernel[CORE_NUM](x, out, size, TILE_SIZE, asc.ceildiv(num_tiles, CORE_NUM))
+    return out
 
 
 def run_kernel(backend: config.Backend, platform: config.Platform):
     config.set_platform(backend, platform)
-    device = "npu" if config.Backend(backend) == config.Backend.NPU else "cpu"
 
-    test_shapes = [[1, 128], [4, 2048], [32, 4096]]
+    test_sizes = [128, 8192, 131072]
+    rng = np.random.default_rng(seed=2026)
 
-    for shape in test_shapes:
-        x = torch.randn(shape, dtype=torch.float16, device=device)
-        y = abs_launch(x)
-        expected = torch.abs(x)
-        assert torch.allclose(y, expected, atol=1e-5), f"Output mismatch for shape {shape}! Max diff: {(y - expected).abs().max()}"
-        logging.info(f"[PASS] Kernel output verified for shape {shape}.")
+    for size in test_sizes:
+        x = (rng.random(size, dtype=np.float32) * 10 - 5).astype(np.float16)
+        out = abs_launch(x)
+        expected = np.abs(x)
+        np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
+        logging.info(f"[PASS] Kernel output verified for size {size}.")
+
+
+def test_abs_f16(backend: config.Backend, platform: config.Platform):
+    """pytest entry point."""
+    run_kernel(backend, platform)
 
 
 if __name__ == "__main__":

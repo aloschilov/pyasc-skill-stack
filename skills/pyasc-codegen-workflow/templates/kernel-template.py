@@ -6,109 +6,64 @@ Operation: {describe operation}
 Usage:
     python3.10 kernel.py -r Model -v Ascend910B1   # Run with simulator
     python3.10 kernel.py -r NPU                    # Run with NPU hardware
+    pytest kernel.py --backend Model --platform Ascend910B1
 """
 
 import logging
 import argparse
-import torch
-try:
-    import torch_npu
-except ModuleNotFoundError:
-    pass
+import numpy as np
 
 import asc
 import asc.runtime.config as config
-import asc.lib.runtime as rt
+import asc2
 
-BUFFER_NUM = 2
-MIN_TILE_LENGTH = 32
+TILE_SIZE = 128
+CORE_NUM = 16
 
 logging.basicConfig(level=logging.INFO)
 
 
-def _compute_tiling(total_length: int) -> tuple:
-    """Pick (core_num, tile_num) that keep tile_length >= MIN_TILE_LENGTH.
-
-    DMA transfers require a minimum data length per tile.  For small
-    tensors the default tile_num=8 / core_num=8 can make tile_length
-    too small.  This helper reduces core count and tile count until
-    the constraint is satisfied.
-    """
-    for cores in (8, 4, 2, 1):
-        if total_length % cores != 0:
-            continue
-        block = total_length // cores
-        for tiles in (8, 4, 2, 1):
-            if block % (tiles * BUFFER_NUM) != 0:
-                continue
-            tile_len = block // tiles // BUFFER_NUM
-            if tile_len >= MIN_TILE_LENGTH:
-                return cores, tiles
-    return 1, 1
-
-
-@asc.jit
-def kernel_func(x: asc.GlobalAddress, y: asc.GlobalAddress, z: asc.GlobalAddress,
-                block_length: int, tile_num: asc.ConstExpr[int]):
+@asc2.jit(always_compile=True)
+def kernel_func(x_ptr: asc.GlobalAddress, y_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
+                size: int, tile_size: asc.ConstExpr[int], tile_per_block: asc.ConstExpr[int]):
     """Replace this with your kernel implementation."""
-    offset = asc.get_block_idx() * block_length
-    x_gm = asc.GlobalTensor()
-    y_gm = asc.GlobalTensor()
-    z_gm = asc.GlobalTensor()
-    x_gm.set_global_buffer(x + offset, block_length)
-    y_gm.set_global_buffer(y + offset, block_length)
-    z_gm.set_global_buffer(z + offset, block_length)
-
-    tile_length = block_length // tile_num // BUFFER_NUM
-    data_type = x.dtype
-    buffer_size = tile_length * BUFFER_NUM * data_type.sizeof()
-
-    x_local = asc.LocalTensor(data_type, asc.TPosition.VECIN, 0, tile_length * BUFFER_NUM)
-    y_local = asc.LocalTensor(data_type, asc.TPosition.VECIN, buffer_size, tile_length * BUFFER_NUM)
-    z_local = asc.LocalTensor(data_type, asc.TPosition.VECOUT, buffer_size + buffer_size, tile_length * BUFFER_NUM)
-
-    for i in range(tile_num * BUFFER_NUM):
-        buf_id = i % BUFFER_NUM
-
-        asc.data_copy(x_local[buf_id * tile_length:], x_gm[i * tile_length:], tile_length)
-        asc.data_copy(y_local[buf_id * tile_length:], y_gm[i * tile_length:], tile_length)
-
-        asc.set_flag(asc.HardEvent.MTE2_V, buf_id)
-        asc.wait_flag(asc.HardEvent.MTE2_V, buf_id)
-
+    x_gm = asc2.tensor(x_ptr, [size])
+    y_gm = asc2.tensor(y_ptr, [size])
+    out_gm = asc2.tensor(out_ptr, [size])
+    base_offset = asc2.block_idx() * tile_size * tile_per_block
+    for i in asc2.range(tile_per_block):
+        tile_offset = base_offset + i * tile_size
+        x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
+        y = asc2.load(y_gm, [tile_size], offsets=[tile_offset])
         # TODO: Replace with your operation
-        asc.add(z_local[buf_id * tile_length:], x_local[buf_id * tile_length:], y_local[buf_id * tile_length:],
-                tile_length)
-
-        asc.set_flag(asc.HardEvent.V_MTE3, buf_id)
-        asc.wait_flag(asc.HardEvent.V_MTE3, buf_id)
-
-        asc.data_copy(z_gm[i * tile_length:], z_local[buf_id * tile_length:], tile_length)
-
-        asc.set_flag(asc.HardEvent.MTE3_MTE2, buf_id)
-        asc.wait_flag(asc.HardEvent.MTE3_MTE2, buf_id)
+        out = x + y
+        asc2.store(out, out_gm, offsets=[tile_offset])
 
 
-def kernel_launch(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    z = torch.zeros_like(x)
-    total_length = z.numel()
-    core_num, tile_num = _compute_tiling(total_length)
-    block_length = total_length // core_num
-    kernel_func[core_num, rt.current_stream()](x, y, z, block_length, tile_num)
-    return z
+def kernel_launch(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    out = np.empty_like(x)
+    size = out.size
+    num_tiles = asc.ceildiv(size, TILE_SIZE)
+    kernel_func[CORE_NUM](x, y, out, size, TILE_SIZE, asc.ceildiv(num_tiles, CORE_NUM))
+    return out
 
 
 def run_kernel(backend: config.Backend, platform: config.Platform):
     config.set_platform(backend, platform)
-    device = "npu" if config.Backend(backend) == config.Backend.NPU else "cpu"
-    # TODO: Update shapes, dtype, and expected result for your operation
-    test_shapes = [[4, 2048], [32, 4096]]
-    for shape in test_shapes:
-        x = torch.rand(shape, dtype=torch.float32, device=device)
-        y = torch.rand(shape, dtype=torch.float32, device=device)
-        z = kernel_launch(x, y)
-        assert torch.allclose(z, x + y), f"Output mismatch for shape {shape}! Max diff: {(z - (x + y)).abs().max()}"
-        logging.info(f"[PASS] Kernel output verified for shape {shape}.")
+    # TODO: Update sizes, dtype, and expected result for your operation
+    test_sizes = [8192, 131072]
+    rng = np.random.default_rng(seed=2026)
+    for size in test_sizes:
+        x = rng.random(size, dtype=np.float32) * 10
+        y = rng.random(size, dtype=np.float32) * 10
+        out = kernel_launch(x, y)
+        np.testing.assert_allclose(out, x + y, atol=1e-5, rtol=1e-5)
+        logging.info(f"[PASS] Kernel output verified for size {size}.")
+
+
+def test_kernel(backend: config.Backend, platform: config.Platform):
+    """pytest entry point — uses conftest.py fixtures for backend/platform."""
+    run_kernel(backend, platform)
 
 
 if __name__ == "__main__":

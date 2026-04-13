@@ -6,7 +6,7 @@
 # output against the golden reference (golden/tutorials/01_add.py).
 #
 # Checks:
-#   - Same API patterns (data_copy, set_flag/wait_flag, asc.add)
+#   - Same API patterns (asc2.load, asc2.store, element-wise add)
 #   - Same sync event types (MTE2_V, V_MTE3, MTE3_MTE2)
 #   - Same verification approach (torch.allclose)
 #   - Both pass static verification
@@ -52,9 +52,9 @@ print_section_header "Phase: Agent Generation"
 
 PROMPT="Write a pyasc vector add kernel. The kernel should:
 - Accept two float32 input tensors x, y and produce output z = x + y
-- Use @asc.jit decorator
-- Use asc.GlobalTensor, asc.LocalTensor, asc.data_copy
-- Use set_flag/wait_flag for pipeline sync with MTE2_V, V_MTE3, MTE3_MTE2 events
+- Use @asc2.jit decorator
+- Use asc2.tensor, asc2.load, asc2.store, and asc2.range as needed
+- Use pipeline sync with MTE2_V, V_MTE3, MTE3_MTE2 events where applicable
 - Include a launch function and torch.allclose verification
 - Use only supported pyasc syntax
 
@@ -148,7 +148,7 @@ golden_src=$(cat "$GOLDEN")
 gen_src=$(cat "$GEN_PY")
 
 # API pattern checks
-for pattern in "data_copy" "set_flag" "wait_flag" "allclose"; do
+for pattern in "asc2.load" "asc2.store" "allclose"; do
     golden_has=false
     gen_has=false
     echo "$golden_src" | grep -q "$pattern" && golden_has=true
@@ -176,21 +176,19 @@ done
 echo ""
 
 # Decorator check
-if echo "$gen_src" | grep -q "@asc.jit"; then
-    print_pass "@asc.jit decorator present"
+if echo "$gen_src" | grep -qE '@asc2\.jit|@asc\.jit'; then
+    print_pass "@asc2.jit or @asc.jit decorator present"
 else
-    print_fail "@asc.jit decorator missing"
+    print_fail "@asc2.jit / @asc.jit decorator missing"
     FAILED=$((FAILED + 1))
 fi
 
-# Tensor type check
-for ttype in "GlobalTensor" "LocalTensor"; do
-    if echo "$gen_src" | grep -q "$ttype"; then
-        print_pass "$ttype used"
-    else
-        print_warn "$ttype not found"
-    fi
-done
+# Tensor API check
+if echo "$gen_src" | grep -q "asc2.tensor"; then
+    print_pass "asc2.tensor used"
+else
+    print_warn "asc2.tensor not found"
+fi
 
 echo ""
 

@@ -39,14 +39,14 @@ print_section_header "Positive Kernel-Dev Prompts"
 
 run_behavior_test \
     "Kernel dev team: start new operator" \
-    "I am using the pyasc kernel development team workflow. What is the first step before writing any @asc.jit kernel code?" \
+    "I am using the pyasc kernel development team workflow. What is the first step before writing any @asc2.jit kernel code?" \
     "workflow|phase|skill|codegen|document|read|design|pyasc|kernel" \
     60
 
 run_behavior_test \
     "Team context: vector add" \
     "Under the pyasc-kernel-dev-team setup, how do I implement a minimal float32 vector add kernel?" \
-    "@asc\.jit|kernel|data_copy|GlobalTensor|pyasc|asc\.|LocalTensor" \
+    "@asc2\.jit|@asc\.jit|kernel|asc2\.load|asc2\.store|asc2\.tensor|pyasc|asc\." \
     60
 
 run_behavior_test \
@@ -63,8 +63,8 @@ run_behavior_test \
 
 run_behavior_test \
     "Sync in pipeline" \
-    "For pyasc kernel development on Ascend, explain set_flag and wait_flag briefly." \
-    "set_flag|wait_flag|HardEvent|sync|pipeline|pyasc|kernel" \
+    "For pyasc kernel development on Ascend, explain how asc2.load and asc2.store participate in pipeline sync briefly." \
+    "asc2\.load|asc2\.store|HardEvent|sync|pipeline|pyasc|kernel" \
     60
 
 # ============================================

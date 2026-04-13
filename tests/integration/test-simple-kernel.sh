@@ -77,17 +77,17 @@ echo "--- Test 4: Golden kernel content check ---"
 
 GOLDEN_ADD="$SKILLS_DIR/golden/tutorials/01_add.py"
 if [ -f "$GOLDEN_ADD" ]; then
-    if grep -q "@asc.jit" "$GOLDEN_ADD"; then
-        print_pass "Golden kernel has @asc.jit decorator"
+    if grep -qE '@asc2\.jit|@asc\.jit' "$GOLDEN_ADD"; then
+        print_pass "Golden kernel has @asc2.jit or @asc.jit decorator"
     else
-        print_fail "Golden kernel missing @asc.jit"
+        print_fail "Golden kernel missing @asc2.jit / @asc.jit"
         ERRORS=$((ERRORS + 1))
     fi
 
-    if grep -q "asc.data_copy" "$GOLDEN_ADD"; then
-        print_pass "Golden kernel has asc.data_copy"
+    if grep -q "asc2.load" "$GOLDEN_ADD" && grep -q "asc2.store" "$GOLDEN_ADD"; then
+        print_pass "Golden kernel has asc2.load and asc2.store"
     else
-        print_fail "Golden kernel missing asc.data_copy"
+        print_fail "Golden kernel missing asc2.load or asc2.store"
         ERRORS=$((ERRORS + 1))
     fi
 
@@ -98,10 +98,10 @@ if [ -f "$GOLDEN_ADD" ]; then
         ERRORS=$((ERRORS + 1))
     fi
 
-    if grep -q "set_flag" "$GOLDEN_ADD"; then
-        print_pass "Golden kernel has sync flags"
+    if grep -q "asc2.range" "$GOLDEN_ADD"; then
+        print_pass "Golden kernel has asc2.range tile loop"
     else
-        print_fail "Golden kernel missing sync flags"
+        print_fail "Golden kernel missing asc2.range"
         ERRORS=$((ERRORS + 1))
     fi
 fi
@@ -112,10 +112,10 @@ echo "--- Test 5: Template content check ---"
 
 TEMPLATE="$SKILLS_DIR/skills/pyasc-codegen-workflow/templates/kernel-template.py"
 if [ -f "$TEMPLATE" ]; then
-    if grep -q "@asc.jit" "$TEMPLATE"; then
-        print_pass "Kernel template has @asc.jit"
+    if grep -qE '@asc2\.jit|@asc\.jit' "$TEMPLATE"; then
+        print_pass "Kernel template has @asc2.jit or @asc.jit"
     else
-        print_fail "Kernel template missing @asc.jit"
+        print_fail "Kernel template missing @asc2.jit / @asc.jit"
         ERRORS=$((ERRORS + 1))
     fi
 

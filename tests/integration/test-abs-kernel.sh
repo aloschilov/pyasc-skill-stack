@@ -49,7 +49,7 @@ print_section_header "Phase: Agent Execution"
 PROMPT="Help me develop an abs operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].
 
 Follow the pyasc-codegen-workflow phases strictly.
-Use @asc.jit, asc.GlobalTensor, asc.LocalTensor, asc.data_copy, set_flag/wait_flag.
+Use @asc2.jit, asc2.tensor, asc2.load, asc2.store, asc2.range, and kernel[cores](...) launch syntax.
 Include torch.allclose verification for all three shapes.
 Write the kernel to kernels/abs_f16/kernel.py."
 
@@ -194,7 +194,7 @@ print_section_header "Phase: Golden Comparison"
 if [ -n "$KERNEL_PY" ] && [ -f "$KERNEL_PY" ] && [ -f "$GOLDEN_ABS" ]; then
     gen_src=$(cat "$KERNEL_PY")
 
-    for pattern in "data_copy" "set_flag" "wait_flag" "allclose" "abs" "float16"; do
+    for pattern in "asc2.tensor" "asc2.load" "asc2.store" "allclose" "abs" "float16"; do
         if echo "$gen_src" | grep -q "$pattern"; then
             print_pass "Generated has '$pattern'"
         else
@@ -205,11 +205,11 @@ if [ -n "$KERNEL_PY" ] && [ -f "$KERNEL_PY" ] && [ -f "$GOLDEN_ABS" ]; then
 
     echo ""
 
-    for event in "MTE2_V" "V_MTE3" "MTE3_MTE2"; do
-        if echo "$gen_src" | grep -q "$event"; then
-            print_pass "Sync event '$event' present"
+    for pattern in "asc2.range" "block_idx" "GlobalAddress"; do
+        if echo "$gen_src" | grep -q "$pattern"; then
+            print_pass "asc2 pattern '$pattern' present"
         else
-            print_warn "Sync event '$event' missing"
+            print_warn "asc2 pattern '$pattern' missing"
         fi
     done
 

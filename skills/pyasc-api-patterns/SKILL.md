@@ -1,145 +1,167 @@
 ---
 name: pyasc-api-patterns
-description: pyasc API usage patterns and best practices. Provides correct usage for tensor operations, data transfer, sync primitives, JIT options, and type system. Trigger — when calling pyasc APIs, encountering parameter errors, or needing API usage guidance.
+description: pyasc asc2 API usage patterns and best practices. Provides correct usage for tensor operations, tiling, memory access, JIT options, and type system. Trigger — when calling pyasc asc2 APIs, encountering parameter errors, or needing API usage guidance.
 ---
 
-# pyasc API Best Practices
+# pyasc asc2 API Best Practices
 
 ## API Category Index
 
-| API Category | Key APIs | Documentation | Typical Scenarios |
-|-------------|----------|---------------|-------------------|
-| **Tensor operations** | `asc.add`, `asc.sub`, `asc.mul`, `asc.div` | [api-tensor-ops.md](references/api-tensor-ops.md) | Element-wise computation |
-| **Data transfer** | `asc.data_copy` | [api-data-transfer.md](references/api-data-transfer.md) | GM <-> UB data movement |
-| **Sync primitives** | `asc.set_flag`, `asc.wait_flag`, `asc.HardEvent` | [api-sync-pipeline.md](references/api-sync-pipeline.md) | Pipeline synchronization |
-| **JIT options** | `@asc.jit(...)`, compile parameters | [api-jit-options.md](references/api-jit-options.md) | Compilation control |
-| **Quick reference** | All APIs | [api-quickref.md](references/api-quickref.md) | Quick lookup |
+| API Category | Key APIs | Typical Scenarios |
+|-------------|----------|-------------------|
+| **Memory** | `asc2.tensor`, `asc2.load`, `asc2.store` | Global memory access, tile load/store |
+| **Computation** | `x + y`, `asc2.abs(x)`, `asc2.exp(x)`, `asc2.where()` | Element-wise and reduction ops |
+| **Control flow** | `asc2.range(n)` | Tile loops with optional unrolling |
+| **Programming model** | `asc2.block_idx()`, `asc2.block_num()` | Multi-core work distribution |
+| **JIT** | `@asc2.jit(always_compile=True)` | Compilation control |
+| **Kernel params** | `asc.GlobalAddress`, `asc.ConstExpr[int]` | Kernel function signatures |
+| **Tiling math** | `asc.ceildiv(a, b)` | Compute tiles per block |
 
 ## Core Types
 
-### Tensor types
+### Kernel parameter types
 
 | Type | Purpose | Example |
 |------|---------|---------|
-| `asc.GlobalAddress` | Kernel parameter for global memory pointer | `def kernel(x: asc.GlobalAddress, ...)` |
-| `asc.GlobalTensor` | Global memory tensor handle | `x_gm = asc.GlobalTensor()` |
-| `asc.LocalTensor` | Local (UB) memory tensor | `x_local = asc.LocalTensor(dtype, pos, offset, size)` |
+| `asc.GlobalAddress` | Global memory pointer for kernel args | `def kernel(x_ptr: asc.GlobalAddress, ...)` |
+| `asc.ConstExpr[int]` | Compile-time integer constant (included in JIT cache key) | `tile_size: asc.ConstExpr[int]` |
+| `int` | Runtime integer | `size: int` |
 
-### Enum types
+### asc2 tensor and memory types
 
-| Enum | Values | Purpose |
-|------|--------|---------|
-| `asc.TPosition` | `VECIN`, `VECOUT`, `VECCALC`, `A1`, `A2`, `B1`, `B2`, `CO1`, `CO2` | Tensor logical position |
-| `asc.HardEvent` | `MTE2_V`, `V_MTE3`, `MTE3_MTE2`, ... | Pipeline sync events |
+| Type / Function | Purpose | Example |
+|-----------------|---------|---------|
+| `asc2.tensor(ptr, [shape])` | Wrap a global memory pointer as a tensor | `x_gm = asc2.tensor(x_ptr, [size])` |
+| `asc2.load(gm, [tile_shape], offsets=[...])` | Load a tile from global memory | `x = asc2.load(x_gm, [tile_size], offsets=[offset])` |
+| `asc2.store(tile, gm, offsets=[...])` | Store a tile to global memory | `asc2.store(out, out_gm, offsets=[offset])` |
 
 ### Configuration types
 
 | Type | Purpose | Example |
 |------|---------|---------|
 | `asc.runtime.config.Backend` | Execution backend | `Backend.NPU`, `Backend.Model` |
-| `asc.runtime.config.Platform` | Target platform | Hardware-specific SoC |
+| `asc.runtime.config.Platform` | Target platform | `Platform.Ascend910B1` |
 
 ## Common Patterns
 
-### Kernel function pattern
+### Kernel function pattern (asc2)
 
 ```python
-@asc.jit
-def my_kernel(x: asc.GlobalAddress, y: asc.GlobalAddress, z: asc.GlobalAddress, n: int):
-    offset = asc.get_block_idx() * n
-    x_gm = asc.GlobalTensor()
-    x_gm.set_global_buffer(x + offset, n)
-    # ... computation ...
+import asc
+import asc2
+
+@asc2.jit(always_compile=True)
+def my_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
+              size: int, tile_size: asc.ConstExpr[int], tile_per_block: asc.ConstExpr[int]):
+    x_gm = asc2.tensor(x_ptr, [size])
+    out_gm = asc2.tensor(out_ptr, [size])
+    base_offset = asc2.block_idx() * tile_size * tile_per_block
+    for i in asc2.range(tile_per_block):
+        tile_offset = base_offset + i * tile_size
+        x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
+        out = asc2.abs(x)  # your operation here
+        asc2.store(out, out_gm, offsets=[tile_offset])
 ```
 
-### Launch pattern
+### Launch pattern (asc2)
 
 ```python
-import asc.lib.runtime as rt
+TILE_SIZE = 128
+CORE_NUM = 16
 
-my_kernel[core_num, rt.current_stream()](x_tensor, y_tensor, z_tensor, block_length)
+num_tiles = asc.ceildiv(size, TILE_SIZE)
+my_kernel[CORE_NUM](x, out, size, TILE_SIZE, asc.ceildiv(num_tiles, CORE_NUM))
 ```
 
-### Data copy pattern (GM -> UB -> Compute -> UB -> GM)
+Note: asc2 launch uses `kernel[core_num](...)` — no stream argument needed.
+
+### Tiling with ceildiv
+
+asc2 handles tail/non-divisible tile sizes automatically. The tiling pattern is:
 
 ```python
-asc.data_copy(x_local[buf_offset:], x_gm[tile_offset:], tile_length)
-asc.set_flag(asc.HardEvent.MTE2_V, buf_id)
-asc.wait_flag(asc.HardEvent.MTE2_V, buf_id)
+TILE_SIZE = 128   # fixed tile size (elements per tile)
+CORE_NUM = 16     # number of compute cores
 
-asc.add(z_local[buf_offset:], x_local[buf_offset:], y_local[buf_offset:], tile_length)
-
-asc.set_flag(asc.HardEvent.V_MTE3, buf_id)
-asc.wait_flag(asc.HardEvent.V_MTE3, buf_id)
-asc.data_copy(z_gm[tile_offset:], z_local[buf_offset:], tile_length)
+size = data.size
+num_tiles = asc.ceildiv(size, TILE_SIZE)
+tile_per_block = asc.ceildiv(num_tiles, CORE_NUM)
 ```
 
-### Dynamic tiling for variable shapes (CRITICAL)
+Inside the kernel:
+```python
+base_offset = asc2.block_idx() * tile_size * tile_per_block
+for i in asc2.range(tile_per_block):
+    tile_offset = base_offset + i * tile_size
+    x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
+    # ... compute ...
+    asc2.store(out, out_gm, offsets=[tile_offset])
+```
 
-> **When the user specifies multiple shapes, some may be too small for the default
-> `tile_num=8` / `core_num=8`.  You MUST use dynamic tiling — otherwise the
-> simulator will produce incorrect results silently.**
+**Why `ConstExpr`?** `tile_size` and `tile_per_block` are passed as `asc.ConstExpr[int]` so the JIT compiler can optimize tile-level code and include these values in the cache key.
 
-The tile length (`block_length / tile_num / BUFFER_NUM`) **must** be >= 32 for
-DMA to work correctly.  Use `_compute_tiling()` to pick safe values and pass
-`tile_num` as an `asc.ConstExpr[int]` kernel parameter.  This ensures the JIT
-generates a separate compiled kernel per `tile_num` value (pyasc caches by
-`ConstExpr` values; ordinary globals are NOT included in the cache key).
+### asc2.range() options
 
 ```python
-BUFFER_NUM = 2
-MIN_TILE_LENGTH = 32
-
-def _compute_tiling(total_length: int) -> tuple:
-    """Pick (core_num, tile_num) that keep tile_length >= MIN_TILE_LENGTH."""
-    for cores in (8, 4, 2, 1):
-        if total_length % cores != 0:
-            continue
-        block = total_length // cores
-        for tiles in (8, 4, 2, 1):
-            if block % (tiles * BUFFER_NUM) != 0:
-                continue
-            if block // tiles // BUFFER_NUM >= MIN_TILE_LENGTH:
-                return cores, tiles
-    return 1, 1
-
-@asc.jit
-def my_kernel(x: asc.GlobalAddress, y: asc.GlobalAddress,
-              block_length: int, tile_num: asc.ConstExpr[int]):
-    tile_length = block_length // tile_num // BUFFER_NUM
-    # ... use tile_num inside range() and tile_length for DMA/compute ...
-    for i in range(tile_num * BUFFER_NUM):
-        ...
-
-def kernel_launch(x: torch.Tensor) -> torch.Tensor:
-    y = torch.zeros_like(x)
-    total_length = y.numel()
-    core_num, tile_num = _compute_tiling(total_length)
-    block_length = total_length // core_num
-    my_kernel[core_num, rt.current_stream()](x, y, block_length, tile_num)
-    return y
+for i in asc2.range(tile_per_block):                # basic loop
+for i in asc2.range(n, unroll_factor=2):             # unroll by 2
+for i in asc2.range(n, parallel=True):               # parallel iteration
 ```
 
-**Why `ConstExpr`?** pyasc's JIT file cache keys include `ConstExpr` parameter
-values but NOT ordinary module globals.  If you use `global TILE_NUM` mutation,
-a stale cache entry compiled with a different `TILE_NUM` may be silently reused,
-producing incorrect results.
-
-**Example**: shape `[1, 128]` has 128 elements.  With default `cores=8, tile_num=8`,
-`tile_length = 128/8/8/2 = 1` — far too small, produces garbage.
-`_compute_tiling(128)` returns `(2, 1)` → `tile_length = 64/1/2 = 32` — correct.
-
-### Verification pattern
+### Verification pattern (numpy)
 
 ```python
-import torch
-z = kernel_launch(x, y)
-assert torch.allclose(z, x + y), "Kernel output mismatch"
+import numpy as np
+out = kernel_launch(x)
+expected = np.abs(x)
+np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
 ```
+
+## Available asc2 Operations
+
+### Unary operations (on tiles)
+
+| Operation | Usage | Notes |
+|-----------|-------|-------|
+| `asc2.abs(x)` | Absolute value | |
+| `asc2.exp(x)` | Exponential | |
+| `asc2.log(x)` | Natural log | |
+| `asc2.sqrt(x)` | Square root | |
+| `asc2.relu(x)` | ReLU activation | |
+| `asc2.erf(x)` | Error function | |
+| `asc2.sin(x)` | Sine | |
+| `asc2.cos(x)` | Cosine | |
+| `-x` | Negate | Unary operator |
+
+### Binary operations (on tiles)
+
+| Operation | Usage | Notes |
+|-----------|-------|-------|
+| `x + y` | Add | |
+| `x - y` | Subtract | |
+| `x * y` | Multiply | |
+| `x / y` | Divide | |
+| `asc2.where(cond, a, b)` | Conditional select | Like `np.where` |
+
+### Reduction operations
+
+| Operation | Usage | Notes |
+|-----------|-------|-------|
+| `asc2.reduce_max(x)` | Max reduction | Returns scalar tile |
+| `x.sum()` | Sum reduction | |
+| `x.max()` | Max reduction | |
+| `x.min()` | Min reduction | |
+
+### Advanced operations
+
+| Operation | Usage | Notes |
+|-----------|-------|-------|
+| `asc2.softmax(x)` | Softmax | |
+| `asc2.matmul(a, b)` or `a @ b` | Matrix multiply | Requires `asc2.TileLocation` for memory placement |
 
 ## API Restrictions
 
-**Do not use inside `@asc.jit` functions**:
+**Do not use inside `@asc2.jit` functions**:
 - `print()` — use `assert` with f-strings for debug messages
 - Standard library imports — all imports must be outside JIT scope
 - Dynamic Python features (exceptions, generators, etc.)
@@ -148,10 +170,14 @@ assert torch.allclose(z, x + y), "Kernel output mismatch"
 - Supported: `bool`, `int`, `float`, numpy scalars/ndarray, `torch.Tensor`, `asc.GlobalAddress`
 - Not supported as runtime args: `str`, `tuple`, `list`, `dict` (use `asc.ConstExpr[T]` for compile-time)
 
+**What asc2 handles automatically** (do NOT do manually):
+- Pipeline synchronization (`set_flag`/`wait_flag`) — `@asc2.jit` sets `insert_sync=True`
+- DMA transfers — use `asc2.load`/`asc2.store` instead of `asc.data_copy`
+- Buffer management — no `BUFFER_NUM`, `LocalTensor`, or `TPosition` needed
+- Double buffering — handled by `run_asc2_passes=True`
+
 ## References
 
 - [API Quick Reference](references/api-quickref.md)
 - [Tensor Operations](references/api-tensor-ops.md)
-- [Data Transfer](references/api-data-transfer.md)
-- [Sync and Pipeline](references/api-sync-pipeline.md)
 - [JIT Options](references/api-jit-options.md)

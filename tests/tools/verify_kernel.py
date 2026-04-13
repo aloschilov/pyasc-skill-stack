@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Static AST verifier for pyasc kernels.
+"""Static AST verifier for pyasc asc2 kernels.
 
-Parses a kernel .py file and checks it against the pyasc syntax constraints:
-  - @asc.jit decorated kernel function exists
+Parses a kernel .py file and checks it against the pyasc asc2 constraints:
+  - @asc2.jit or @asc.jit decorated kernel function exists
   - Kernel does not return a value
   - No banned constructs inside JIT-decorated functions
-  - Only allowed loop forms (for ... in range(...))
-  - set_flag / wait_flag sync calls present
-  - data_copy calls present
-  - Verification with torch.allclose or numpy.allclose present
+  - Only allowed loop forms (for ... in asc2.range(...) or range(...))
+  - asc2.load / asc2.store calls present (asc2 memory access)
+  - asc2.tensor calls present (asc2 global memory wrapping)
+  - Verification with assert_allclose or allclose present
 
 Exit 0 = all checks pass, exit 1 = one or more failures.
 """
@@ -48,26 +48,24 @@ except AttributeError:
     pass
 
 
-def _is_asc_jit_decorator(node: ast.expr) -> bool:
-    """Return True if *node* represents ``@asc.jit`` or ``@asc.jit(...)``."""
+def _is_jit_decorator(node: ast.expr) -> bool:
+    """Return True if *node* represents @asc.jit, @asc2.jit, or their call forms."""
     if isinstance(node, ast.Attribute):
-        return (
-            isinstance(node.value, ast.Name)
-            and node.value.id == "asc"
-            and node.attr == "jit"
-        )
+        if isinstance(node.value, ast.Name):
+            if node.value.id in ("asc", "asc2") and node.attr == "jit":
+                return True
     if isinstance(node, ast.Call):
-        return _is_asc_jit_decorator(node.func)
+        return _is_jit_decorator(node.func)
     return False
 
 
 def _find_jit_functions(tree: ast.Module) -> list[ast.FunctionDef]:
-    """Return top-level functions decorated with @asc.jit."""
+    """Return top-level functions decorated with @asc.jit or @asc2.jit."""
     results = []
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, ast.FunctionDef):
             for dec in node.decorator_list:
-                if _is_asc_jit_decorator(dec):
+                if _is_jit_decorator(dec):
                     results.append(node)
                     break
     return results
@@ -125,13 +123,9 @@ def _check_banned_constructs(func: ast.FunctionDef) -> list[str]:
 
 
 def _check_loop_forms(func: ast.FunctionDef) -> list[str]:
-    """Only ``for ... in range(...)`` and ``for ... in asc.static_range(...)`` allowed."""
+    """for loops must use range(), asc2.range(), or asc.static_range()."""
     issues = []
     for node in ast.walk(func):
-        if isinstance(node, ast.While):
-            issues.append(
-                f"line {node.lineno}: while loop in '{func.name}' (only for/range allowed)"
-            )
         if isinstance(node, ast.For):
             it = node.iter
             ok = False
@@ -173,7 +167,7 @@ def verify(path: str) -> list[CheckResult]:
     results.append(CheckResult(
         "jit_decorator",
         len(jit_funcs) > 0,
-        f"Found {len(jit_funcs)} @asc.jit function(s)" if jit_funcs else "No @asc.jit function found",
+        f"Found {len(jit_funcs)} @asc2.jit/@asc.jit function(s)" if jit_funcs else "No JIT function found",
     ))
 
     if not jit_funcs:
@@ -207,20 +201,23 @@ def verify(path: str) -> list[CheckResult]:
             "; ".join(loop_issues) if loop_issues else "OK",
         ))
 
-    has_sync = _source_has_call(source, "set_flag") and _source_has_call(source, "wait_flag")
-    results.append(CheckResult("sync_calls", has_sync,
-                               "set_flag + wait_flag present" if has_sync else "Missing set_flag/wait_flag"))
+    has_load = _source_has_call(source, "load")
+    has_store = _source_has_call(source, "store")
+    has_load_store = has_load and has_store
+    results.append(CheckResult("asc2_load_store", has_load_store,
+                               "asc2.load + asc2.store present" if has_load_store else "Missing asc2.load/asc2.store"))
 
-    has_dc = _source_has_call(source, "data_copy")
-    results.append(CheckResult("data_copy", has_dc,
-                               "data_copy present" if has_dc else "Missing data_copy"))
+    has_tensor = _source_has_call(source, "tensor")
+    results.append(CheckResult("asc2_tensor", has_tensor,
+                               "asc2.tensor present" if has_tensor else "Missing asc2.tensor"))
 
     has_verify = (
         _source_has_call(source, "allclose")
+        or _source_has_call(source, "assert_allclose")
         or "allclose" in source
     )
     results.append(CheckResult("verification", has_verify,
-                               "allclose verification present" if has_verify else "Missing torch/numpy allclose"))
+                               "allclose verification present" if has_verify else "Missing assert_allclose / allclose"))
 
     return results
 

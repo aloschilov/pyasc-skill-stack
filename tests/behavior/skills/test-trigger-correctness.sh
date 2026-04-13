@@ -41,12 +41,12 @@ print_section_header "Positive Domain Prompts"
 run_behavior_test \
     "Vector add kernel query" \
     "How do I implement a vector add kernel in pyasc?" \
-    "@asc\.jit|kernel|data_copy|GlobalTensor|pyasc|asc\." \
+    "@asc2\.jit|@asc\.jit|kernel|asc2\.load|asc2\.store|asc2\.tensor|pyasc|asc\." \
     60
 
 run_behavior_test \
     "Supported syntax query" \
-    "What Python syntax is supported inside @asc.jit functions in pyasc?" \
+    "What Python syntax is supported inside @asc2.jit functions in pyasc?" \
     "for.*range|supported|unsupported|ConstExpr|syntax|jit" \
     60
 
@@ -58,25 +58,25 @@ run_behavior_test \
 
 run_behavior_test \
     "Data copy API query" \
-    "How do I use asc.data_copy in pyasc to transfer data?" \
-    "data_copy|LocalTensor|GlobalTensor|TPosition|copy" \
+    "How do I use asc2.load and asc2.store in pyasc to transfer data?" \
+    "asc2\.load|asc2\.store|asc2\.tensor|TPosition|copy|GM|UB" \
     60
 
 run_behavior_test \
     "Sync primitives query" \
-    "How do set_flag and wait_flag work in pyasc pipeline sync?" \
-    "set_flag|wait_flag|HardEvent|MTE2|sync|pipeline" \
+    "How do asc2.load and asc2.store relate to pipeline sync in pyasc?" \
+    "asc2\.load|asc2\.store|HardEvent|MTE2|sync|pipeline" \
     60
 
 run_behavior_test \
     "pyasc-api-patterns skill trigger" \
-    "What are the best practices for using asc.data_copy API?" \
-    "data_copy|LocalTensor|GlobalTensor|TPosition|copy|tensor|pyasc|asc\." \
+    "What are the best practices for using asc2.load and asc2.store?" \
+    "asc2\.load|asc2\.store|asc2\.tensor|TPosition|copy|tensor|pyasc|asc\." \
     60
 
 run_behavior_test \
     "pyasc-syntax-constraints skill trigger" \
-    "What Python constructs are banned inside @asc.jit?" \
+    "What Python constructs are banned inside @asc2.jit?" \
     "syntax|unsupported|forbidden|jit|@asc|lambda|print|try" \
     60
 
@@ -108,7 +108,7 @@ run_behavior_test_negative_no_pyasc() {
     local name="$1"
     local prompt="$2"
     local timeout_val="${3:-45}"
-    local drift='@asc\.jit|GlobalTensor|LocalTensor|pyasc.*kernel|Ascend|NPU|data_copy.*pyasc'
+    local drift='@asc2\.jit|@asc\.jit|asc2\.tensor|GlobalTensor|LocalTensor|pyasc.*kernel|Ascend|NPU|asc2\.load.*pyasc|data_copy.*pyasc'
 
     echo "Testing: $name"
 

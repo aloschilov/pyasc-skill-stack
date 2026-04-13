@@ -1,22 +1,22 @@
 ---
 name: pyasc-codegen-workflow
-description: pyasc kernel development standard workflow. Contains 4 phases with checkpoints — environment preparation, design, implementation with review, and verification. Trigger — user requests kernel development using pyasc. Applicable to pyasc JIT kernels (Python scripts), not Ascend C direct mode.
+description: pyasc kernel development standard workflow using the asc2 tile-based API. Contains 4 phases with checkpoints — environment preparation, design, implementation with review, and verification. Trigger — user requests kernel development using pyasc. Applicable to pyasc asc2 JIT kernels (Python scripts).
 ---
 
-# pyasc kernel development workflow
+# pyasc kernel development workflow (asc2 API)
 
-## pyasc JIT kernel requirements
+## pyasc asc2 JIT kernel requirements
 
-> **This skill is for pyasc JIT kernels**: the final product is a runnable Python script using `@asc.jit`, not a C++ executable or `.so` library.
+> **This skill is for pyasc asc2 kernels**: the final product is a runnable Python script using `@asc2.jit`, not a C++ executable or `.so` library.
 
 **Phase 2 exit requirements**:
-- There is a kernel function decorated with `@asc.jit`
-- There is a launch function using `kernel[core_num, stream](...)`
-- There is a host-side driver (`if __name__ == "__main__"`) or test harness
-- There is output verification (`torch.allclose` or numpy comparison)
+- There is a kernel function decorated with `@asc2.jit(always_compile=True)`
+- There is a launch function using `kernel[core_num](...)`
+- There is a host-side driver (`if __name__ == "__main__"`) AND a `test_*` function (for pytest)
+- There is output verification (`np.testing.assert_allclose` or `torch.allclose`)
 - The kernel runs successfully (on NPU or Model backend)
 
-**Golden reference**: `golden/tutorials/01_add.py` (local) or `~/workspace/pyasc/python/tutorials/01_add/add.py` (external)
+**Golden reference**: `golden/kernels/abs_f16.py` (local) or `~/workspace/pyasc/python/test/kernels/asc2/test_vadd.py` (external)
 
 ---
 
@@ -37,9 +37,12 @@ description: pyasc kernel development standard workflow. Contains 4 phases with 
 
 **Common mistakes**:
 - Phase 0 skips environment check -> pyasc not installed, CANN missing
-- Phase 2 uses unsupported syntax inside `@asc.jit` -> JIT compilation fails
+- Phase 2 uses unsupported syntax inside `@asc2.jit` -> JIT compilation fails
 - Skipping acceptance review -> syntax constraint violations missed
-- Using fixed `core_num=8` / `tile_num=8` with small shapes (e.g. `[1,128]`) -> tile_length too small -> silent incorrect results on simulator. **Always use `_compute_tiling()` and pass `tile_num` as `asc.ConstExpr[int]`** (pyasc's JIT cache ignores ordinary globals — only `ConstExpr` values are cache-safe).
+- Using `asc.data_copy`, `asc.set_flag`/`asc.wait_flag`, `asc.GlobalTensor`, or `asc.LocalTensor` — these are **asc v1 APIs, NOT asc2**. Use `asc2.load`/`asc2.store` and `asc2.tensor` instead.
+- Using `range()` inside the kernel — use `asc2.range()` instead
+- Using `kernel[core_num, stream](...)` launch syntax — asc2 uses `kernel[core_num](...)`
+- Forgetting `always_compile=True` in `@asc2.jit` — required for development
 
 ---
 
@@ -128,11 +131,12 @@ Main Agent
 
 1. **Understand the operation**: What mathematical/logical operation does this kernel perform?
 2. **Retrieve documentation**: Read the golden API reference for the target operation.
-   - **MANDATORY READ**: `golden/docs/python-api/language/generated/asc.language.basic.{operation}.md`
-   - Also read the closest tutorial: `golden/tutorials/01_add.py` or another relevant golden tutorial
-3. **Select APIs**: Choose from `asc.language.basic`, `asc.language.core`, etc.
+   - **MANDATORY READ**: `golden/kernels/abs_f16.py` (asc2 golden reference)
+   - Also read the external reference: `~/workspace/pyasc/python/test/kernels/asc2/test_vadd.py`
+3. **Select APIs**: Choose from `asc2` operations (see table below).
    - **MANDATORY READ**: Load skill `pyasc-api-patterns` to check correct API usage patterns
-   - **CRITICAL**: Read the "Dynamic tiling for variable shapes" section — you MUST use `_compute_tiling()` if any requested shape has fewer than ~4096 elements (e.g. `[1,128]`)
+   - The standard pattern is: `asc2.tensor` -> `asc2.load` -> compute -> `asc2.store`
+   - Tiling: fixed `TILE_SIZE` + `asc.ceildiv(num_tiles, CORE_NUM)` for `tile_per_block`
 4. **Check syntax constraints**: Verify all constructs you plan to use are supported.
    - **MANDATORY READ**: Load skill `pyasc-syntax-constraints` — confirm every construct is in the supported set
 5. **Write design document**: Use [templates/design-template.md](templates/design-template.md)
@@ -146,7 +150,7 @@ Main Agent
 - [ ] "## Design Score" section present with numeric rating >= 8.5
 - [ ] All syntax compliance checkboxes are `[x]`
 - [ ] Evidence of reading `pyasc-syntax-constraints` and `pyasc-api-patterns` skills
-- [ ] Evidence of reading the golden API reference for the target operation
+- [ ] Evidence of reading the golden asc2 reference kernel
 
 **Detailed guide**: [references/phase1-design.md](references/phase1-design.md)
 
@@ -211,24 +215,24 @@ Task 2: Acceptance review (MUST be a separate step after Task 1)
 
 Verification has three layers:
 
-1. **Layer 1 — Simulator execution** (use `python3.10` — the python with pyasc and torch installed):
+1. **Layer 1 — Simulator execution** (use `python3.10` — the python with pyasc installed):
    ```bash
    export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
    cd kernels/{name}
    python3.10 kernel.py -r Model -v Ascend910B1
    ```
-   - **IMPORTANT**: Do NOT use bare `python` or `python3` — those may resolve to a different version without pyasc/torch.
+   - **IMPORTANT**: Do NOT use bare `python` or `python3` — those may resolve to a different version without pyasc.
    - **IMPORTANT**: The `LD_LIBRARY_PATH` export and `-v Ascend910B1` platform flag are required for the CANN simulator.
    - If this succeeds, record the output in `kernels/{name}/docs/verification.md`
    - If runtime fails for ANY reason (missing lib, platform error, timeout, etc.): record the error message and **immediately proceed to Layer 2**. Do NOT attempt to debug or fix the runtime environment.
 
 2. **Layer 2 — Static AST verification** (always do this even if runtime works):
    - Parse kernel.py with Python `ast` module to verify it is valid Python
-   - Verify `@asc.jit` decorator is present
+   - Verify `@asc2.jit` decorator is present
    - Verify no banned constructs (`print`, `try/except`, `break`, `continue`, `lambda`, `import` inside JIT)
-   - Verify `set_flag`/`wait_flag` sync pairs present
-   - Verify `data_copy` usage present
-   - Verify `allclose` or numpy verification present in host code
+   - Verify `asc2.load` and `asc2.store` usage present
+   - Verify `asc2.tensor` usage present
+   - Verify `assert_allclose` or numpy/torch verification present in host code
 
 3. **Layer 3 — Write verification record** — `kernels/{name}/docs/verification.md`:
    - Runtime result (PASS / FAIL / SKIP with reason and error message)

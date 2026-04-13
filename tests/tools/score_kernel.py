@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""Automated code-review scoring for pyasc kernels.
+"""Automated code-review scoring for pyasc asc2 kernels.
 
-Implements 10 checklist categories derived from
-skills/pyasc-codegen-workflow/references/code-review-checklist.md.
-
+Implements 10 checklist categories for asc2 kernels.
 Each category is scored 0 or 1; the final score is out of 10.
 The workflow acceptance threshold is >= 8.5.
 
@@ -29,18 +27,21 @@ class Check(NamedTuple):
 # AST helpers
 # ---------------------------------------------------------------------------
 
-def _is_asc_jit(node: ast.expr) -> bool:
+def _is_jit(node: ast.expr) -> bool:
+    """Match @asc.jit, @asc2.jit, or their call forms."""
     if isinstance(node, ast.Attribute):
-        return isinstance(node.value, ast.Name) and node.value.id == "asc" and node.attr == "jit"
+        if isinstance(node.value, ast.Name):
+            if node.value.id in ("asc", "asc2") and node.attr == "jit":
+                return True
     if isinstance(node, ast.Call):
-        return _is_asc_jit(node.func)
+        return _is_jit(node.func)
     return False
 
 
 def _jit_funcs(tree: ast.Module) -> list[ast.FunctionDef]:
     return [
         n for n in ast.iter_child_nodes(tree)
-        if isinstance(n, ast.FunctionDef) and any(_is_asc_jit(d) for d in n.decorator_list)
+        if isinstance(n, ast.FunctionDef) and any(_is_jit(d) for d in n.decorator_list)
     ]
 
 
@@ -79,7 +80,7 @@ def score(path: str) -> list[Check]:
 
     jit = _jit_funcs(tree)
 
-    # 1. @asc.jit decorator present
+    # 1. @asc2.jit or @asc.jit decorator present
     checks.append(Check("jit_decorator", len(jit) > 0,
                          f"{len(jit)} JIT function(s)" if jit else "missing"))
 
@@ -107,46 +108,41 @@ def score(path: str) -> list[Check]:
     checks.append(Check("no_banned_constructs", len(ban_issues) == 0,
                          "OK" if not ban_issues else f"found: {', '.join(ban_issues[:5])}"))
 
-    # 4. sync flags (set_flag + wait_flag)
+    # 4. asc2.load / asc2.store present in JIT functions
     calls_in_jit = []
     for f in jit:
         calls_in_jit.extend(_all_calls(f))
-    has_sync = "set_flag" in calls_in_jit and "wait_flag" in calls_in_jit
-    checks.append(Check("sync_flags", has_sync,
-                         "set_flag+wait_flag" if has_sync else "missing sync primitives"))
+    has_load_store = "load" in calls_in_jit and "store" in calls_in_jit
+    checks.append(Check("asc2_load_store", has_load_store,
+                         "load+store" if has_load_store else "missing asc2.load/asc2.store"))
 
-    # 5. data_copy present
-    has_dc = "data_copy" in calls_in_jit
-    checks.append(Check("data_copy", has_dc,
-                         "present" if has_dc else "missing data_copy"))
+    # 5. asc2.tensor present in JIT functions
+    has_tensor = "tensor" in calls_in_jit
+    checks.append(Check("asc2_tensor", has_tensor,
+                         "present" if has_tensor else "missing asc2.tensor"))
 
-    # 6. Correct sync events (MTE2_V, V_MTE3, MTE3_MTE2 referenced anywhere)
-    events_found = set()
-    for event in ("MTE2_V", "V_MTE3", "MTE3_MTE2"):
-        if event in source:
-            events_found.add(event)
-    checks.append(Check("sync_events", len(events_found) >= 2,
-                         f"events: {', '.join(sorted(events_found)) or 'none'}"))
+    # 6. asc2.range or range used for loops in JIT
+    has_range = "range" in calls_in_jit
+    checks.append(Check("loop_range", has_range,
+                         "range/asc2.range present" if has_range else "no range call in kernel"))
 
-    # 7. Verification call (torch.allclose or numpy.allclose in file)
+    # 7. Verification call (allclose or assert_allclose in file)
     has_verify = "allclose" in source
     checks.append(Check("verification", has_verify,
                          "allclose present" if has_verify else "no allclose call"))
 
-    # 8. Launch pattern: kernel[core_num, stream](...)
-    has_launch = bool(re.search(r'\w+\[.*,\s*rt\.\w+\(.*\)\]\(', source) or
-                      re.search(r'\w+\[\w+,\s*\w+\]\(', source) or
-                      re.search(r'\w+\[.*,\s*\w+\]\(', source))
+    # 8. Launch pattern: kernel[core_num](...) — asc2 style (no stream)
+    has_launch = bool(re.search(r'\w+\[\s*\w+\s*\]\(', source) or
+                      re.search(r'\w+\[\s*\d+\s*\]\(', source))
     checks.append(Check("launch_pattern", has_launch,
                          "kernel launch found" if has_launch else "no launch pattern"))
 
-    # 9. Tensor types used (GlobalTensor / LocalTensor / GlobalAddress)
-    tensor_types = {"GlobalTensor", "LocalTensor", "GlobalAddress"}
-    found_types = {t for t in tensor_types if t in source}
-    checks.append(Check("tensor_types", len(found_types) >= 2,
-                         f"found: {', '.join(sorted(found_types)) or 'none'}"))
+    # 9. GlobalAddress used in kernel parameter types
+    has_ga = "GlobalAddress" in source
+    checks.append(Check("global_address", has_ga,
+                         "GlobalAddress found" if has_ga else "missing GlobalAddress type"))
 
-    # 10. File is syntactically valid Python (already parsed above, so pass)
+    # 10. File is syntactically valid Python (already parsed above)
     checks.append(Check("valid_python", True, "parsed without errors"))
 
     return checks
