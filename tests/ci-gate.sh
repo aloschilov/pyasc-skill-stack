@@ -118,6 +118,26 @@ run_nightly_gate() {
     else
         FAILED=$((FAILED + 1))
     fi
+
+    echo ""
+    echo "--- Generative Evidence Collection ---"
+    COLLECT_TOOL="$TOOLS_DIR/collect_generative_evidence.py"
+    if [ -f "$COLLECT_TOOL" ] && command -v opencode >/dev/null 2>&1; then
+        $PYTHON "$COLLECT_TOOL" \
+            --op abs --dtype float16 \
+            --runtime --timeout 600 \
+            --notes "Nightly CI gate run" 2>&1 || {
+            ec=$?
+            if [ "$ec" -eq 2 ]; then
+                echo "  [SKIP] opencode not available"
+            else
+                echo "  [FAIL] Generative evidence: abs/float16"
+                FAILED=$((FAILED + 1))
+            fi
+        }
+    else
+        echo "  [SKIP] collect_generative_evidence.py or opencode not available"
+    fi
 }
 
 # ============================================

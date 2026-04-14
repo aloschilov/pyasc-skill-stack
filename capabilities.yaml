@@ -1,0 +1,263 @@
+schema_version: "2"
+
+classes:
+  unary_elementwise:
+    pattern: "out[i] = f(x[i])"
+    description: "Single input, same-shape output"
+  binary_elementwise:
+    pattern: "out[i] = f(x[i], y[i])"
+    description: "Two inputs, same-shape output"
+  reduction:
+    pattern: "out = reduce(x, axis)"
+    description: "Input reduced along axis"
+  advanced:
+    pattern: "varies"
+    description: "Multi-step, cube, or fused operations"
+
+# Status definitions (apply to both golden_status and generative_status independently):
+#   confirmed   - Evidence JSON exists and records a pass
+#   pending     - Prompt/golden defined but not yet run
+#   claimed     - Listed in AGENTS.md / api-patterns as supported, no prompt or golden defined
+#   untested    - Operation exists in asc2 but not tracked
+#   blocked     - Known issue prevents verification (see notes)
+
+operations:
+
+  # --- Unary elementwise ---
+
+  - name: abs
+    class: unary_elementwise
+    asc2_api: "asc2.abs(x)"
+    cells:
+      - dtype: float16
+        prompt: >-
+          Help me develop an abs operator that supports float16 data type.
+          The shape is mainly [1,128], [4,2048], [32,4096].
+        shapes:
+          - [1, 128]
+          - [4, 2048]
+          - [32, 4096]
+        golden_status: confirmed
+        golden: golden/kernels/abs_f16.py
+        golden_evidence: evidence/abs-f16-golden.json
+        generative_status: confirmed
+        generative_evidence: evidence/abs-f16-generative.json
+      - dtype: float32
+        golden_status: untested
+        generative_status: untested
+
+  - name: exp
+    class: unary_elementwise
+    asc2_api: "asc2.exp(x)"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  - name: log
+    class: unary_elementwise
+    asc2_api: "asc2.log(x)"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  - name: sqrt
+    class: unary_elementwise
+    asc2_api: "asc2.sqrt(x)"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  - name: relu
+    class: unary_elementwise
+    asc2_api: "asc2.relu(x)"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  - name: erf
+    class: unary_elementwise
+    asc2_api: "asc2.erf(x)"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  - name: sin
+    class: unary_elementwise
+    asc2_api: "asc2.sin(x)"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  - name: cos
+    class: unary_elementwise
+    asc2_api: "asc2.cos(x)"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  - name: neg
+    class: unary_elementwise
+    asc2_api: "-x"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  # --- Binary elementwise ---
+
+  - name: add
+    class: binary_elementwise
+    asc2_api: "x + y"
+    cells:
+      - dtype: float32
+        prompt: >-
+          Help me develop an add operator that supports float32 data type.
+          The shape is mainly [8192].
+        shapes:
+          - [8192]
+        golden_status: confirmed
+        golden: golden/tutorials/01_add.py
+        golden_evidence: evidence/add-f32-golden.json
+        generative_status: pending
+      - dtype: float16
+        golden_status: untested
+        generative_status: untested
+
+  - name: sub
+    class: binary_elementwise
+    asc2_api: "x - y"
+    cells:
+      - dtype: float16
+        prompt: >-
+          Help me develop a sub operator that supports float16 data type.
+          The shape is mainly [1,128], [4,2048], [32,4096].
+        shapes:
+          - [1, 128]
+          - [4, 2048]
+          - [32, 4096]
+        golden_status: golden_only
+        golden: golden/kernels/sub_f16.py
+        generative_status: pending
+      - dtype: float32
+        golden_status: untested
+        generative_status: untested
+
+  - name: mul
+    class: binary_elementwise
+    asc2_api: "x * y"
+    cells:
+      - dtype: float16
+        prompt: >-
+          Help me develop a mul operator that supports float16 data type.
+          The shape is mainly [1,128], [4,2048], [32,4096].
+        shapes:
+          - [1, 128]
+          - [4, 2048]
+          - [32, 4096]
+        golden_status: golden_only
+        golden: golden/kernels/mul_f16.py
+        generative_status: pending
+      - dtype: float32
+        golden_status: untested
+        generative_status: untested
+
+  - name: div
+    class: binary_elementwise
+    asc2_api: "x / y"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  - name: where
+    class: binary_elementwise
+    asc2_api: "asc2.where(cond, a, b)"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  # --- Reduction ---
+
+  - name: reduce_max
+    class: reduction
+    asc2_api: "asc2.reduce_max(x)"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  - name: sum
+    class: reduction
+    asc2_api: "x.sum()"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  # --- Advanced ---
+
+  - name: softmax
+    class: advanced
+    asc2_api: "asc2.softmax(x)"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
+
+  - name: matmul
+    class: advanced
+    asc2_api: "asc2.matmul(a, b)"
+    cells:
+      - dtype: float16
+        golden_status: claimed
+        generative_status: untested
+      - dtype: float32
+        golden_status: claimed
+        generative_status: untested
