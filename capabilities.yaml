@@ -60,16 +60,6 @@ operations:
         golden_evidence: evidence/abs-f16-golden.json
         generative_status: confirmed
         generative_evidence: evidence/abs-f16-generative.json
-      - dtype: float32
-        prompt: >-
-          Help me develop an abs operator that supports float32 data type.
-          The shape is mainly [1,128], [4,2048], [32,4096].
-        shapes:
-          - [1, 128]
-          - [4, 2048]
-          - [32, 4096]
-        golden_status: untested
-        generative_status: untested
 
   - name: add
     tier: elementwise
@@ -79,16 +69,6 @@ operations:
       - mul
       - div
     cells:
-      - dtype: float32
-        prompt: >-
-          Help me develop an add operator that supports float32 data type.
-          The shape is mainly [8192].
-        shapes:
-          - [8192]
-        golden_status: confirmed
-        golden: golden/tutorials/01_add.py
-        golden_evidence: evidence/add-f32-golden.json
-        generative_status: pending
       - dtype: float16
         prompt: >-
           Help me develop an add operator that supports float16 data type.
@@ -178,8 +158,10 @@ operations:
           so each row sums to 1.
         shapes:
           - [32, 4096]
-        golden_status: untested
-        generative_status: untested
+        golden_status: confirmed
+        golden: golden/kernels/softmax_f16.py
+        golden_evidence: evidence/softmax-f16-golden.json
+        generative_status: pending
 
   - name: matmul
     tier: advanced

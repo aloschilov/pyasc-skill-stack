@@ -155,7 +155,7 @@ jobs:
           NODE_TLS_REJECT_UNAUTHORIZED: "0"
           PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
         run: |
-          declare -a OPS=("abs:float16" "add:float16" "reduce_sum:float32" "gelu:float16")
+          declare -a OPS=("abs:float16" "add:float16" "reduce_sum:float32" "gelu:float16" "leaky_relu:float16" "softmax:float16")
           for entry in "${OPS[@]}"; do
             op="${entry%%:*}"
             dtype="${entry##*:}"

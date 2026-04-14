@@ -175,14 +175,19 @@ def run_static_verify(kernel_path: Path) -> str:
 
 
 def run_docker_verify(kernel_path: Path, project_dir: Path) -> dict:
-    """Run simulator verification inside the Docker container."""
+    """Run simulator verification inside the Docker container.
+
+    Mounts the repo at /repo (for tool scripts) and the project at /workspace
+    (for the generated kernel). Runs run_and_verify.py from /repo.
+    """
     rel_kernel = kernel_path.relative_to(project_dir)
     cmd = [
         "docker", "run", "--rm",
+        "-v", f"{REPO_ROOT}:/repo:ro",
         "-v", f"{project_dir}:/workspace",
         "-w", "/workspace",
         DOCKER_IMAGE,
-        "python3.11", str(REPO_ROOT / "tests" / "tools" / "run_and_verify.py"),
+        "python3.11", "/repo/tests/tools/run_and_verify.py",
         str(rel_kernel), "--mode", "simulator", "--json",
     ]
     code, out, err = _run(cmd, timeout=300)
