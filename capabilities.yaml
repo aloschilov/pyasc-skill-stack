@@ -98,7 +98,8 @@ operations:
           - [4, 2048]
           - [32, 4096]
         golden_status: untested
-        generative_status: untested
+        generative_status: confirmed
+        generative_evidence: evidence/add-f16-generative.json
 
   # --- Tier 1: Reduction ---
 
@@ -120,7 +121,8 @@ operations:
         golden_status: golden_only
         golden: golden/kernels/reduce_sum_f32.py
         golden_evidence: evidence/reduce_sum-f32-golden.json
-        generative_status: untested
+        generative_status: confirmed
+        generative_evidence: evidence/reduce_sum-f32-generative.json
 
   # --- Tier 2: Composed ---
 
@@ -141,7 +143,8 @@ operations:
         golden_status: golden_only
         golden: golden/kernels/gelu_f16.py
         golden_evidence: evidence/gelu-f16-golden.json
-        generative_status: untested
+        generative_status: confirmed
+        generative_evidence: evidence/gelu-f16-generative.json
 
   - name: leaky_relu
     tier: composed
