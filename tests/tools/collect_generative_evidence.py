@@ -92,12 +92,26 @@ def load_prompt_from_capabilities(op: str, dtype: str) -> str | None:
 
 
 def create_test_project(prefix: str) -> Path:
-    """Create a temporary directory with skills/teams/golden symlinked in."""
+    """Create a fresh isolated project directory for one agent run.
+
+    Read-only assets (skills, golden) are symlinked; writable assets (teams)
+    are deep-copied so each run starts clean and cannot pollute other runs.
+    opencode.json is copied so skill discovery works.
+    """
     tmp = Path(tempfile.mkdtemp(prefix=f"{prefix}."))
-    for subdir in ("skills", "teams", "golden"):
+
+    for subdir in ("skills", "golden"):
         src = REPO_ROOT / subdir
         if src.exists():
             (tmp / subdir).symlink_to(src)
+
+    teams_src = REPO_ROOT / "teams"
+    if teams_src.exists():
+        shutil.copytree(teams_src, tmp / "teams", symlinks=True)
+
+    opencode_cfg = REPO_ROOT / "opencode.json"
+    if opencode_cfg.exists():
+        shutil.copy2(opencode_cfg, tmp / "opencode.json")
 
     subprocess.run(
         ["git", "init", "--quiet"],
@@ -115,7 +129,19 @@ def create_test_project(prefix: str) -> Path:
 
 
 def find_kernel(project_dir: Path, op: str) -> Path | None:
-    """Search for the generated kernel.py, trying likely paths first."""
+    """Search for the generated kernel.py, preferring paths containing the op name.
+
+    Excludes symlinked read-only directories (skills/, golden/) to avoid
+    picking up golden reference kernels instead of the agent-generated one.
+    """
+    exclude_prefixes = (
+        str(project_dir / "skills"),
+        str(project_dir / "golden"),
+    )
+
+    def _is_excluded(p: str) -> bool:
+        return any(p.startswith(pfx) for pfx in exclude_prefixes)
+
     candidates = [
         project_dir / "kernels" / f"{op}_f16" / "kernel.py",
         project_dir / "kernels" / f"{op}_f32" / "kernel.py",
@@ -127,15 +153,20 @@ def find_kernel(project_dir: Path, op: str) -> Path | None:
         if c.is_file():
             return c
 
-    matches = glob.glob(str(project_dir / "**" / "kernel.py"), recursive=True)
-    for m in matches:
-        if op in m:
-            return Path(m)
-    if matches:
-        return Path(matches[0])
+    all_kernels = glob.glob(str(project_dir / "**" / "kernel.py"), recursive=True)
+    all_kernels = [m for m in all_kernels if not _is_excluded(m)]
+
+    op_matches = [m for m in all_kernels if op in Path(m).parent.name]
+    if op_matches:
+        return Path(op_matches[0])
+    if all_kernels:
+        print(f"  WARN: no kernel.py in a directory named after '{op}'; "
+              f"using first match: {all_kernels[0]}", file=sys.stderr)
+        return Path(all_kernels[0])
 
     py_files = glob.glob(str(project_dir / "**" / "*.py"), recursive=True)
-    py_files = [f for f in py_files if not Path(f).name.startswith("__")]
+    py_files = [f for f in py_files
+                if not Path(f).name.startswith("__") and not _is_excluded(f)]
     if py_files:
         return Path(py_files[0])
 
@@ -172,6 +203,50 @@ def run_static_verify(kernel_path: Path) -> str:
         except json.JSONDecodeError:
             pass
     return "fail"
+
+
+OP_SEMANTIC_MARKERS: dict[str, list[str]] = {
+    "abs": ["asc2.abs"],
+    "exp": ["asc2.exp"],
+    "log": ["asc2.log"],
+    "sqrt": ["asc2.sqrt"],
+    "relu": ["asc2.relu"],
+    "erf": ["asc2.erf"],
+    "add": ["x + y", "x+y", "+ y", "+y"],
+    "sub": ["x - y", "x-y", "- y", "-y"],
+    "mul": ["x * y", "x*y", "* y", "*y"],
+    "div": ["x / y", "x/y", "/ y", "/y"],
+    "reduce_sum": ["asc2.reduce_sum", ".sum("],
+    "reduce_max": ["asc2.reduce_max", ".max("],
+    "reduce_min": [".min("],
+    "gelu": ["asc2.erf"],
+    "leaky_relu": ["asc2.where"],
+    "softmax": ["asc2.softmax"],
+    "matmul": ["asc2.matmul", "@ "],
+}
+
+
+def check_op_semantics(kernel_path: Path, op: str) -> dict:
+    """Check whether the kernel source contains API calls expected for the operation.
+
+    Returns {"passed": bool, "detail": str, "markers_found": list[str]}.
+    """
+    markers = OP_SEMANTIC_MARKERS.get(op)
+    if markers is None:
+        return {"passed": True, "detail": f"no semantic markers defined for '{op}'",
+                "markers_found": []}
+
+    try:
+        source = kernel_path.read_text()
+    except OSError:
+        return {"passed": False, "detail": "could not read kernel source",
+                "markers_found": []}
+
+    found = [m for m in markers if m in source]
+    passed = len(found) > 0
+    detail = (f"found {found}" if passed
+              else f"none of {markers} found in kernel source")
+    return {"passed": passed, "detail": detail, "markers_found": found}
 
 
 def run_docker_verify(kernel_path: Path, project_dir: Path) -> dict:
@@ -229,6 +304,8 @@ def main() -> None:
                         help="Print JSON to stdout, don't write file")
     parser.add_argument("--keep-project", action="store_true",
                         help="Don't delete the test project after run")
+    parser.add_argument("--archive-dir", default=None,
+                        help="Copy generated kernel directory here for archival")
     args = parser.parse_args()
 
     prompt = args.prompt
@@ -285,10 +362,16 @@ def main() -> None:
         "mode": "static_only", "status": "fail", "shapes_verified": [],
     }
 
+    semantic_check: dict = {"passed": False, "detail": "no kernel found",
+                            "markers_found": []}
+
     if kernel and kernel.is_file():
         score_data = run_score(kernel)
         static_result = run_static_verify(kernel)
+        semantic_check = check_op_semantics(kernel, args.op)
         print(f"  Static verify: {static_result}")
+        print(f"  Semantic check: {'pass' if semantic_check['passed'] else 'FAIL'}"
+              f" — {semantic_check['detail']}")
         if score_data:
             print(f"  Score: {score_data.get('score', '?')}/10")
         verification = {
@@ -323,6 +406,7 @@ def main() -> None:
             "artifacts_found": artifacts,
         },
         "verification": verification,
+        "semantic_check": semantic_check,
         "score": {
             "value": score_data.get("score", 0.0) if score_data else 0.0,
             "threshold": 8.5,
@@ -347,6 +431,15 @@ def main() -> None:
             f.write("\n")
         print(f"  Written: {out_path.relative_to(REPO_ROOT)}")
 
+    if args.archive_dir and kernel and kernel.is_file():
+        archive_dest = Path(args.archive_dir) / f"{args.op}-{dtype_short}"
+        archive_dest.mkdir(parents=True, exist_ok=True)
+        kernel_dir = kernel.parent
+        for item in kernel_dir.iterdir():
+            if item.is_file():
+                shutil.copy2(item, archive_dest / item.name)
+        print(f"  Archived kernel to: {archive_dest}")
+
     if not args.keep_project:
         shutil.rmtree(project, ignore_errors=True)
         print("  Cleaned up project directory")
@@ -356,6 +449,7 @@ def main() -> None:
     overall_pass = (
         static_result == "pass"
         and evidence["score"]["accepted"]
+        and semantic_check["passed"]
         and agent_completed
         and kernel is not None
     )

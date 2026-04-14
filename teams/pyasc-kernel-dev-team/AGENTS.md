@@ -143,15 +143,17 @@ pyasc-kernel-dev-team/
 
 | Resource type | Path | Description |
 |---------------|------|-------------|
-| Golden kernels | `golden/kernels/` | asc2 kernels: abs_f16, sub_f16, mul_f16 |
-| Golden tutorials | `golden/tutorials/` | asc2 tutorial: 01_add (vector add) |
+| Golden kernels | `golden/kernels/` | asc2 kernels: abs_f16, gelu_f16, leaky_relu_f16, reduce_sum_f32, softmax_f16 |
+| Golden tutorials | `golden/tutorials/` | asc2 tutorials: 01_add, 02_add_framework, 03-05_matmul variants |
 | API docs (language) | `golden/docs/python-api/language/` | basic, core, adv, fwk API indexes |
 | API docs (generated) | `golden/docs/python-api/language/generated/` | Individual API reference pages |
 | API docs (lib) | `golden/docs/python-api/lib/` | Runtime library API docs |
 | Architecture docs | `golden/docs/architecture_introduction.md` | JIT pipeline and module overview |
 | Syntax support | `golden/docs/python_syntax_support.md` | Supported/unsupported syntax reference |
 
-### External pyasc source tree (requires external_directory permission)
+### External pyasc source tree (optional, not available in CI)
+
+> These paths exist only on local developer machines. If unavailable, rely on the local golden set above.
 
 | Resource type | Path | Description |
 |---------------|------|-------------|

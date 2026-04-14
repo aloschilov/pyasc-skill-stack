@@ -1,33 +1,34 @@
-# pyasc JIT Compile Options
+# pyasc asc2 JIT Compile Options
 
 ## Decorator syntax
 
 ```python
-@asc.jit                              # defaults
-@asc.jit(always_compile=True)         # with options
+@asc2.jit(always_compile=True)        # standard for development
+@asc2.jit                              # defaults (uses cache)
 ```
 
 ## Compile parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `kernel_type` | `asc.runtime.config.KernelType` | Auto-detected | Kernel type classification |
-| `opt_level` | `int` (0-3) | Compiler default | Bisheng optimization level |
-| `auto_sync` | `bool` | `False` | Let compiler insert sync automatically |
-| `auto_sync_log` | `str` | None | File path to log auto-sync insertions |
-| `matmul_cube_only` | `bool` | `False` | Pure cube mode (matrix compute only) |
 | `always_compile` | `bool` | `False` | Force recompilation, bypass cache |
+| `opt_level` | `int` (0-3) | Compiler default | Bisheng optimization level |
+| `matmul_cube_only` | `bool` | `False` | Pure cube mode (matrix compute only) |
 
-## Runtime parameters (launch syntax)
+Note: `insert_sync=True` and `run_asc2_passes=True` are defaults for `@asc2.jit`.
+Do not disable them unless debugging a specific issue.
+
+## Launch syntax (asc2)
 
 ```python
-kernel[core_num, stream](arg1, arg2, ...)
+kernel[core_num](arg1, arg2, ...)
 ```
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `core_num` | `int` | Yes | Number of cores to use (must not exceed hardware) |
-| `stream` | Stream object | No | Execution stream from `rt.current_stream()` |
+| `core_num` | `int` | Yes | Number of cores to use |
+
+**asc2 does NOT use a stream argument.** The v1 syntax `kernel[core_num, stream](...)` must not be used.
 
 ## JIT cache behavior
 
@@ -47,6 +48,6 @@ kernel[core_num, stream](arg1, arg2, ...)
 
 | Aspect | Kernel function | Device function |
 |--------|----------------|-----------------|
-| Called from | Host: `kernel[cores, stream](...)` | Other `@asc.jit` functions |
+| Called from | Host: `kernel[cores](...)` | Other `@asc2.jit` functions |
 | Compile options | Effective | Ignored |
 | `return` | Not allowed | Allowed (top-level only) |

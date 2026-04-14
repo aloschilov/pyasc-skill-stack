@@ -178,6 +178,4 @@ np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
 
 ## References
 
-- [API Quick Reference](references/api-quickref.md)
-- [Tensor Operations](references/api-tensor-ops.md)
 - [JIT Options](references/api-jit-options.md)

@@ -32,7 +32,7 @@ No network, no simulator, no opencode required.
 Runs in under 5 minutes. Requires CANN simulator environment.
 
 1. Everything in PR gate
-2. Simulator execution of all golden kernels via `run_and_verify.py --mode simulator` -- confirms numerical correctness with `torch.allclose`
+2. Simulator execution of all golden kernels via `run_and_verify.py --mode simulator` -- confirms numerical correctness with `np.testing.assert_allclose`
 
 Requires: `source $HOME/Ascend/cann/set_env.sh` and `LD_LIBRARY_PATH` set. See [cann-setup.md](cann-setup.md).
 

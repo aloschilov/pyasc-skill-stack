@@ -117,28 +117,33 @@ def build_data(cap: dict) -> dict:
             }
 
             if golden_ev:
+                gv_status = golden_ev.get("verification", {}).get("status", "")
                 row["golden_evidence"] = {
                     "date": golden_ev.get("date", ""),
                     "score": golden_ev.get("score", {}).get("value", 0),
                     "verification_mode": golden_ev.get("verification", {}).get("mode", ""),
-                    "verification_status": golden_ev.get("verification", {}).get("status", ""),
+                    "verification_status": gv_status,
+                    "runtime_verified": gv_status == "pass",
                     "shapes": golden_ev.get("verification", {}).get("shapes_verified", []),
                     "notes": golden_ev.get("notes", ""),
                     "kernel_path": golden_ev.get("kernel_path", ""),
                 }
 
             if gen_ev:
+                v_status = gen_ev.get("verification", {}).get("status", "")
                 row["generative_evidence"] = {
                     "date": gen_ev.get("date", ""),
                     "score": gen_ev.get("score", {}).get("value", 0),
                     "verification_mode": gen_ev.get("verification", {}).get("mode", ""),
-                    "verification_status": gen_ev.get("verification", {}).get("status", ""),
+                    "verification_status": v_status,
+                    "runtime_verified": v_status == "pass",
                     "shapes": gen_ev.get("verification", {}).get("shapes_verified", []),
                     "notes": gen_ev.get("notes", ""),
                     "kernel_path": gen_ev.get("kernel_path", ""),
                     "agent_platform": gen_ev.get("agent", {}).get("platform", ""),
                     "agent_completed": gen_ev.get("agent", {}).get("completed", False),
                     "artifacts": gen_ev.get("agent", {}).get("artifacts_found", []),
+                    "semantic_check": gen_ev.get("semantic_check", {}),
                 }
 
             rows.append(row)
@@ -499,7 +504,15 @@ function makeBadge(status, evidence, kind, prompt) {
   if (hasEvidence) dataAttr += ` data-detail='${JSON.stringify(evidence).replace(/'/g, "&#39;")}'`;
   if (hasPrompt) dataAttr += ` data-prompt='${prompt.replace(/'/g, "&#39;")}'`;
   dataAttr += ` data-kind="${kind}"`;
-  return `<span class="${cls}"${dataAttr} onclick="toggleDetail(this)">${label}</span>`;
+  let rtIcon = "";
+  if (hasEvidence && status === "confirmed") {
+    if (evidence.runtime_verified) {
+      rtIcon = ' <span title="Runtime verified on simulator" style="font-size:11px;color:var(--confirmed);">&#9745;</span>';
+    } else {
+      rtIcon = ' <span title="Static only (runtime skipped)" style="font-size:11px;color:var(--pending);">&#9744;</span>';
+    }
+  }
+  return `<span class="${cls}"${dataAttr} onclick="toggleDetail(this)">${label}</span>${rtIcon}`;
 }
 
 function toggleDetail(el) {
@@ -521,7 +534,10 @@ function toggleDetail(el) {
     const d = JSON.parse(detailStr);
     if (d.date) html += `<dt>Date</dt><dd>${d.date}</dd>`;
     if (d.score !== undefined) html += `<dt>Score</dt><dd>${d.score}/10</dd>`;
-    if (d.verification_mode) html += `<dt>Verification</dt><dd>${d.verification_mode} (${d.verification_status})</dd>`;
+    if (d.verification_mode) {
+      const rtLabel = d.runtime_verified ? "&#9745; runtime pass" : (d.verification_status === "skip" ? "&#9744; runtime skipped" : d.verification_status);
+      html += `<dt>Verification</dt><dd>${d.verification_mode} &mdash; ${rtLabel}</dd>`;
+    }
     if (d.shapes && d.shapes.length) html += `<dt>Shapes</dt><dd>${JSON.stringify(d.shapes)}</dd>`;
     if (d.kernel_path) html += `<dt>Kernel</dt><dd><code>${d.kernel_path}</code></dd>`;
     if (kind === "generative") {

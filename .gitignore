@@ -11,3 +11,6 @@ teams/pyasc-kernel-dev-team/kernels/vadd_f32_1024/
 
 # Generated dashboard output
 _site/
+
+# CI-only generative kernel archive (uploaded as artifact, not committed)
+generative-archive/

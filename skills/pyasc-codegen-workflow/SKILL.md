@@ -132,7 +132,7 @@ Main Agent
 1. **Understand the operation**: What mathematical/logical operation does this kernel perform?
 2. **Retrieve documentation**: Read the golden API reference for the target operation.
    - **MANDATORY READ**: `golden/kernels/abs_f16.py` (asc2 golden reference)
-   - Also read the external reference: `~/workspace/pyasc/python/test/kernels/asc2/test_vadd.py`
+   - **IF AVAILABLE**: `~/workspace/pyasc/python/test/kernels/asc2/test_vadd.py` (external reference; skip if path does not exist)
 3. **Select APIs**: Choose from `asc2` operations (see table below).
    - **MANDATORY READ**: Load skill `pyasc-api-patterns` to check correct API usage patterns
    - The standard pattern is: `asc2.tensor` -> `asc2.load` -> compute -> `asc2.store`
