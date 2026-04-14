@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate capabilities.yaml (v2) against golden kernels and evidence artifacts.
+"""Validate capabilities.yaml (v3, tier-based) against golden kernels and evidence.
 
 For each operation cell in capabilities.yaml, checks both golden_status and
 generative_status independently:
@@ -7,6 +7,7 @@ generative_status independently:
   golden_status:
     confirmed   - golden file must exist + pass static verify + golden_evidence JSON valid
     golden_only - golden file must exist + pass static verify
+    pending     - golden file should exist (warn if missing)
     claimed     - warn (no artifacts)
     untested    - info only
     blocked     - info only
@@ -16,6 +17,12 @@ generative_status independently:
     pending     - warn (prompt defined but no evidence yet)
     untested    - info only
     blocked     - info only
+
+Structural validation (v3):
+  - schema_version must be "3"
+  - tiers block must exist with level + description
+  - every operation must have a valid tier reference
+  - representative_of entries are informational (no validation against asc2 API)
 
 Exit 0 = all consistency checks pass, exit 1 = at least one confirmed cell is broken.
 
@@ -45,7 +52,6 @@ PYTHON = "python3.10"
 
 
 def _load_yaml(path: Path) -> dict:
-    """Load YAML, falling back to a minimal parser if PyYAML is unavailable."""
     if yaml is not None:
         with open(path) as f:
             return yaml.safe_load(f)
@@ -63,7 +69,6 @@ def _load_yaml(path: Path) -> dict:
 
 
 def _run_static_verify(kernel_path: Path) -> bool:
-    """Run verify_kernel.py on a golden kernel and return True if it passes."""
     try:
         result = subprocess.run(
             [PYTHON, str(VERIFY_SCRIPT), str(kernel_path), "--json"],
@@ -78,7 +83,6 @@ def _run_static_verify(kernel_path: Path) -> bool:
 
 
 def _validate_evidence(evidence_path: Path, expected_kind: str | None = None) -> tuple[bool, str]:
-    """Validate that an evidence JSON file exists and has the required fields."""
     if not evidence_path.exists():
         return False, f"evidence file not found: {evidence_path}"
     try:
@@ -113,9 +117,10 @@ def _validate_evidence(evidence_path: Path, expected_kind: str | None = None) ->
 
 
 class CellResult:
-    def __init__(self, op: str, dtype: str):
+    def __init__(self, op: str, dtype: str, tier: str):
         self.op = op
         self.dtype = dtype
+        self.tier = tier
         self.issues: list[str] = []
         self.warnings: list[str] = []
         self.info: list[str] = []
@@ -133,7 +138,6 @@ class CellResult:
 
 
 def _check_golden(cell: dict, result: CellResult) -> None:
-    """Check golden_status for a cell."""
     status = cell.get("golden_status", "untested")
 
     if status == "confirmed":
@@ -173,6 +177,17 @@ def _check_golden(cell: dict, result: CellResult) -> None:
             else:
                 result.note(f"golden passes: {golden}")
 
+    elif status == "pending":
+        golden = cell.get("golden")
+        if golden:
+            golden_path = REPO_ROOT / golden
+            if not golden_path.exists():
+                result.warn(f"golden pending but kernel not found: {golden}")
+            else:
+                result.note(f"golden pending, kernel exists: {golden}")
+        else:
+            result.warn("golden pending — no golden kernel path")
+
     elif status == "claimed":
         result.warn("golden claimed — no golden kernel")
 
@@ -185,7 +200,6 @@ def _check_golden(cell: dict, result: CellResult) -> None:
 
 
 def _check_generative(cell: dict, result: CellResult) -> None:
-    """Check generative_status for a cell."""
     status = cell.get("generative_status", "untested")
 
     if status == "confirmed":
@@ -215,16 +229,35 @@ def _check_generative(cell: dict, result: CellResult) -> None:
         result.warn(f"generative blocked: {notes}")
 
 
-def check_cell(op_name: str, cell: dict) -> CellResult:
-    dtype = cell.get("dtype", "unknown")
-    result = CellResult(op_name, dtype)
-    _check_golden(cell, result)
-    _check_generative(cell, result)
-    return result
+def check_structure(data: dict) -> list[str]:
+    """Validate v3 structural requirements. Returns list of fatal errors."""
+    errors: list[str] = []
+
+    tiers = data.get("tiers")
+    if not tiers or not isinstance(tiers, dict):
+        errors.append("missing or invalid 'tiers' block")
+        return errors
+
+    for t_name, t_info in tiers.items():
+        if "level" not in t_info:
+            errors.append(f"tier '{t_name}' missing 'level'")
+        if "description" not in t_info:
+            errors.append(f"tier '{t_name}' missing 'description'")
+
+    valid_tiers = set(tiers.keys())
+    for op in data.get("operations", []):
+        op_name = op.get("name", "?")
+        op_tier = op.get("tier")
+        if not op_tier:
+            errors.append(f"operation '{op_name}' missing 'tier' field")
+        elif op_tier not in valid_tiers:
+            errors.append(f"operation '{op_name}' references unknown tier '{op_tier}'")
+
+    return errors
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Validate capabilities.yaml (v2) consistency.")
+    parser = argparse.ArgumentParser(description="Validate capabilities.yaml (v3) consistency.")
     parser.add_argument("--json", action="store_true", help="JSON output")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show info-level notes")
     args = parser.parse_args()
@@ -239,66 +272,84 @@ def main() -> None:
     data = _load_yaml(CAPABILITIES_FILE)
 
     schema = data.get("schema_version", "1")
-    if schema != "2":
-        msg = f"capabilities.yaml schema_version is '{schema}', expected '2'"
+    if schema != "3":
+        msg = f"capabilities.yaml schema_version is '{schema}', expected '3'"
         if args.json:
             print(json.dumps({"status": "fail", "error": msg}))
         else:
             print(f"FAIL: {msg}")
         sys.exit(1)
 
+    struct_errors = check_structure(data)
+    if struct_errors:
+        if args.json:
+            print(json.dumps({"status": "fail", "structural_errors": struct_errors}))
+        else:
+            print("FAIL: Structural validation errors:")
+            for e in struct_errors:
+                print(f"  - {e}")
+        sys.exit(1)
+
     operations = data.get("operations", [])
+    tiers = data.get("tiers", {})
 
     results: list[CellResult] = []
     for op in operations:
         op_name = op.get("name", "unknown")
+        op_tier = op.get("tier", "unknown")
         for cell in op.get("cells", []):
-            r = check_cell(op_name, cell)
-            results.append(r)
+            dtype = cell.get("dtype", "unknown")
+            result = CellResult(op_name, dtype, op_tier)
+            _check_golden(cell, result)
+            _check_generative(cell, result)
+            results.append(result)
 
     failures = [r for r in results if not r.passed]
     warnings = [r for r in results if r.warnings]
 
-    golden_counts: dict[str, int] = {}
-    gen_counts: dict[str, int] = {}
+    tier_counts: dict[str, dict] = {}
     for r in results:
+        if r.tier not in tier_counts:
+            tier_counts[r.tier] = {"total": 0, "golden_confirmed": 0, "gen_confirmed": 0}
+        tc = tier_counts[r.tier]
+        tc["total"] += 1
         for op in operations:
             if op.get("name") != r.op:
                 continue
             for cell in op.get("cells", []):
                 if cell.get("dtype") == r.dtype:
-                    gs = cell.get("golden_status", "untested")
-                    golden_counts[gs] = golden_counts.get(gs, 0) + 1
-                    gn = cell.get("generative_status", "untested")
-                    gen_counts[gn] = gen_counts.get(gn, 0) + 1
+                    if cell.get("golden_status") == "confirmed":
+                        tc["golden_confirmed"] += 1
+                    if cell.get("generative_status") == "confirmed":
+                        tc["gen_confirmed"] += 1
                     break
             break
 
     if args.json:
         out = {
             "status": "pass" if not failures else "fail",
+            "schema_version": "3",
             "total_cells": len(results),
-            "golden_counts": golden_counts,
-            "generative_counts": gen_counts,
+            "tier_counts": tier_counts,
             "failures": [
-                {"op": r.op, "dtype": r.dtype, "issues": r.issues}
+                {"op": r.op, "dtype": r.dtype, "tier": r.tier, "issues": r.issues}
                 for r in failures
             ],
             "warnings": [
-                {"op": r.op, "dtype": r.dtype, "warnings": r.warnings}
+                {"op": r.op, "dtype": r.dtype, "tier": r.tier, "warnings": r.warnings}
                 for r in warnings
             ],
         }
         print(json.dumps(out, indent=2))
     else:
         print("=" * 60)
-        print("  Capabilities Matrix Validation (v2)")
+        print("  Capabilities Matrix Validation (v3 — tier-based)")
         print("=" * 60)
         print()
 
         for r in results:
             tag = "PASS" if r.passed else "FAIL"
-            line = f"  [{tag}] {r.op}/{r.dtype}"
+            line = f"  [{tag}] {r.op}/{r.dtype} (tier: {r.tier})"
             if r.issues:
                 line += f" — {'; '.join(r.issues)}"
             if r.warnings:
@@ -309,8 +360,11 @@ def main() -> None:
 
         print()
         print(f"  Cells: {len(results)} total")
-        print(f"  Golden:     {', '.join(f'{k}: {v}' for k, v in sorted(golden_counts.items()))}")
-        print(f"  Generative: {', '.join(f'{k}: {v}' for k, v in sorted(gen_counts.items()))}")
+        for t_name in sorted(tier_counts, key=lambda k: tiers.get(k, {}).get("level", 99)):
+            tc = tier_counts[t_name]
+            lvl = tiers.get(t_name, {}).get("level", "?")
+            print(f"  Tier {lvl} ({t_name}): golden {tc['golden_confirmed']}/{tc['total']}, "
+                  f"gen {tc['gen_confirmed']}/{tc['total']}")
         print()
 
         if failures:

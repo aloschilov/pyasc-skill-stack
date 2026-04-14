@@ -115,7 +115,8 @@ pyasc-skill-stack/
 │       └── kernels/                  # Generated kernel workspace
 ├── golden/
 │   ├── tutorials/                    # Golden reference tutorial (asc2 vadd)
-│   ├── kernels/                      # Verified golden kernels (abs, sub, mul — asc2)
+│   ├── kernels/                      # Golden kernels per tier (abs, reduce_sum, gelu, leaky_relu)
+│   ├── archive/                      # Archived golden kernels (sub, mul — covered by tier 0)
 │   └── docs/                         # Local pyasc API documentation
 ├── tests/                            # Automated test pyramid
 │   ├── run-tests.sh                  # Test runner
@@ -167,11 +168,22 @@ The `script -qc` wrapper provides the pseudo-TTY that `opencode run` requires in
 
 ## Capabilities dashboard
 
-A live view of the capabilities matrix — which operations are verified, pending, or claimed — is published automatically on every push to `main`:
+A live view of the capabilities matrix is published automatically on every push to `main`:
 
 **[https://aloschilov.github.io/pyasc-skill-stack/](https://aloschilov.github.io/pyasc-skill-stack/)**
 
-The dashboard is generated from `capabilities.yaml` and `evidence/*.json` by `tests/tools/generate_dashboard.py` and deployed via GitHub Pages. It supports filtering by class, status, and evidence dimension (golden vs generative), with click-to-expand evidence details.
+The matrix is organized around four **complexity tiers** that represent genuinely distinct generative challenges, rather than listing every elementwise operation individually:
+
+| Tier | Name | What it tests |
+|------|------|--------------|
+| 0 | Elementwise | Template substitution: `load` -> single `asc2.*()` call -> `store` |
+| 1 | Reduction | Output shape differs from input; accumulation logic |
+| 2 | Composed | No single asc2 builtin; agent must compose multiple API calls |
+| 3 | Advanced | Multi-dimensional tiling, accumulator management, placement |
+
+Each tier has representative operations with prompts. Proving a representative (e.g. `abs` for unary elementwise) gives high confidence that structurally identical operations (e.g. `exp`, `log`, `sqrt`) can also be generated.
+
+The dashboard is generated from `capabilities.yaml` and `evidence/*.json` by `tests/tools/generate_dashboard.py` and deployed via GitHub Pages. Click any status badge to see evidence details and the prompt used.
 
 ## License
 

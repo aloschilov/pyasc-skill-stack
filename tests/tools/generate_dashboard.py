@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Generate an interactive HTML dashboard from capabilities.yaml and evidence/*.json.
+"""Generate an interactive HTML dashboard from capabilities.yaml (v3) and evidence/*.json.
 
-Reads the capabilities matrix and any evidence artifacts, then produces a
-self-contained index.html with embedded data, interactive table, filters,
-and expand/collapse evidence details.
+Reads the tier-based capabilities matrix and any evidence artifacts, then
+produces a self-contained index.html with embedded data, tier progress bars,
+representative_of tags, prompt display, and expand/collapse evidence details.
 
 Usage:
     python generate_dashboard.py [--output-dir _site]
@@ -55,23 +55,29 @@ def _load_evidence(path: Path) -> dict | None:
 
 
 def build_data(cap: dict) -> dict:
-    classes = cap.get("classes", {})
+    tiers = cap.get("tiers", {})
     operations = cap.get("operations", [])
 
-    counts = {
-        "golden": {"confirmed": 0, "golden_only": 0, "pending": 0,
-                    "claimed": 0, "untested": 0, "blocked": 0},
-        "generative": {"confirmed": 0, "pending": 0, "claimed": 0,
-                        "untested": 0, "blocked": 0},
-    }
+    tier_progress: dict[str, dict] = {}
+    for t_name, t_info in tiers.items():
+        tier_progress[t_name] = {
+            "level": t_info.get("level", 0),
+            "description": t_info.get("description", ""),
+            "note": t_info.get("note", ""),
+            "golden_confirmed": 0,
+            "generative_confirmed": 0,
+            "total_cells": 0,
+        }
 
     all_dtypes: list[str] = []
     rows: list[dict] = []
 
     for op in operations:
         op_name = op.get("name", "?")
-        op_class = op.get("class", "?")
+        op_tier = op.get("tier", "?")
         asc2_api = op.get("asc2_api", "")
+        representative_of = op.get("representative_of", [])
+        note = op.get("note", "")
 
         for cell in op.get("cells", []):
             dtype = cell.get("dtype", "?")
@@ -80,8 +86,14 @@ def build_data(cap: dict) -> dict:
 
             gs = cell.get("golden_status", "untested")
             gen_s = cell.get("generative_status", "untested")
-            counts["golden"][gs] = counts["golden"].get(gs, 0) + 1
-            counts["generative"][gen_s] = counts["generative"].get(gen_s, 0) + 1
+            prompt = cell.get("prompt", "")
+
+            if op_tier in tier_progress:
+                tier_progress[op_tier]["total_cells"] += 1
+                if gs == "confirmed":
+                    tier_progress[op_tier]["golden_confirmed"] += 1
+                if gen_s == "confirmed":
+                    tier_progress[op_tier]["generative_confirmed"] += 1
 
             golden_ev = None
             gen_ev = None
@@ -94,11 +106,14 @@ def build_data(cap: dict) -> dict:
 
             row: dict = {
                 "op": op_name,
-                "class": op_class,
+                "tier": op_tier,
                 "asc2_api": asc2_api,
                 "dtype": dtype,
                 "golden_status": gs,
                 "generative_status": gen_s,
+                "representative_of": representative_of,
+                "note": note,
+                "prompt": prompt,
             }
 
             if golden_ev:
@@ -130,8 +145,7 @@ def build_data(cap: dict) -> dict:
 
     return {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "classes": classes,
-        "counts": counts,
+        "tiers": tier_progress,
         "dtypes": all_dtypes,
         "total_cells": len(rows),
         "rows": rows,
@@ -165,6 +179,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   --blocked-bg: #ffebe9;
   --radius: 6px;
   --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --accent: #0969da;
+  --bar-bg: #eaeef2;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -186,6 +202,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     --blocked: #f85149;
     --blocked-bg: #3d1214;
     --shadow: 0 1px 3px rgba(0,0,0,0.3);
+    --accent: #58a6ff;
+    --bar-bg: #21262d;
   }
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -198,24 +216,62 @@ body {
   max-width: 1400px;
   margin: 0 auto;
 }
-h1 { font-size: 24px; margin-bottom: 8px; }
+h1 { font-size: 24px; margin-bottom: 4px; }
 .subtitle { color: var(--fg-muted); margin-bottom: 24px; font-size: 14px; }
-.summary {
-  display: flex;
-  flex-wrap: wrap;
+.tier-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
   margin-bottom: 24px;
 }
-.summary-card {
+.tier-card {
   background: var(--bg-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 16px;
-  min-width: 120px;
+  padding: 14px 16px;
   box-shadow: var(--shadow);
 }
-.summary-card .label { font-size: 11px; text-transform: uppercase; color: var(--fg-muted); letter-spacing: 0.5px; }
-.summary-card .value { font-size: 28px; font-weight: 600; }
+.tier-card .tier-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tier-card .tier-level {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+.tier-card .tier-desc { font-size: 12px; color: var(--fg-muted); margin-bottom: 8px; }
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.progress-row .prog-label { min-width: 80px; color: var(--fg-muted); }
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--bar-bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-bar .fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.progress-bar .fill-golden { background: var(--golden-only); }
+.progress-bar .fill-gen { background: var(--confirmed); }
+.progress-row .prog-count { min-width: 30px; text-align: right; font-weight: 600; }
 .controls {
   display: flex;
   flex-wrap: wrap;
@@ -259,7 +315,7 @@ thead th:hover { color: var(--fg); }
 thead th .sort-arrow { font-size: 10px; margin-left: 4px; }
 tbody tr { border-bottom: 1px solid var(--border); }
 tbody tr:hover { background: var(--bg-alt); }
-tbody td { padding: 6px 12px; vertical-align: middle; }
+tbody td { padding: 6px 12px; vertical-align: top; }
 td.op-name { font-weight: 600; }
 td.api-col { font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; color: var(--fg-muted); }
 .badge {
@@ -278,6 +334,21 @@ td.api-col { font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px
 .badge-untested { background: var(--untested-bg); color: var(--untested); }
 .badge-blocked { background: var(--blocked-bg); color: var(--blocked); }
 .badge.clickable { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+.rep-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.rep-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  color: var(--fg-muted);
+}
 .detail-panel {
   display: none;
   background: var(--bg-alt);
@@ -293,7 +364,17 @@ td.api-col { font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px
 .detail-panel dt::after { content: ": "; }
 .detail-panel dd { display: inline; margin: 0; }
 .detail-panel dd::after { content: ""; display: block; }
-.class-header td {
+.detail-panel .prompt-text {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 12px;
+  margin: 4px 0;
+  font-style: italic;
+  color: var(--fg-muted);
+}
+.tier-header td {
   background: var(--bg-alt);
   font-weight: 600;
   font-size: 13px;
@@ -314,13 +395,13 @@ footer a { color: var(--fg-muted); }
 <body>
 
 <h1>pyasc-skill-stack Capabilities</h1>
-<p class="subtitle">Auto-generated from <code>capabilities.yaml</code> and <code>evidence/*.json</code></p>
+<p class="subtitle">Auto-generated from <code>capabilities.yaml</code> (v3) and <code>evidence/*.json</code></p>
 
-<div class="summary" id="summary"></div>
+<div class="tier-cards" id="tier-cards"></div>
 
 <div class="controls">
-  <label>Class:
-    <select id="filter-class">
+  <label>Tier:
+    <select id="filter-tier">
       <option value="all">All</option>
     </select>
   </label>
@@ -359,74 +440,96 @@ footer a { color: var(--fg-muted); }
 <script>
 const DATA = __DATA_PLACEHOLDER__;
 
+const TIER_ORDER = Object.entries(DATA.tiers)
+  .sort((a, b) => a[1].level - b[1].level)
+  .map(e => e[0]);
+
 function init() {
   document.getElementById("gen-time").textContent = DATA.generated_at;
-  renderSummary();
-  populateClassFilter();
+  renderTierCards();
+  populateTierFilter();
   renderTable();
-  document.getElementById("filter-class").addEventListener("change", renderTable);
+  document.getElementById("filter-tier").addEventListener("change", renderTable);
   document.getElementById("filter-status").addEventListener("change", renderTable);
   document.getElementById("filter-dimension").addEventListener("change", renderTable);
 }
 
-function renderSummary() {
-  const el = document.getElementById("summary");
-  const gc = DATA.counts.golden;
-  const gn = DATA.counts.generative;
-  const cards = [
-    { label: "Total cells", value: DATA.total_cells },
-    { label: "Golden confirmed", value: gc.confirmed || 0 },
-    { label: "Golden only", value: gc.golden_only || 0 },
-    { label: "Gen confirmed", value: gn.confirmed || 0 },
-    { label: "Gen pending", value: gn.pending || 0 },
-    { label: "Claimed", value: gc.claimed || 0 },
-    { label: "Untested", value: (gc.untested || 0) + (gn.untested || 0) },
-  ];
-  el.innerHTML = cards.map(c =>
-    `<div class="summary-card"><div class="label">${c.label}</div><div class="value">${c.value}</div></div>`
-  ).join("");
+function renderTierCards() {
+  const el = document.getElementById("tier-cards");
+  let html = "";
+  for (const tName of TIER_ORDER) {
+    const t = DATA.tiers[tName];
+    const goldenPct = t.total_cells ? Math.round(100 * t.golden_confirmed / t.total_cells) : 0;
+    const genPct = t.total_cells ? Math.round(100 * t.generative_confirmed / t.total_cells) : 0;
+    html += `<div class="tier-card">
+      <div class="tier-title"><span class="tier-level">${t.level}</span> ${tName.replace(/_/g, " ")}</div>
+      <div class="tier-desc">${t.description}</div>
+      <div class="progress-row">
+        <span class="prog-label">Golden</span>
+        <div class="progress-bar"><div class="fill fill-golden" style="width:${goldenPct}%"></div></div>
+        <span class="prog-count">${t.golden_confirmed}/${t.total_cells}</span>
+      </div>
+      <div class="progress-row">
+        <span class="prog-label">Generative</span>
+        <div class="progress-bar"><div class="fill fill-gen" style="width:${genPct}%"></div></div>
+        <span class="prog-count">${t.generative_confirmed}/${t.total_cells}</span>
+      </div>
+    </div>`;
+  }
+  el.innerHTML = html;
 }
 
-function populateClassFilter() {
-  const sel = document.getElementById("filter-class");
-  const classes = Object.keys(DATA.classes);
-  classes.forEach(c => {
+function populateTierFilter() {
+  const sel = document.getElementById("filter-tier");
+  TIER_ORDER.forEach(t => {
     const opt = document.createElement("option");
-    opt.value = c;
-    opt.textContent = c.replace(/_/g, " ");
+    opt.value = t;
+    opt.textContent = `Tier ${DATA.tiers[t].level}: ${t.replace(/_/g, " ")}`;
     sel.appendChild(opt);
   });
 }
 
-function makeBadge(status, evidence, kind) {
+function makeBadge(status, evidence, kind, prompt) {
   const label = status.replace(/_/g, " ");
   const hasEvidence = !!evidence;
-  const cls = hasEvidence ? "badge badge-" + status + " clickable" : "badge badge-" + status;
-  const dataAttr = hasEvidence ? ` data-kind="${kind}" data-detail='${JSON.stringify(evidence).replace(/'/g, "&#39;")}'` : "";
+  const hasPrompt = !!prompt;
+  const isClickable = hasEvidence || hasPrompt;
+  const cls = isClickable ? "badge badge-" + status + " clickable" : "badge badge-" + status;
+  let dataAttr = "";
+  if (hasEvidence) dataAttr += ` data-detail='${JSON.stringify(evidence).replace(/'/g, "&#39;")}'`;
+  if (hasPrompt) dataAttr += ` data-prompt='${prompt.replace(/'/g, "&#39;")}'`;
+  dataAttr += ` data-kind="${kind}"`;
   return `<span class="${cls}"${dataAttr} onclick="toggleDetail(this)">${label}</span>`;
 }
 
 function toggleDetail(el) {
-  const detailStr = el.getAttribute("data-detail");
-  if (!detailStr) return;
   let panel = el.parentElement.querySelector(".detail-panel");
   if (panel) {
     panel.classList.toggle("open");
     return;
   }
-  const d = JSON.parse(detailStr);
+  const detailStr = el.getAttribute("data-detail");
+  const promptStr = el.getAttribute("data-prompt");
   const kind = el.getAttribute("data-kind");
+  if (!detailStr && !promptStr) return;
+
   let html = "<dl>";
-  if (d.date) html += `<dt>Date</dt><dd>${d.date}</dd>`;
-  if (d.score !== undefined) html += `<dt>Score</dt><dd>${d.score}/10</dd>`;
-  if (d.verification_mode) html += `<dt>Verification</dt><dd>${d.verification_mode} (${d.verification_status})</dd>`;
-  if (d.shapes && d.shapes.length) html += `<dt>Shapes</dt><dd>${JSON.stringify(d.shapes)}</dd>`;
-  if (d.kernel_path) html += `<dt>Kernel</dt><dd><code>${d.kernel_path}</code></dd>`;
-  if (kind === "generative") {
-    if (d.agent_platform) html += `<dt>Agent</dt><dd>${d.agent_platform}${d.agent_completed ? " (completed)" : " (incomplete)"}</dd>`;
-    if (d.artifacts && d.artifacts.length) html += `<dt>Artifacts</dt><dd>${d.artifacts.join(", ")}</dd>`;
+  if (promptStr) {
+    html += `<dt>Prompt</dt><dd><div class="prompt-text">${promptStr}</div></dd>`;
   }
-  if (d.notes) html += `<dt>Notes</dt><dd>${d.notes}</dd>`;
+  if (detailStr) {
+    const d = JSON.parse(detailStr);
+    if (d.date) html += `<dt>Date</dt><dd>${d.date}</dd>`;
+    if (d.score !== undefined) html += `<dt>Score</dt><dd>${d.score}/10</dd>`;
+    if (d.verification_mode) html += `<dt>Verification</dt><dd>${d.verification_mode} (${d.verification_status})</dd>`;
+    if (d.shapes && d.shapes.length) html += `<dt>Shapes</dt><dd>${JSON.stringify(d.shapes)}</dd>`;
+    if (d.kernel_path) html += `<dt>Kernel</dt><dd><code>${d.kernel_path}</code></dd>`;
+    if (kind === "generative") {
+      if (d.agent_platform) html += `<dt>Agent</dt><dd>${d.agent_platform}${d.agent_completed ? " (completed)" : " (incomplete)"}</dd>`;
+      if (d.artifacts && d.artifacts.length) html += `<dt>Artifacts</dt><dd>${d.artifacts.join(", ")}</dd>`;
+    }
+    if (d.notes) html += `<dt>Notes</dt><dd>${d.notes}</dd>`;
+  }
   html += "</dl>";
   panel = document.createElement("div");
   panel.className = "detail-panel open";
@@ -444,12 +547,12 @@ function sortBy(col) {
 }
 
 function renderTable() {
-  const filterClass = document.getElementById("filter-class").value;
+  const filterTier = document.getElementById("filter-tier").value;
   const filterStatus = document.getElementById("filter-status").value;
   const filterDim = document.getElementById("filter-dimension").value;
 
   let rows = DATA.rows.filter(r => {
-    if (filterClass !== "all" && r["class"] !== filterClass) return false;
+    if (filterTier !== "all" && r.tier !== filterTier) return false;
     if (filterStatus !== "all") {
       if (filterDim === "golden") return r.golden_status === filterStatus;
       if (filterDim === "generative") return r.generative_status === filterStatus;
@@ -472,7 +575,7 @@ function renderTable() {
 
   const cols = [
     { key: "op", label: "Operation" },
-    { key: "class", label: "Class" },
+    { key: "tier", label: "Tier" },
     { key: "dtype", label: "dtype" },
     { key: "asc2_api", label: "asc2 API" },
     { key: "golden_status", label: "Golden" },
@@ -487,23 +590,24 @@ function renderTable() {
 
   const tbody = document.getElementById("tbody");
   let html = "";
-  let lastClass = null;
+  let lastTier = null;
 
   for (const r of rows) {
-    if (r["class"] !== lastClass) {
-      lastClass = r["class"];
-      const classInfo = DATA.classes[lastClass] || {};
-      const desc = classInfo.description || "";
-      const pattern = classInfo.pattern || "";
-      html += `<tr class="class-header"><td colspan="${cols.length}">${lastClass.replace(/_/g, " ")} &mdash; <code>${pattern}</code> &mdash; ${desc}</td></tr>`;
+    if (r.tier !== lastTier) {
+      lastTier = r.tier;
+      const t = DATA.tiers[lastTier] || {};
+      html += `<tr class="tier-header"><td colspan="${cols.length}">Tier ${t.level || "?"}: ${lastTier.replace(/_/g, " ")} &mdash; ${t.description || ""}</td></tr>`;
     }
+    const repTags = (r.representative_of && r.representative_of.length)
+      ? `<div class="rep-tags">${r.representative_of.map(x => `<span class="rep-tag">${x}</span>`).join("")}</div>`
+      : "";
     html += "<tr>";
-    html += `<td class="op-name">${r.op}</td>`;
-    html += `<td>${r["class"].replace(/_/g, " ")}</td>`;
+    html += `<td class="op-name">${r.op}${repTags}</td>`;
+    html += `<td>${r.tier.replace(/_/g, " ")}</td>`;
     html += `<td>${r.dtype}</td>`;
     html += `<td class="api-col">${r.asc2_api}</td>`;
-    html += `<td>${makeBadge(r.golden_status, r.golden_evidence, "golden")}</td>`;
-    html += `<td>${makeBadge(r.generative_status, r.generative_evidence, "generative")}</td>`;
+    html += `<td>${makeBadge(r.golden_status, r.golden_evidence, "golden", r.prompt)}</td>`;
+    html += `<td>${makeBadge(r.generative_status, r.generative_evidence, "generative", r.prompt)}</td>`;
     html += "</tr>";
   }
 
@@ -539,9 +643,11 @@ def main() -> None:
 
     print(f"Dashboard written to {out_dir / 'index.html'}")
     print(f"  {data['total_cells']} cells, {len(data['rows'])} rows")
-    golden_confirmed = data["counts"]["golden"].get("confirmed", 0)
-    gen_confirmed = data["counts"]["generative"].get("confirmed", 0)
-    print(f"  Golden confirmed: {golden_confirmed}, Generative confirmed: {gen_confirmed}")
+
+    for t_name in sorted(data["tiers"], key=lambda k: data["tiers"][k]["level"]):
+        t = data["tiers"][t_name]
+        print(f"  Tier {t['level']} ({t_name}): golden {t['golden_confirmed']}/{t['total_cells']}, "
+              f"gen {t['generative_confirmed']}/{t['total_cells']}")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# L1 Unit Test: Capabilities matrix consistency (v2 schema)
+# L1 Unit Test: Capabilities matrix consistency (v3 tier-based schema)
 # Validates capabilities.yaml against golden kernels and evidence artifacts.
 # =============================================================================
 
@@ -9,7 +9,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/test-helpers.sh"
 
-echo "=== Test: Capabilities Matrix Validation (v2) ==="
+echo "=== Test: Capabilities Matrix Validation (v3) ==="
 
 CAPS_FILE="$SKILLS_DIR/capabilities.yaml"
 CHECK_TOOL="$TOOLS_DIR/check_capabilities.py"
@@ -33,23 +33,17 @@ total=$(echo "$output" | $PYTHON -c "import json,sys; print(json.load(sys.stdin)
 fail_count=$(echo "$output" | $PYTHON -c "import json,sys; print(len(json.load(sys.stdin).get('failures',[])))" 2>/dev/null || echo "0")
 warn_count=$(echo "$output" | $PYTHON -c "import json,sys; print(len(json.load(sys.stdin).get('warnings',[])))" 2>/dev/null || echo "0")
 
-golden_counts=$(echo "$output" | $PYTHON -c "
+tier_summary=$(echo "$output" | $PYTHON -c "
 import json, sys
-d = json.load(sys.stdin).get('golden_counts', {})
-parts = [f'{k}: {v}' for k, v in sorted(d.items())]
-print(', '.join(parts))
-" 2>/dev/null || echo "n/a")
-
-gen_counts=$(echo "$output" | $PYTHON -c "
-import json, sys
-d = json.load(sys.stdin).get('generative_counts', {})
-parts = [f'{k}: {v}' for k, v in sorted(d.items())]
-print(', '.join(parts))
+tc = json.load(sys.stdin).get('tier_counts', {})
+parts = []
+for t, c in sorted(tc.items()):
+    parts.append(f'{t}: golden {c[\"golden_confirmed\"]}/{c[\"total\"]}, gen {c[\"gen_confirmed\"]}/{c[\"total\"]}')
+print('; '.join(parts))
 " 2>/dev/null || echo "n/a")
 
 echo "  Total cells: $total"
-echo "  Golden:      $golden_counts"
-echo "  Generative:  $gen_counts"
+echo "  Tiers:       $tier_summary"
 echo "  Failures: $fail_count"
 echo "  Warnings: $warn_count"
 echo ""
@@ -62,7 +56,7 @@ else
 import json, sys
 data = json.load(sys.stdin)
 for f in data.get('failures', []):
-    print(f'    {f[\"op\"]}/{f[\"dtype\"]}: {\"; \".join(f[\"issues\"])}')
+    print(f'    {f[\"op\"]}/{f[\"dtype\"]} ({f[\"tier\"]}): {\"; \".join(f[\"issues\"])}')
 " 2>/dev/null || true
     exit 1
 fi
