@@ -165,6 +165,14 @@ script -qc 'opencode run "Help me develop an abs operator that supports float16 
 
 The `script -qc` wrapper provides the pseudo-TTY that `opencode run` requires in headless environments.
 
+## Capabilities dashboard
+
+A live view of the capabilities matrix — which operations are verified, pending, or claimed — is published automatically on every push to `main`:
+
+**[https://aloschilov.github.io/pyasc-skill-stack/](https://aloschilov.github.io/pyasc-skill-stack/)**
+
+The dashboard is generated from `capabilities.yaml` and `evidence/*.json` by `tests/tools/generate_dashboard.py` and deployed via GitHub Pages. It supports filtering by class, status, and evidence dimension (golden vs generative), with click-to-expand evidence details.
+
 ## License
 
 This project is a port of the [CANN Skills](https://gitcode.com/cann/skills) architecture. See the original project for license terms.

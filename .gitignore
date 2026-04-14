@@ -8,3 +8,6 @@ teams/pyasc-kernel-dev-team/kernels/abs_f16/
 teams/pyasc-kernel-dev-team/kernels/neg_f16/
 teams/pyasc-kernel-dev-team/kernels/sub_f16/
 teams/pyasc-kernel-dev-team/kernels/vadd_f32_1024/
+
+# Generated dashboard output
+_site/
