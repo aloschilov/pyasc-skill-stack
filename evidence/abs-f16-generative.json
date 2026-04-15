@@ -4,24 +4,33 @@
   "operation": "abs",
   "dtype": "float16",
   "prompt": "Help me develop an abs operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add/kernel.py",
-  "date": "2026-04-14T16:20:13Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
+  "date": "2026-04-15T04:20:06Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 600,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
-      "design.md"
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md"
     ]
   },
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend910B1",
-    "status": "fail",
-    "detail": "File not found",
+    "status": "skip",
+    "detail": "python3.10 not found on PATH",
     "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.abs']",
+    "markers_found": [
+      "asc2.abs"
+    ]
   },
   "score": {
     "value": 10.0,

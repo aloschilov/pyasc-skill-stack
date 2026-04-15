@@ -4,24 +4,31 @@
   "operation": "softmax",
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator that supports float16 data type. The shape is mainly [32, 4096]. Apply softmax along the last axis so each row sums to 1.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add/kernel.py",
-  "date": "2026-04-14T16:28:35Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
+  "date": "2026-04-15T05:09:59Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 600,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
-      "design.md"
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md"
     ]
   },
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend910B1",
-    "status": "fail",
-    "detail": "File not found",
+    "status": "skip",
+    "detail": "python3.10 not found on PATH",
     "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "none of ['asc2.softmax'] found in kernel source",
+    "markers_found": []
   },
   "score": {
     "value": 10.0,
