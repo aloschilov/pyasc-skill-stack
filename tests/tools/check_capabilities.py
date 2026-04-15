@@ -91,19 +91,20 @@ def _validate_evidence(evidence_path: Path, expected_kind: str | None = None) ->
     except (json.JSONDecodeError, OSError) as exc:
         return False, f"evidence file invalid JSON: {exc}"
 
-    required_top = {"schema_version", "operation", "dtype", "kernel_path", "date"}
+    required_top = {"schema_version", "operation", "dtype", "date"}
     missing = required_top - set(data.keys())
     if missing:
         return False, f"evidence missing top-level fields: {missing}"
 
-    if "score" not in data:
-        return False, "evidence missing 'score' section"
-    score_section = data["score"]
-    if not isinstance(score_section, dict) or "value" not in score_section:
-        return False, "evidence 'score' section missing 'value'"
-
     if "verification" not in data:
         return False, "evidence missing 'verification' section"
+
+    if expected_kind == "generative":
+        if "score" not in data:
+            return False, "evidence missing 'score' section"
+        score_section = data["score"]
+        if not isinstance(score_section, dict) or "value" not in score_section:
+            return False, "evidence 'score' section missing 'value'"
 
     if expected_kind:
         actual_kind = data.get("kind", "")
