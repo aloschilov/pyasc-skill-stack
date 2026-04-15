@@ -1,0 +1,112 @@
+{
+  "schema_version": "2",
+  "kind": "generative",
+  "operation": "matmul",
+  "dtype": "float16",
+  "prompt": "Help me develop a matrix multiplication operator that supports float16 data type. The shapes are mainly M=128, K=256, N=128. Use asc2.matmul for the core computation.",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16/kernel.py",
+  "date": "2026-04-15T20:18:24Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
+    ]
+  },
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend910B1",
+    "status": "fail",
+    "detail": "Exit code 1: [INFO] Config file is found, path is /usr/local/Ascend/cann-9.0.0-beta.2/x86_64-linux/simulator/dav_2201/lib/config_stars.json.\n[FuncCache]: size:0x20000, line_size:128, way_num:16, line_num:1024, idx_num:64\n             idx_lsb:7, idx_mask:0x3f, tag_lsb:13, tag_mask:0xffffffffffffffff, ofst_mask:0x7f\n\n[TmSim]: Run in serial mode.\n[INFO] AicWrapper attach AIC 0, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 1, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 2, num_vec_cor",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.matmul', '@ ']",
+    "markers_found": [
+      "asc2.matmul",
+      "@ "
+    ]
+  },
+  "score": {
+    "value": 13.0,
+    "threshold": 8.5,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": false,
+        "detail": "no range call in kernel"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "allclose present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=3 params, found 3"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": false,
+        "detail": "no tiling math found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single allclose, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.matmul', '@ ']"
+      }
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Nightly CI run (attempt 1/2)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24471010562",
+  "history": []
+}
