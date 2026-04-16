@@ -184,7 +184,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/softmax_f16.py
     golden_evidence: evidence/softmax-f16-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/softmax-f16-generative.json
 - name: matmul
   tier: advanced

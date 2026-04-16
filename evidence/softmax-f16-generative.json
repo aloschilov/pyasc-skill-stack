@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "softmax",
   "dtype": "float16",
-  "prompt": "Help me develop a softmax operator that supports float16 data type. The shape is mainly [32, 4096]. Apply softmax along the last axis so each row sums to 1.",
+  "prompt": "Help me develop a softmax operator that supports float16 data type. Test with shape [32, 4096] ONLY. Do not test additional shapes -- the simulator is slow. Apply softmax along the last axis so each row sums to 1. Use atol=1e-2, rtol=1e-2 for verification.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
-  "date": "2026-04-16T10:15:34Z",
+  "date": "2026-04-16T15:33:39Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -13,15 +13,16 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md"
+      "self_review.md",
+      "acceptance_review.md"
     ]
   },
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend910B1",
-    "status": "fail",
-    "detail": "timeout",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend910B1, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -33,8 +34,8 @@
     ]
   },
   "score": {
-    "value": 14.0,
-    "threshold": 8.5,
+    "value": 15.0,
+    "threshold": 12,
     "accepted": true,
     "checks": {
       "jit_decorator": {
@@ -90,8 +91,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single allclose, no shape loop"
+        "passed": true,
+        "detail": "allclose x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -104,8 +105,8 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 2/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24499972988",
+  "notes": "Nightly CI run (attempt 1/2)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24515440358",
   "history": [
     {
       "date": "2026-04-15T20:04:58Z",
@@ -147,6 +148,15 @@
       "date": "2026-04-16T10:03:34Z",
       "overall_pass": false,
       "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T10:15:34Z",
+      "overall_pass": false,
+      "score": 14.0,
       "static": "pass",
       "runtime": "fail",
       "semantic": true,

@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator that supports float32 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_float32/kernel.py",
-  "date": "2026-04-16T08:59:53Z",
+  "date": "2026-04-16T14:48:34Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -34,7 +34,7 @@
   },
   "score": {
     "value": 15.0,
-    "threshold": 8.5,
+    "threshold": 12,
     "accepted": true,
     "checks": {
       "jit_decorator": {
@@ -105,7 +105,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 1/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24499972988",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24515440358",
   "history": [
     {
       "date": "2026-04-15T19:05:51Z",
@@ -127,6 +127,15 @@
     },
     {
       "date": "2026-04-16T06:44:01Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T08:59:53Z",
       "overall_pass": true,
       "score": 15.0,
       "static": "pass",
