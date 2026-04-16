@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator that supports float16 data type. The shape is mainly [32, 4096]. Apply softmax along the last axis so each row sums to 1.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
-  "date": "2026-04-16T07:53:28Z",
+  "date": "2026-04-16T10:15:34Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -105,7 +105,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 2/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24494990002",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24499972988",
   "history": [
     {
       "date": "2026-04-15T20:04:58Z",
@@ -129,6 +129,24 @@
       "date": "2026-04-16T07:41:28Z",
       "overall_pass": false,
       "score": 14.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T07:53:28Z",
+      "overall_pass": false,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T10:03:34Z",
+      "overall_pass": false,
+      "score": 15.0,
       "static": "pass",
       "runtime": "fail",
       "semantic": true,

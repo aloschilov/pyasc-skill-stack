@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a reduce_sum operator that supports float16 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
-  "date": "2026-04-16T06:58:04Z",
+  "date": "2026-04-16T09:14:00Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -21,7 +21,7 @@
     "backend": "Model",
     "platform": "Ascend910B1",
     "status": "fail",
-    "detail": "Exit code 1: [INFO] Config file is found, path is /usr/local/Ascend/cann-9.0.0-beta.2/x86_64-linux/simulator/dav_2201/lib/config_stars.json.\n[FuncCache]: size:0x20000, line_size:128, way_num:16, line_num:1024, idx_num:64\n             idx_lsb:7, idx_mask:0x3f, tag_lsb:13, tag_mask:0xffffffffffffffff, ofst_mask:0x7f\n\n[TmSim]: Run in serial mode.\n[INFO] AicWrapper attach AIC 0, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 1, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 2, num_vec_cor",
+    "detail": "Exit code 1: 14.11, -338.8 ,  130.9 ,  102.56,  135.5 ,   54.9 , -332.2 ,...\n / 32 (31.2%)\nMax absolute difference: 0.5\nMax relative difference: 0.0314\n x: array([  78.25 , -186.1  ,  494.   , -406.5  ,  307.8  ,  253.   ,\n        -71.9  , -127.56 , -169.4  ,   -8.89 ,  -79.4  , -463.2  ,\n         -5.78 ,  -80.3  ,   14.09 , -338.2  ,  130.9  ,  102.5  ,...\n y: array([  78.4 , -186.1 ,  494.2 , -406.2 ,  307.8 ,  253.2 ,  -71.75,\n       -127.9 , -169.2 ,   -8.65,  -79.06, -463.  ,   -5.97,  -80.4 ,\n         14.11, -338.8 ,  130.9 ,  102.56,  135.5 ,   54.9 , -332.2 ,...\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -105,7 +105,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 2/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24494990002",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24499972988",
   "history": [
     {
       "date": "2026-04-15T19:19:54Z",
@@ -127,6 +127,24 @@
     },
     {
       "date": "2026-04-16T06:51:03Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T06:58:04Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T09:06:55Z",
       "overall_pass": false,
       "score": 15.0,
       "static": "pass",

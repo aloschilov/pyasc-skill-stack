@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f16/kernel.py",
-  "date": "2026-04-16T07:12:08Z",
+  "date": "2026-04-16T09:28:54Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -21,7 +21,7 @@
     "backend": "Model",
     "platform": "Ascend910B1",
     "status": "fail",
-    "detail": "Exit code 1: [INFO] Config file is found, path is /usr/local/Ascend/cann-9.0.0-beta.2/x86_64-linux/simulator/dav_2201/lib/config_stars.json.\n[FuncCache]: size:0x20000, line_size:128, way_num:16, line_num:1024, idx_num:64\n             idx_lsb:7, idx_mask:0x3f, tag_lsb:13, tag_mask:0xffffffffffffffff, ofst_mask:0x7f\n\n[TmSim]: Run in serial mode.\n[INFO] AicWrapper attach AIC 0, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 1, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 2, num_vec_cor",
+    "detail": "Exit code 1: AttributeError: module 'numpy' has no attribute 'erf'\nm/kernels/gelu_f16/kernel.py\", line 88, in <module>\n    run_kernel(backend, platform)\n  File \"/workspace/teams/pyasc-kernel-dev-team/kernels/gelu_f16/kernel.py\", line 62, in run_kernel\n    expected = 0.5 * x_flat * (1 + np.erf(x_flat * k))\n                                   ^^^^^^\n  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/numpy/__init__.py\", line 333, in __getattr__\n    raise AttributeError(\"module {!r} has no attribute \"\nAttributeError: module 'numpy' has no attribute 'erf'\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -90,7 +90,7 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "allclose x2, shape loop=yes"
+        "detail": "allclose x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -104,7 +104,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 2/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24494990002",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24499972988",
   "history": [
     {
       "date": "2026-04-15T19:33:57Z",
@@ -126,6 +126,24 @@
     },
     {
       "date": "2026-04-16T07:05:06Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T07:12:08Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T09:21:25Z",
       "overall_pass": false,
       "score": 16.0,
       "static": "pass",

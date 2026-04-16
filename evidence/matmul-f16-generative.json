@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a matrix multiplication operator that supports float16 data type. The shapes are mainly M=128, K=256, N=128. Use asc2.matmul for the core computation.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16/kernel.py",
-  "date": "2026-04-16T08:07:31Z",
+  "date": "2026-04-16T10:29:37Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -21,7 +21,7 @@
     "backend": "Model",
     "platform": "Ascend910B1",
     "status": "fail",
-    "detail": "Exit code 1: [INFO] Config file is found, path is /usr/local/Ascend/cann-9.0.0-beta.2/x86_64-linux/simulator/dav_2201/lib/config_stars.json.\n[FuncCache]: size:0x20000, line_size:128, way_num:16, line_num:1024, idx_num:64\n             idx_lsb:7, idx_mask:0x3f, tag_lsb:13, tag_mask:0xffffffffffffffff, ofst_mask:0x7f\n\n[TmSim]: Run in serial mode.\n[INFO] AicWrapper attach AIC 0, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 1, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 2, num_vec_cor",
+    "detail": "Exit code 1: RuntimeError: Failed to run passes\n^^\n  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/asc/runtime/jit.py\", line 198, in _run_compiler\n    return compiler.run(mod, self.fn.__name__)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/asc/runtime/compiler.py\", line 287, in run\n    self.run_passes(mod)\n  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/asc/runtime/compiler.py\", line 305, in run_passes\n    pm.run(mod)\nRuntimeError: Failed to run passes\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -58,8 +58,8 @@
         "detail": "present"
       },
       "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
+        "passed": false,
+        "detail": "no range call in kernel"
       },
       "verification": {
         "passed": true,
@@ -90,8 +90,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single allclose, no shape loop"
+        "passed": true,
+        "detail": "allclose x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": false,
@@ -105,7 +105,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 2/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24494990002",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24499972988",
   "history": [
     {
       "date": "2026-04-15T20:18:24Z",
@@ -118,6 +118,24 @@
     },
     {
       "date": "2026-04-16T08:00:30Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T08:07:31Z",
+      "overall_pass": false,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T10:22:36Z",
       "overall_pass": false,
       "score": 15.0,
       "static": "pass",

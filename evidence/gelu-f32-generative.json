@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a GELU activation operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f32/kernel.py",
-  "date": "2026-04-16T07:26:47Z",
+  "date": "2026-04-16T09:43:44Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -13,7 +13,8 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md"
+      "self_review.md",
+      "acceptance_review.md"
     ]
   },
   "verification": {
@@ -21,7 +22,7 @@
     "backend": "Model",
     "platform": "Ascend910B1",
     "status": "fail",
-    "detail": "Exit code 1: [INFO] Config file is found, path is /usr/local/Ascend/cann-9.0.0-beta.2/x86_64-linux/simulator/dav_2201/lib/config_stars.json.\n[FuncCache]: size:0x20000, line_size:128, way_num:16, line_num:1024, idx_num:64\n             idx_lsb:7, idx_mask:0x3f, tag_lsb:13, tag_mask:0xffffffffffffffff, ofst_mask:0x7f\n\n[TmSim]: Run in serial mode.\n[INFO] AicWrapper attach AIC 0, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 1, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 2, num_vec_cor",
+    "detail": "Exit code 1: 1.325900e+00, -1.065110e-01,  3.309070e+00,  2.899851e+00,...\nts: 54 / 128 (42.2%)\nMax absolute difference: 4.7264123\nMax relative difference: 1.\n x: array([ 3.517757e+00, -2.125927e-03, -5.080989e-06,  1.285960e+00,\n       -1.200968e-01, -1.216682e-01, -5.584857e-05, -1.264706e-01,\n        1.325900e+00, -1.065111e-01,  3.309070e+00,  2.899851e+00,...\n y: array([ 3.517757e+00, -2.126022e-03, -5.222128e-06,  1.285960e+00,\n       -1.200968e-01, -1.216682e-01, -5.559813e-05, -1.264705e-01,\n        1.325900e+00, -1.065110e-01,  3.309070e+00,  2.899851e+00,...\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -32,7 +33,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 8.5,
     "accepted": true,
     "checks": {
@@ -89,8 +90,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "allclose x1, shape loop=yes"
+        "passed": false,
+        "detail": "single allclose, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -104,7 +105,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 2/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24494990002",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24499972988",
   "history": [
     {
       "date": "2026-04-15T19:48:00Z",
@@ -128,6 +129,24 @@
       "date": "2026-04-16T07:19:27Z",
       "overall_pass": false,
       "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T07:26:47Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T09:36:22Z",
+      "overall_pass": false,
+      "score": 16.0,
       "static": "pass",
       "runtime": "fail",
       "semantic": true,
