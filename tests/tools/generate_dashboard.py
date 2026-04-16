@@ -134,6 +134,27 @@ def build_data(cap: dict) -> dict:
 
             if gen_ev:
                 v_status = gen_ev.get("verification", {}).get("status", "")
+                v_detail = gen_ev.get("verification", {}).get("detail", "")
+                failure_reason = ""
+                if v_status not in ("pass", "skip", "") and v_detail:
+                    for line in v_detail.strip().splitlines():
+                        line = line.strip()
+                        if line and not line.startswith("Traceback") and not line.startswith("File "):
+                            failure_reason = line[:200]
+                            break
+                    if not failure_reason:
+                        failure_reason = v_detail.strip()[-200:]
+
+                history = gen_ev.get("history", [])
+                trend = ""
+                if history:
+                    prev_pass = history[-1].get("overall_pass", False)
+                    curr_pass = v_status == "pass"
+                    if prev_pass and not curr_pass:
+                        trend = "regression"
+                    elif not prev_pass and curr_pass:
+                        trend = "improvement"
+
                 row["generative_evidence"] = {
                     "date": gen_ev.get("date", ""),
                     "score": gen_ev.get("score", {}).get("value", 0),
@@ -147,8 +168,10 @@ def build_data(cap: dict) -> dict:
                     "agent_completed": gen_ev.get("agent", {}).get("completed", False),
                     "artifacts": gen_ev.get("agent", {}).get("artifacts_found", []),
                     "semantic_check": gen_ev.get("semantic_check", {}),
-                    "history": gen_ev.get("history", []),
+                    "history": history,
                     "ci_run_url": gen_ev.get("ci_run_url", ""),
+                    "failure_reason": failure_reason,
+                    "trend": trend,
                 }
 
             rows.append(row)
@@ -702,7 +725,13 @@ function makeBadge(status, evidence, kind, prompt) {
       rtIcon = ' <span title="Static only (runtime skipped)" style="font-size:11px;color:var(--pending);">&#9744;</span>';
     }
   }
-  return `<span class="${cls}"${dataAttr} onclick="toggleDetail(this)">${label}</span>${rtIcon}`;
+  let trendIcon = "";
+  if (hasEvidence && evidence.trend === "regression") {
+    trendIcon = ' <span title="Regression from previous run" style="font-size:13px;color:var(--blocked);">&#9660;</span>';
+  } else if (hasEvidence && evidence.trend === "improvement") {
+    trendIcon = ' <span title="Improved from previous run" style="font-size:13px;color:var(--confirmed);">&#9650;</span>';
+  }
+  return `<span class="${cls}"${dataAttr} onclick="toggleDetail(this)">${label}</span>${rtIcon}${trendIcon}`;
 }
 
 function toggleDetail(el) {
@@ -747,6 +776,9 @@ function toggleDetail(el) {
       if (d.semantic_check && d.semantic_check.passed !== undefined) {
         html += `<dt>Semantic</dt><dd>${d.semantic_check.passed ? "&#9745; pass" : "&#9744; fail"} &mdash; ${d.semantic_check.detail || ""}</dd>`;
       }
+      if (d.failure_reason) html += `<dt>Failure</dt><dd style="color:var(--blocked);">${d.failure_reason}</dd>`;
+      if (d.trend === "regression") html += `<dt>Trend</dt><dd style="color:var(--blocked);">&#9660; Regression from previous run</dd>`;
+      else if (d.trend === "improvement") html += `<dt>Trend</dt><dd style="color:var(--confirmed);">&#9650; Improved from previous run</dd>`;
       if (d.ci_run_url) html += `<dt>CI run</dt><dd><a href="${d.ci_run_url}" target="_blank" rel="noopener">View run &amp; artifacts &#8599;</a></dd>`;
       if (d.history && d.history.length) {
         const rate = d.history.filter(h => h.overall_pass).length;

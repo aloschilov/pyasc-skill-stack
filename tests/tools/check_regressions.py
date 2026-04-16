@@ -26,12 +26,19 @@ DEFAULT_EVIDENCE_DIR = REPO_ROOT / "evidence"
 
 
 def _current_pass(ev: dict) -> bool:
+    """Match the overall_pass logic from collect_generative_evidence.py."""
+    verification = ev.get("verification", {})
+    runtime_ok = (
+        verification.get("status") == "pass"
+        if verification.get("mode") != "static_only"
+        else True
+    )
     return (
         ev.get("static_verify") == "pass"
         and ev.get("score", {}).get("accepted", False)
         and ev.get("semantic_check", {}).get("passed", False)
-        and ev.get("agent", {}).get("completed", False)
         and bool(ev.get("kernel_path"))
+        and runtime_ok
     )
 
 

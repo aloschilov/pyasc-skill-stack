@@ -112,10 +112,14 @@ operations:
         prompt: >-
           Help me develop a reduce_sum operator that supports float16 data type.
           The input shape is [32, 4096], reduce along the last axis to produce
-          shape [32]. Each row should be summed independently.
+          shape [32]. Each row should be summed independently. Use OUT_PAD=16
+          for 32-byte alignment with float16. Use atol=2.0, rtol=5e-2 for
+          verification (float16 reductions accumulate error).
         shapes:
           - [32, 4096]
-        golden_status: untested
+        golden_status: confirmed
+        golden: golden/kernels/reduce_sum_f16.py
+        golden_evidence: evidence/reduce_sum-f16-golden.json
         generative_status: pending
         generative_evidence: evidence/reduce_sum-f16-generative.json
 
@@ -130,13 +134,16 @@ operations:
         prompt: >-
           Help me develop a GELU activation operator that supports float16 data
           type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is
-          defined as 0.5*x*(1+erf(x/sqrt(2))).
+          defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification,
+          use math.erf with np.vectorize (not np.erf or scipy).
         prompt_variants:
           minimal: "Generate a GELU activation kernel for float16."
           guided: >-
             Generate a GELU kernel composing asc2.erf, multiplication, and
             addition: 0.5*x*(1+erf(x/sqrt(2))). Use float16, shapes [1,128],
             [4,2048], [32,4096]. Use asc2.load/store and asc2.range for tiling.
+            For host-side verification use: import math; _verf = np.vectorize(math.erf).
+            Do NOT use np.erf or scipy.special.erf. Use atol=5e-2, rtol=5e-2.
         shapes:
           - [1, 128]
           - [4, 2048]
@@ -150,7 +157,8 @@ operations:
         prompt: >-
           Help me develop a GELU activation operator that supports float32 data
           type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is
-          defined as 0.5*x*(1+erf(x/sqrt(2))).
+          defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification,
+          use math.erf with np.vectorize (not np.erf or scipy). Use atol=1e-3.
         shapes:
           - [1, 128]
           - [4, 2048]
@@ -188,8 +196,9 @@ operations:
       - dtype: float16
         prompt: >-
           Help me develop a softmax operator that supports float16 data type.
-          The shape is mainly [32, 4096]. Apply softmax along the last axis
-          so each row sums to 1.
+          Test with shape [32, 4096] ONLY. Do not test additional shapes --
+          the simulator is slow. Apply softmax along the last axis so each row
+          sums to 1. Use atol=1e-2, rtol=1e-2 for verification.
         shapes:
           - [32, 4096]
         golden_status: confirmed
@@ -201,16 +210,19 @@ operations:
   - name: matmul
     tier: advanced
     asc2_api: "asc2.matmul(a, b)"
-    note: "Requires K-tiling with accumulator for non-trivial sizes"
+    note: >-
+      Requires torch.Tensor inputs for L0A/L0B memory placement on simulator.
+      Blocked: our Docker image (numpy-only) cannot run matmul -- the simulator
+      produces zeros with numpy arrays. Needs torch or NPU hardware.
     cells:
       - dtype: float16
         prompt: >-
           Help me develop a matrix multiplication operator that supports float16
-          data type. The shapes are mainly M=128, K=256, N=128. Use asc2.matmul
-          for the core computation.
+          data type. The shapes are mainly M=64, K=128, N=256. Use asc2.matmul
+          for the core computation. Load A to L0A and B to L0B.
         shapes:
+          - [64, 128]
           - [128, 256]
-          - [256, 128]
-        golden_status: untested
-        generative_status: pending
+        golden_status: blocked
+        generative_status: blocked
         generative_evidence: evidence/matmul-f16-generative.json

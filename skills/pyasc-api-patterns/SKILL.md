@@ -218,12 +218,28 @@ my_kernel[CORE_NUM](x, out, size, TILE_SIZE, asc.ceildiv(num_tiles, CORE_NUM))
 For **composed** operations (gelu, leaky_relu), use the same 1D pattern but chain ops:
 
 ```python
-# GELU: 0.5 * x * (1 + erf(x / sqrt(2)))
+# GELU kernel op (inside @asc2.jit):
 k = asc2.sqrt(0.5)
 out = x * (asc2.erf(x * k) + 1) * 0.5
 
-# Leaky ReLU: x if x >= 0 else alpha * x
+# Leaky ReLU kernel op (inside @asc2.jit):
 out = asc2.where(x >= 0, x, x * alpha)
+```
+
+**GELU host-side verification** (CRITICAL -- do NOT use np.erf or scipy):
+
+```python
+import math
+_verf = np.vectorize(math.erf)
+
+def run_kernel(backend, platform):
+    config.set_platform(backend, platform)
+    rng = np.random.default_rng(seed=2026)
+    # CRITICAL: generate float32 first, then cast (np.float16 not supported by rng)
+    x = (rng.random(size, dtype=np.float32) * 10 - 5).astype(np.float16)
+    out = kernel_launch(x)
+    expected = 0.5 * x * (1.0 + _verf(x.astype(np.float32) / np.sqrt(2.0)))
+    np.testing.assert_allclose(out, expected.astype(x.dtype), atol=5e-2, rtol=5e-2)
 ```
 
 ### Tier 1 — Reduction (row-wise)
@@ -254,9 +270,22 @@ reduce_sum_kernel[CORE_NUM](x, out, num_rows, num_cols, OUT_PAD)
 result = out[:, 0]  # extract first column
 ```
 
-### Tier 3 — Advanced (softmax)
+### Tier 3 — Advanced (softmax, matmul)
 
 Use `asc2.softmax()` on a block of full rows. Do NOT decompose softmax manually.
+
+**matmul** — BLOCKED on simulator without torch. The `asc2.matmul` API requires
+loading to `asc2.TileLocation.L0A`/`L0B` and produces float32 output. The simulator
+requires `torch.Tensor` inputs for matmul; numpy arrays produce zeros.
+If hardware or torch is available, use:
+
+```python
+a = asc2.load(a_gm, a_shape, offsets=[0, 0], location=asc2.TileLocation.L0A)
+b = asc2.load(b_gm, b_shape, offsets=[0, 0], location=asc2.TileLocation.L0B)
+c = a @ b  # or asc2.matmul(a, b, acc) for K-tiling
+```
+
+**softmax** — use `asc2.softmax()` directly:
 
 ```python
 @asc2.jit(always_compile=True)
@@ -274,6 +303,9 @@ def softmax_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
 block_size = asc.ceildiv(num_rows, CORE_NUM)
 softmax_kernel[CORE_NUM](x, out, num_rows, num_cols, block_size)
 ```
+
+**Softmax simulator constraint:** Test ONLY the shape specified in the prompt.
+The simulator is extremely slow for large softmax shapes. Do NOT add extra shapes.
 
 ## Common Mistakes
 

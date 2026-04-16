@@ -441,7 +441,7 @@ def main() -> None:
         "semantic_check": semantic_check,
         "score": {
             "value": score_data.get("score", 0.0) if score_data else 0.0,
-            "threshold": 8.5,
+            "threshold": 12,
             "accepted": score_data.get("accepted", False) if score_data else False,
             "checks": score_data.get("checks", {}) if score_data else {},
         },

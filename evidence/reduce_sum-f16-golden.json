@@ -1,0 +1,17 @@
+{
+  "schema_version": "3",
+  "kind": "golden",
+  "operation": "reduce_sum",
+  "dtype": "float16",
+  "kernel_path": "golden/kernels/reduce_sum_f16.py",
+  "date": "2026-04-16T13:47:51Z",
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend910B1",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend910B1, verification passed"
+  },
+  "runtime_verified": true,
+  "notes": "Golden kernel verified on CANN 9.0.0 simulator in Docker."
+}
