@@ -153,17 +153,130 @@ np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
 
 | Operation | Usage | Notes |
 |-----------|-------|-------|
+| `asc2.reduce_sum(x)` | Full sum reduction | Returns scalar tile |
+| `asc2.reduce_sum(x, dim)` | Axis sum reduction | Reduce along given dim |
 | `asc2.reduce_max(x)` | Max reduction | Returns scalar tile |
 | `x.sum()` | Sum reduction | |
 | `x.max()` | Max reduction | |
 | `x.min()` | Min reduction | |
 
+### Tile creation
+
+| Operation | Usage | Notes |
+|-----------|-------|-------|
+| `asc2.full(shape, scalar, dtype=...)` | Create tile filled with scalar | **Required** when storing scalar reduction results — last dim must be >= 32/sizeof(dtype) bytes for alignment |
+
 ### Advanced operations
 
 | Operation | Usage | Notes |
 |-----------|-------|-------|
-| `asc2.softmax(x)` | Softmax | |
+| `asc2.softmax(x)` | Softmax | Operates on full rows of a 2D tile |
 | `asc2.matmul(a, b)` or `a @ b` | Matrix multiply | Requires `asc2.TileLocation` for memory placement |
+
+## Proven Kernel Patterns
+
+> **Use these exact patterns.** They are extracted from golden kernels verified on the CANN 9.0.0 simulator. Deviating from these patterns is the primary cause of runtime failures.
+
+### Tier 0 — Elementwise (1D flatten)
+
+Use for any unary or binary element-wise operation (abs, exp, add, sub, gelu, leaky_relu, etc.).
+
+```python
+TILE_SIZE = 128
+CORE_NUM = 16
+
+@asc2.jit(always_compile=True)
+def my_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
+              size: int, tile_size: asc.ConstExpr[int],
+              tile_per_block: asc.ConstExpr[int]):
+    x_gm = asc2.tensor(x_ptr, [size])
+    out_gm = asc2.tensor(out_ptr, [size])
+    base_offset = asc2.block_idx() * tile_size * tile_per_block
+    for i in asc2.range(tile_per_block):
+        tile_offset = base_offset + i * tile_size
+        x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
+        out = asc2.abs(x)  # replace with your op
+        asc2.store(out, out_gm, offsets=[tile_offset])
+
+# Launch:
+num_tiles = asc.ceildiv(size, TILE_SIZE)
+my_kernel[CORE_NUM](x, out, size, TILE_SIZE, asc.ceildiv(num_tiles, CORE_NUM))
+```
+
+For **composed** operations (gelu, leaky_relu), use the same 1D pattern but chain ops:
+
+```python
+# GELU: 0.5 * x * (1 + erf(x / sqrt(2)))
+k = asc2.sqrt(0.5)
+out = x * (asc2.erf(x * k) + 1) * 0.5
+
+# Leaky ReLU: x if x >= 0 else alpha * x
+out = asc2.where(x >= 0, x, x * alpha)
+```
+
+### Tier 1 — Reduction (row-wise)
+
+Use for reduce_sum, reduce_max, etc. Key differences from elementwise:
+- 2D tensor layout; rows distributed across cores via `asc2.range(block_idx, num_rows, block_num)`
+- Scalar results must be wrapped with `asc2.full()` before storing (32-byte alignment)
+- Output buffer must be padded (e.g., `OUT_PAD = 8` for float32)
+
+```python
+OUT_PAD = 8  # min last-dim for 32-byte alignment with float32
+
+@asc2.jit(always_compile=True)
+def reduce_sum_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
+                      num_rows: int, num_cols: asc.ConstExpr[int],
+                      out_pad: asc.ConstExpr[int]):
+    x_gm = asc2.tensor(x_ptr, [num_rows, num_cols])
+    out_gm = asc2.tensor(out_ptr, [num_rows, out_pad])
+    for i in asc2.range(asc2.block_idx(), num_rows, asc2.block_num()):
+        row = asc2.load(x_gm, [1, num_cols], offsets=[i, 0])
+        s = asc2.reduce_sum(row)
+        result = asc2.full([1, out_pad], s, dtype=row.dtype)
+        asc2.store(result, out_gm, offsets=[i, 0])
+
+# Launch + extract results:
+out = np.zeros((num_rows, OUT_PAD), dtype=x.dtype)
+reduce_sum_kernel[CORE_NUM](x, out, num_rows, num_cols, OUT_PAD)
+result = out[:, 0]  # extract first column
+```
+
+### Tier 3 — Advanced (softmax)
+
+Use `asc2.softmax()` on a block of full rows. Do NOT decompose softmax manually.
+
+```python
+@asc2.jit(always_compile=True)
+def softmax_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
+                   num_rows: int, num_cols: asc.ConstExpr[int],
+                   block_size: asc.ConstExpr[int]):
+    x_gm = asc2.tensor(x_ptr, [num_rows, num_cols])
+    out_gm = asc2.tensor(out_ptr, [num_rows, num_cols])
+    start_row = asc2.block_idx() * block_size
+    rows = asc2.load(x_gm, [block_size, num_cols], offsets=[start_row, 0])
+    out = asc2.softmax(rows)
+    asc2.store(out, out_gm, offsets=[start_row, 0])
+
+# Launch:
+block_size = asc.ceildiv(num_rows, CORE_NUM)
+softmax_kernel[CORE_NUM](x, out, num_rows, num_cols, block_size)
+```
+
+## Common Mistakes
+
+> These mistakes cause runtime failures even when static verification passes.
+
+| Mistake | Why it fails | Fix |
+|---------|-------------|-----|
+| `break`, `continue`, or early `return` inside `@asc2.jit` | Not supported by the AST codegen | Remove; restructure loop logic |
+| `if row_idx >= num_rows: pass` bounds guard | asc2 handles bounds automatically; `if` with `pass` confuses codegen | Remove the guard entirely |
+| Tiling softmax with sub-row chunks | `asc2.softmax` needs the full row to compute the denominator | Load full `[block_size, num_cols]` and call `asc2.softmax` once |
+| Storing scalar reduction result directly | Tile last-dim must be >= 32 bytes; scalar is too small | Wrap with `asc2.full([1, pad], scalar, dtype=...)` |
+| Using `torch` or `scipy` for verification | Not installed in the simulator Docker image | Use only `numpy` and `math` stdlib |
+| `num_cols: int` in kernel when used in `asc2.load` shape | Shape args must be compile-time known | Declare as `num_cols: asc.ConstExpr[int]` |
+| Skipping `asc.ceildiv` for tiling | Manual division causes wrong tile counts | Always use `asc.ceildiv(a, b)` |
+| Using `range()` instead of `asc2.range()` inside kernel | Python `range` is not JIT-compatible | Replace with `asc2.range()` |
 
 ## API Restrictions
 

@@ -28,7 +28,7 @@
 - [ ] Buffer ID matches between set_flag and wait_flag
 
 ### 5. Output verification
-- [ ] Verification present (torch.allclose, numpy, or similar)
+- [ ] Verification present (np.testing.assert_allclose; numpy only)
 - [ ] Tolerance is reasonable (e.g., atol=1e-5 for float32)
 - [ ] Reference computation is correct
 

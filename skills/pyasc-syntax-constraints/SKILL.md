@@ -65,7 +65,7 @@ pyasc compiles Python code to Ascend C via JIT. Only a subset of Python syntax i
 |-----------|---------------|
 | `bool`, `int`, `float` | `str` |
 | `numpy` scalars and `ndarray` | `tuple`, `list`, `dict` |
-| `torch.Tensor` | Complex objects |
+| `torch.Tensor` (NPU mode only) | Complex objects |
 | `asc.GlobalAddress` | |
 
 ### Compile-time parameters

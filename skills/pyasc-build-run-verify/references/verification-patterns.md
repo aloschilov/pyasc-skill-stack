@@ -8,8 +8,7 @@ import torch
 def verify_kernel(kernel_launch_fn, x, y, expected_fn, atol=1e-5):
     result = kernel_launch_fn(x, y)
     expected = expected_fn(x, y)
-    assert torch.allclose(result, expected, atol=atol), \
-        f"Max diff: {(result - expected).abs().max().item()}"
+    np.testing.assert_allclose(result, expected, atol=atol, rtol=1e-3)
     return True
 ```
 

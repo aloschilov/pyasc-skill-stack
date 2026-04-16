@@ -24,7 +24,7 @@ Implement the kernel based on the Phase 1 design, review it, and verify output c
    - [ ] No unsupported constructs (print, break, continue, lambda, etc.)
    - [ ] Kernel function does not return a value
    - [ ] Proper sync: set_flag/wait_flag between pipeline stages
-   - [ ] Output verification with torch.allclose or numpy
+   - [ ] Output verification with np.testing.assert_allclose (numpy only)
    - [ ] Code matches the design document
 
 3. **Run verification**:
@@ -53,7 +53,7 @@ Implement the kernel based on the Phase 1 design, review it, and verify output c
 | `@asc.jit` decoration correct | Kernel vs device function |
 | Supported syntax only | No unsupported constructs inside JIT |
 | Proper sync flags | MTE2_V, V_MTE3, MTE3_MTE2 as needed |
-| Output verification | torch.allclose or numpy comparison |
+| Output verification | np.testing.assert_allclose (numpy only) |
 | Design consistency | Implementation matches design.md |
 | No hardcoded values | Parameterized where appropriate |
 

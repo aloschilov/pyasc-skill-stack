@@ -48,7 +48,7 @@ If required parameters are missing:
 | **asc2.tensor usage** | Global memory wrapped via `asc2.tensor(ptr, [shape])` | `pyasc-api-patterns` |
 | **asc2.range usage** | Tile loops use `asc2.range()`, NOT `range()` | `pyasc-syntax-constraints` |
 | **Launch syntax** | `kernel[core_num](...)` — no stream argument | `pyasc-api-patterns` |
-| **Output verification** | `np.testing.assert_allclose` or `torch.allclose` present | `pyasc-build-run-verify` |
+| **Output verification** | `np.testing.assert_allclose` present (numpy only; no torch/scipy) | `pyasc-build-run-verify` |
 | **Variable scoping** | No use of variables only defined inside one `if` branch | `pyasc-syntax-constraints` |
 
 ### Red flags — asc v1 API in asc2 kernel

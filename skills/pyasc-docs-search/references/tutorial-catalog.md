@@ -18,7 +18,7 @@ For first-time kernel development, start with **01_add** (manual sync). It demon
 - `data_copy` for GM <-> UB transfers
 - `asc.add` for vector computation
 - Manual `set_flag`/`wait_flag` synchronization
-- `torch.allclose` verification
+- `np.testing.assert_allclose` verification (numpy only)
 - Multi-core launch with `kernel[cores, stream](...)`
 
 ## Complexity progression

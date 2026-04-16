@@ -28,7 +28,7 @@ Kernel implementation complete
     |
     +-- Verify output
             |
-            +-- np.testing.assert_allclose / torch.allclose
+            +-- np.testing.assert_allclose
 ```
 
 ## Running a pyasc asc2 kernel

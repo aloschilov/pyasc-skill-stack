@@ -52,6 +52,21 @@ This skill provides local-first documentation search for pyasc kernel developmen
 5. ~/workspace/pyasc/python/test/ (test examples, external)
 ```
 
+## v1-to-asc2 translation
+
+> Many golden docs, tutorials, and API references use **v1 naming** (GlobalTensor, LocalTensor, data_copy, set_flag, wait_flag, TPosition, TPipe, TQue, etc.).
+> When retrieving v1 docs, **translate to asc2 equivalents** per `pyasc-api-patterns`:
+
+| v1 pattern | asc2 equivalent |
+|-----------|----------------|
+| `asc.GlobalTensor` / `asc.LocalTensor` | `asc2.tensor(ptr, [shape])` + `asc2.load`/`asc2.store` |
+| `asc.data_copy(dst, src, ...)` | `asc2.load(gm, [shape], offsets=[...])` / `asc2.store(tile, gm, offsets=[...])` |
+| `asc.set_flag` / `asc.wait_flag` | Not needed — `@asc2.jit` handles sync automatically |
+| `TPipe`, `TQue`, `BUFFER_NUM` | Not needed — `@asc2.jit` handles buffering |
+| `asc.abs(dst, src)` (v1 style) | `result = asc2.abs(x)` (returns new tile) |
+| `@asc.kernel_function` | `@asc2.jit(always_compile=True)` |
+| `kernel.launch(stream, ...)` | `kernel[CORE_NUM](...)` (no stream) |
+
 ## Tutorial catalog
 
 | Tutorial | Golden path | External path | Description |

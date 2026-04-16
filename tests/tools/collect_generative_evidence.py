@@ -200,11 +200,10 @@ def run_score(kernel_path: Path, op: str | None = None,
     if dtype:
         cmd += ["--dtype", dtype]
     code, out, _ = _run(cmd)
-    if code == 0:
-        try:
-            return json.loads(out)
-        except json.JSONDecodeError:
-            pass
+    try:
+        return json.loads(out)
+    except (json.JSONDecodeError, TypeError):
+        pass
     return None
 
 
@@ -263,7 +262,7 @@ def check_op_semantics(kernel_path: Path, op: str) -> dict:
     return {"passed": passed, "detail": detail, "markers_found": found}
 
 
-def run_docker_verify(kernel_path: Path, project_dir: Path) -> dict:
+def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300) -> dict:
     """Run simulator verification inside the Docker container.
 
     Mounts the repo at /repo (for tool scripts) and the project at /workspace
@@ -279,7 +278,7 @@ def run_docker_verify(kernel_path: Path, project_dir: Path) -> dict:
         "python3.11", "/repo/tests/tools/run_and_verify.py",
         str(rel_kernel), "--mode", "simulator", "--json",
     ]
-    code, out, err = _run(cmd, timeout=300)
+    code, out, err = _run(cmd, timeout=timeout)
     result = {
         "mode": "simulator", "backend": "Model", "platform": "Ascend910B1",
     }
@@ -295,7 +294,17 @@ def run_docker_verify(kernel_path: Path, project_dir: Path) -> dict:
         result["detail"] = parsed.get("detail", "")
         result["shapes_verified"] = parsed.get("shapes_verified", [])
     except (json.JSONDecodeError, TypeError):
-        result["detail"] = (err or out)[:300]
+        raw = err or out
+        traceback_line = ""
+        for line in reversed(raw.splitlines()):
+            stripped = line.strip()
+            if stripped and not stripped.startswith("^") and not stripped.startswith("~"):
+                traceback_line = stripped
+                break
+        detail = raw[-1000:] if len(raw) > 1000 else raw
+        if traceback_line and traceback_line not in detail:
+            detail = f"... {traceback_line}\n{detail}"
+        result["detail"] = detail
         result["shapes_verified"] = []
 
     return result
@@ -313,6 +322,8 @@ def main() -> None:
                         help="Agent timeout in seconds (default: 300)")
     parser.add_argument("--runtime", action="store_true",
                         help="Run simulator verification in Docker after generation")
+    parser.add_argument("--docker-timeout", type=int, default=300,
+                        help="Docker verify timeout in seconds (default: 300)")
     parser.add_argument("--notes", default="", help="Optional notes")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print JSON to stdout, don't write file")
@@ -401,7 +412,7 @@ def main() -> None:
 
         if args.runtime:
             print("  Running simulator in Docker...")
-            rt = run_docker_verify(kernel, project)
+            rt = run_docker_verify(kernel, project, timeout=args.docker_timeout)
             verification = rt
             print(f"  Runtime: {rt['status']}")
     else:
@@ -451,14 +462,15 @@ def main() -> None:
             with open(out_path) as f:
                 prev = json.load(f)
             history = prev.get("history", [])
+            prev_runtime_ok = prev.get("verification", {}).get("status") == "pass" if prev.get("verification", {}).get("mode") != "static_only" else True
             history.append({
                 "date": prev.get("date", ""),
                 "overall_pass": (
                     prev.get("static_verify") == "pass"
                     and prev.get("score", {}).get("accepted", False)
                     and prev.get("semantic_check", {}).get("passed", False)
-                    and prev.get("agent", {}).get("completed", False)
                     and bool(prev.get("kernel_path"))
+                    and prev_runtime_ok
                 ),
                 "score": prev.get("score", {}).get("value", 0),
                 "static": prev.get("static_verify", ""),
@@ -498,12 +510,13 @@ def main() -> None:
     else:
         print(f"  Project kept at: {project}")
 
+    runtime_ok = verification.get("status") == "pass" if args.runtime else True
     overall_pass = (
         static_result == "pass"
         and evidence["score"]["accepted"]
         and semantic_check["passed"]
-        and agent_completed
         and kernel is not None
+        and runtime_ok
     )
     print(f"  Overall: {'pass' if overall_pass else 'fail'}")
     sys.exit(0 if overall_pass else 1)

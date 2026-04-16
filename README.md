@@ -115,7 +115,7 @@ pyasc-skill-stack/
 │       └── kernels/                  # Generated kernel workspace
 ├── golden/
 │   ├── tutorials/                    # Golden reference tutorial (asc2 vadd)
-│   ├── kernels/                      # Golden kernels per tier (abs, reduce_sum, gelu, leaky_relu)
+│   ├── kernels/                      # Golden kernels per tier (abs, reduce_sum, gelu, leaky_relu, softmax)
 │   ├── archive/                      # Archived golden kernels (sub, mul — covered by tier 0)
 │   └── docs/                         # Local pyasc API documentation
 ├── tests/                            # Automated test pyramid

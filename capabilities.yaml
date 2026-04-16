@@ -63,7 +63,7 @@ operations:
         golden_status: confirmed
         golden: golden/kernels/abs_f16.py
         golden_evidence: evidence/abs-f16-golden.json
-        generative_status: pending
+        generative_status: confirmed
         generative_evidence: evidence/abs-f16-generative.json
 
   - name: add
@@ -83,7 +83,7 @@ operations:
           - [4, 2048]
           - [32, 4096]
         golden_status: untested
-        generative_status: pending
+        generative_status: confirmed
         generative_evidence: evidence/add-f16-generative.json
 
   # --- Tier 1: Reduction ---

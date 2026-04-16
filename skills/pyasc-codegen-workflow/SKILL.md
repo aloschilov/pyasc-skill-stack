@@ -232,7 +232,7 @@ Verification has three layers:
    - Verify no banned constructs (`print`, `try/except`, `break`, `continue`, `lambda`, `import` inside JIT)
    - Verify `asc2.load` and `asc2.store` usage present
    - Verify `asc2.tensor` usage present
-   - Verify `assert_allclose` or numpy/torch verification present in host code
+   - Verify `np.testing.assert_allclose` verification present in host code (numpy only; no torch/scipy)
 
 3. **Layer 3 — Write verification record** — `kernels/{name}/docs/verification.md`:
    - Runtime result (PASS / FAIL / SKIP with reason and error message)

@@ -53,7 +53,7 @@ This project provides an AI-assisted workflow for developing custom operators us
 
 3. **Progressive verification**
    - Start with the simplest possible kernel (e.g., vector add)
-   - Verify with `np.testing.assert_allclose` or `torch.allclose` before expanding
+   - Verify with `np.testing.assert_allclose` before expanding (numpy only; no torch/scipy)
    - Use `Model` backend when NPU hardware is unavailable
 
 4. **No unsupported shortcuts**
@@ -169,8 +169,9 @@ pyasc-kernel-dev-team/
 
 **Mandatory restrictions**:
 - **ALLOWED (asc2)**: `asc2.tensor`, `asc2.load`, `asc2.store`, `asc2.range`, `asc2.block_idx`, `asc2.block_num`
-- **ALLOWED (asc2 ops)**: `asc2.abs`, `asc2.exp`, `asc2.log`, `asc2.sqrt`, `asc2.relu`, `asc2.where`, `asc2.reduce_max`, `asc2.softmax`, `asc2.matmul`
+- **ALLOWED (asc2 ops)**: `asc2.abs`, `asc2.exp`, `asc2.log`, `asc2.sqrt`, `asc2.relu`, `asc2.erf`, `asc2.sin`, `asc2.cos`, `asc2.where`, `asc2.reduce_sum`, `asc2.reduce_max`, `asc2.softmax`, `asc2.matmul`, `asc2.full`
 - **ALLOWED (asc2 ops)**: Tile arithmetic via operators: `x + y`, `x - y`, `x * y`, `x / y`, `-x`
+- **ALLOWED (asc2 ops)**: Tile method reductions: `x.sum()`, `x.max()`, `x.min()`
 - **ALLOWED (shared)**: `asc.GlobalAddress`, `asc.ConstExpr[int]`, `asc.ceildiv`
 - **ALLOWED (runtime)**: `asc2.jit`, `asc.runtime.config`
 - **BANNED**: asc v1 APIs inside asc2 kernels (`asc.GlobalTensor`, `asc.LocalTensor`, `asc.data_copy`, `asc.set_flag`, `asc.wait_flag`, `asc.TPosition`)

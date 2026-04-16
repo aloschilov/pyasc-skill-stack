@@ -53,6 +53,19 @@ def _simulator_env(platform: str, base: dict[str, str]) -> dict[str, str]:
     return env
 
 
+def _extract_shapes(detail: str) -> list[list[int]]:
+    """Extract shape info from PASS messages like 'size 128' or 'shape (32, 4096)'."""
+    import re
+    shapes: list[list[int]] = []
+    for m in re.finditer(r"size\s+(\d+)", detail):
+        shapes.append([int(m.group(1))])
+    for m in re.finditer(r"shape\s*\(([^)]+)\)", detail):
+        dims = [int(d.strip()) for d in m.group(1).split(",") if d.strip().isdigit()]
+        if dims:
+            shapes.append(dims)
+    return shapes
+
+
 def _report(
     use_json: bool,
     path: str,
@@ -61,13 +74,14 @@ def _report(
     mode: str | None = None,
 ) -> None:
     if use_json:
-        payload: dict[str, str | None] = {
+        payload: dict[str, object] = {
             "file": path,
             "status": status,
             "detail": detail,
         }
         if mode is not None:
             payload["mode"] = mode
+        payload["shapes_verified"] = _extract_shapes(detail) if status == "PASS" else []
         print(json.dumps(payload, indent=2))
     else:
         mode_s = f" [{mode}]" if mode else ""

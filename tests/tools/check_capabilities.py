@@ -213,7 +213,13 @@ def _check_generative(cell: dict, result: CellResult) -> None:
             if not ok:
                 result.fail(f"generative evidence: {detail}")
             else:
-                result.note(f"generative evidence valid: {evidence_ref}")
+                with open(evidence_path) as f:
+                    ev_data = json.load(f)
+                rt_status = ev_data.get("verification", {}).get("status", "")
+                if rt_status != "pass":
+                    result.fail(f"generative confirmed but runtime status is '{rt_status}', not 'pass'")
+                else:
+                    result.note(f"generative evidence valid + runtime pass: {evidence_ref}")
 
     elif status == "pending":
         prompt = cell.get("prompt")

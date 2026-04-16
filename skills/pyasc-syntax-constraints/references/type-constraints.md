@@ -11,7 +11,7 @@
 | `float` | Float | `def kernel(scale: float)` |
 | `numpy` scalar | numpy scalar types | `def kernel(val: np.float32)` |
 | `numpy.ndarray` | numpy array | Passed as data |
-| `torch.Tensor` | PyTorch tensor | Auto H2D/D2H transfer |
+| `torch.Tensor` | PyTorch tensor (NPU mode only) | Auto H2D/D2H transfer |
 | `asc.GlobalAddress` | Global memory pointer | Explicit memory management |
 
 ### Not supported as runtime parameters

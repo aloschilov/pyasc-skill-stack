@@ -45,8 +45,8 @@
 ## 6. Verification plan
 
 - **Backend**: Model (simulator)
-- **Reference**: `torch` element-wise addition: `x + y`
-- **Tolerance**: default (torch.allclose defaults)
+- **Reference**: numpy element-wise addition: `x + y`
+- **Tolerance**: atol=1e-3, rtol=1e-3
 - **Test shapes**: `(16384,)` = 8 * 2048
 
 ## 7. Syntax compliance check
