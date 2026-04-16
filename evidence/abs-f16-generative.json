@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an abs operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
-  "date": "2026-04-15T18:45:02Z",
+  "date": "2026-04-16T06:28:37Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -13,16 +13,15 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md",
-      "acceptance_review.md"
+      "self_review.md"
     ]
   },
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend910B1",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend910B1, verification passed",
+    "status": "fail",
+    "detail": "Exit code 1: [INFO] Config file is found, path is /usr/local/Ascend/cann-9.0.0-beta.2/x86_64-linux/simulator/dav_2201/lib/config_stars.json.\n[FuncCache]: size:0x20000, line_size:128, way_num:16, line_num:1024, idx_num:64\n             idx_lsb:7, idx_mask:0x3f, tag_lsb:13, tag_mask:0xffffffffffffffff, ofst_mask:0x7f\n\n[TmSim]: Run in serial mode.\n[INFO] AicWrapper attach AIC 0, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 1, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 2, num_vec_cor",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -33,7 +32,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 8.5,
     "accepted": true,
     "checks": {
@@ -90,8 +89,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single allclose, no shape loop"
+        "passed": true,
+        "detail": "allclose x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -105,10 +104,28 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 2/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24471010562",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24494990002",
   "history": [
     {
       "date": "2026-04-15T18:37:19Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-15T18:45:02Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-16T06:21:35Z",
       "overall_pass": false,
       "score": 16.0,
       "static": "pass",
