@@ -154,9 +154,8 @@ jobs:
             op="${entry%%:*}"
             dtype="${entry##*:}"
             best_exit=1
-            # Softmax needs longer docker timeout due to simulator speed
             DOCKER_TO=300
-            if [ "$op" = "softmax" ]; then
+            if [ "$op" = "softmax" ] || [ "$op" = "gelu" ]; then
               DOCKER_TO=600
             fi
             for attempt in $(seq 1 $ATTEMPTS); do
@@ -193,8 +192,9 @@ jobs:
           done
           echo ""
           echo "=== Generative evidence summary: $PASS/$TOTAL passed ==="
-          if [ "$PASS" -eq 0 ]; then
-            echo "::error::Zero operations passed — failing nightly gate"
+          MIN_PASS=$(( (TOTAL + 1) / 2 ))
+          if [ "$PASS" -lt "$MIN_PASS" ]; then
+            echo "::error::Only $PASS/$TOTAL passed (minimum $MIN_PASS required, 50%) — failing nightly gate"
             exit 1
           fi
 

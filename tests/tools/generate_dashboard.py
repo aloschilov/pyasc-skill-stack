@@ -147,9 +147,21 @@ def build_data(cap: dict) -> dict:
 
                 history = gen_ev.get("history", [])
                 trend = ""
+                verification = gen_ev.get("verification", {})
+                runtime_ok = (
+                    verification.get("status") == "pass"
+                    if verification.get("mode") != "static_only"
+                    else True
+                )
+                curr_pass = (
+                    gen_ev.get("static_verify") == "pass"
+                    and gen_ev.get("score", {}).get("accepted", False)
+                    and gen_ev.get("semantic_check", {}).get("passed", False)
+                    and bool(gen_ev.get("kernel_path"))
+                    and runtime_ok
+                )
                 if history:
                     prev_pass = history[-1].get("overall_pass", False)
-                    curr_pass = v_status == "pass"
                     if prev_pass and not curr_pass:
                         trend = "regression"
                     elif not prev_pass and curr_pass:
