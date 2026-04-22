@@ -169,15 +169,8 @@ def find_kernel(project_dir: Path, op: str) -> Path | None:
     if op_matches:
         return Path(op_matches[0])
     if all_kernels:
-        print(f"  WARN: no kernel.py in a directory named after '{op}'; "
-              f"using first match: {all_kernels[0]}", file=sys.stderr)
-        return Path(all_kernels[0])
-
-    py_files = glob.glob(str(project_dir / "**" / "*.py"), recursive=True)
-    py_files = [f for f in py_files
-                if not Path(f).name.startswith("__") and not _is_excluded(f)]
-    if py_files:
-        return Path(py_files[0])
+        print(f"  WARN: found kernel.py files but none in a directory matching '{op}': "
+              f"{[Path(m).parent.name for m in all_kernels]}", file=sys.stderr)
 
     return None
 
@@ -351,16 +344,31 @@ def main() -> None:
         opencode_cmd = f'opencode run "{prompt}" --dir "{project}"'
         cmd = ["script", "-qc", opencode_cmd, "/dev/null"]
 
+        import time as _time
         print(f"  Running opencode (timeout={args.timeout}s)...")
+        t0 = _time.monotonic()
         result = subprocess.run(
             cmd, capture_output=True, text=True,
             timeout=args.timeout, env=env,
         )
+        elapsed = _time.monotonic() - t0
         with open(output_file, "w") as f:
             f.write(result.stdout)
             f.write(result.stderr)
         agent_completed = True
-        print("  Agent completed.")
+        print(f"  Agent completed (exit={result.returncode}, {elapsed:.1f}s).")
+        if elapsed < 10:
+            print("  WARNING: opencode exited suspiciously fast — possible API/config issue")
+            stderr_lines = (result.stderr or "").strip().splitlines()
+            stdout_lines = (result.stdout or "").strip().splitlines()
+            if stderr_lines:
+                print(f"  stderr (last 5 lines):")
+                for line in stderr_lines[-5:]:
+                    print(f"    {line}")
+            if not stderr_lines and stdout_lines:
+                print(f"  stdout (last 5 lines):")
+                for line in stdout_lines[-5:]:
+                    print(f"    {line}")
     except subprocess.TimeoutExpired:
         print(f"  Agent timed out after {args.timeout}s")
     except Exception as exc:
