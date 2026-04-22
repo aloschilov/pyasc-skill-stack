@@ -3,18 +3,16 @@
   "kind": "generative",
   "operation": "reduce_sum",
   "dtype": "float16",
-  "prompt": "Help me develop a reduce_sum operator that supports float16 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently. Use OUT_PAD=16 for 32-byte alignment with float16. Use atol=2.0, rtol=5e-2 for verification (float16 reductions accumulate error).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
-  "date": "2026-04-21T04:52:27Z",
+  "prompt": "Generate a reduce_sum kernel for float16 with shape [32, 4096]. Use asc2.reduce_sum on each row, wrap scalar result with asc2.full([1, OUT_PAD], s, dtype=row.dtype) for 32-byte alignment (OUT_PAD=16 for float16). Use asc2.range for row distribution. Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Verify with np.testing.assert_allclose(out_f32, expected_f32, atol=2.0, rtol=5e-2).",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add/kernel.py",
+  "date": "2026-04-22T04:16:50Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md",
-      "self_review.md",
-      "acceptance_review.md"
+      "design.md"
     ]
   },
   "verification": {
@@ -26,15 +24,12 @@
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['asc2.reduce_sum', '.sum(']",
-    "markers_found": [
-      "asc2.reduce_sum",
-      ".sum("
-    ]
+    "passed": false,
+    "detail": "none of ['asc2.reduce_sum', '.sum('] found in kernel source",
+    "markers_found": []
   },
   "score": {
-    "value": 15.0,
+    "value": 14.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -80,33 +75,33 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 2"
+        "detail": "expected>=1 params, found 3"
       },
       "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
+        "passed": false,
+        "detail": "none of ['float16', 'f16', 'fp16'] found in source"
       },
       "tiling_consistency": {
         "passed": true,
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single allclose, no shape loop"
+        "passed": true,
+        "detail": "allclose x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": true,
         "detail": "shapes parameterized"
       },
       "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['asc2.reduce_sum', '.sum(']"
+        "passed": false,
+        "detail": "none of ['asc2.reduce_sum', '.sum('] found in source"
       }
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 1/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24703472608",
+  "notes": "Nightly CI run (guided fallback)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24759608427",
   "history": [
     {
       "date": "2026-04-15T19:19:54Z",
@@ -241,6 +236,42 @@
       "static": "pass",
       "runtime": "pass",
       "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-21T04:52:27Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T04:16:28Z",
+      "overall_pass": false,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T04:16:36Z",
+      "overall_pass": false,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T04:16:43Z",
+      "overall_pass": false,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
       "skipped": false
     }
   ]

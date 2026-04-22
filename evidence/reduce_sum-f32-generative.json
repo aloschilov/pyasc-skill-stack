@@ -3,18 +3,16 @@
   "kind": "generative",
   "operation": "reduce_sum",
   "dtype": "float32",
-  "prompt": "Help me develop a reduce_sum operator that supports float32 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_float32/kernel.py",
-  "date": "2026-04-21T04:45:23Z",
+  "prompt": "Generate a reduce_sum kernel for float32 with shape [32, 4096]. Use asc2.reduce_sum on each row, wrap scalar result with asc2.full([1, OUT_PAD], s, dtype=row.dtype) for 32-byte alignment (OUT_PAD=8 for float32). Use asc2.range for row distribution. Verify with np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-3).",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add/kernel.py",
+  "date": "2026-04-22T04:16:21Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md",
-      "self_review.md",
-      "acceptance_review.md"
+      "design.md"
     ]
   },
   "verification": {
@@ -26,12 +24,9 @@
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['asc2.reduce_sum', '.sum(']",
-    "markers_found": [
-      "asc2.reduce_sum",
-      ".sum("
-    ]
+    "passed": false,
+    "detail": "none of ['asc2.reduce_sum', '.sum('] found in kernel source",
+    "markers_found": []
   },
   "score": {
     "value": 15.0,
@@ -80,7 +75,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 2"
+        "detail": "expected>=1 params, found 3"
       },
       "output_dtype": {
         "passed": true,
@@ -91,22 +86,22 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single allclose, no shape loop"
+        "passed": true,
+        "detail": "allclose x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": true,
         "detail": "shapes parameterized"
       },
       "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['asc2.reduce_sum', '.sum(']"
+        "passed": false,
+        "detail": "none of ['asc2.reduce_sum', '.sum('] found in source"
       }
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 1/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24703472608",
+  "notes": "Nightly CI run (guided fallback)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24759608427",
   "history": [
     {
       "date": "2026-04-15T19:05:51Z",
@@ -205,6 +200,42 @@
       "static": "pass",
       "runtime": "pass",
       "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-21T04:45:23Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T04:16:00Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T04:16:07Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T04:16:14Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
       "skipped": false
     }
   ]

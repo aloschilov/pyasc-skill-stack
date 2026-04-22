@@ -3,19 +3,16 @@
   "kind": "generative",
   "operation": "abs",
   "dtype": "float32",
-  "prompt": "Help me develop an abs operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f32/kernel.py",
-  "date": "2026-04-21T04:30:18Z",
+  "prompt": "Generate an abs kernel using asc2.abs() with tiling via asc2.range. Use float32, shapes [1,128], [4,2048], [32,4096].",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add/kernel.py",
+  "date": "2026-04-22T04:15:45Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md",
-      "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
+      "design.md"
     ]
   },
   "verification": {
@@ -27,14 +24,12 @@
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['asc2.abs']",
-    "markers_found": [
-      "asc2.abs"
-    ]
+    "passed": false,
+    "detail": "none of ['asc2.abs'] found in kernel source",
+    "markers_found": []
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -80,7 +75,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 2"
+        "detail": "expected>=1 params, found 3"
       },
       "output_dtype": {
         "passed": true,
@@ -92,21 +87,21 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "allclose x1, shape loop=yes"
+        "detail": "allclose x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": true,
         "detail": "shapes parameterized"
       },
       "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['asc2.abs']"
+        "passed": false,
+        "detail": "none of ['asc2.abs'] found in source"
       }
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 1/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24703472608",
+  "notes": "Nightly CI run (guided fallback)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24759608427",
   "history": [
     {
       "date": "2026-04-20T15:42:39Z",
@@ -124,6 +119,42 @@
       "static": "pass",
       "runtime": "pass",
       "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-21T04:30:18Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T04:15:23Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T04:15:31Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T04:15:38Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
       "skipped": false
     }
   ]
