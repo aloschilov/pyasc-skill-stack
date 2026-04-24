@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a GELU activation operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf with np.vectorize (not np.erf or scipy). IMPORTANT: The simulator erf has significant numerical error for float32. Use np.testing.assert_allclose(out, expected, atol=2.0, rtol=0.1).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f32/kernel.py",
-  "date": "2026-04-23T04:56:18Z",
+  "date": "2026-04-24T04:51:35Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -37,7 +37,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -94,8 +94,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "allclose x1, shape loop=yes"
+        "passed": false,
+        "detail": "single allclose, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -108,27 +108,9 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 3/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24816157861",
+  "notes": "Nightly CI run (attempt 2/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24871744215",
   "history": [
-    {
-      "date": "2026-04-16T15:11:17Z",
-      "overall_pass": false,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-16T15:18:46Z",
-      "overall_pass": false,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-17T05:01:57Z",
       "overall_pass": true,
@@ -376,6 +358,24 @@
       "date": "2026-04-23T04:49:42Z",
       "overall_pass": false,
       "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-23T04:56:18Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-24T04:47:23Z",
+      "overall_pass": false,
+      "score": 16.0,
       "static": "pass",
       "runtime": "fail",
       "semantic": true,
