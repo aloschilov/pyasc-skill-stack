@@ -154,10 +154,10 @@ def score(path: str, op: str | None = None, dtype: str | None = None) -> list[Ch
     checks.append(Check("loop_range", has_range,
                          "range/asc2.range present" if has_range else "no range call in kernel"))
 
-    # 7. Verification call (allclose or assert_allclose in file)
-    has_verify = "allclose" in source
+    # 7. Verification call (allclose, assert_allclose, or torch.testing.assert_close)
+    has_verify = "allclose" in source or "assert_close" in source
     checks.append(Check("verification", has_verify,
-                         "allclose present" if has_verify else "no allclose call"))
+                         "verification call present" if has_verify else "no allclose/assert_close call"))
 
     # 8. Launch pattern: kernel[core_num](...) — asc2 style (no stream)
     has_launch = bool(re.search(r'\w+\[\s*\w+\s*\]\(', source) or
@@ -217,15 +217,15 @@ def score(path: str, op: str | None = None, dtype: str | None = None) -> list[Ch
     checks.append(Check("tiling_consistency", has_tiling,
                          "tiling logic found" if has_tiling else "no tiling math found"))
 
-    # 14. Multi-shape verification: allclose called for multiple test sizes
-    allclose_count = len(re.findall(r'allclose', source))
+    # 14. Multi-shape verification: verification call for multiple test sizes
+    verify_count = len(re.findall(r'allclose|assert_close', source))
     has_shape_loop = bool(re.search(r'for\s+\w+\s+in\s+.*shape', source, re.IGNORECASE)
                           or re.search(r'for\s+\w+\s+in\s+\[.*\(', source)
                           or re.search(r'for\s+.*\bin\b.*\[.*,.*\]', source))
-    multi_shape = allclose_count >= 2 or has_shape_loop
+    multi_shape = verify_count >= 2 or has_shape_loop
     checks.append(Check("multi_shape_verification", multi_shape,
-                         f"allclose x{allclose_count}, shape loop={'yes' if has_shape_loop else 'no'}"
-                         if multi_shape else "single allclose, no shape loop"))
+                         f"verify x{verify_count}, shape loop={'yes' if has_shape_loop else 'no'}"
+                         if multi_shape else "single verify call, no shape loop"))
 
     # 15. No hardcoded shapes inside JIT function body
     no_hardcoded = True

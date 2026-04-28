@@ -214,10 +214,12 @@ def verify(path: str) -> list[CheckResult]:
     has_verify = (
         _source_has_call(source, "allclose")
         or _source_has_call(source, "assert_allclose")
+        or _source_has_call(source, "assert_close")
         or "allclose" in source
+        or "torch.testing.assert_close" in source
     )
     results.append(CheckResult("verification", has_verify,
-                               "allclose verification present" if has_verify else "Missing assert_allclose / allclose"))
+                               "verification present" if has_verify else "Missing assert_allclose / allclose / assert_close"))
 
     return results
 

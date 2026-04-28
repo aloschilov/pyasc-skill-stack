@@ -70,16 +70,26 @@ jobs:
       - name: Simulator verification of golden kernels
         run: |
           FAILED=0
+          # Heavy CANN simulator runs (esp. matmul) need a large nofile ulimit.
           for kernel in golden/kernels/*.py; do
             [ -f "$kernel" ] || continue
             base=$(basename "$kernel")
-            echo "--- Verifying: $base ---"
+            # matmul golden uses the cube unit -> Ascend950PR_9599 platform.
+            if [[ "$base" == matmul_* ]]; then
+              PLATFORM=Ascend950PR_9599
+              TIMEOUT=600
+            else
+              PLATFORM=Ascend910B1
+              TIMEOUT=300
+            fi
+            echo "--- Verifying: $base (platform=$PLATFORM) ---"
             if docker run --rm \
+              --ulimit nofile=65536:65536 \
               -v "$(pwd)":/workspace:ro \
               -w /workspace \
               ${{ env.PYASC_SIM_IMAGE }} \
               python3.11 tests/tools/run_and_verify.py "$kernel" \
-                --mode simulator --timeout 300; then
+                --mode simulator --platform "$PLATFORM" --timeout "$TIMEOUT"; then
               echo "[PASS] $base"
             else
               echo "[FAIL] $base"
@@ -145,6 +155,7 @@ jobs:
             "gelu:float32"
             "leaky_relu:float16"
             "softmax:float16"
+            "matmul:float16"
           )
           CI_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           ATTEMPTS=3
@@ -155,7 +166,7 @@ jobs:
             dtype="${entry##*:}"
             best_exit=1
             DOCKER_TO=300
-            if [ "$op" = "softmax" ] || [ "$op" = "gelu" ]; then
+            if [ "$op" = "softmax" ] || [ "$op" = "gelu" ] || [ "$op" = "matmul" ]; then
               DOCKER_TO=600
             fi
             for attempt in $(seq 1 $ATTEMPTS); do

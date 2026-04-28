@@ -16,9 +16,13 @@
 #
 # Inside the container:
 #   source "$CANN_HOME/set_env.sh"
-#   export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
-#   python3.11 -c "import asc, asc2; print('pyasc OK')"
+#   export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
+#   python3.11 -c "import asc, asc2, torch; print('pyasc OK')"
 #   opencode
+#
+# The Ascend950PR_9599 simulator is required for matmul (cube unit). torch is
+# installed (CPU-only) because asc2.matmul requires torch.Tensor inputs on the
+# simulator -- numpy arrays produce zeros for matmul.
 #
 # Build args:
 #   PYASC_GIT_URL   pyasc source repository (default: upstream gitcode mirror)
@@ -29,7 +33,7 @@ FROM ascendai/cann:9.0.0-beta.2-910b-ubuntu22.04-py3.11
 
 ENV CANN_HOME=/usr/local/Ascend/ascend-toolkit/latest
 ENV ASCEND_HOME_PATH=${CANN_HOME}
-ENV LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/lib64:${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/lib64:${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:${ASCEND_HOME_PATH}/tools/simulator/Ascend950PR_9599/lib:${LD_LIBRARY_PATH}
 
 ARG PYASC_GIT_URL=https://gitcode.com/cann/pyasc.git
 ARG PYASC_GIT_REF=refs/merge-requests/85/head
@@ -53,6 +57,10 @@ RUN pip install --no-cache-dir \
         setuptools_scm \
         wheel
 
+RUN pip install --no-cache-dir \
+        torch==2.5.1 \
+        --index-url https://download.pytorch.org/whl/cpu
+
 ENV PYASC_SRC=/opt/pyasc
 RUN git clone "${PYASC_GIT_URL}" "${PYASC_SRC}" \
  && cd "${PYASC_SRC}" \
@@ -66,6 +74,7 @@ RUN cd "${PYASC_SRC}" \
  && pip install --no-cache-dir --no-build-isolation .
 
 RUN python3 -c "import numpy; print(f'numpy: {numpy.__version__}')" && \
+    python3 -c "import torch; print(f'torch: {torch.__version__}')" && \
     python3 -c "import asc, asc2; print('asc, asc2: OK')" || \
     echo "WARN: import failed during build (expected if CANN runtime not fully initialized). Will work at container runtime."
 

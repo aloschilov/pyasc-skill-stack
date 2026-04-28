@@ -1,0 +1,29 @@
+# pyasc-sim with matmul support: layered overlay on top of the base image.
+#
+# Adds:
+#   - torch==2.5.1 (CPU): required for asc2.matmul (numpy arrays produce zeros)
+#   - Ascend950PR_9599 simulator lib in LD_LIBRARY_PATH (matmul cube unit)
+#
+# This is a pragmatic overlay used to ship matmul support without rebuilding
+# pyasc from source. The canonical full build is still in `docker/Dockerfile`.
+#
+# Build:
+#   docker build -f docker/Dockerfile.matmul -t pyasc-sim:matmul docker/
+#   docker tag pyasc-sim:matmul ghcr.io/aloschilov/pyasc-sim:py3.11
+#   docker push ghcr.io/aloschilov/pyasc-sim:py3.11
+
+ARG BASE_IMAGE=ghcr.io/aloschilov/pyasc-sim:py3.11
+FROM ${BASE_IMAGE}
+
+ENV LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/lib64:${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:${ASCEND_HOME_PATH}/tools/simulator/Ascend950PR_9599/lib:${LD_LIBRARY_PATH}
+
+RUN pip install --no-cache-dir \
+        torch==2.5.1 \
+        --index-url https://download.pytorch.org/whl/cpu
+
+RUN python3 -c "import torch; print(f'torch: {torch.__version__}')" && \
+    python3 -c "import asc, asc2; print('asc, asc2: OK')" || \
+    echo "WARN: import failed during build (will work at container runtime)."
+
+WORKDIR /workspace
+CMD ["/bin/bash"]

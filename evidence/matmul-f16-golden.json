@@ -1,0 +1,17 @@
+{
+  "schema_version": "3",
+  "kind": "golden",
+  "operation": "matmul",
+  "dtype": "float16",
+  "kernel_path": "golden/kernels/matmul_f16.py",
+  "date": "2026-04-27T19:55:00Z",
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed"
+  },
+  "runtime_verified": true,
+  "notes": "Golden matmul kernel verified on CANN 9.0.0 Ascend950PR_9599 simulator with torch.Tensor inputs. Pattern from pyasc v2 test_matmul_mnblock.py."
+}

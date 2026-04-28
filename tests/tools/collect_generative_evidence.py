@@ -64,6 +64,33 @@ def _run(cmd: list[str], timeout: int = 30) -> tuple[int, str, str]:
         return 1, "", str(exc)
 
 
+def _load_capabilities_data() -> dict | None:
+    """Load capabilities.yaml as a dict (or None if unavailable)."""
+    if not CAPABILITIES_FILE.exists():
+        return None
+    if yaml is not None:
+        with open(CAPABILITIES_FILE) as f:
+            return yaml.safe_load(f)
+    code, out, _ = _run(
+        [PYTHON, "-c",
+         f"import yaml,json; print(json.dumps(yaml.safe_load(open('{CAPABILITIES_FILE}'))))"],
+        timeout=10,
+    )
+    if code != 0:
+        return None
+    return json.loads(out)
+
+
+def _find_cell(data: dict, op: str, dtype: str) -> dict | None:
+    for operation in data.get("operations", []):
+        if operation.get("name") != op:
+            continue
+        for cell in operation.get("cells", []):
+            if cell.get("dtype") == dtype:
+                return cell
+    return None
+
+
 def load_prompt_from_capabilities(op: str, dtype: str,
                                    variant: str | None = None) -> str | None:
     """Extract the prompt for a given op/dtype from capabilities.yaml.
@@ -71,32 +98,32 @@ def load_prompt_from_capabilities(op: str, dtype: str,
     If *variant* is given, look up that key in ``prompt_variants`` instead
     of using the primary ``prompt``.
     """
-    if not CAPABILITIES_FILE.exists():
+    data = _load_capabilities_data()
+    if data is None:
         return None
+    cell = _find_cell(data, op, dtype)
+    if cell is None:
+        return None
+    if variant:
+        variants = cell.get("prompt_variants", {})
+        return variants.get(variant)
+    return cell.get("prompt")
 
-    if yaml is not None:
-        with open(CAPABILITIES_FILE) as f:
-            data = yaml.safe_load(f)
-    else:
-        code, out, _ = _run(
-            [PYTHON, "-c",
-             f"import yaml,json; print(json.dumps(yaml.safe_load(open('{CAPABILITIES_FILE}'))))"],
-            timeout=10,
-        )
-        if code != 0:
-            return None
-        data = json.loads(out)
 
-    for operation in data.get("operations", []):
-        if operation.get("name") != op:
-            continue
-        for cell in operation.get("cells", []):
-            if cell.get("dtype") == dtype:
-                if variant:
-                    variants = cell.get("prompt_variants", {})
-                    return variants.get(variant)
-                return cell.get("prompt")
-    return None
+def load_platform_from_capabilities(op: str, dtype: str,
+                                     default: str = "Ascend910B1") -> str:
+    """Look up the simulator platform for a given op/dtype cell.
+
+    Most cells run on Ascend910B1; matmul (cube unit) requires Ascend950PR_9599.
+    Falls back to the default if the cell or field is missing.
+    """
+    data = _load_capabilities_data()
+    if data is None:
+        return default
+    cell = _find_cell(data, op, dtype)
+    if cell is None:
+        return default
+    return cell.get("platform") or default
 
 
 def create_test_project(prefix: str) -> Path:
@@ -238,25 +265,32 @@ def check_op_semantics(kernel_path: Path, op: str) -> dict:
     return {"passed": passed, "detail": detail, "markers_found": found}
 
 
-def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300) -> dict:
+def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
+                      platform: str = "Ascend910B1") -> dict:
     """Run simulator verification inside the Docker container.
 
     Mounts the repo at /repo (for tool scripts) and the project at /workspace
     (for the generated kernel). Runs run_and_verify.py from /repo.
+
+    *platform* is forwarded to run_and_verify.py via ``--platform``. Most ops
+    work on the default ``Ascend910B1``; matmul requires ``Ascend950PR_9599``.
+    Heavy CANN simulator runs need a high open-files ulimit.
     """
     rel_kernel = kernel_path.relative_to(project_dir)
     cmd = [
         "docker", "run", "--rm",
+        "--ulimit", "nofile=65536:65536",
         "-v", f"{REPO_ROOT}:/repo:ro",
         "-v", f"{project_dir}:/workspace",
         "-w", "/workspace",
         DOCKER_IMAGE,
         "python3.11", "/repo/tests/tools/run_and_verify.py",
         str(rel_kernel), "--mode", "simulator", "--json",
+        "--platform", platform,
     ]
     code, out, err = _run(cmd, timeout=timeout)
     result = {
-        "mode": "simulator", "backend": "Model", "platform": "Ascend910B1",
+        "mode": "simulator", "backend": "Model", "platform": platform,
     }
     if code == 0:
         result["status"] = "pass"
@@ -402,8 +436,10 @@ def main() -> None:
         }
 
         if args.runtime:
-            print("  Running simulator in Docker...")
-            rt = run_docker_verify(kernel, project, timeout=args.docker_timeout)
+            platform = load_platform_from_capabilities(args.op, args.dtype)
+            print(f"  Running simulator in Docker (platform={platform})...")
+            rt = run_docker_verify(kernel, project, timeout=args.docker_timeout,
+                                    platform=platform)
             verification = rt
             print(f"  Runtime: {rt['status']}")
     else:

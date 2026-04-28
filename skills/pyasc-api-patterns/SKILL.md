@@ -276,16 +276,68 @@ result = out[:, 0]  # extract first column
 
 Use `asc2.softmax()` on a block of full rows. Do NOT decompose softmax manually.
 
-**matmul** — BLOCKED on simulator without torch. The `asc2.matmul` API requires
-loading to `asc2.TileLocation.L0A`/`L0B` and produces float32 output. The simulator
-requires `torch.Tensor` inputs for matmul; numpy arrays produce zeros.
-If hardware or torch is available, use:
+**matmul** — supported. Two strict requirements:
+
+1. **Platform must be `Ascend950PR_9599`** (cube unit). `Ascend910B1` does not
+   expose the cube ops needed by `asc2.matmul`. Pass `-v Ascend950PR_9599` when
+   running the kernel script.
+2. **Inputs must be `torch.Tensor`** (not numpy arrays). The simulator silently
+   lowers numpy arrays to zero for matmul. This is the *only* operation that
+   requires torch on the host side; everything else stays numpy-only.
+
+The `asc2.matmul` (or `@`) API loads the operands to `L0A` / `L0B` and always
+produces a `float32` result tile, even for `float16` inputs.
+
+Proven kernel pattern (from `golden/kernels/matmul_f16.py`):
 
 ```python
-a = asc2.load(a_gm, a_shape, offsets=[0, 0], location=asc2.TileLocation.L0A)
-b = asc2.load(b_gm, b_shape, offsets=[0, 0], location=asc2.TileLocation.L0B)
-c = a @ b  # or asc2.matmul(a, b, acc) for K-tiling
+import torch
+import asc, asc2
+import asc.runtime.config as config
+
+@asc2.jit(always_compile=True)
+def matmul_kernel(a_ptr, b_ptr, c_ptr,
+                  a_shape: asc.ConstExpr, b_shape: asc.ConstExpr, c_shape: asc.ConstExpr,
+                  m_tile: asc.ConstExpr[int], m_tiles_per_block: asc.ConstExpr[int],
+                  n_tile: asc.ConstExpr[int], n_tiles_per_block: asc.ConstExpr[int]):
+    a_gm = asc2.tensor(a_ptr, a_shape)
+    b_gm = asc2.tensor(b_ptr, b_shape)
+    c_gm = asc2.tensor(c_ptr, c_shape)
+    block_id = asc2.block_idx()
+    m_elems_per_block = m_tile * m_tiles_per_block
+    m_base_off = (m_elems_per_block * block_id) % a_shape[0]
+    n_base_off = ((m_elems_per_block * block_id) // a_shape[0]) * (n_tile * n_tiles_per_block)
+    for j in range(n_tiles_per_block):
+        b_offset = n_base_off + j * n_tile
+        b_j = asc2.load(b_gm, [b_shape[0], n_tile], offsets=[0, b_offset],
+                        location=asc2.TileLocation.L0B)
+        for i in range(m_tiles_per_block):
+            a_offset = m_base_off + i * m_tile
+            a_i = asc2.load(a_gm, [m_tile, a_shape[1]], offsets=[a_offset, 0],
+                            location=asc2.TileLocation.L0A)
+            c_ij = a_i @ b_j     # asc2.matmul; result is float32
+            asc2.store(c_ij, c_gm, offsets=[a_offset, b_offset])
+
+# Host-side launch (torch, not numpy):
+a = torch.rand((m, k), dtype=torch.float16)
+b = torch.rand((k, n), dtype=torch.float16)
+c = torch.zeros((m, n), dtype=torch.float32)   # output is float32
+matmul_kernel[core_num](a, b, c, a.shape, b.shape, c.shape,
+                        m_tile, m_tiles_per_block, n_tile, n_tiles_per_block)
+c_ref = a.to(torch.float32) @ b.to(torch.float32)
+torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2)
 ```
+
+Tile-size constraints (from the proven pattern):
+
+- `m_tile % 16 == 0`, `n_tile % 16 == 0`
+- `m_tile * k * a.element_size() <= 64 KiB` (L0A budget)
+- `n_tile * k * b.element_size() <= 64 KiB` (L0B budget)
+- `m % m_tile == 0`, `n % n_tile == 0`
+- Tiles distributed evenly across `core_num` blocks
+
+Recommended starter shape: `m=k=n=16, core_num=1, m_tile=n_tile=16,
+m_tiles_per_block=n_tiles_per_block=1`. Once that passes, scale up.
 
 **softmax** — use `asc2.softmax()` directly:
 
@@ -319,7 +371,9 @@ The simulator is extremely slow for large softmax shapes. Do NOT add extra shape
 | `if row_idx >= num_rows: pass` bounds guard | asc2 handles bounds automatically; `if` with `pass` confuses codegen | Remove the guard entirely |
 | Tiling softmax with sub-row chunks | `asc2.softmax` needs the full row to compute the denominator | Load full `[block_size, num_cols]` and call `asc2.softmax` once |
 | Storing scalar reduction result directly | Tile last-dim must be >= 32 bytes; scalar is too small | Wrap with `asc2.full([1, pad], scalar, dtype=...)` |
-| Using `torch` or `scipy` for verification | Not installed in the simulator Docker image | Use only `numpy` and `math` stdlib |
+| Using `scipy` for verification | Not installed in the simulator Docker image | Use only `numpy` and `math` stdlib (or `torch` for matmul I/O only) |
+| Using numpy arrays for `asc2.matmul` inputs | The simulator silently lowers numpy arrays to zero for matmul | Use `torch.Tensor` (CPU) for matmul host-side data; verify with `torch.testing.assert_close` |
+| Running matmul on `Ascend910B1` | The cube unit lives on `Ascend950PR_9599` only | Pass `-v Ascend950PR_9599` (or set `platform: Ascend950PR_9599` in capabilities cell) |
 | `num_cols: int` in kernel when used in `asc2.load` shape | Shape args must be compile-time known | Declare as `num_cols: asc.ConstExpr[int]` |
 | Skipping `asc.ceildiv` for tiling | Manual division causes wrong tile counts | Always use `asc.ceildiv(a, b)` |
 | Using `range()` instead of `asc2.range()` inside kernel | Python `range` is not JIT-compatible | Replace with `asc2.range()` |
@@ -341,8 +395,12 @@ The simulator is extremely slow for large softmax shapes. Do NOT add extra shape
 - Use `asc.ConstExpr[int]` for any parameter that appears in `asc2.load` shape or `asc2.tensor` shape
 
 **Host-side data preparation**:
-- Use **numpy** arrays (NOT torch tensors) for data inputs and verification
-- Do NOT import `scipy`, `torch`, or other heavy libraries — they are not available in the simulator environment
+- Default: use **numpy** arrays for data inputs and verification.
+- **Exception (matmul only)**: the cube unit needs `torch.Tensor` inputs on the
+  simulator. Use `torch.float16` inputs and a `torch.float32` output buffer,
+  and verify with `torch.testing.assert_close`. `torch` (CPU) is installed in
+  the Docker image specifically for matmul.
+- Do NOT import `scipy` — it is not used by any kernel and bloats the prompt.
 
 **What asc2 handles automatically** (do NOT do manually):
 - Pipeline synchronization (`set_flag`/`wait_flag`) — `@asc2.jit` sets `insert_sync=True`

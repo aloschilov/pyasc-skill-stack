@@ -143,7 +143,7 @@ pyasc-kernel-dev-team/
 
 | Resource type | Path | Description |
 |---------------|------|-------------|
-| Golden kernels | `golden/kernels/` | asc2 kernels: abs_f16, gelu_f16, gelu_f32, leaky_relu_f16, reduce_sum_f16, reduce_sum_f32, softmax_f16 |
+| Golden kernels | `golden/kernels/` | asc2 kernels: abs_f16, gelu_f16, gelu_f32, leaky_relu_f16, matmul_f16, reduce_sum_f16, reduce_sum_f32, softmax_f16 |
 | Golden tutorials | `golden/tutorials/` | asc2 tutorials: 01_add, 02_add_framework, 03-05_matmul variants |
 | API docs (language) | `golden/docs/python-api/language/` | basic, core, adv, fwk API indexes |
 | API docs (generated) | `golden/docs/python-api/language/generated/` | Individual API reference pages |
