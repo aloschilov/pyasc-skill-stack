@@ -288,3 +288,52 @@ operations:
     - '@'
     - torch.Tensor
     - TileLocation.L0A
+- name: rms_norm
+  tier: advanced
+  asc2_api: asc2.rms_norm(x, gamma, eps)
+  note: Single builtin that normalizes along the last dim only. Supports float16/float32
+    and 1D or 2D inputs. Multi-core layout follows the softmax pattern (dynamic batch
+    dim, ConstExpr norm dim).
+  cells:
+  - dtype: float16
+    prompt: Create an RMSNorm kernel capable of handling dynamic string lengths. It
+      must utilize all available AI Cores by processing the data along the first or
+      last dimension.
+    prompt_variants:
+      guided: 'Build an asc2 RMSNorm kernel for float16. Use asc2.rms_norm(x, gamma,
+        eps). The number of rows is runtime-dynamic (`num_rows: int`); the normalization
+        dim is compile-time (`num_cols: asc.ConstExpr[int]`). Distribute rows across
+        AI cores via asc2.block_idx() and `kernel[CORE_NUM](...)`. Load gamma once
+        as a 1D tile of length num_cols. Use atol=5e-2, rtol=5e-2 with a numpy reference:
+        rms=sqrt(mean(x*x)+eps); y=(x/rms)*gamma. Test shape (32, 4096).'
+    shapes:
+    - - 32
+      - 4096
+    golden_status: confirmed
+    golden: golden/kernels/rms_norm_f16.py
+    golden_evidence: evidence/rms_norm-f16-golden.json
+    generative_status: pending
+    generative_evidence: evidence/rms_norm-f16-generative.json
+    semantic_check:
+    - asc2.rms_norm
+  - dtype: float32
+    prompt: Create an RMSNorm kernel capable of handling dynamic string lengths. It
+      must utilize all available AI Cores by processing the data along the first or
+      last dimension. Use float32 inputs.
+    prompt_variants:
+      guided: 'Build an asc2 RMSNorm kernel for float32. Use asc2.rms_norm(x, gamma,
+        eps). The number of rows is runtime-dynamic (`num_rows: int`); the normalization
+        dim is compile-time (`num_cols: asc.ConstExpr[int]`). Distribute rows across
+        AI cores via asc2.block_idx() and `kernel[CORE_NUM](...)`. Load gamma once
+        as a 1D tile of length num_cols. Use atol=1e-2, rtol=1e-2 with a numpy reference:
+        rms=sqrt(mean(x*x)+eps); y=(x/rms)*gamma. Test shape (8, 1024).'
+    shapes:
+    - - 8
+      - 1024
+    golden_status: confirmed
+    golden: golden/kernels/rms_norm_f32.py
+    golden_evidence: evidence/rms_norm-f32-golden.json
+    generative_status: pending
+    generative_evidence: evidence/rms_norm-f32-generative.json
+    semantic_check:
+    - asc2.rms_norm

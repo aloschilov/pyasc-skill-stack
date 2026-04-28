@@ -156,6 +156,8 @@ jobs:
             "leaky_relu:float16"
             "softmax:float16"
             "matmul:float16"
+            "rms_norm:float16"
+            "rms_norm:float32"
           )
           CI_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           ATTEMPTS=3

@@ -73,6 +73,15 @@ RUN cd "${PYASC_SRC}" \
  && pip install --no-cache-dir -r requirements-build.txt \
  && pip install --no-cache-dir --no-build-isolation .
 
+# Patch upstream casing bug: asc.language.tile.unary_ops.rms_norm calls
+# `create_asctile_RmsnormOp` (lowercase n) but the IR builder exposes
+# `create_asctile_RmsNormOp` (capital N). Fix in-place so asc2.rms_norm works.
+RUN PYASC_SITE=$(python3 -c "import asc, os; print(os.path.dirname(asc.__file__))") \
+ && sed -i 's/create_asctile_RmsnormOp/create_asctile_RmsNormOp/g' \
+        "${PYASC_SITE}/language/tile/unary_ops.py" \
+ && grep -q "create_asctile_RmsNormOp" "${PYASC_SITE}/language/tile/unary_ops.py" \
+ && echo "rms_norm casing patched"
+
 RUN python3 -c "import numpy; print(f'numpy: {numpy.__version__}')" && \
     python3 -c "import torch; print(f'torch: {torch.__version__}')" && \
     python3 -c "import asc, asc2; print('asc, asc2: OK')" || \
