@@ -312,7 +312,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/rms_norm_f16.py
     golden_evidence: evidence/rms_norm-f16-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/rms_norm-f16-generative.json
     semantic_check:
     - asc2.rms_norm
@@ -333,7 +333,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/rms_norm_f32.py
     golden_evidence: evidence/rms_norm-f32-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/rms_norm-f32-generative.json
     semantic_check:
     - asc2.rms_norm
