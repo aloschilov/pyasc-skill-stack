@@ -146,3 +146,51 @@ described here) remain open; once they are fixed in a future pyasc
 image, the kernel can be simplified back toward either the doc's wide-
 tile streaming or its pure-scalar column-loop without changing the
 capability matrix shape.
+
+## C310 multi-variant evolution
+
+The single-vector-lane streaming approach above was the C220
+(`Ascend910B1`) production form. The current `rms_norm/{float16,
+float32}` cells have since been **migrated to C310**
+(`Ascend950PR_9599`) and now ship a **two-kernel + host-side
+dispatcher** that mirrors CANN's arch35 dispatch in
+[`opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/rms_norm/rms_norm.cpp`](../../../home/aloschilov/Ascend/cann-9.0.0/opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/rms_norm/rms_norm.cpp):
+
+```cpp
+if (TILING_KEY_IS(5000)) {
+    GENERAL_OP_IMPL(RmsNorm::KernelRmsNormRegBase, DTYPE_X, DTYPE_GAMMA);
+} else if (TILING_KEY_IS(2001)) {
+    GENERAL_OP_IMPL(RmsNorm::KernelRmsNormRegBaseSplitD, DTYPE_X, DTYPE_GAMMA);
+}
+```
+
+The pyasc analogue lives in
+[`golden/kernels/rms_norm_f32.py`](../golden/kernels/rms_norm_f32.py)
+and [`golden/kernels/rms_norm_f16.py`](../golden/kernels/rms_norm_f16.py):
+
+- `rms_norm_full_row_kernel` — `KernelRmsNormRegBase` analogue. Loads
+  `[1, num_cols]` per row (`num_cols` is `asc.ConstExpr[int]`), reduces
+  inside the tile, broadcast-multiplies with gamma, stores back. Used
+  when `num_cols * dtype_bytes` fits a 64KB UB budget.
+- `rms_norm_split_d_kernel` — `KernelRmsNormRegBaseSplitD` analogue.
+  Streams along D in `tile_cols=64` (one Ascend SIMD lane) tiles with
+  host-side zero padding. Used when the row exceeds the budget; both
+  `num_rows` and `num_cols` are runtime `int`.
+- `rms_norm_launch(x, gamma, eps)` — host-side dispatcher with the
+  threshold check, mirroring the `TILING_KEY_IS` switch in pure Python.
+
+Inputs are `torch.Tensor` (numpy is silently zeroed on the C310
+simulator path; `golden/kernels/matmul_f16.py` documents the same
+quirk). Both shape regimes — `(8, 256)` for full_row and `(8, 1055)`
+for split_d — are verified in a single `run_kernel` call. CI routes
+`rms_norm_*` to `Ascend950PR_9599` alongside `matmul_*` (see
+`.github/workflows/ci.yml`).
+
+The MR-85 multi-core `SetValueOp` bug described in the previous section
+still applies to scalar `asc2.store`, but neither C310 kernel emits one
+(both use tile stores), so it is a non-issue for the current goldens.
+The wide-tile `asc2.full` / `asc2.mask` bugs likewise do not apply:
+full_row never broadcasts a scalar across a wide tile, and split_d pins
+`tile_cols=64`. The teaching pattern lives in
+`skills/pyasc-api-patterns/SKILL.md` under "Normalization layers —
+two-kernel RMSNorm with host dispatcher (C310)".

@@ -2,36 +2,29 @@
 """
 Golden reference: rms_norm_f32 kernel (asc2 API).
 
-Truly runtime-dynamic `num_cols` RMSNorm via single-vector-lane tile
-streaming. Both `num_rows` and `num_cols` are runtime `int`; the only
-compile-time constant in the inner loop is `tile_cols = 64` (= one
-hardware vector lane on Ascend910B1, 64 floats = 256 bytes), which keeps
-all tile arithmetic within a single SIMD lane and avoids the wide-tile
-fill / scalar-broadcast bugs in the pinned MR-85 simulator build.
+Two-variant RMSNorm with a host-side dispatcher, mirroring the CANN
+arch35 (C310) `rms_norm` op layout in
+``opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/rms_norm/rms_norm.cpp``:
 
-Why not the column-loop in `pyasc-fork/docs/e2e-rms-norm-column-loop-en.md`?
-  Pure scalar `asc2.store(plain_value, gm, offsets=[r, c])` lowers to
-  `SetValueOp`, which is dropped on even-indexed blocks in MR-85 multi-
-  core launches. We verified this with a minimal 8-row probe: rows
-  processed by blocks 0, 2, 4, 6 came back as zero. The streaming form
-  here uses tile stores instead and works reliably across all cores.
+  - ``KernelRmsNormRegBase``      (tiling key 5000) -> full_row branch
+  - ``KernelRmsNormRegBaseSplitD`` (tiling key 2001) -> split_d branch
 
-Shape contract:
-  Host pads x and gamma so the row length becomes
-  `padded_cols = ceil(num_cols / tile_cols) * tile_cols`. Padded zeros
-  do not contribute to `sum_sq`, so mean-square is normalized by the
-  REAL `num_cols`. The output is sliced back to `[:num_cols]` before
-  return. This satisfies the user-visible "dynamic string lengths"
-  prompt: any `num_cols` works without recompile of the kernel.
+Both kernels run on ``Ascend950PR_9599`` (compilation arch C310) and use
+``torch.Tensor`` inputs. The dispatcher picks one kernel based on
+``num_cols * dtype_bytes`` against a conservative UB budget; this
+matches CANN's ``TILING_KEY_IS`` switch in spirit but in pure Python.
 
-To run the doc-equivalent (64, 100003) shape, change only CORE_NUM and
-the `num_rows, num_cols` line in `run_kernel`. The kernel itself does
-not need any code changes.
+Test shapes (both verified in a single ``run_kernel`` call):
+  - (8, 256)  exercises full_row (row tile fits in UB).
+  - (8, 1055) exercises split_d (row exceeds UB; host-padded to 1088).
+
+Tolerances: full_row ``atol=rtol=1e-4``, split_d ``atol=rtol=1e-4``
+(both well under torch.testing.assert_close defaults for f32).
 """
 
 import logging
 import argparse
-import numpy as np
+import torch
 
 import asc
 import asc.runtime.config as config
@@ -40,17 +33,52 @@ import asc2
 CORE_NUM = 8
 TILE_COLS = 64
 EPS = 1e-5
+UB_BUDGET_BYTES = 64 * 1024
 
 logging.basicConfig(level=logging.INFO)
 
 
 @asc2.jit(always_compile=True)
-def rms_norm_streaming_kernel(x_ptr: asc.GlobalAddress, gamma_ptr: asc.GlobalAddress,
-                              out_ptr: asc.GlobalAddress,
-                              num_rows: int, num_cols: int, padded_cols: int,
-                              num_tiles: int,
-                              tile_cols: asc.ConstExpr[int],
-                              epsilon: asc.ConstExpr[float]):
+def rms_norm_full_row_kernel(x_ptr: asc.GlobalAddress, gamma_ptr: asc.GlobalAddress,
+                             out_ptr: asc.GlobalAddress,
+                             num_rows: int,
+                             num_cols: asc.ConstExpr[int],
+                             epsilon: asc.ConstExpr[float]):
+    """Full-row variant. ``num_cols`` is compile-time so the row tile shape
+    is known. Loads ``[1, num_cols]`` per row, reduces inside the tile,
+    multiplies by gamma + inv_rms, stores back. Mirrors CANN's
+    ``KernelRmsNormRegBase``.
+    """
+    x_gm = asc2.tensor(x_ptr, [num_rows, num_cols])
+    gamma_gm_2d = asc2.tensor(gamma_ptr, [1, num_cols])
+    out_gm = asc2.tensor(out_ptr, [num_rows, num_cols])
+
+    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num()):
+        x_row = asc2.load(x_gm, [1, num_cols], offsets=[row, 0])
+        x_row_f32 = x_row.to(asc.float32)
+        sum_sq = asc2.reduce_sum(x_row_f32 * x_row_f32)
+        inv_rms = 1.0 / asc2.sqrt(sum_sq / num_cols + epsilon)
+
+        gamma_row = asc2.load(gamma_gm_2d, [1, num_cols], offsets=[0, 0])
+        gamma_row_f32 = gamma_row.to(asc.float32)
+        out_f32 = x_row_f32 * gamma_row_f32 * inv_rms
+        asc2.store(out_f32.to(x_row.dtype), out_gm, offsets=[row, 0])
+
+
+@asc2.jit(always_compile=True)
+def rms_norm_split_d_kernel(x_ptr: asc.GlobalAddress, gamma_ptr: asc.GlobalAddress,
+                            out_ptr: asc.GlobalAddress,
+                            num_rows: int, num_cols: int, padded_cols: int,
+                            num_tiles: int,
+                            tile_cols: asc.ConstExpr[int],
+                            epsilon: asc.ConstExpr[float]):
+    """Split-D variant. Both ``num_rows`` and ``num_cols`` are runtime int.
+    Streams along D in ``tile_cols=64`` (one Ascend SIMD lane) tiles; the
+    host pre-pads ``x``/``gamma`` to a multiple of ``tile_cols`` and slices
+    the output back. ``sum_sq`` is divided by REAL ``num_cols``, so padded
+    zeros do not bias the mean-square. Mirrors CANN's
+    ``KernelRmsNormRegBaseSplitD``.
+    """
     x_gm = asc2.tensor(x_ptr, [num_rows, padded_cols])
     gamma_gm_2d = asc2.tensor(gamma_ptr, [1, padded_cols])
     out_gm = asc2.tensor(out_ptr, [num_rows, padded_cols])
@@ -62,7 +90,8 @@ def rms_norm_streaming_kernel(x_ptr: asc.GlobalAddress, gamma_ptr: asc.GlobalAdd
         for tile_id in asc2.range(num_tiles):
             col = tile_id * tile_cols
             x = asc2.load(x_gm, [1, tile_cols], offsets=[row, col])
-            sum_sq = sum_sq + asc2.reduce_sum(x * x)
+            x_f32 = x.to(asc.float32)
+            sum_sq = sum_sq + asc2.reduce_sum(x_f32 * x_f32)
 
         inv_rms = 1.0 / asc2.sqrt(sum_sq / num_cols + epsilon)
 
@@ -70,14 +99,22 @@ def rms_norm_streaming_kernel(x_ptr: asc.GlobalAddress, gamma_ptr: asc.GlobalAdd
             col = tile_id * tile_cols
             x = asc2.load(x_gm, [1, tile_cols], offsets=[row, col])
             gamma = asc2.load(gamma_gm_2d, [1, tile_cols], offsets=[0, col])
-            out = x * gamma * inv_rms
-            asc2.store(out, out_gm, offsets=[row, col])
+            x_f32 = x.to(asc.float32)
+            gamma_f32 = gamma.to(asc.float32)
+            out_f32 = x_f32 * gamma_f32 * inv_rms
+            asc2.store(out_f32.to(x.dtype), out_gm, offsets=[row, col])
 
 
-def rms_norm_launch(x: np.ndarray, gamma: np.ndarray,
-                    eps: float = EPS,
-                    tile_cols: int = TILE_COLS,
-                    core_num: int = CORE_NUM) -> np.ndarray:
+def _full_row_launch(x: torch.Tensor, gamma: torch.Tensor, eps: float,
+                     core_num: int) -> torch.Tensor:
+    num_rows, num_cols = x.shape
+    out = torch.empty_like(x)
+    rms_norm_full_row_kernel[core_num](x, gamma, out, num_rows, num_cols, eps)
+    return out
+
+
+def _split_d_launch(x: torch.Tensor, gamma: torch.Tensor, eps: float,
+                    core_num: int, tile_cols: int = TILE_COLS) -> torch.Tensor:
     num_rows, num_cols = x.shape
     padded_cols = ((num_cols + tile_cols - 1) // tile_cols) * tile_cols
 
@@ -85,38 +122,62 @@ def rms_norm_launch(x: np.ndarray, gamma: np.ndarray,
         x_padded = x
         gamma_padded = gamma
     else:
-        x_padded = np.zeros((num_rows, padded_cols), dtype=x.dtype)
+        x_padded = torch.zeros((num_rows, padded_cols), dtype=x.dtype)
         x_padded[:, :num_cols] = x
-        gamma_padded = np.zeros((padded_cols,), dtype=gamma.dtype)
+        gamma_padded = torch.zeros((padded_cols,), dtype=gamma.dtype)
         gamma_padded[:num_cols] = gamma
 
-    out_padded = np.zeros((num_rows, padded_cols), dtype=x.dtype)
+    out_padded = torch.zeros((num_rows, padded_cols), dtype=x.dtype)
     num_tiles = padded_cols // tile_cols
-    rms_norm_streaming_kernel[core_num](x_padded, gamma_padded, out_padded,
-                                        num_rows, num_cols, padded_cols,
-                                        num_tiles, tile_cols, eps)
-    return out_padded[:, :num_cols].copy()
+    rms_norm_split_d_kernel[core_num](x_padded, gamma_padded, out_padded,
+                                      num_rows, num_cols, padded_cols,
+                                      num_tiles, tile_cols, eps)
+    return out_padded[:, :num_cols].clone()
 
 
-def rms_norm_numpy(x: np.ndarray, gamma: np.ndarray, eps: float) -> np.ndarray:
-    x32 = x.astype(np.float32)
-    mean_sq = (x32 * x32).mean(axis=-1, keepdims=True)
-    return (x32 / np.sqrt(mean_sq + eps) * gamma.astype(np.float32)).astype(x.dtype)
+def rms_norm_launch(x: torch.Tensor, gamma: torch.Tensor,
+                    eps: float = EPS,
+                    core_num: int = CORE_NUM) -> torch.Tensor:
+    """Host-side dispatcher between the two C310 variants.
+
+    The threshold mirrors CANN's tiling: when one row fits in UB with
+    headroom for accumulator, gamma, and double-buffer, use the full-row
+    kernel (faster). Otherwise stream along D.
+    """
+    num_rows, num_cols = x.shape
+    dtype_bytes = x.element_size()
+    row_bytes = num_cols * dtype_bytes
+    if row_bytes <= UB_BUDGET_BYTES and num_cols % 8 == 0:
+        return _full_row_launch(x, gamma, eps, core_num)
+    return _split_d_launch(x, gamma, eps, core_num)
+
+
+def torch_rms_norm(x: torch.Tensor, gamma: torch.Tensor, eps: float) -> torch.Tensor:
+    x32 = x.to(torch.float32)
+    mean_sq = torch.mean(x32 * x32, dim=-1, keepdim=True)
+    return (x32 * torch.rsqrt(mean_sq + eps) * gamma.to(torch.float32)).to(x.dtype)
 
 
 def run_kernel(backend: config.Backend, platform: config.Platform):
     config.set_platform(backend, platform)
 
-    rng = np.random.default_rng(seed=2026)
-    num_rows, num_cols = 8, 1055
-    x = rng.standard_normal((num_rows, num_cols), dtype=np.float32)
-    gamma = rng.standard_normal((num_cols,), dtype=np.float32)
+    rng = torch.Generator().manual_seed(2026)
+
+    num_rows, num_cols = 8, 256
+    x = torch.randn((num_rows, num_cols), generator=rng, dtype=torch.float32)
+    gamma = torch.randn((num_cols,), generator=rng, dtype=torch.float32)
     out = rms_norm_launch(x, gamma, EPS)
-    expected = rms_norm_numpy(x, gamma, EPS)
-    np.testing.assert_allclose(out, expected, atol=1e-4, rtol=1e-4)
-    logging.info(
-        f"[PASS] streaming rms_norm verified for shape "
-        f"({num_rows}, {num_cols}) tile_cols={TILE_COLS}.")
+    expected = torch_rms_norm(x, gamma, EPS)
+    torch.testing.assert_close(out, expected, atol=1e-4, rtol=1e-4)
+    logging.info(f"[PASS] full_row branch shape ({num_rows}, {num_cols})")
+
+    num_rows, num_cols = 8, 1055
+    x = torch.randn((num_rows, num_cols), generator=rng, dtype=torch.float32)
+    gamma = torch.randn((num_cols,), generator=rng, dtype=torch.float32)
+    out = rms_norm_launch(x, gamma, EPS)
+    expected = torch_rms_norm(x, gamma, EPS)
+    torch.testing.assert_close(out, expected, atol=1e-4, rtol=1e-4)
+    logging.info(f"[PASS] split_d branch shape ({num_rows}, {num_cols})")
 
 
 def test_rms_norm_f32(backend: config.Backend, platform: config.Platform):

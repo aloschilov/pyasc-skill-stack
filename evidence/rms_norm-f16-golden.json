@@ -4,14 +4,14 @@
   "operation": "rms_norm",
   "dtype": "float16",
   "kernel_path": "golden/kernels/rms_norm_f16.py",
-  "date": "2026-04-29T11:25:00Z",
+  "date": "2026-04-29T18:05:00Z",
   "verification": {
     "mode": "simulator",
     "backend": "Model",
-    "platform": "Ascend910B1",
+    "platform": "Ascend950PR_9599",
     "status": "pass",
-    "detail": "Kernel executed on Model/Ascend910B1, verification passed"
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed"
   },
   "runtime_verified": true,
-  "notes": "Golden kernel verified on CANN 9.0.0 simulator in Docker. Single-vector-lane streaming pattern with float32 accumulator: tile_cols=64 (one Ascend910B1 SIMD lane), host-side zero padding to a multiple of tile_cols, multi-core (CORE_NUM=16) row distribution, x and gamma loaded as float16 then cast via .to(asc.float32) inside the inner loop and cast back via .to(x.dtype) before asc2.store. Both num_rows and num_cols are runtime int. Test shape (8, 1055) — non-aligned num_cols exercises the host-padding tail path. Tolerances atol=rtol=5e-2."
+  "notes": "Golden kernel verified on CANN 9.0.0 simulator (Ascend950PR_9599 / C310 / arch35) in Docker. Two-kernel + host-dispatcher structure mirroring CANN's KernelRmsNormRegBase (full_row, tiling key 5000) and KernelRmsNormRegBaseSplitD (split_d, tiling key 2001). Float16 input/output with float32 accumulator: loaded tiles cast via .to(asc.float32), output cast back via .to(x.dtype) before asc2.store. Inputs are torch.Tensor (numpy is silently zeroed on C310). Test shapes (8, 256) for full_row (atol=rtol=2e-2) and (8, 1055) for split_d (atol=rtol=5e-2) are both verified in a single run_kernel call."
 }

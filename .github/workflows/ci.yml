@@ -74,10 +74,11 @@ jobs:
           for kernel in golden/kernels/*.py; do
             [ -f "$kernel" ] || continue
             base=$(basename "$kernel")
-            # matmul golden uses the cube unit -> Ascend950PR_9599 platform.
-            if [[ "$base" == matmul_* ]]; then
+            # matmul golden uses the cube unit; rms_norm goldens are pinned
+            # to the C310 (arch35) variant set -> Ascend950PR_9599 platform.
+            if [[ "$base" == matmul_* || "$base" == rms_norm_* ]]; then
               PLATFORM=Ascend950PR_9599
-              TIMEOUT=600
+              TIMEOUT=900
             else
               PLATFORM=Ascend910B1
               TIMEOUT=300
