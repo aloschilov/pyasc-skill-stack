@@ -168,17 +168,23 @@ operations:
     generative_status: confirmed
     generative_evidence: evidence/gelu-f16-generative.json
   - dtype: float32
-    prompt: 'Help me develop a GELU activation operator that supports float32 data
-      type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))).
-      For host-side verification, use math.erf with np.vectorize (not np.erf or scipy).
-      IMPORTANT: The simulator erf has significant numerical error for float32. Use
-      np.testing.assert_allclose(out, expected, atol=2.0, rtol=0.1).'
+    prompt: 'Help me develop a GELU activation operator (tanh / Padé approximation
+      form) that supports float32 data type. The shape is mainly [1,128], [4,2048],
+      [32,4096]. GELU(x) = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3))). Use asc2.tanh;
+      do NOT use asc2.erf (simulator erf is too noisy on float32). For host-side
+      reference, use np.tanh. Use np.testing.assert_allclose(out, expected, atol=1e-2,
+      rtol=1e-2).'
     prompt_variants:
-      guided: 'Generate a GELU kernel for float32: 0.5*x*(1+erf(x/sqrt(2))). Use asc2.erf
-        for the kernel op. For host-side verification, use: import math; _verf = np.vectorize(math.erf);
-        expected = 0.5*x*(1+_verf(x/np.sqrt(2))). Do NOT use np.erf or scipy.special.erf.
-        The simulator erf has large numerical error for float32 -- use np.testing.assert_allclose(out,
-        expected, atol=2.0, rtol=0.1). Shapes [1,128], [4,2048], [32,4096].'
+      guided: 'Generate a GELU kernel for float32 using the tanh/Padé approximation
+        (PyTorch gelu(approximate=''tanh'')): out = 0.5 * x * (1 + tanh(sqrt(2/pi)
+        * (x + 0.044715 * x^3))). The kernel must use asc2.tanh; do NOT call asc2.erf
+        (simulator erf has up to 4.7 absolute error on float32 and is excluded from
+        this prompt). Use TILE_SIZE=64 (one Ascend910B1 SIMD vector lane — wider tiles
+        only write the first 64 elements). Compute sqrt(2/pi) and 0.044715 as Python
+        module-level constants outside the @asc2.jit function. For host-side reference,
+        use: k = np.sqrt(2.0 / np.pi); expected = 0.5 * x * (1.0 + np.tanh(k * (x
+        + 0.044715 * x**3))). Use np.testing.assert_allclose(out, expected, atol=1e-2,
+        rtol=1e-2). Shapes [1,128], [4,2048], [32,4096].'
     shapes:
     - - 1
       - 128
@@ -189,7 +195,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f32.py
     golden_evidence: evidence/gelu-f32-golden.json
-    generative_status: confirmed
+    generative_status: pending
     generative_evidence: evidence/gelu-f32-generative.json
 - name: leaky_relu
   tier: composed

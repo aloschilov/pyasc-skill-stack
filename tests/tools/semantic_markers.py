@@ -18,7 +18,7 @@ OP_SEMANTIC_MARKERS: dict[str, list[str]] = {
     "reduce_sum": ["asc2.reduce_sum", ".sum("],
     "reduce_max": ["asc2.reduce_max", ".max("],
     "reduce_min": [".min("],
-    "gelu": ["asc2.erf", "erf(", "gelu", "0.5 * x", "0.5*x"],
+    "gelu": ["asc2.tanh", "0.044715", "asc2.erf", "gelu"],
     "leaky_relu": ["asc2.where"],
     "softmax": ["asc2.softmax", "asc2.exp", "softmax"],
     "matmul": ["asc2.matmul", "@ "],

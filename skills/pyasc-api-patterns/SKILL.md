@@ -133,7 +133,7 @@ np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
 - float16 elementwise: `atol=1e-3, rtol=1e-3`
 - float16 composed (gelu, softmax): `atol=5e-2, rtol=5e-2`
 - float32 elementwise: `atol=1e-5, rtol=1e-5`
-- float32 composed (gelu): `atol=2.0, rtol=0.1` (simulator erf has large numerical error on float32)
+- float32 composed (gelu, tanh form): `atol=1e-2, rtol=1e-2` (use the tanh / Padé approximation; the simulator's `asc2.erf` is too noisy on float32 and was retired from the f32 golden)
 
 ## Available asc2 Operations
 
@@ -146,7 +146,8 @@ np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
 | `asc2.log(x)` | Natural log | |
 | `asc2.sqrt(x)` | Square root | |
 | `asc2.relu(x)` | ReLU activation | |
-| `asc2.erf(x)` | Error function | |
+| `asc2.erf(x)` | Error function | Noisy on float32 simulator (~1.84-4.7 max abs error); avoid for f32 GELU — use `asc2.tanh` instead |
+| `asc2.tanh(x)` | Hyperbolic tangent | Bit-exact on Ascend910B1; the canonical f32 GELU primitive |
 | `asc2.sin(x)` | Sine | |
 | `asc2.cos(x)` | Cosine | |
 | `-x` | Negate | Unary operator |
@@ -218,31 +219,49 @@ my_kernel[CORE_NUM](x, out, size, TILE_SIZE, asc.ceildiv(num_tiles, CORE_NUM))
 
 ### Tier 2 — Composed (gelu, leaky_relu)
 
-Uses the same 1D tiling pattern as elementwise but chains multiple `asc2` ops:
+Uses the same 1D tiling pattern as elementwise but chains multiple `asc2` ops.
+Two GELU forms are supported on the simulator; pick by dtype:
 
 ```python
-# GELU kernel op (inside @asc2.jit):
+# float16 GELU (erf form -- simulator erf precision is fine at f16 tolerance):
 k = asc2.sqrt(0.5)
 out = x * (asc2.erf(x * k) + 1) * 0.5
+
+# float32 GELU (tanh / Pade form -- simulator erf is too noisy on f32):
+# Define module-level constants OUTSIDE @asc2.jit:
+#     GELU_K = math.sqrt(2.0 / math.pi)
+#     GELU_C = 0.044715
+inner = (x + x * x * x * GELU_C) * GELU_K
+out = x * (asc2.tanh(inner) + 1) * 0.5
 
 # Leaky ReLU kernel op (inside @asc2.jit):
 out = asc2.where(x >= 0, x, x * alpha)
 ```
 
-**GELU host-side verification** (CRITICAL -- do NOT use np.erf or scipy):
+Two simulator constraints to honour:
+- Module-level constants only (e.g. `GELU_K = math.sqrt(...)`); calling `math.sqrt`
+  inside a `@asc2.jit` body raises `RuntimeError: Unsupported function referenced`.
+- For tanh-form f32 GELU, pin `TILE_SIZE = 64`. With wider tiles (128) only the
+  first 64 elements get written (one Ascend910B1 SIMD lane); the rest are
+  silently zero. This is the same wide-tile lowering bug seen in the rms_norm
+  history.
+
+**GELU host-side verification** (pick one):
 
 ```python
 import math
-_verf = np.vectorize(math.erf)
 
-def run_kernel(backend, platform):
-    config.set_platform(backend, platform)
-    rng = np.random.default_rng(seed=2026)
-    # CRITICAL: generate float32 first, then cast (np.float16 not supported by rng)
-    x = (rng.random(size, dtype=np.float32) * 10 - 5).astype(np.float16)
-    out = kernel_launch(x)
-    expected = 0.5 * x * (1.0 + _verf(x.astype(np.float32) / np.sqrt(2.0)))
-    np.testing.assert_allclose(out, expected.astype(x.dtype), atol=5e-2, rtol=5e-2)
+# float16 erf form: vectorise math.erf -- do NOT use np.erf or scipy.
+_verf = np.vectorize(math.erf)
+expected_f16 = (0.5 * x * (1.0 + _verf(x.astype(np.float32) / np.sqrt(2.0)))).astype(np.float16)
+np.testing.assert_allclose(out_f16.astype(np.float32),
+                           expected_f16.astype(np.float32),
+                           atol=5e-2, rtol=5e-2)
+
+# float32 tanh form: use np.tanh (no scipy needed):
+k = np.sqrt(2.0 / np.pi)
+expected_f32 = 0.5 * x * (1.0 + np.tanh(k * (x + 0.044715 * x ** 3)))
+np.testing.assert_allclose(out_f32, expected_f32, atol=1e-2, rtol=1e-2)
 ```
 
 ### Tier 1 — Reduction (row-wise)
