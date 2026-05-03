@@ -561,6 +561,24 @@ what makes the row dim dynamic.
 | Tolerance too tight for simulator (`atol=1e-5`) | Simulator introduces rounding; composed ops accumulate error | Use `atol=1e-3, rtol=1e-3` for float16; `atol=1e-3, rtol=1e-3` for composed float32 |
 | Testing many/large shapes on simulator | Simulator is ~1000x slower than NPU; large shapes cause timeouts | Test 1-2 shapes per run; keep total elements ≤ 131072 for float16 |
 
+### Editing `capabilities.yaml`
+
+The nightly bot owns `generative_status` and the `evidence/*-generative.json`
+files. It runs `tests/tools/sync_capabilities.py` after each nightly,
+demoting any cell whose latest run failed and promoting any cell whose
+latest run passed. **Always `git pull` before hand-editing
+`capabilities.yaml`** — otherwise a stale local edit can silently re-promote
+a cell the bot just demoted (this happened with `gelu/float32` on
+`28f8c77` → `8160e96`).
+
+The PR gate runs `check_capabilities.py --soft-runtime`: a confirmed cell
+with a fail in evidence shows up as `[DRIFT]` warning, not a hard fail,
+so an unrelated commit cannot be blocked by a flaky generative cell that
+the next nightly will reconcile. Merge-gate and nightly-gate still run
+the strict variant (i.e. `check_capabilities.py` without `--soft-runtime`).
+If you see `[DRIFT]` locally, run `python3 tests/tools/sync_capabilities.py`
+and commit the resulting capabilities.yaml.
+
 ## API Restrictions
 
 **Do not use inside `@asc2.jit` functions**:

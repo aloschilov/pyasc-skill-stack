@@ -200,7 +200,7 @@ def _check_golden(cell: dict, result: CellResult) -> None:
         result.warn(f"golden blocked: {notes}")
 
 
-def _check_generative(cell: dict, result: CellResult) -> None:
+def _check_generative(cell: dict, result: CellResult, soft_runtime: bool = False) -> None:
     status = cell.get("generative_status", "untested")
 
     if status == "confirmed":
@@ -217,7 +217,15 @@ def _check_generative(cell: dict, result: CellResult) -> None:
                     ev_data = json.load(f)
                 rt_status = ev_data.get("verification", {}).get("status", "")
                 if rt_status != "pass":
-                    result.fail(f"generative confirmed but runtime status is '{rt_status}', not 'pass'")
+                    msg = (f"generative confirmed but runtime status is '{rt_status}',"
+                           f" not 'pass' (drift — likely the nightly-bot has updated"
+                           f" since you last pulled; run"
+                           f" `python3 tests/tools/sync_capabilities.py` and commit,"
+                           f" or pull and rebase)")
+                    if soft_runtime:
+                        result.warn(msg)
+                    else:
+                        result.fail(msg)
                 else:
                     result.note(f"generative evidence valid + runtime pass: {evidence_ref}")
 
@@ -267,6 +275,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Validate capabilities.yaml (v3) consistency.")
     parser.add_argument("--json", action="store_true", help="JSON output")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show info-level notes")
+    parser.add_argument(
+        "--soft-runtime",
+        action="store_true",
+        help=(
+            "Demote 'generative confirmed but runtime fail' from FAIL to WARN."
+            " Used at PR-gate time so that transient nightly-vs-local drift in"
+            " generative_status does not block unrelated commits. Hard failures"
+            " (missing files, invalid JSON, schema violations, broken golden"
+            " static verify) still fail. Merge-gate and nightly-gate run the"
+            " strict variant."
+        ),
+    )
     args = parser.parse_args()
 
     if not CAPABILITIES_FILE.exists():
@@ -308,7 +328,7 @@ def main() -> None:
             dtype = cell.get("dtype", "unknown")
             result = CellResult(op_name, dtype, op_tier)
             _check_golden(cell, result)
-            _check_generative(cell, result)
+            _check_generative(cell, result, soft_runtime=args.soft_runtime)
             results.append(result)
 
     failures = [r for r in results if not r.passed]

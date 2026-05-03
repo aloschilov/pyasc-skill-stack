@@ -25,8 +25,12 @@ if [ ! -f "$CHECK_TOOL" ]; then
 fi
 
 echo ""
-echo "--- check_capabilities.py ---"
-output=$($PYTHON "$CHECK_TOOL" --json 2>&1) || true
+echo "--- check_capabilities.py (PR gate: --soft-runtime) ---"
+# PR gate runs with --soft-runtime so that transient drift between local edits
+# and a nightly-bot demotion does not hard-fail unrelated commits. Hard failures
+# (missing files, invalid JSON, schema violations) still block. Merge-gate and
+# nightly-gate run the strict variant.
+output=$($PYTHON "$CHECK_TOOL" --json --soft-runtime 2>&1) || true
 
 status=$(echo "$output" | $PYTHON -c "import json,sys; print(json.load(sys.stdin).get('status','unknown'))" 2>/dev/null || echo "unknown")
 total=$(echo "$output" | $PYTHON -c "import json,sys; print(json.load(sys.stdin).get('total_cells',0))" 2>/dev/null || echo "0")
@@ -50,6 +54,16 @@ echo ""
 
 if [ "$status" = "pass" ]; then
     print_pass "Capabilities matrix is consistent (all confirmed cells have valid artifacts)"
+    if [ "$warn_count" -gt 0 ]; then
+        echo "$output" | $PYTHON -c "
+import json, sys
+data = json.load(sys.stdin)
+for w in data.get('warnings', []):
+    msgs = w.get('warnings', [])
+    if any('drift' in m or 'runtime' in m for m in msgs):
+        print(f'    [DRIFT] {w[\"op\"]}/{w[\"dtype\"]} ({w[\"tier\"]}): {\"; \".join(msgs)}')
+" 2>/dev/null || true
+    fi
 else
     print_fail "Capabilities matrix has inconsistencies"
     echo "$output" | $PYTHON -c "
