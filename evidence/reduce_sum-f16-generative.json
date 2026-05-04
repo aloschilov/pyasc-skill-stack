@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a reduce_sum operator that supports float16 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently. Use OUT_PAD=16 for 32-byte alignment with float16. Use atol=2.0, rtol=5e-2 for verification (float16 reductions accumulate error).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
-  "date": "2026-05-03T20:01:23Z",
+  "date": "2026-05-04T05:07:15Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -107,17 +107,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 1/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25288422518",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25300932619",
   "history": [
-    {
-      "date": "2026-04-17T04:45:14Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-18T04:37:28Z",
       "overall_pass": true,
@@ -372,6 +363,15 @@
     },
     {
       "date": "2026-05-03T05:03:03Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-03T20:01:23Z",
       "overall_pass": true,
       "score": 15.0,
       "static": "pass",
