@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float32",
-  "prompt": "Help me develop a GELU activation operator (tanh / Pad\u00e9 approximation form) that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU(x) = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3))). Use asc2.tanh; do NOT use asc2.erf (simulator erf is too noisy on float32). For host-side reference, use np.tanh. Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_tanh_f32/kernel.py",
-  "date": "2026-05-06T05:30:21Z",
+  "prompt": "Generate a GELU kernel for float32 using the tanh/Pad\u00e9 approximation (PyTorch gelu(approximate='tanh')): out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3))). The kernel must use asc2.tanh; do NOT call asc2.erf (simulator erf has up to 4.7 absolute error on float32 and is excluded from this prompt). Use TILE_SIZE=64 (a conservative single-lane width that is the safe default for goldens on C310; wider tiles can hit lowering bugs that only write the first 64 elements). Compute sqrt(2/pi) and 0.044715 as Python module-level constants outside the @asc2.jit function. For host-side reference, use: k = np.sqrt(2.0 / np.pi); expected = 0.5 * x * (1.0 + np.tanh(k * (x + 0.044715 * x**3))). Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2). Shapes [1,128], [4,2048], [32,4096].",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f32_tanh/kernel.py",
+  "date": "2026-05-06T19:29:51Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -21,9 +21,9 @@
   "verification": {
     "mode": "simulator",
     "backend": "Model",
-    "platform": "Ascend910B1",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend910B1, verification passed",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Timeout after 300s",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -94,7 +94,7 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "detail": "verify x2, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -107,45 +107,9 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 2/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25416259656",
+  "notes": "Nightly CI run (guided fallback)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25445944784",
   "history": [
-    {
-      "date": "2026-04-28T04:59:26Z",
-      "overall_pass": false,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-28T05:03:55Z",
-      "overall_pass": false,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-28T05:07:45Z",
-      "overall_pass": false,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-28T05:11:55Z",
-      "overall_pass": false,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-28T09:45:22Z",
       "overall_pass": true,
@@ -373,6 +337,42 @@
     },
     {
       "date": "2026-05-06T05:23:07Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-06T05:30:21Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-06T18:59:14Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-06T19:09:25Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-06T19:19:19Z",
       "overall_pass": false,
       "score": 16.0,
       "static": "pass",

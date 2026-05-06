@@ -67,7 +67,7 @@ operations:
     - - 32
       - 4096
     golden_status: untested
-    generative_status: confirmed
+    generative_status: pending
     generative_evidence: evidence/abs-f32-generative.json
 - name: add
   tier: elementwise
@@ -94,7 +94,7 @@ operations:
     - - 32
       - 4096
     golden_status: untested
-    generative_status: confirmed
+    generative_status: pending
     generative_evidence: evidence/add-f16-generative.json
 - name: reduce_sum
   tier: reduction
@@ -171,7 +171,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f16.py
     golden_evidence: evidence/gelu-f16-golden.json
-    generative_status: confirmed
+    generative_status: pending
     generative_evidence: evidence/gelu-f16-generative.json
   - dtype: float32
     platform: Ascend950PR_9599
@@ -187,11 +187,11 @@ operations:
         (simulator erf has up to 4.7 absolute error on float32 and is excluded from
         this prompt). Use TILE_SIZE=64 (a conservative single-lane width that is the
         safe default for goldens on C310; wider tiles can hit lowering bugs that only
-        write the first 64 elements). Compute sqrt(2/pi) and 0.044715 as Python
-        module-level constants outside the @asc2.jit function. For host-side reference,
-        use: k = np.sqrt(2.0 / np.pi); expected = 0.5 * x * (1.0 + np.tanh(k * (x
-        + 0.044715 * x**3))). Use np.testing.assert_allclose(out, expected, atol=1e-2,
-        rtol=1e-2). Shapes [1,128], [4,2048], [32,4096].'
+        write the first 64 elements). Compute sqrt(2/pi) and 0.044715 as Python module-level
+        constants outside the @asc2.jit function. For host-side reference, use: k
+        = np.sqrt(2.0 / np.pi); expected = 0.5 * x * (1.0 + np.tanh(k * (x + 0.044715
+        * x**3))). Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).
+        Shapes [1,128], [4,2048], [32,4096].'
     shapes:
     - - 1
       - 128
@@ -202,7 +202,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f32.py
     golden_evidence: evidence/gelu-f32-golden.json
-    generative_status: confirmed
+    generative_status: pending
     generative_evidence: evidence/gelu-f32-generative.json
 - name: leaky_relu
   tier: composed
@@ -228,7 +228,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/leaky_relu_f16.py
     golden_evidence: evidence/leaky_relu-f16-golden.json
-    generative_status: confirmed
+    generative_status: pending
     generative_evidence: evidence/leaky_relu-f16-generative.json
 - name: softmax
   tier: advanced
@@ -287,8 +287,8 @@ operations:
         (each ≤ 64 KiB): start with m=k=n=16, core_num=1, m_tile=n_tile=16. Tile sizes
         must be multiples of 16. (4) Set platform="Ascend950PR_9599" in argparse default.
         matmul requires the cube unit on Ascend950PR_9599 (the only CI platform).
-        (5) Verify with torch.testing.assert_close(c,
-        c_ref, atol=1e-2, rtol=1e-2) where c_ref = a.to(torch.float32) @ b.to(torch.float32).'
+        (5) Verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2)
+        where c_ref = a.to(torch.float32) @ b.to(torch.float32).'
     shapes:
     - - 16
       - 16
