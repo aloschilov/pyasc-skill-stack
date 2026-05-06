@@ -4,14 +4,14 @@
   "operation": "softmax",
   "dtype": "float16",
   "kernel_path": "golden/kernels/softmax_f16.py",
-  "date": "2026-04-15T17:59:01Z",
+  "date": "2026-05-06T11:46:46Z",
   "verification": {
     "mode": "simulator",
     "backend": "Model",
-    "platform": "Ascend910B1",
+    "platform": "Ascend950PR_9599",
     "status": "pass",
-    "detail": "Kernel executed on Model/Ascend910B1, verification passed"
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed"
   },
   "runtime_verified": true,
-  "notes": "Golden kernel verified on CANN 9.0.0 simulator in Docker (honest run)."
+  "notes": "Golden kernel verified on CANN 9.0.0 simulator in Docker on Ascend950PR_9599 (C310). Migrated from Ascend910B1 in plan migrate_goldens_to_c310; size=128 dropped from elementwise test set due to C310's stricter MTE GDMA burst alignment."
 }

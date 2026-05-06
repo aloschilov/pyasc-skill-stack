@@ -14,16 +14,16 @@ pyasc kernel implementation for element-wise vector addition: out = x + y.
 ```bash
 # Set up CANN env first — see docs/cann-setup.md
 source $HOME/Ascend/cann/set_env.sh
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH
 
-python3.10 kernel.py -r Model -v Ascend910B1   # Run with simulator
-python3.10 kernel.py -r NPU                    # Run with NPU hardware
+python3.10 kernel.py -r Model -v Ascend950PR_9599   # Run with simulator
+python3.10 kernel.py -r NPU                         # Run with NPU hardware
 ```
 
 Or via pytest:
 
 ```bash
-pytest kernel.py --backend Model --platform Ascend910B1
+pytest kernel.py --backend Model --platform Ascend950PR_9599
 ```
 
 ## Verification

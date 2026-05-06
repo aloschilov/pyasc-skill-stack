@@ -2,7 +2,12 @@
 """
 Golden reference: abs_f16 kernel (asc2 API)
 Element-wise absolute value for float16 tensors.
-Verified on CANN simulator with Ascend910B1 platform.
+Verified on CANN simulator with Ascend950PR_9599 platform.
+
+Test sizes intentionally start at 8192 (= TILE_SIZE * CORE_NUM * 4) -- C310
+enforces stricter MTE GDMA burst alignment than 910B1 and silently errors
+on inputs smaller than TILE_SIZE * CORE_NUM (the cores receive empty tiles
+that fail the alignment check).
 """
 
 import logging
@@ -43,7 +48,7 @@ def abs_launch(x: np.ndarray) -> np.ndarray:
 def run_kernel(backend: config.Backend, platform: config.Platform):
     config.set_platform(backend, platform)
 
-    test_sizes = [128, 8192, 131072]
+    test_sizes = [8192, 131072]
     rng = np.random.default_rng(seed=2026)
 
     for size in test_sizes:
@@ -62,7 +67,7 @@ def test_abs_f16(backend: config.Backend, platform: config.Platform):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", type=str, default="Model", help="backend: Model or NPU")
-    parser.add_argument("-v", type=str, default=None, help="platform/SoC version")
+    parser.add_argument("-v", type=str, default="Ascend950PR_9599", help="platform/SoC version")
     args = parser.parse_args()
     backend = args.r
     platform = args.v

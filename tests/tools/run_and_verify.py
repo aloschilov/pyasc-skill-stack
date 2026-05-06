@@ -15,7 +15,7 @@ Usage::
     python run_and_verify.py <kernel.py> \\
         [--mode jit|simulator|auto] \\
         [--backend Model|NPU] \\
-        [--platform Ascend910B1] \\
+        [--platform Ascend950PR_9599] \\
         [--json]
 """
 
@@ -199,8 +199,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--platform",
-        default="Ascend910B1",
-        help="Platform passed as -v for simulator mode (default: Ascend910B1)",
+        default="Ascend950PR_9599",
+        help="Platform passed as -v for simulator mode (default: Ascend950PR_9599)",
     )
     parser.add_argument(
         "--json",

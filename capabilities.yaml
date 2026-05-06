@@ -32,6 +32,7 @@ operations:
   - tanh
   cells:
   - dtype: float16
+    platform: Ascend950PR_9599
     prompt: Help me develop an abs operator that supports float16 data type. The shape
       is mainly [1,128], [4,2048], [32,4096].
     prompt_variants:
@@ -51,6 +52,7 @@ operations:
     generative_status: confirmed
     generative_evidence: evidence/abs-f16-generative.json
   - dtype: float32
+    platform: Ascend950PR_9599
     prompt: Help me develop an abs operator that supports float32 data type. The shape
       is mainly [1,128], [4,2048], [32,4096].
     prompt_variants:
@@ -76,6 +78,7 @@ operations:
   - div
   cells:
   - dtype: float16
+    platform: Ascend950PR_9599
     prompt: Help me develop an add operator that supports float16 data type. The shape
       is mainly [1,128], [4,2048], [32,4096].
     prompt_variants:
@@ -102,6 +105,7 @@ operations:
   - reduce_prod
   cells:
   - dtype: float32
+    platform: Ascend950PR_9599
     prompt: Help me develop a reduce_sum operator that supports float32 data type.
       The input shape is [32, 4096], reduce along the last axis to produce shape [32].
       Each row should be summed independently.
@@ -120,6 +124,7 @@ operations:
     generative_status: confirmed
     generative_evidence: evidence/reduce_sum-f32-generative.json
   - dtype: float16
+    platform: Ascend950PR_9599
     prompt: Help me develop a reduce_sum operator that supports float16 data type.
       The input shape is [32, 4096], reduce along the last axis to produce shape [32].
       Each row should be summed independently. Use OUT_PAD=16 for 32-byte alignment
@@ -145,6 +150,7 @@ operations:
   note: No asc2.gelu builtin; must compose from erf, mul, add
   cells:
   - dtype: float16
+    platform: Ascend950PR_9599
     prompt: Help me develop a GELU activation operator that supports float16 data
       type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))).
       For host-side verification, use math.erf with np.vectorize (not np.erf or scipy).
@@ -168,6 +174,7 @@ operations:
     generative_status: confirmed
     generative_evidence: evidence/gelu-f16-generative.json
   - dtype: float32
+    platform: Ascend950PR_9599
     prompt: Help me develop a GELU activation operator (tanh / Padé approximation
       form) that supports float32 data type. The shape is mainly [1,128], [4,2048],
       [32,4096]. GELU(x) = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3))). Use asc2.tanh;
@@ -178,8 +185,9 @@ operations:
         (PyTorch gelu(approximate=''tanh'')): out = 0.5 * x * (1 + tanh(sqrt(2/pi)
         * (x + 0.044715 * x^3))). The kernel must use asc2.tanh; do NOT call asc2.erf
         (simulator erf has up to 4.7 absolute error on float32 and is excluded from
-        this prompt). Use TILE_SIZE=64 (one Ascend910B1 SIMD vector lane — wider tiles
-        only write the first 64 elements). Compute sqrt(2/pi) and 0.044715 as Python
+        this prompt). Use TILE_SIZE=64 (a conservative single-lane width that is the
+        safe default for goldens on C310; wider tiles can hit lowering bugs that only
+        write the first 64 elements). Compute sqrt(2/pi) and 0.044715 as Python
         module-level constants outside the @asc2.jit function. For host-side reference,
         use: k = np.sqrt(2.0 / np.pi); expected = 0.5 * x * (1.0 + np.tanh(k * (x
         + 0.044715 * x**3))). Use np.testing.assert_allclose(out, expected, atol=1e-2,
@@ -202,6 +210,7 @@ operations:
   note: Tests conditional logic with asc2.where
   cells:
   - dtype: float16
+    platform: Ascend950PR_9599
     prompt: Help me develop a leaky_relu operator that supports float16 data type
       with alpha=0.01. The shape is mainly [1,128], [4,2048], [32,4096].
     prompt_variants:
@@ -227,6 +236,7 @@ operations:
   note: Single builtin for tiles that fit; manual decomposition for long rows
   cells:
   - dtype: float16
+    platform: Ascend950PR_9599
     prompt: Help me develop a softmax operator that supports float16 data type. Test
       with shape [32, 4096] ONLY. Do not test additional shapes -- the simulator is
       slow. Apply softmax along the last axis so each row sums to 1. Use atol=5e-2,
@@ -276,7 +286,8 @@ operations:
         then asc2.store the float32 result. (3) Use small shapes that fit L0A/L0B
         (each ≤ 64 KiB): start with m=k=n=16, core_num=1, m_tile=n_tile=16. Tile sizes
         must be multiples of 16. (4) Set platform="Ascend950PR_9599" in argparse default.
-        matmul does NOT run on Ascend910B1. (5) Verify with torch.testing.assert_close(c,
+        matmul requires the cube unit on Ascend950PR_9599 (the only CI platform).
+        (5) Verify with torch.testing.assert_close(c,
         c_ref, atol=1e-2, rtol=1e-2) where c_ref = a.to(torch.float32) @ b.to(torch.float32).'
     shapes:
     - - 16

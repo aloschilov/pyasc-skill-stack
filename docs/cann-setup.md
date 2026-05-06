@@ -45,7 +45,7 @@ This sets `ASCEND_HOME_PATH` and adds CANN binaries to `PATH`.
 ### 2. Set simulator library path
 
 ```bash
-export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
 ```
 
 This is required for the Model backend (simulator). Without it, pyasc kernels will fail with missing library errors.
@@ -57,11 +57,11 @@ This is required for the Model backend (simulator). Without it, pyasc kernels wi
 grep '^Version=' "$ASCEND_HOME_PATH/compiler/version.info"
 
 # Check simulator libs exist
-ls "$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib/"
+ls "$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib/"
 
 # Run a pyasc tutorial to verify end-to-end
 cd "$PYASC_SRC"
-python3.10 python/tutorials/01_add/add.py -r Model -v Ascend910B1
+python3.10 python/tutorials/01_add/add.py -r Model -v Ascend950PR_9599
 ```
 
 Success criteria: The tutorial prints "Sample add run success." with no ISA errors.
@@ -71,12 +71,12 @@ Success criteria: The tutorial prints "Sample add run success." with no ISA erro
 Always use `python3.10` (not `python` or `python3`) since pyasc and torch are installed under Python 3.10.
 
 ```bash
-export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
-python3.10 kernel.py -r Model -v Ascend910B1
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
+python3.10 kernel.py -r Model -v Ascend950PR_9599
 ```
 
 - `-r Model` selects the simulator backend
-- `-v Ascend910B1` specifies the platform (the `1` suffix is required)
+- `-v Ascend950PR_9599` specifies the platform (the only platform the stack targets)
 
 ## Running pyasc Tests
 
@@ -87,7 +87,7 @@ python3.10 -m pytest python/test/unit/ -v
 
 # Kernel integration tests (requires simulator)
 source "$CANN_HOME/set_env.sh"
-export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
 python3.10 -m pytest python/test/kernels/test_vadd.py -v
 ```
 
@@ -99,7 +99,7 @@ If the simulator initializes ("PEM MODEL Init Success!") but produces ISA errors
 
 1. `LD_LIBRARY_PATH` includes the correct simulator path
 2. `source set_env.sh` was run in the current shell
-3. The `-v Ascend910B1` platform flag is specified (not `-v Ascend910B`)
+3. The `-v Ascend950PR_9599` platform flag is specified (not `-v Ascend950PR`)
 
 ### pytest collection errors
 

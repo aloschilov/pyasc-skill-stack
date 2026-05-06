@@ -1,7 +1,7 @@
 """Shared pytest fixtures for pyasc kernel tests.
 
 Usage:
-    pytest golden/kernels/abs_f16.py --backend Model --platform Ascend910B1
+    pytest golden/kernels/abs_f16.py --backend Model --platform Ascend950PR_9599
 """
 
 import asc.runtime.config as config
@@ -10,7 +10,8 @@ import pytest
 
 def pytest_addoption(parser):
     parser.addoption("--backend", default="Model", help="Backend: Model or NPU")
-    parser.addoption("--platform", default=None, help="Platform SoC, e.g. Ascend910B1")
+    parser.addoption("--platform", default="Ascend950PR_9599",
+                     help="Platform SoC (default: Ascend950PR_9599)")
 
 
 @pytest.fixture

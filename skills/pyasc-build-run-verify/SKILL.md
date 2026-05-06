@@ -39,21 +39,21 @@ Kernel implementation complete
 
 ```bash
 # Set up simulator environment (required for Model backend)
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH
 
 # Run with Model backend (simulator) — specify platform explicitly
-python3.10 kernel.py -r Model -v Ascend910B1
+python3.10 kernel.py -r Model -v Ascend950PR_9599
 
 # Run with NPU backend (requires hardware)
-python3.10 kernel.py -r NPU -v Ascend910B1
+python3.10 kernel.py -r NPU -v Ascend950PR_9599
 ```
 
-> The `-v Ascend910B1` flag is required. Do NOT use `-v Ascend910B` (missing version suffix).
+> The `-v Ascend950PR_9599` flag matches the only platform the stack targets. Do NOT use `-v Ascend950PR` (missing version suffix).
 
 ### Running via pytest
 
 ```bash
-pytest kernel.py --backend Model --platform Ascend910B1
+pytest kernel.py --backend Model --platform Ascend950PR_9599
 ```
 
 This requires a `conftest.py` with `backend` and `platform` fixtures (see the kernel template).

@@ -4,9 +4,9 @@ pyasc kernel template: {kernel_name}
 
 Operation: {describe operation}
 Usage:
-    python3.10 kernel.py -r Model -v Ascend910B1   # Run with simulator
-    python3.10 kernel.py -r NPU                    # Run with NPU hardware
-    pytest kernel.py --backend Model --platform Ascend910B1
+    python3.10 kernel.py -r Model -v Ascend950PR_9599   # Run with simulator
+    python3.10 kernel.py -r NPU                         # Run with NPU hardware
+    pytest kernel.py --backend Model --platform Ascend950PR_9599
 """
 
 import logging

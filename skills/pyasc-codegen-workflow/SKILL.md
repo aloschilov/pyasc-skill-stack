@@ -217,12 +217,12 @@ Verification has three layers:
 
 1. **Layer 1 — Simulator execution** (use `python3.10` — the python with pyasc installed):
    ```bash
-   export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+   export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH
    cd kernels/{name}
-   python3.10 kernel.py -r Model -v Ascend910B1
+   python3.10 kernel.py -r Model -v Ascend950PR_9599
    ```
    - **IMPORTANT**: Do NOT use bare `python` or `python3` — those may resolve to a different version without pyasc.
-   - **IMPORTANT**: The `LD_LIBRARY_PATH` export and `-v Ascend910B1` platform flag are required for the CANN simulator.
+   - **IMPORTANT**: The `LD_LIBRARY_PATH` export and `-v Ascend950PR_9599` platform flag are required for the CANN simulator.
    - If this succeeds, record the output in `kernels/{name}/docs/verification.md`
    - If runtime fails for ANY reason (missing lib, platform error, timeout, etc.): record the error message and **immediately proceed to Layer 2**. Do NOT attempt to debug or fix the runtime environment.
 

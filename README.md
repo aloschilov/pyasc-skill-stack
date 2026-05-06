@@ -18,7 +18,7 @@ These must be available on the host before starting:
 
 - `opencode` CLI installed
 - CANN Toolkit installed somewhere on disk (see [docs/cann-setup.md](docs/cann-setup.md))
-- Simulator libraries for `Ascend910B1` (shipped with CANN)
+- Simulator libraries for `Ascend950PR_9599` (shipped with CANN — the only platform the stack targets)
 - Either: Python 3.10.x (for the local-build path) **or** Docker (for the containerized path)
 
 > **Note on `asc2`.** The `asc2` tile-based API is not yet published to PyPI — the PyPI `pyasc` wheel ships only the `asc` v1 API. To get `asc2` you currently need either the Docker image (Option A) or a build from the `v2` branch of the `pyasc` source (Option B).
@@ -105,7 +105,7 @@ Same commands for all three options (for Docker, run them inside the container �
 
 ```bash
 source "$CANN_HOME/set_env.sh"
-export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
 python3.10 -c "import asc, asc2; print('pyasc OK')"
 opencode
 ```
@@ -127,8 +127,8 @@ After the agent finishes, run the generated kernel manually:
 
 ```bash
 source "$CANN_HOME/set_env.sh"
-export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
-python3.10 teams/pyasc-kernel-dev-team/kernels/<kernel_name>/kernel.py -r Model -v Ascend910B1
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
+python3.10 teams/pyasc-kernel-dev-team/kernels/<kernel_name>/kernel.py -r Model -v Ascend950PR_9599
 ```
 
 ## What the agent does
@@ -221,7 +221,7 @@ For non-interactive verification, use `opencode run` with a pseudo-TTY wrapper:
 
 ```bash
 source "$CANN_HOME/set_env.sh"
-export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
 script -qc 'opencode run "Help me develop an abs operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096]." --format json' /dev/null
 ```
 

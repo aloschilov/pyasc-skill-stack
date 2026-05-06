@@ -3,7 +3,7 @@
 Golden reference: softmax_f16 kernel (asc2 API)
 Row-wise softmax using the asc2.softmax builtin for float16 tensors.
 Each row is independently normalized so that it sums to 1.
-Verified on CANN simulator with Ascend910B1 platform.
+Verified on CANN simulator with Ascend950PR_9599 platform.
 """
 
 import logging
@@ -67,7 +67,7 @@ def test_softmax_f16(backend: config.Backend, platform: config.Platform):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", type=str, default="Model", help="backend: Model or NPU")
-    parser.add_argument("-v", type=str, default=None, help="platform/SoC version")
+    parser.add_argument("-v", type=str, default="Ascend950PR_9599", help="platform/SoC version")
     args = parser.parse_args()
     backend = args.r
     platform = args.v

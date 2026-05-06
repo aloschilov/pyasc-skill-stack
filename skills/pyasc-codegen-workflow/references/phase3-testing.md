@@ -18,9 +18,9 @@ Final verification of the kernel and preparation for delivery.
 Set up the simulator environment and run:
 
 ```bash
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH
 cd kernels/{name}
-python3.10 kernel.py -r Model -v Ascend910B1
+python3.10 kernel.py -r Model -v Ascend950PR_9599
 ```
 
 **If runtime fails**: Record the exact error message and proceed immediately to Step 2. Do NOT attempt to fix the runtime environment, explore simulator directories, or try alternative platforms.
@@ -44,7 +44,7 @@ Write `kernels/{name}/docs/verification.md` with:
 
 ## Runtime verification
 - Backend: Model
-- Platform: Ascend910B1
+- Platform: Ascend950PR_9599
 - Status: PASS / FAIL / SKIP
 - Output: (paste output or error message)
 

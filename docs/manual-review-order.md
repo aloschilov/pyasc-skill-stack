@@ -124,7 +124,7 @@ diff -u golden/tutorials/05_matmul_leakyrelu.py ~/workspace/pyasc/python/tutoria
 
 ```bash
 source $HOME/Ascend/cann/set_env.sh
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH
 python3.10 -c "import asc, asc2; print('asc/asc2 OK')"
 ```
 

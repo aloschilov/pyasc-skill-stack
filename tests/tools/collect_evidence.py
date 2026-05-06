@@ -61,12 +61,19 @@ def collect_static_verify(kernel_path: str) -> str:
     return "fail"
 
 
-def collect_runtime(kernel_path: str, mode: str, backend: str, platform: str) -> dict:
+def collect_runtime(
+    kernel_path: str,
+    mode: str,
+    backend: str,
+    platform: str,
+    timeout: int = 1500,
+) -> dict:
     cmd = [
         PYTHON, str(RUN_VERIFY_SCRIPT), kernel_path,
         "--json", "--mode", mode, "--backend", backend, "--platform", platform,
+        "--timeout", str(timeout),
     ]
-    code, out = _run_tool(cmd, timeout=180)
+    code, out = _run_tool(cmd, timeout=timeout + 60)
     result = {"mode": mode, "backend": backend, "platform": platform}
     if code == 0:
         result["status"] = "pass"
@@ -101,7 +108,13 @@ def main() -> None:
     parser.add_argument("--mode", default="auto", choices=("jit", "simulator", "auto"),
                         help="Runtime verification mode (default: auto)")
     parser.add_argument("--backend", default="Model", help="Backend for runtime (default: Model)")
-    parser.add_argument("--platform", default="Ascend910B1", help="Platform for runtime")
+    parser.add_argument("--platform", default="Ascend950PR_9599", help="Platform for runtime")
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=1500,
+        help="Seconds for run_and_verify simulator subprocess (default: 1500)",
+    )
     parser.add_argument("--notes", default="", help="Optional notes to include")
     parser.add_argument("--dry-run", action="store_true", help="Print JSON to stdout instead of writing file")
     args = parser.parse_args()
@@ -141,7 +154,10 @@ def main() -> None:
 
     if args.runtime:
         print(f"  Running runtime verification (mode={args.mode})...")
-        rt = collect_runtime(str(kernel_path), args.mode, args.backend, args.platform)
+        rt = collect_runtime(
+            str(kernel_path), args.mode, args.backend, args.platform,
+            timeout=args.timeout,
+        )
         verification_section = {
             "mode": rt["mode"],
             "backend": rt["backend"],

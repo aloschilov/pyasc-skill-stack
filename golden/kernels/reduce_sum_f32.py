@@ -2,7 +2,7 @@
 """
 Golden reference: reduce_sum_f32 kernel (asc2 API)
 Row-wise sum reduction for float32 tensors: [num_rows, num_cols] -> [num_rows].
-Verified on CANN simulator with Ascend910B1 platform.
+Verified on CANN simulator with Ascend950PR_9599 platform.
 """
 
 import logging
@@ -59,7 +59,7 @@ def test_reduce_sum_f32(backend: config.Backend, platform: config.Platform):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", type=str, default="Model", help="backend: Model or NPU")
-    parser.add_argument("-v", type=str, default=None, help="platform/SoC version")
+    parser.add_argument("-v", type=str, default="Ascend950PR_9599", help="platform/SoC version")
     args = parser.parse_args()
     backend = args.r
     platform = args.v

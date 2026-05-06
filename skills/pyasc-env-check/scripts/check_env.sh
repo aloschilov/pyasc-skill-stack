@@ -97,18 +97,18 @@ fi
 
 # CANN Simulator
 if [ "$CANN_PATH" != "not set" ] && [ -d "$CANN_PATH" ]; then
-    SIM_PATH="$CANN_PATH/tools/simulator/Ascend910B1/lib"
+    SIM_PATH="$CANN_PATH/tools/simulator/Ascend950PR_9599/lib"
     if [ -d "$SIM_PATH" ]; then
-        echo "[PASS] Simulator: Ascend910B1 libs found"
+        echo "[PASS] Simulator: Ascend950PR_9599 libs found"
         if echo "$LD_LIBRARY_PATH" 2>/dev/null | grep -q "simulator"; then
             echo "[PASS] Simulator: LD_LIBRARY_PATH includes simulator path"
         else
             echo "[WARN] Simulator: LD_LIBRARY_PATH missing simulator path"
-            echo "       Run: export LD_LIBRARY_PATH=\$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:\$LD_LIBRARY_PATH"
+            echo "       Run: export LD_LIBRARY_PATH=\$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:\$LD_LIBRARY_PATH"
             WARNINGS=$((WARNINGS + 1))
         fi
     else
-        echo "[INFO] Simulator: Ascend910B1 libs not found (Model backend requires this)"
+        echo "[INFO] Simulator: Ascend950PR_9599 libs not found (Model backend requires this)"
     fi
 fi
 

@@ -111,11 +111,11 @@ def load_prompt_from_capabilities(op: str, dtype: str,
 
 
 def load_platform_from_capabilities(op: str, dtype: str,
-                                     default: str = "Ascend910B1") -> str:
+                                     default: str = "Ascend950PR_9599") -> str:
     """Look up the simulator platform for a given op/dtype cell.
 
-    Most cells run on Ascend910B1; matmul (cube unit) requires Ascend950PR_9599.
-    Falls back to the default if the cell or field is missing.
+    All goldens target Ascend950PR_9599 (C310). Falls back to the default
+    if the cell or field is missing.
     """
     data = _load_capabilities_data()
     if data is None:
@@ -266,15 +266,15 @@ def check_op_semantics(kernel_path: Path, op: str) -> dict:
 
 
 def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
-                      platform: str = "Ascend910B1") -> dict:
+                      platform: str = "Ascend950PR_9599") -> dict:
     """Run simulator verification inside the Docker container.
 
     Mounts the repo at /repo (for tool scripts) and the project at /workspace
     (for the generated kernel). Runs run_and_verify.py from /repo.
 
-    *platform* is forwarded to run_and_verify.py via ``--platform``. Most ops
-    work on the default ``Ascend910B1``; matmul requires ``Ascend950PR_9599``.
-    Heavy CANN simulator runs need a high open-files ulimit.
+    *platform* is forwarded to run_and_verify.py via ``--platform``. The
+    default ``Ascend950PR_9599`` (C310) is the only platform the stack
+    targets. Heavy CANN simulator runs need a high open-files ulimit.
     """
     rel_kernel = kernel_path.relative_to(project_dir)
     cmd = [

@@ -70,19 +70,14 @@ jobs:
       - name: Simulator verification of golden kernels
         run: |
           FAILED=0
-          # Heavy CANN simulator runs (esp. matmul) need a large nofile ulimit.
+          # All goldens verified on C310 (Ascend950PR_9599); 910B1 is no
+          # longer a CI target. Heavy CANN simulator runs (esp. matmul,
+          # gelu_f32) need a large nofile ulimit and a generous timeout.
+          PLATFORM=Ascend950PR_9599
+          TIMEOUT=1500
           for kernel in golden/kernels/*.py; do
             [ -f "$kernel" ] || continue
             base=$(basename "$kernel")
-            # matmul golden uses the cube unit; rms_norm goldens are pinned
-            # to the C310 (arch35) variant set -> Ascend950PR_9599 platform.
-            if [[ "$base" == matmul_* || "$base" == rms_norm_* ]]; then
-              PLATFORM=Ascend950PR_9599
-              TIMEOUT=900
-            else
-              PLATFORM=Ascend910B1
-              TIMEOUT=300
-            fi
             echo "--- Verifying: $base (platform=$PLATFORM) ---"
             if docker run --rm \
               --ulimit nofile=65536:65536 \

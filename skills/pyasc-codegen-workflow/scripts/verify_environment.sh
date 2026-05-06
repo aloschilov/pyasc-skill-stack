@@ -52,16 +52,11 @@ else
     CANN_STATUS="not found"
 fi
 
-SIM_LIB_PATH="$CANN_PATH/tools/simulator/Ascend910B1/lib"
+SIM_LIB_PATH="$CANN_PATH/tools/simulator/Ascend950PR_9599/lib"
 if [ -d "$SIM_LIB_PATH" ]; then
     SIMULATOR_STATUS="found"
 else
-    SIM_LIB_PATH="$CANN_PATH/tools/simulator/Ascend910B/lib"
-    if [ -d "$SIM_LIB_PATH" ]; then
-        SIMULATOR_STATUS="found (Ascend910B)"
-    else
-        SIMULATOR_STATUS="not found"
-    fi
+    SIMULATOR_STATUS="not found (expected: $SIM_LIB_PATH)"
 fi
 
 NPU_AVAILABLE=$(npu-smi info 2>/dev/null | head -1 || echo "not available")

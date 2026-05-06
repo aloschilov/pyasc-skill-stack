@@ -40,7 +40,7 @@ description: pyasc asc2 API usage patterns and best practices. Provides correct 
 | Type | Purpose | Example |
 |------|---------|---------|
 | `asc.runtime.config.Backend` | Execution backend | `Backend.NPU`, `Backend.Model` |
-| `asc.runtime.config.Platform` | Target platform | `Platform.Ascend910B1` |
+| `asc.runtime.config.Platform` | Target platform | `Platform.Ascend950PR_9599` |
 
 ## Common Patterns
 
@@ -205,7 +205,7 @@ np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
 | `asc2.sqrt(x)` | Square root | |
 | `asc2.relu(x)` | ReLU activation | |
 | `asc2.erf(x)` | Error function | Noisy on float32 simulator (~1.84-4.7 max abs error); avoid for f32 GELU — use `asc2.tanh` instead |
-| `asc2.tanh(x)` | Hyperbolic tangent | Bit-exact on Ascend910B1; the canonical f32 GELU primitive |
+| `asc2.tanh(x)` | Hyperbolic tangent | Bit-exact on the simulator; the canonical f32 GELU primitive |
 | `asc2.sin(x)` | Sine | |
 | `asc2.cos(x)` | Cosine | |
 | `-x` | Negate | Unary operator |
@@ -305,9 +305,8 @@ Two simulator constraints to honour:
 - Module-level constants only (e.g. `GELU_K = math.sqrt(...)`); calling `math.sqrt`
   inside a `@asc2.jit` body raises `RuntimeError: Unsupported function referenced`.
 - For tanh-form f32 GELU, pin `TILE_SIZE = 64`. With wider tiles (128) only the
-  first 64 elements get written (one Ascend910B1 SIMD lane); the rest are
-  silently zero. This is the same wide-tile lowering bug seen in the rms_norm
-  history.
+  first 64 elements get written (a wide-tile lowering bug on C310's simulator path);
+  the rest are silently zero. Same class of issue as the wide-tile rms_norm history.
 
 **GELU host-side verification** (pick one):
 
@@ -362,9 +361,9 @@ Use `asc2.softmax()` on a block of full rows. Do NOT decompose softmax manually.
 
 **matmul** — supported. Two strict requirements:
 
-1. **Platform must be `Ascend950PR_9599`** (cube unit). `Ascend910B1` does not
-   expose the cube ops needed by `asc2.matmul`. Pass `-v Ascend950PR_9599` when
-   running the kernel script.
+1. **Platform must be `Ascend950PR_9599`** (cube unit) — and so does the entire
+   stack: it is the only simulator platform CI targets. Pass `-v Ascend950PR_9599`
+   when running the kernel script (the goldens default to it).
 2. **Inputs must be `torch.Tensor`** (not numpy arrays). The simulator silently
    lowers numpy arrays to zero for matmul. This is the *only* operation that
    requires torch on the host side; everything else stays numpy-only.
@@ -620,7 +619,7 @@ what makes the row dim dynamic.
 | Storing scalar reduction result directly | Tile last-dim must be >= 32 bytes; scalar is too small | Wrap with `asc2.full([1, pad], scalar, dtype=...)` |
 | Using `scipy` for verification | Not installed in the simulator Docker image | Use only `numpy` and `math` stdlib (or `torch` for matmul I/O only) |
 | Using numpy arrays for `asc2.matmul` inputs | The simulator silently lowers numpy arrays to zero for matmul | Use `torch.Tensor` (CPU) for matmul host-side data; verify with `torch.testing.assert_close` |
-| Running matmul on `Ascend910B1` | The cube unit lives on `Ascend950PR_9599` only | Pass `-v Ascend950PR_9599` (or set `platform: Ascend950PR_9599` in capabilities cell) |
+| Accidentally running with `-v Ascend910B1` | The stack only targets `Ascend950PR_9599`; matmul also requires the C310 cube unit | Pass `-v Ascend950PR_9599` (or omit `-v` — kernels default to it) |
 | `num_cols: int` in kernel when used in `asc2.load` shape | Shape args must be compile-time known | Declare as `num_cols: asc.ConstExpr[int]` |
 | Skipping `asc.ceildiv` for tiling | Manual division causes wrong tile counts | Always use `asc.ceildiv(a, b)` |
 | Using `range()` instead of `asc2.range()` inside kernel | Python `range` is not JIT-compatible | Replace with `asc2.range()` |

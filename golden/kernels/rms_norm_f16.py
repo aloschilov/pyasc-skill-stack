@@ -182,7 +182,8 @@ def test_rms_norm_f16(backend: config.Backend, platform: config.Platform):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", type=str, default="Model", help="backend: Model or NPU")
-    parser.add_argument("-v", type=str, default=None, help="platform/SoC version")
+    parser.add_argument("-v", type=str, default="Ascend950PR_9599",
+                        help="platform/SoC version (RMSNorm requires C310)")
     args = parser.parse_args()
     backend = args.r
     platform = args.v

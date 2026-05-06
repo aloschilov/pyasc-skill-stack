@@ -11,8 +11,8 @@ Notes
 -----
 * asc2.matmul / `@` require torch.Tensor inputs on the simulator.
   numpy arrays are silently lowered to zero, so torch is mandatory here.
-* Platform must be Ascend950PR_9599 (cube unit). Ascend910B1 does not
-  expose the cube ops needed by asc2.matmul.
+* Platform must be Ascend950PR_9599 (the only platform the stack
+  targets). asc2.matmul requires the cube unit exposed by C310.
 * Memory hierarchy: GM -> L0A (left) / L0B (right) -> MAC (cube) -> GM.
 * Result tile dtype is always float32 (cube accumulator).
 """

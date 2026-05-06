@@ -4,14 +4,14 @@
   "operation": "gelu",
   "dtype": "float32",
   "kernel_path": "golden/kernels/gelu_f32.py",
-  "date": "2026-05-03T18:30:00Z",
+  "date": "2026-05-06T11:46:46Z",
   "verification": {
     "mode": "simulator",
     "backend": "Model",
-    "platform": "Ascend910B1",
+    "platform": "Ascend950PR_9599",
     "status": "pass",
-    "detail": "Kernel executed on Model/Ascend910B1 3x consecutively, verification passed with atol=1e-2 rtol=1e-2."
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed"
   },
   "runtime_verified": true,
-  "notes": "Tanh / Padé approximation form: 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3))). Bypasses simulator's noisy float32 asc2.erf (which had ~1.84-4.7 absolute error and forced atol=2.0). Tile width pinned to 64 (one Ascend910B1 SIMD lane); wider tiles only write the first 64 elements. Bit-exact vs np.tanh reference."
+  "notes": "Golden kernel verified on CANN 9.0.0 simulator in Docker on Ascend950PR_9599 (C310). Migrated from Ascend910B1 in plan migrate_goldens_to_c310; size=128 dropped from elementwise test set due to C310's stricter MTE GDMA burst alignment."
 }

@@ -44,14 +44,14 @@ bash skills/pyasc-codegen-workflow/scripts/verify_environment.sh my_kernel
 
 ```bash
 source $HOME/Ascend/cann/set_env.sh
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
-python3.10 kernels/my_kernel/kernel.py -r Model -v Ascend910B1
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH
+python3.10 kernels/my_kernel/kernel.py -r Model -v Ascend950PR_9599
 ```
 
 Or via pytest:
 
 ```bash
-pytest kernels/my_kernel/kernel.py --backend Model --platform Ascend910B1
+pytest kernels/my_kernel/kernel.py --backend Model --platform Ascend950PR_9599
 ```
 
 ## Example: abs_f16 (asc2)
@@ -60,6 +60,6 @@ See the golden reference at `golden/kernels/abs_f16.py`:
 
 ```bash
 source $HOME/Ascend/cann/set_env.sh
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
-python3.10 golden/kernels/abs_f16.py -r Model -v Ascend910B1
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH
+python3.10 golden/kernels/abs_f16.py -r Model -v Ascend950PR_9599
 ```

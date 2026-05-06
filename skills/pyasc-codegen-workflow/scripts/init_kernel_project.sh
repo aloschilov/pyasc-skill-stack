@@ -34,9 +34,9 @@ pyasc kernel implementation for the $KERNEL_NAME operation using the asc2 tile-b
 ## Usage
 
 \`\`\`bash
-python3.10 kernel.py -r Model -v Ascend910B1   # Run with simulator
-python3.10 kernel.py -r NPU                    # Run with NPU hardware
-pytest kernel.py --backend Model --platform Ascend910B1
+python3.10 kernel.py -r Model -v Ascend950PR_9599   # Run with simulator
+python3.10 kernel.py -r NPU                         # Run with NPU hardware
+pytest kernel.py --backend Model --platform Ascend950PR_9599
 \`\`\`
 EOF
 
@@ -47,7 +47,7 @@ from asc.runtime import config
 
 def pytest_addoption(parser):
     parser.addoption("--backend", type=config.Backend, default=config.Backend.Model)
-    parser.addoption("--platform", type=config.Platform, default=config.Platform.Ascend910B1)
+    parser.addoption("--platform", type=config.Platform, default=config.Platform.Ascend950PR_9599)
 
 
 @pytest.fixture

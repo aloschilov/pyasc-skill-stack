@@ -3,7 +3,7 @@ set -euo pipefail
 
 KERNEL_PATH="${1:?Usage: $0 <kernel.py> [backend] [platform]}"
 BACKEND="${2:-Model}"
-PLATFORM="${3:-Ascend910B1}"
+PLATFORM="${3:-Ascend950PR_9599}"
 
 if [ ! -f "$KERNEL_PATH" ]; then
     echo "[ERROR] Kernel file not found: $KERNEL_PATH"
