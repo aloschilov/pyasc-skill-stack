@@ -693,11 +693,14 @@ What this establishes and what it doesn't:
 - **reduce_sum/float32 clears the gate at 1.63** — the generated row-per-core
   kernel is *faster* than canonical `aclnnReduceSum`, which carries extra
   workspace/dispatch overhead the lean pyasc kernel skips.
-- **add/float16 is an honest perf miss at 0.68** — just under the gate. A
-  two-load elementwise add amortises per-tile MTE setup across two input
-  streams, so the wide-tile policy that lands abs at 0.93 only reaches ~0.68. We
-  report the miss rather than hand-tuning the kernel past the bar; it is the one
-  genuine R4 (tile-policy perf miss) in the matrix.
+- **add/float16 was an honest perf miss at 0.68** (Phase 11b snapshot) — just
+  under the gate. A two-load elementwise add is bound by the second MTE2 load
+  stream that pyasc2's high-level lowering does not yet overlap. **Subsequently
+  RESOLVED to 1.18**: spreading the launch across all 32 AIV cores
+  (`CORE_NUM=16 → 32`, matching the reference's ~32-block split) halved the
+  per-core serial load work (`gen_ticks` 6304 → 3623). See
+  [`docs/perf-vs-ascendc-demo.md`](perf-vs-ascendc-demo.md) "Reference
+  programming model" / the resolved R4 note.
 - **The references are real and canonical** for all three cells
   (`reference_kind: canonical_only`, no hand-rolled fallback): abs 4349,
   add 4281, reduce_sum 8328 (3-run medians, <0.15% spread).

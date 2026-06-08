@@ -39,6 +39,18 @@ Non-obvious constraints (Phase 9):
   - UB/L1/L0 placement: each tile loaded into UB, ``+`` operates
     in-place, result stored straight back to GM. No L0 / cube
     involvement.
+  - Perf variant (perf-vs-ascendc demo): this golden keeps the
+    ``TILE_SIZE=128 / CORE_NUM=16`` correctness skeleton, but the
+    measured perf kernel
+    (``teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py``) uses
+    ``TILE_SIZE=2048 / CORE_NUM=32``. A two-input add is bound by the
+    *second* MTE2 load stream that pyasc2's high-level lowering does not
+    yet overlap (the ``asc2.range(parallel=True)`` software-pipelining
+    pass is not wired up), so spreading the ``[32,4096]`` launch across
+    all 32 AIV cores -- matching the hand-written ops-math reference,
+    which also runs ~32 blocks with intra-core double buffering -- halves
+    the per-core serial load work and clears the >=0.70 ratio gate
+    (gen 6307 -> 3621 ticks; see docs/perf-vs-ascendc-demo.md).
   - Tolerance: ``atol=rtol=1e-3`` matches the tolerance contract in
     ``capabilities.yaml`` for ``add/float16``. Upstream
     ``target/test_vadd.py`` uses ``atol=rtol=1e-3`` for float32.

@@ -123,6 +123,27 @@ unchanged — only the tile width moves the number. See
 [`docs/perf-vs-ascendc-demo.md`](../../docs/perf-vs-ascendc-demo.md) and
 [`docs/perf-methodology/ticks-calculation.md` §8](../../docs/perf-methodology/ticks-calculation.md).
 
+**Multi-input elementwise: also widen `CORE_NUM`.** A wide tile alone is not
+enough when the op loads two or more input streams (e.g. `add`, `mul`,
+`x*y+z`). The extra MTE2 load stream is *not* overlapped today — pyasc2 sets the
+`asc2.range(parallel=True)` attribute but the software-pipelining pass that would
+overlap loads with compute is not yet wired up — so the second load runs
+serially per core. Spread the launch across **all 32 AIV cores** (not 16) so
+each core does half the tiles and half the serial load work:
+
+```python
+# perf-aware, multi-input elementwise (add/mul/fma): use all 32 AIV cores
+TILE_SIZE = 2048
+CORE_NUM  = 32     # vs 16 for single-input; matches the reference's ~32-block split
+# size must be a multiple of TILE_SIZE * CORE_NUM (aligned_only)
+```
+
+Evidence (camodel `Ascend950PR_9599`, add/float16, `[32,4096]`, vs hand-written
+`aclnnAdd`): at `CORE_NUM=16` the kernel measured `gen_ticks=6304` (ratio 0.68,
+**FAIL**); at `CORE_NUM=32` it drops to `gen_ticks=3623` (ratio **1.18**, PASS) —
+same op, only the core count moved. Single-input ops like `abs` already clear the
+gate at 16 cores, so this is specifically the multi-load lever.
+
 Reference tile policy (hand-written AscendC, arch35):
 [`ops-math/math/abs/op_host/arch35/abs_tiling_arch35.cpp`](/home/aloschilov/workspace/ops-math/math/abs/op_host/arch35/abs_tiling_arch35.cpp)
 and [`add_tiling_arch35.cpp`](/home/aloschilov/workspace/ops-math/math/add/op_host/arch35/add_tiling_arch35.cpp).

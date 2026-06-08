@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-06-08T11:53:59Z",
+  "generated_at": "2026-06-08T14:58:53Z",
   "gate": 0.7,
   "counts": {
-    "pass": 6,
-    "fail": 3,
+    "pass": 7,
+    "fail": 2,
     "gen_blocked": 0,
     "unknown": 0,
     "total": 9
@@ -41,17 +41,17 @@
       ],
       "arch": "Ascend950PR_9599",
       "gate": 0.7,
-      "ref_ticks": 4281,
-      "gen_ticks": 6304,
-      "ratio": 0.6791,
-      "status": "fail",
-      "reference_source": "ops-math canonical operator (math/add), build.sh --pkg --soc=ascend950",
+      "ref_ticks": 4279,
+      "gen_ticks": 3623,
+      "ratio": 1.1811,
+      "status": "pass",
+      "reference_source": "ops-math canonical operator (add, aclnnop/aclnn_add.h), build.sh --pkg --soc=ascend950",
       "kernel_source": "live_regen (opencode 1.15.10, dashscope/glm-5, oracle_guided, attempt-1)",
       "perf_miss_note": "",
       "comparability_note": "",
-      "evidence_file": "evidence/perf-vs-ascendc/add-float16-20260601T141454.json",
+      "evidence_file": "evidence/perf-vs-ascendc/add-float16-20260608T175511.json",
       "source": "measured",
-      "measured_at": "2026-06-01T14:14:54Z"
+      "measured_at": "2026-06-08T17:55:11Z"
     },
     {
       "cell": "apply_adam/float32",
@@ -70,7 +70,7 @@
       "reference_source": "ops-nn/optim/apply_adam (aclnnApplyAdam, canonical_only; ApplyAdamD has no public aclnn)",
       "kernel_source": "vetted golden (golden/kernels/apply_adam_f32.py, in-place 4-load/3-store)",
       "perf_miss_note": "Honest, documented perf miss. Memory-bound: a zero-arithmetic copy-only diagnostic of the identical 4-load/3-store f32 tensors floors at 16966-17647 ticks at every tile size (2048/4096/8192), ~2.1x the reference 8107. Reaching 0.70 needs gen <= 11581, which is below even the pure-memcpy floor -> infeasible by kernel tuning (camodel DMA-modeling wall). Double-buffering (unroll=2) overflows UB at TILE=2048 and yields no gain at TILE=1024; rsqrt/fused ops only shave the small compute term. Kept as a correctness-confirmed generative cell with the gap disclosed.",
-      "comparability_note": "",
+      "comparability_note": "Not a like-for-like high-level comparison: the reference (ops-nn/optim/apply_adam/op_kernel/arch35/apply_adam_dag.h) hand-writes CalcMt/CalcVt/CalcVarT in register-fused SIMT micro-API (__VEC_SCOPE__, MicroAPI::RegTensor, MicroAPI::DataCopy, MaskReg), keeping the entire m_t/v_t/var_t chain in vector registers (4 copy-ins / 3 copy-outs, no UB round-trips for intermediates). pyasc2 emits only the high-level API and must materialize each intermediate tile in UB, which is exactly why it stays memory-bound. The miss is therefore SIMT-attributable, reinforcing the DMA-floor finding, not a pyasc codegen bug. See docs/perf-vs-ascendc-demo.md \"Reference programming model\".",
       "evidence_file": "evidence/perf/ascendc-ref/apply_adam-f32-ascend950-32x4096.json",
       "source": "curated"
     },
@@ -92,7 +92,7 @@
       "reference_source": "ops-nn/norm/batch_norm_v3 (aclnnBatchNorm, training=true, canonical_only)",
       "kernel_source": "vetted golden (golden/kernels/batch_norm_v3_f32.py, on-chip strided per-channel reduce)",
       "perf_miss_note": "Honest, documented perf miss. The on-chip strided per-channel reduction over [N,C,L] is heavily DMA/instruction-bound on the camodel; reaching 0.70 would need a ~9x speedup that the pyasc strided-load path cannot deliver against the hand-tuned aclnnBatchNorm. Kept as a correctness-confirmed (numerically exact) generative cell to demonstrate vector-only BatchNormV3 generation, with the perf gap disclosed rather than hidden.",
-      "comparability_note": "",
+      "comparability_note": "Not a like-for-like high-level comparison: the reference (ops-nn/norm/batch_norm_v3/op_kernel/arch35/batch_norm_v3_regbase_common.h) is a register-based SIMT micro-API (\"regbase\") kernel using MicroAPI::CreateMask/RegTensor/LoadDist/StoreDist, while pyasc2 deliberately emits only the AscendC high-level API (no micro-api). The register-resident reduction is a structural advantage pyasc2 cannot express, so this miss is SIMT-attributable (and additionally DMA-bound), not a pyasc codegen bug. Contrast add (add_dag.h), a high-level Vec DAG that pyasc2 matches at ratio 1.18. See docs/perf-vs-ascendc-demo.md \"Reference programming model\".",
       "evidence_file": "evidence/perf/ascendc-ref/batch_norm_v3-f32-ascend950-32x64x64.json",
       "source": "curated"
     },
