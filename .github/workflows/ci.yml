@@ -32,8 +32,9 @@ env:
   # nightly perf-gate runs the full perf-vs-AscendC harness inside it.
   # ARM64-ONLY: the camodel sims + pyasc native extension are arm64, so the
   # image is built on the aarch64 host and consumed by the arm64 perf-gate
-  # (runs-on: ubuntu-24.04-arm). The tag carries an explicit -arm64 suffix
-  # so it is never confused with the amd64 pyasc-sim base.
+  # (runs-on: [self-hosted, arm64] - the MacBook Docker Desktop runner). The tag
+  # carries an explicit -arm64 suffix so it is never confused with the amd64
+  # pyasc-sim base.
   PYASC_PERF_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim-perf:py3.11-arm64
   # Hard pin so the harness aborts if a runner accidentally imports a
   # pyasc tree other than pyasc-v2-eval (e.g. the user's dev fork).
@@ -45,7 +46,10 @@ jobs:
   # PR gate: L1 unit tests + static checks (no Docker, no CANN)
   # ==========================================================================
   pr-gate:
-    runs-on: ubuntu-latest
+    # Self-hosted RTX 4090 box (192.168.0.229), label `gpu`. See
+    # infra/self-hosted-runner/. GitHub-hosted ubuntu-latest is the documented
+    # fallback if the box is offline.
+    runs-on: [self-hosted, gpu]
     steps:
       - uses: actions/checkout@v4
 
@@ -66,7 +70,7 @@ jobs:
   # and pushed to ghcr.io.  CI only pulls it.
   # ==========================================================================
   merge-gate:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, gpu]
     needs: [pr-gate]
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
@@ -136,10 +140,12 @@ jobs:
   # positioning). Also report-only.
   # ==========================================================================
   perf-gate:
-    # Native arm64 runner: the perf image (camodel sims + pyasc native
-    # extension) is arm64-only, so it cannot run on the amd64 ubuntu-latest
-    # used by the other gates. Free for public repos.
-    runs-on: ubuntu-24.04-arm
+    # Self-hosted arm64 runner on the MacBook (198.18.0.1) via Docker Desktop's
+    # Linux/arm64 VM, label `arm64`. The perf image (camodel sims + pyasc native
+    # extension) is arm64-only, so it cannot run on the amd64 `gpu` box; this
+    # runner pulls/runs it through the Docker Desktop daemon. See
+    # infra/self-hosted-runner/compose.arm64.yml.
+    runs-on: [self-hosted, arm64]
     needs: [merge-gate]
     continue-on-error: true
     if: >-
@@ -250,7 +256,7 @@ jobs:
   # the aggregator see a consistent evidence directory.
   # ==========================================================================
   nightly-gate:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, gpu]
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
@@ -439,7 +445,9 @@ jobs:
   # produces.
   # ==========================================================================
   local-stability-gate:
-    runs-on: ubuntu-latest
+    # Self-hosted RTX 4090 box, label `gpu`: in-job `ollama serve` runs on the
+    # GPU (--gpus all) with a shared model cache, instead of CPU on a hosted runner.
+    runs-on: [self-hosted, gpu]
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||

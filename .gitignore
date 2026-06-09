@@ -48,6 +48,10 @@ evidence/runtime-archive/**/AGENTS.md
 # evidence under evidence/perf/ascendc-ref/ IS tracked.
 evidence/perf/_build_cache/
 
+# Self-hosted runner secrets: the PAT-bearing .env lives only on the runner
+# hosts, never in the repo. The committed template is .env.example.
+infra/self-hosted-runner/.env
+
 # Large binary files in Docker overlay (built locally, not tracked).
 # Per-arch subdirectories (x86_64/, aarch64/) keep their host-built .so
 # locally; both are picked up by docker/Dockerfile.overlay at build time.

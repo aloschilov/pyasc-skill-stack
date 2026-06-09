@@ -1,0 +1,27 @@
+# arm64 runner for the MacBook (198.18.0.1) via Docker Desktop's Linux/arm64 VM.
+# Serves the arm64-only perf-gate (pulls + runs ghcr pyasc-sim-perf:py3.11-arm64).
+#
+# The image is prebuilt and `docker load`-ed onto the Mac (Docker Desktop's
+# keychain credstore blocks host-side pulls/builds over SSH), so compose only
+# runs the container. Bring up (from this dir, .env present):
+#   docker compose -f compose.arm64.yml up -d
+#
+# Docker-out-of-Docker on Docker Desktop: the runner _work dir lives under a
+# macOS-shared path (RUNNER_WORK_HOST=/Users/aloschilov/ar-work) bind-mounted at
+# the SAME path, so the Docker Desktop VM sees it and the perf harness's sibling
+# `docker run -v "$(pwd)":/workspace` mounts resolve. A Docker named volume would
+# NOT align. /var/run/docker.sock symlinks to the Desktop socket (verified).
+services:
+  runner:
+    image: pyasc-ci-runner:latest
+    env_file: .env
+    environment:
+      RUNNER_SCOPE: repo
+      LABELS: arm64
+      DISABLE_AUTO_UPDATE: "true"
+      START_DOCKER_SERVICE: "false"
+      RUNNER_WORKDIR: ${RUNNER_WORKDIR}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${RUNNER_WORK_HOST}:${RUNNER_WORKDIR}
+    restart: always
