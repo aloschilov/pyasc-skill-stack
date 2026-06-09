@@ -2,36 +2,65 @@
 #
 # The image is prebuilt (docker build -t pyasc-ci-runner:latest .) so compose
 # never has to build/pull at `up` time. Bring up (from this dir, .env present):
-#   docker compose -f compose.gpu.yml up -d --scale runner=3
+#   docker compose -f compose.gpu.yml up -d
 #
-# Ephemeral vs persistent and the registration credential are controlled by
-# .env (ACCESS_TOKEN=PAT + EPHEMERAL=true for fresh-per-job, or RUNNER_TOKEN=
-# a registration token for a persistent runner). Labels: gpu (+ the default
-# self-hosted,linux,x64).
+# Three explicit services (NOT `--scale`), because each runner MUST have its own
+# isolated, path-aligned work dir + Ollama cache. The earlier shared mount caused
+# concurrent nightly matrix jobs to collide in _actions/_temp (`Directory not
+# empty`, `tar: Error is not recoverable`). Now runner-N uses ${AR_BASE}/work-N
+# and ${AR_BASE}/ollama-N, bind-mounted at the IDENTICAL host path so the jobs'
+# `docker run -v "$(pwd)":/workspace` sibling mounts resolve on the host daemon
+# (Docker-out-of-Docker path alignment).
 #
-# Docker-out-of-Docker: the host docker socket is shared and the runner _work
-# dir is bind-mounted at an IDENTICAL host path (RUNNER_WORK_HOST==RUNNER_WORKDIR)
-# so the jobs' `docker run -v "$(pwd)":/workspace` sibling mounts resolve on the
-# host daemon. OLLAMA_CACHE_HOST is a shared model cache (pull is a hit after run 1).
+# Ephemeral vs persistent + the registration credential live in .env
+# (ACCESS_TOKEN=PAT + EPHEMERAL=true for fresh-per-job, or RUNNER_TOKEN=a
+# registration token for a persistent runner). Labels: gpu (+ self-hosted,linux,x64).
+x-gpu-runner: &gpu-runner
+  image: pyasc-ci-runner:latest
+  env_file: .env
+  restart: always
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+
 services:
-  runner:
-    image: pyasc-ci-runner:latest
-    env_file: .env
+  runner-1:
+    <<: *gpu-runner
     environment:
       RUNNER_SCOPE: repo
       LABELS: gpu
       DISABLE_AUTO_UPDATE: "true"
       START_DOCKER_SERVICE: "false"
-      RUNNER_WORKDIR: ${RUNNER_WORKDIR}
+      RUNNER_WORKDIR: ${AR_BASE}/work-1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${RUNNER_WORK_HOST}:${RUNNER_WORKDIR}
-      - ${OLLAMA_CACHE_HOST}:/root/.ollama
-    restart: always
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+      - ${AR_BASE}/work-1:${AR_BASE}/work-1
+      - ${AR_BASE}/ollama-1:/root/.ollama
+  runner-2:
+    <<: *gpu-runner
+    environment:
+      RUNNER_SCOPE: repo
+      LABELS: gpu
+      DISABLE_AUTO_UPDATE: "true"
+      START_DOCKER_SERVICE: "false"
+      RUNNER_WORKDIR: ${AR_BASE}/work-2
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${AR_BASE}/work-2:${AR_BASE}/work-2
+      - ${AR_BASE}/ollama-2:/root/.ollama
+  runner-3:
+    <<: *gpu-runner
+    environment:
+      RUNNER_SCOPE: repo
+      LABELS: gpu
+      DISABLE_AUTO_UPDATE: "true"
+      START_DOCKER_SERVICE: "false"
+      RUNNER_WORKDIR: ${AR_BASE}/work-3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${AR_BASE}/work-3:${AR_BASE}/work-3
+      - ${AR_BASE}/ollama-3:/root/.ollama

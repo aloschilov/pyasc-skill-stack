@@ -6,11 +6,11 @@
 # runs the container. Bring up (from this dir, .env present):
 #   docker compose -f compose.arm64.yml up -d
 #
-# Docker-out-of-Docker on Docker Desktop: the runner _work dir lives under a
-# macOS-shared path (RUNNER_WORK_HOST=/Users/aloschilov/ar-work) bind-mounted at
-# the SAME path, so the Docker Desktop VM sees it and the perf harness's sibling
-# `docker run -v "$(pwd)":/workspace` mounts resolve. A Docker named volume would
-# NOT align. /var/run/docker.sock symlinks to the Desktop socket (verified).
+# Single runner, so no work-dir collision risk; still uses an isolated,
+# path-aligned work dir under a macOS-shared path (${AR_BASE}/work) bind-mounted
+# at the SAME path, so the Docker Desktop VM sees it and the perf harness's
+# sibling `docker run -v "$(pwd)":/workspace` mounts resolve. A Docker named
+# volume would NOT align. /var/run/docker.sock symlinks to the Desktop socket.
 services:
   runner:
     image: pyasc-ci-runner:latest
@@ -20,8 +20,8 @@ services:
       LABELS: arm64
       DISABLE_AUTO_UPDATE: "true"
       START_DOCKER_SERVICE: "false"
-      RUNNER_WORKDIR: ${RUNNER_WORKDIR}
+      RUNNER_WORKDIR: ${AR_BASE}/work
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${RUNNER_WORK_HOST}:${RUNNER_WORKDIR}
+      - ${AR_BASE}/work:${AR_BASE}/work
     restart: always
