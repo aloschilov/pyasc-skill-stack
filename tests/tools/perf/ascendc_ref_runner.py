@@ -362,6 +362,40 @@ def _apply_adam_body(dt: dict, shape: list[int]) -> str:
 """
 
 
+def _batch_mat_mul_v3_body(dt: dict, shape: list[int]) -> str:
+    # aclnnBatchMatMul(self, mat2, out, cubeMathType): batched GEMM on the cube
+    # unit.  self [B,M,K], mat2 [B,K,N], out [B,M,N].  The comparability contract
+    # is the square case (M=K=N), so the 3D cell shape [B, M, K] sets N=K.
+    # cubeMathType=1 keeps the fp16 cube path (matches f16 in/out).  Mirrors
+    # ops-nn/matmul/batch_mat_mul_v3/examples/test_aclnn_batchmatmul.cpp.
+    if len(shape) != 3:
+        raise RefError("batch_mat_mul_v3 driver expects a 3D shape [B, M, K] (square N=K)")
+    B, M, K = shape
+    N = K
+    n_self = B * M * K
+    n_mat2 = B * K * N
+    n_out = B * M * N
+    return f"""
+  std::vector<int64_t> selfShape = {{ {B}, {M}, {K} }};
+  std::vector<int64_t> mat2Shape = {{ {B}, {K}, {N} }};
+  std::vector<int64_t> outShape = {{ {B}, {M}, {N} }};
+  void *selfAddr=nullptr,*mat2Addr=nullptr,*outAddr=nullptr;
+  aclTensor *self=nullptr,*mat2=nullptr,*out=nullptr;
+  std::vector<{dt['ctype']}> selfh({n_self}, {dt['init']}), mat2h({n_mat2}, {dt['init']}), outh({n_out}, 0);
+  if (CreateAclTensor(selfh, selfShape, &selfAddr, aclDataType::{dt['acl']}, &self)) return 1;
+  if (CreateAclTensor(mat2h, mat2Shape, &mat2Addr, aclDataType::{dt['acl']}, &mat2)) return 1;
+  if (CreateAclTensor(outh, outShape, &outAddr, aclDataType::{dt['acl']}, &out)) return 1;
+  int8_t cubeMathType = 1;
+  uint64_t ws=0; aclOpExecutor* exe;
+  ACL_CALL(aclnnBatchMatMulGetWorkspaceSize(self, mat2, out, cubeMathType, &ws, &exe));
+  void* wsAddr=nullptr; if (ws>0) ACL_CALL(aclrtMalloc(&wsAddr, ws, ACL_MEM_MALLOC_HUGE_FIRST));
+  ACL_CALL(aclnnBatchMatMul(wsAddr, ws, exe, stream));
+  ACL_CALL(aclrtSynchronizeStream(stream));
+  if (ws>0) aclrtFree(wsAddr); aclrtFree(selfAddr); aclrtFree(mat2Addr); aclrtFree(outAddr);
+  aclDestroyTensor(self); aclDestroyTensor(mat2); aclDestroyTensor(out);
+"""
+
+
 # op -> {repo, build_op (--ops= name + <op>.json sentinel), header, body}.
 # build_op is the snake op-type the kernel config is keyed by; it can differ
 # from the registry key when a cell maps onto a sibling reference op (e.g. the
@@ -384,6 +418,8 @@ OP_SPECS = {
                       "header": "aclnnop/aclnn_batch_norm.h", "body": _batch_norm_v3_body},
     "apply_adam": {"repo": "ops-nn", "build_op": "apply_adam",
                    "header": "aclnnop/aclnn_apply_adam.h", "body": _apply_adam_body},
+    "batch_mat_mul_v3": {"repo": "ops-nn", "build_op": "batch_mat_mul_v3",
+                         "header": "aclnnop/aclnn_batch_matmul.h", "body": _batch_mat_mul_v3_body},
 }
 
 # Demo cell -> (op spec key, dtype).
@@ -397,6 +433,7 @@ CELL_TO_OP_DTYPE = {
     "rms_norm/float32": ("rms_norm", "f32"),
     "batch_norm_v3/float32": ("batch_norm_v3", "f32"),
     "apply_adam/float32": ("apply_adam", "f32"),
+    "batch_mat_mul_v3/float16": ("batch_mat_mul_v3", "f16"),
 }
 
 
@@ -600,6 +637,51 @@ def _opapi_math_shim(repos: dict[str, Repo], ascend: Path, *, verbose: bool) -> 
     return shim
 
 
+def _ensure_builtin_opp_link(ascend: Path) -> None:
+    """Make the built-in CANN opp reachable from the custom install root.
+
+    Matmul-family ops resolve their legacy tiling impl (``libophost_comm_legacy.so``,
+    shipped by the ``Ascend-cann-A3-ops`` package under ``<cann>/opp/built-in/...``)
+    through a path computed *relative to the custom vendor's* ``libcust_opmaster``
+    -> ``<install_root>/opp/built-in/...`` (see ops-nn LegacyCommonMgr). Our custom
+    install root is the build cache, which has no ``opp``; symlink it to the real
+    CANN opp so the relative lookup resolves. Idempotent / no-op for ops whose
+    tiling is inline."""
+    link = BUILD_CACHE / "opp"
+    target = ascend / "opp"
+    if not target.is_dir():
+        return
+    if link.is_symlink() or link.exists():
+        return
+    BUILD_CACHE.mkdir(parents=True, exist_ok=True)
+    try:
+        link.symlink_to(target)
+    except OSError:
+        pass
+
+
+def _es_lib_dirs(repo: Repo, repos: dict[str, Repo]) -> list[str]:
+    """``op_proto/es/lib`` dirs needed at runtime.
+
+    Some op protos load their InferShape from an ``libes_<repo>.so`` under the
+    vendor's ``op_proto/es/lib/...`` (e.g. BatchMatMulV3's shape inference lives
+    in ops-nn's ``libes_nn.so``, which itself ``DT_NEEDED`` ops-math's
+    ``libes_math.so``). Neither dir is on the default loader path, so collect the
+    current repo's es dir plus ops-math's (the cross-repo matmul shape dep). Ops
+    whose proto has inline InferShape (abs/add/rms_norm/...) simply don't need
+    these, so this is a harmless add for them."""
+    dirs: list[str] = []
+    seen: set[str] = set()
+    for r in (repo, repos.get("ops-math")):
+        if r is None:
+            continue
+        d = r.vendor_dir() / "op_proto" / "es" / "lib" / "linux" / "aarch64"
+        if d.is_dir() and str(d) not in seen:
+            dirs.append(str(d))
+            seen.add(str(d))
+    return dirs
+
+
 def _sim_shadow(ascend: Path) -> Path:
     """Writable dir with libruntime.so / libascend_hal.so -> camodel libs."""
     sim = ascend / "tools" / "simulator" / REF_SIM_CHIP / "lib"
@@ -672,6 +754,7 @@ def run_driver(exe: Path, repo: Repo, ascend: Path, *, runs: int, verbose: bool,
                repos: dict[str, Repo]) -> tuple[list[int], float, Path]:
     vendor = repo.vendor_dir()
     shadow = _sim_shadow(ascend)
+    _ensure_builtin_opp_link(ascend)
     sim = ascend / "tools" / "simulator" / REF_SIM_CHIP / "lib"
     setenv = ascend / "set_env.sh"
     extra_ld = ""
@@ -679,6 +762,9 @@ def run_driver(exe: Path, repo: Repo, ascend: Path, *, runs: int, verbose: bool,
         shim = _opapi_math_shim(repos, ascend, verbose=False)
         if shim is not None:
             extra_ld = f"{shim}:"
+    es_dirs = _es_lib_dirs(repo, repos)
+    if es_dirs:
+        extra_ld = f"{extra_ld}{':'.join(es_dirs)}:"
     log_dir = BUILD_CACHE / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     ticks: list[int] = []

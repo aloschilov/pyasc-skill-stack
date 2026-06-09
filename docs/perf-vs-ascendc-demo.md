@@ -23,6 +23,7 @@ reference, now across **two** canonical reference repos —
 | rms_norm/float32          | ops-nn   |      4168 |      4885 |  0.85 | PASS    |
 | apply_adam/float32        | ops-nn   |      8107 |     17670 |  0.46 | FAIL    |
 | batch_norm_v3/float32     | ops-nn   |      6110 |     62588 |  0.10 | FAIL    |
+| batch_mat_mul_v3/float16  | ops-nn   |     14651 |     18758 |  0.78 | PASS    |
 ```
 
 (3-run medians; elementwise/optimizer cells `[32,4096]`, rms_norm `[8,256]`,
@@ -116,6 +117,46 @@ tiles. pyasc2's high-level lowering must materialize each intermediate tile in U
 (extra MTE traffic), which is precisely why these stay memory-bound. These are
 therefore recorded as honest, **SIMT-attributed** misses (the perf gate is
 report-only and never enforced, so they stay green).
+
+## CUBE BatchMatMulV3 (cube-only operator generation) — PASS 0.78
+
+The first **CUBE-only** operator-generation cell: a batched matmul
+`C[b] = A[b] @ B[b]` that runs entirely on the cube unit, compared against the
+canonical ops-nn **BatchMatMulV3** (`aclnnBatchMatMul`).
+
+- **Contract:** `batch_mat_mul_v3/float16`, `[B,M,K]×[B,K,N]=[16,256,256]×[16,256,256]`,
+  f16 in, f32 cube accumulate, f16 out (cast on store). Both sides measured on
+  `Ascend950PR_9599` / `dav_3510`. **ref 14651 / gen 18758 → ratio 0.78, PASS.**
+- **Kernel provenance:** vetted golden
+  [`golden/kernels/batch_mat_mul_v3_f16.py`](/home/aloschilov/workspace/pyasc-skill-stack/golden/kernels/batch_mat_mul_v3_f16.py),
+  composed from the asc2 cube patterns (MN-block tiling from
+  `matmul_f16.py` / `test_matmul_mnblock.py`; f32→f16 store cast from
+  `test_matmul_fixpipe.py`; L1 staging + parallel tile loop from
+  `test_matmul_tiled.py`). The measured kernel is the committed golden (initial
+  demo); a `teams/.../batch_mat_mul_v3_f16/` regen path is future work.
+- **Programming model (fair, high-level):** unlike the two SIMT misses above, the
+  cube path *is* like-for-like — pyasc2 emits the same high-level `asc2.matmul` /
+  `@` → L0C surface the reference uses for the cube. The batch axis is distributed
+  one matrix per cube core (`asc2.block_idx()`, 16 batches on the 16 AIC cores =
+  one fully parallel wave).
+- **Perf levers applied (measurement-driven, no hand-edited ticks):**
+  1. **L1 staging** — stage each batch's `A[m,k]`/`B[k,n]` into L1 once (every GM
+     element read a single time), feed L0A/L0B from on-chip copies: `gen` 23434
+     (direct GM→L0) → **21620**.
+  2. **Double-buffered N-tile loop** — `asc2.range(n_tiles, unroll_factor=2,
+     parallel=True)` overlaps the next L0B copy with the current MMAD: 21620 →
+     **18758** (0.78). Because `parallel=True` doubles the pipelined L0B buffer,
+     `N_TILE` is dropped to **64** so the 2-deep `[256,64]` f16 tiles fit the
+     64 KiB L0B budget (a full-K `[256,128]` pair overflows at 128 KiB).
+- **Reference prerequisite (environment repair):** the matmul-family aclnn tiling
+  step dlopens `libophost_comm_legacy.so` (the matmul cache-tiling impl). That
+  library ships in the **`Ascend-cann-A3-ops`** package, *not* the base toolkit;
+  the aarch64 host here had the toolkit but no ops package, so the entire matmul
+  aclnn family failed to tile (`TilingPrepareForOpCache fail`). Installing
+  `Ascend-cann-A3-ops_9.0.0_linux-aarch64.run` restored the built-in op-host libs
+  (`libophost_comm_legacy/legacy/math/nn/cv/transformer.so`) and unblocked the
+  reference. The harness now symlinks the built-in opp into the custom build root
+  (`_ensure_builtin_opp_link`) so the custom op's relative legacy lookup resolves.
 
 ## How it works
 

@@ -77,6 +77,28 @@ This skill provides local-first documentation search for pyasc kernel developmen
 | 04_matmul_cube_only | `golden/tutorials/04_matmul_cube_only.py` | `~/workspace/pyasc/python/tutorials/04_matmul_cube_only/` | Pure cube mode matmul |
 | 05_matmul_leakyrelu | `golden/tutorials/05_matmul_leakyrelu.py` | `~/workspace/pyasc/python/tutorials/05_matmul_leakyrelu/` | Matmul + LeakyReLU fusion |
 
+### Canonical operator references & AscendC matmul samples
+
+Perf baselines compare the generated/golden pyasc kernel against the **canonical**
+hand-written operator on the same camodel (`ascendc_ref_runner.py`). For cube /
+matmul work:
+
+| Resource | Path | Use |
+|----------|------|-----|
+| BatchMatMulV3 canonical op | `~/workspace/ops-nn/matmul/batch_mat_mul_v3/` | `aclnnBatchMatMul` reference for the `batch_mat_mul_v3/float16` perf cell (op_host tiling, op_kernel/arch35, examples/test_aclnn_batchmatmul.cpp) |
+| MatMulV3 / FusedMatMul deps | `~/workspace/ops-nn/matmul/mat_mul_v3/`, `.../fused_mat_mul/` | Pulled in by the batch_mat_mul_v3 build; share the `op_cache_tiling` legacy path |
+| AscendC matmul sample (kernel-direct) | `~/workspace/samples/operator/ascendc/tutorials/MatmulCustomSample/KernelLaunch/MatmulInvocationNeo/` | Self-contained single-GEMM cube kernel + host `MultiCoreMatmulTiling`; grounds cube skill guidance |
+| AscendC matmul sample (framework) | `.../MatmulCustomSample/FrameworkLaunch/` | aclnn-invocation single/multi-core matmul custom op |
+| AscendC matmul+act sample | `.../MatmulLeakyReluCustomSample/` | Matmul + LeakyReLU fixpipe fusion reference |
+
+> **Matmul-family camodel prerequisite:** the aclnn tiling step dlopens
+> `libophost_comm_legacy.so` (the matmul cache-tiling impl), shipped by the
+> **`Ascend-cann-A3-ops`** package under `<cann>/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/<arch>/`.
+> If the aarch64 toolkit was installed without that ops package, the whole matmul
+> aclnn family fails to tile (`TilingPrepareForOpCache fail`); install
+> `Ascend-cann-A3-ops_<ver>_linux-aarch64.run` to repair. See
+> `docs/perf-vs-ascendc-demo.md` "CUBE BatchMatMulV3".
+
 ### Quick API lookup
 
 To find the API reference for a specific function (e.g., `asc.abs`):

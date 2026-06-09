@@ -652,6 +652,74 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     - '@'
     - torch.Tensor
     - TileLocation.L0A
+- name: batch_mat_mul_v3
+  tier: advanced
+  asc2_api: batched cube matmul (batch-per-core + L1-staged MN-block @ / asc2.matmul)
+  note: 'CUBE-only batched matmul C[b]=A[b]@B[b] on Ascend950PR_9599. f16 in, f32 cube accumulate, f16 out (cast on store). The [B,M,K]/[B,K,N]/[B,M,N] tensors are flattened on the host to 2D [B*M,K]/[B*K,N]/[B*M,N] so each batch is a contiguous row-block; the batch axis is distributed one-matrix-per-cube-core (block_idx). Per batch the whole A[m,k]/B[k,n] is staged into L1 once, then M/N-block tiles are copied L1->L0A/L0B and the result is cast f32->f16 and stored. Inputs MUST be torch.Tensor (the C310 cube path silently zeros numpy). This is the initial CUBE-only operator-generation demo; the measured kernel is the committed golden. PERF: clears the 0.70 gate against the canonical aclnnBatchMatMul (gen 18758 vs ref 14651, ratio 0.78) after L1 staging + a parallel (double-buffered) N-tile loop with N_TILE=64 to keep the 2-deep L0B pipeline within 64 KiB.'
+  cells:
+  - dtype: float16
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: -1
+    output_shape:
+    - B
+    - M
+    - N
+    accumulator_dtype: float32
+    identity: '0'
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: batch_per_core
+    unsupported_regimes:
+    - non_16_multiple_shapes
+    - broadcast_batch
+    - k_tiled
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop a CUBE-only batched matmul (BatchMatMulV3) on Ascend950PR_9599 (C310) for float16 inputs with a float32 cube accumulator and float16 output, for C[b]=A[b]@B[b] at [B,M,K]x[B,K,N]=[16,256,256]x[16,256,256]. Distribute the batch axis one matrix per cube core (asc2.block_idx), flatten [B,M,K] to 2D [B*M,K] on the host, stage each batch's A/B into asc2.TileLocation.L1, copy M/N tiles to L0A/L0B, compute `a @ b`, cast the result to float16 and asc2.store. Inputs MUST be torch.Tensor.
+    prompt_variants:
+      minimal: 'Operator: batched matmul C[b] = A[b] @ B[b] (float16 in, float32 cube accumulate, float16 out). Input shapes: A [16,256,256], B [16,256,256]. Output shape: [16,256,256]. Dtype: float16.'
+      guided: 'Operator: batched matmul C[b]=A[b]@B[b] (float16 inputs, float32 cube accumulator, float16 output via cast on store). Input shapes: A [B,M,K]=[16,256,256], B [B,K,N]=[16,256,256]. Output: [B,M,N]=[16,256,256]. Axis: -1 (K, contracted, per batch). Layout: flatten [B,M,K]->[B*M,K], [B,K,N]->[B*K,N], [B,M,N]->[B*M,N] on the host so each batch is a contiguous row-block. Tiling: batch_per_core -- launch CORE_NUM=B cube cores, bi=asc2.block_idx() handles batch bi (rows bi*M of A/C, bi*K of B). Stage the whole per-batch A[M,K] and B[K,N] into asc2.TileLocation.L1 once, then for each M tile copy [M_TILE,K]->L0A and for each N tile copy [K,N_TILE]->L0B, compute `a_i @ b_j`, `.to(asc2.float16)`, asc2.store. All of M,K,N,M_TILE,N_TILE must be multiples of 16; keep each L0 tile <= 64 KiB (M_TILE=128, full K=256 -> A tile 64 KiB). Accumulator: float32 (cube). Tolerance: atol=1e-2, rtol=1e-2 vs torch.bmm(a.float(), b.float()).to(torch.float16). Host inputs MUST be torch.Tensor (numpy is silently zeroed on the C310 cube path). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599.'
+      oracle_guided:
+        prompt: 'Operator: batched matmul C[b]=A[b]@B[b] (float16 inputs, float32 cube accumulator, float16 output via cast on store). Input shapes: A [B,M,K]=[16,256,256], B [B,K,N]=[16,256,256]. Output: [B,M,N]=[16,256,256]. Distribute batches one-per-cube-core via asc2.block_idx(); flatten the 3D tensors to 2D row-blocks on the host; stage per-batch A/B into L1, copy M/N tiles to L0A/L0B, `a @ b`, cast to float16, asc2.store. PERF LEVERS (measurement-driven): L1 staging makes each GM element load once; a parallel (double-buffered) N-tile loop (`for j in asc2.range(n_tiles, unroll_factor=2, parallel=True)`) overlaps the L1->L0B copy with the MMAD, but doubles L0B usage -- keep N_TILE=64 so the 2-deep [K=256,64] f16 pipeline stays within the 64 KiB L0B budget. This took gen from 23434 (direct GM->L0) -> 21620 (L1 staged) -> 18758 (pipelined, ratio 0.78 vs aclnnBatchMatMul 14651). Tolerance: atol=1e-2, rtol=1e-2 vs torch.bmm. Host inputs MUST be torch.Tensor. Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Workaround: Reference golden/kernels/batch_mat_mul_v3_f16.py for the exact batch-per-core + L1-staged MN-block + parallel N-loop structure and the f32->f16 store cast.'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: true
+          golden_docs: false
+          external_web: false
+          human_hints: true
+    shapes:
+    - - 16
+      - 256
+      - 256
+    golden_status: confirmed
+    golden: golden/kernels/batch_mat_mul_v3_f16.py
+    generative_status: not_attempted
+    semantic_check:
+    - asc2.matmul
+    - '@'
+    - torch.Tensor
+    - TileLocation.L0A
+    - TileLocation.L0B
+    - TileLocation.L1
+    perf_ratio_demo:
+      ref_source: ops-nn/matmul/batch_mat_mul_v3 (aclnnBatchMatMul, canonical_only)
+      shape: [16, 256, 256]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      ref_ticks: 14651
+      gen_ticks: 18758
+      last_ratio: 0.78
+      status: pass
+      kernel_source: vetted golden (golden/kernels/batch_mat_mul_v3_f16.py, batch-per-core L1-staged MN-block, parallel N-tile pipeline)
+      perf_note: 'Initial CUBE-only operator-generation demo. Clears 0.70 against the canonical aclnnBatchMatMul. Levers applied: L1 staging of per-batch A/B (each GM element read once) + a double-buffered (parallel=True, unroll_factor=2) N-tile loop with N_TILE=64 so the 2-deep L0B copy/MMAD pipeline fits the 64 KiB L0B budget. gen 23434 (direct GM->L0) -> 21620 (L1) -> 18758 (pipelined). Reference required repairing the aarch64 CANN install with the Ascend-cann-A3-ops package, which ships libophost_comm_legacy.so (the matmul cache-tiling impl the aclnn tiling step dlopens); without it the whole matmul aclnn family cannot tile on this camodel. See docs/perf-vs-ascendc-demo.md "CUBE BatchMatMulV3".'
+      evidence: evidence/perf/ascendc-ref/batch_mat_mul_v3-f16-ascend950-16x256x256.json
 - name: rms_norm
   tier: advanced
   asc2_api: two-kernel + host dispatcher (full_row, split_d)

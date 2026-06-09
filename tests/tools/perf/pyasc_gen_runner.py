@@ -55,6 +55,9 @@ CELL_TO_KERNEL = {
     "drop_out_do_mask/float16": (KERNELS_ROOT / "drop_out_do_mask_f16" / "kernel.py", "float16"),
     "batch_norm_v3/float32": (KERNELS_ROOT / "batch_norm_v3_f32" / "kernel.py", "float32"),
     "apply_adam/float32": (KERNELS_ROOT / "apply_adam_f32" / "kernel.py", "float32"),
+    # CUBE-only demo: measured kernel is the committed golden (no regen path yet).
+    "batch_mat_mul_v3/float16": (
+        REPO_ROOT / "golden" / "kernels" / "batch_mat_mul_v3_f16.py", "float16"),
 }
 
 
@@ -84,6 +87,18 @@ def _batch_norm_v3_inputs(shape: list[int], dtype: str) -> list:
     ]
 
 
+def _batch_mat_mul_v3_inputs(shape: list[int], dtype: str) -> list:
+    # bmm_launch(a[B,M,K], b[B,K,N]). The comparability contract is square
+    # (M=K=N), so the 3D cell shape [B, M, K] yields b[B, K, K]. Inputs MUST be
+    # torch (the C310 cube path silently zeros numpy, same as matmul).
+    b, m, k = shape
+    n = k
+    return [
+        {"kind": "tensor", "shape": [b, m, k], "dtype": dtype, "fw": "torch"},
+        {"kind": "tensor", "shape": [b, k, n], "dtype": dtype, "fw": "torch"},
+    ]
+
+
 def arg_specs_for(cell: str, shape: list[int], dtype: str) -> list | None:
     op = cell.split("/")[0]
     builder = _CELL_INPUT_BUILDERS.get(op)
@@ -93,6 +108,7 @@ def arg_specs_for(cell: str, shape: list[int], dtype: str) -> list | None:
 _CELL_INPUT_BUILDERS = {
     "rms_norm": _rms_norm_inputs,
     "batch_norm_v3": _batch_norm_v3_inputs,
+    "batch_mat_mul_v3": _batch_mat_mul_v3_inputs,
 }
 
 

@@ -1,0 +1,25 @@
+{
+  "cell": "kernels",
+  "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/golden/kernels/batch_mat_mul_v3_f16.py",
+  "dtype": "float16",
+  "shape": [
+    16,
+    256,
+    256
+  ],
+  "n_elements": 1048576,
+  "arch": "Ascend950PR_9599",
+  "metric": "camodel_total_tick",
+  "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+  "gen_ticks": 18767,
+  "gen_ticks_runs": [
+    18767,
+    18767,
+    18767
+  ],
+  "gen_ticks_method": "median_of_3",
+  "gen_ticks_spread": 0.0,
+  "vf_fusion": null,
+  "wall_ms_last": 65587.6,
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_kernels_16x256x256_default.run3.log"
+}

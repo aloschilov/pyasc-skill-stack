@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-06-09T15:32:12Z",
+  "generated_at": "2026-06-09T17:21:45Z",
   "gate": 0.7,
   "counts": {
-    "pass": 7,
+    "pass": 8,
     "fail": 2,
     "gen_blocked": 0,
     "unknown": 0,
-    "total": 9
+    "total": 10
   },
   "cells": [
     {
@@ -73,6 +73,29 @@
       "comparability_note": "Not a like-for-like high-level comparison: the reference (ops-nn/optim/apply_adam/op_kernel/arch35/apply_adam_dag.h) hand-writes CalcMt/CalcVt/CalcVarT in register-fused SIMT micro-API (__VEC_SCOPE__, MicroAPI::RegTensor, MicroAPI::DataCopy, MaskReg), keeping the entire m_t/v_t/var_t chain in vector registers (4 copy-ins / 3 copy-outs, no UB round-trips for intermediates). pyasc2 emits only the high-level API and must materialize each intermediate tile in UB, which is exactly why it stays memory-bound. The miss is therefore SIMT-attributable, reinforcing the DMA-floor finding, not a pyasc codegen bug. See docs/perf-vs-ascendc-demo.md \"Reference programming model\".",
       "evidence_file": "evidence/perf/ascendc-ref/apply_adam-f32-ascend950-32x4096.json",
       "source": "curated"
+    },
+    {
+      "cell": "batch_mat_mul_v3/float16",
+      "op": "batch_mat_mul_v3",
+      "dtype": "float16",
+      "shape": [
+        16,
+        256,
+        256
+      ],
+      "arch": "Ascend950PR_9599",
+      "gate": 0.7,
+      "ref_ticks": 14651,
+      "gen_ticks": 18758,
+      "ratio": 0.7811,
+      "status": "pass",
+      "reference_source": "ops-nn canonical operator (batch_mat_mul_v3, aclnnop/aclnn_batch_matmul.h), build.sh --pkg --soc=ascend950",
+      "kernel_source": "vetted golden (golden/kernels/batch_mat_mul_v3_f16.py, batch-per-core L1-staged MN-block, parallel N-tile pipeline)",
+      "perf_miss_note": "",
+      "comparability_note": "",
+      "evidence_file": "evidence/perf-vs-ascendc/batch_mat_mul_v3-float16-20260609T192015.json",
+      "source": "measured",
+      "measured_at": "2026-06-09T19:20:15Z"
     },
     {
       "cell": "batch_norm_v3/float32",

@@ -108,6 +108,14 @@ CELLS = {
         "kernel": GOLDEN_ROOT / "batch_norm_v3_f32.py", "gen_dtype": "float32",
         "shape": [32, 64, 64],
     },
+    # CUBE-only operator-generation demo: batched matmul, measured against the
+    # canonical ops-nn BatchMatMulV3 (aclnnBatchMatMul). Square contract shape
+    # [B, M, K] with N=K -> [16,256,256] x [16,256,256] = [16,256,256].
+    "batch_mat_mul_v3/float16": {
+        "ref_op": "batch_mat_mul_v3", "ref_dtype": "f16",
+        "kernel": GOLDEN_ROOT / "batch_mat_mul_v3_f16.py", "gen_dtype": "float16",
+        "shape": [16, 256, 256],
+    },
 }
 
 

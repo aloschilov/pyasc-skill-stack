@@ -621,6 +621,58 @@ Tile-size constraints (from the proven pattern):
 Recommended starter shape: `m=k=n=16, core_num=1, m_tile=n_tile=16,
 m_tiles_per_block=n_tiles_per_block=1`. Once that passes, scale up.
 
+#### CUBE-only batched matmul (BatchMatMulV3) + perf levers
+
+For a **batched** matmul `C[b] = A[b] @ B[b]` (the first CUBE-only
+operator-generation demo), build on the single-GEMM pattern with three additions
+(proven in `golden/kernels/batch_mat_mul_v3_f16.py`, measured PASS at ratio 0.78
+vs the canonical `aclnnBatchMatMul`):
+
+1. **Batch across cores.** Flatten `[B,M,K]`→`[B*M,K]`, `[B,K,N]`→`[B*K,N]`,
+   `[B,M,N]`→`[B*M,N]` on the host so each batch is a contiguous row-block, launch
+   `kernel[B]`, and let `bi = asc2.block_idx()` own batch `bi` (rows `bi*M` of A/C,
+   `bi*K` of B). All loads/offsets stay 2-D, satisfying the cube tile rules.
+2. **f16 in / f32 accumulate / f16 out.** The cube result tile is always f32; cast
+   it on store with `c_ij = (a_i @ b_j).to(asc2.float16)` (the fixpipe cast path,
+   cf. `test_matmul_fixpipe.py`). Allocate the host output as `torch.float16`.
+3. **L1 staging + a pipelined N-tile loop (the perf levers).** Stage the whole
+   per-batch `A[m,k]`/`B[k,n]` into `L1` once so every GM element is read a single
+   time, then copy `L1`→`L0A`/`L0B` tiles. Pipeline the inner N loop with
+   `asc2.range(n_tiles, unroll_factor=2, parallel=True)` so the next L0B copy
+   overlaps the current MMAD.
+
+```python
+a_l1 = asc2.load(a_gm, [m, k], offsets=[bi * m, 0], location=asc2.TileLocation.L1)
+b_l1 = asc2.load(b_gm, [k, n], offsets=[bi * k, 0], location=asc2.TileLocation.L1)
+for i in range(m // m_tile):                      # plain range: A stays in L0A
+    a_i = asc2.copy(a_l1, [m_tile, k], offsets=[i * m_tile, 0], location=asc2.TileLocation.L0A)
+    for j in asc2.range(n // n_tile, unroll_factor=2, parallel=True):  # double-buffered L0B
+        b_j = asc2.copy(b_l1, [k, n_tile], offsets=[0, j * n_tile], location=asc2.TileLocation.L0B)
+        c_ij = (a_i @ b_j).to(asc2.float16)
+        asc2.store(c_ij, c_gm, offsets=[bi * m + i * m_tile, j * n_tile])
+```
+
+**Perf-tuning levers, in priority order** (measure each on the camodel — no
+hand-edited ticks):
+
+- **L1 staging** is the first win (each GM element read once instead of re-fetched
+  per tile). For the `[16,256,256]` contract this alone took `gen` 23434→21620.
+- **`parallel=True` double-buffering** is the second win (21620→18758, ratio
+  0.78). **Critical budget rule:** `parallel=True` *doubles* the buffer it
+  pipelines, so the 2-deep tile must fit half the L0 capacity. A full-K
+  `[256,128]` f16 L0B tile is already 64 KiB and overflows when doubled — drop to
+  `N_TILE=64` (`[256,64]` f16 = 32 KiB ⇒ 64 KiB for the pair). Only pipeline the
+  loop whose L0 buffer you can halve; keep the other loop a plain `range`.
+- **Batch-to-core mapping** is maxed at `CORE_NUM=B` when `B` ≤ the AIC core count
+  (16 cube cores here, so 16 batches = one fully parallel wave). Launching more
+  blocks than cores adds waves, not parallelism.
+- **K-tiling** (`asc2.zeros_acc` + `asc2.matmul_acc` over a `parallel` K loop, cf.
+  `test_matmul_tiled.py`) is the alternative when a single A/B tile cannot fit L0;
+  not needed at K=256 (the A tile fits L0A whole).
+
+L0 budget reminder for the pair-buffered case: each pipelined L0 tile ≤ **32 KiB**
+(half of 64 KiB); the f32 L0C accumulator tile ≤ **64 KiB** (half of 128 KiB).
+
 **softmax** — use `asc2.softmax()` directly:
 
 ```python
