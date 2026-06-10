@@ -1016,6 +1016,35 @@ def resolve_configured_model(project_dir: Path) -> str | None:
     return None
 
 
+# Exponential backoff (seconds) used when an attempt looks like a transient
+# provider/contention bail. These retries do NOT consume the --max-attempts
+# generation budget; they simply re-run the same planned attempt after a
+# pause so a rate-limit/QPS blip clears. See docs/perf-methodology/
+# phase-3-budget.md "Provider rate-limit head-room".
+NOOP_RETRY_BACKOFFS_S = (5, 15, 45, 120)
+
+
+def _is_transient_noop(rec: dict) -> bool:
+    """True when an attempt looks like a transient provider/contention bail.
+
+    opencode occasionally returns instantly with a success exit code and no
+    output at all (zero tokens, no kernel) when the dashscope key is
+    rate-limited or the run otherwise never reached the model. This mirrors
+    the "exited suspiciously fast" warning emitted in :func:`run_one_attempt`.
+    Such attempts carry no diagnostic signal, so the caller retries them with
+    backoff instead of burning a real generation attempt on them.
+    """
+    try:
+        return (
+            int(rec.get("exit", 1)) == 0
+            and float(rec.get("elapsed_s", 0.0)) < 10.0
+            and int(rec.get("tokens", {}).get("total", 0) or 0) == 0
+            and not rec.get("kernel_path")
+        )
+    except (TypeError, ValueError):
+        return False
+
+
 def run_one_attempt(
     *,
     attempt_num: int,
@@ -1494,7 +1523,7 @@ def main() -> None:
 
     for idx, (this_prompt, label) in enumerate(plan, start=1):
         print(f"  --- attempt {idx}/{len(plan)} ({label}) ---")
-        rec = run_one_attempt(
+        attempt_kwargs = dict(
             attempt_num=idx,
             prompt=this_prompt,
             op=args.op,
@@ -1511,6 +1540,30 @@ def main() -> None:
             agent_format=args.agent_format,
             agents_md_path=agents_md_path,
         )
+        rec = run_one_attempt(**attempt_kwargs)
+        # A transient no-op (instant exit-0/0-token bail, typically a
+        # dashscope QPS/rate-limit blip) carries no signal: re-run the same
+        # planned attempt with exponential backoff rather than counting it as
+        # a real failure. These retries do not consume the max_attempts budget.
+        backoff_idx = 0
+        while (
+            rec["outcome"] != "pass"
+            and _is_transient_noop(rec)
+            and backoff_idx < len(NOOP_RETRY_BACKOFFS_S)
+        ):
+            delay = NOOP_RETRY_BACKOFFS_S[backoff_idx]
+            backoff_idx += 1
+            print(f"  [attempt {idx}] transient no-op "
+                  f"(exit={rec['exit']}, tokens=0, {rec['elapsed_s']}s); "
+                  f"retrying in {delay}s "
+                  f"({backoff_idx}/{len(NOOP_RETRY_BACKOFFS_S)})")
+            # Discard the throwaway project from the no-op run so it does not
+            # leak — the end-of-run cleanup only walks the kept `attempts`.
+            stale_project = rec.get("_project")
+            if stale_project is not None and not rec.get("_keep_project", False):
+                shutil.rmtree(stale_project, ignore_errors=True)
+            time.sleep(delay)
+            rec = run_one_attempt(**attempt_kwargs)
         rec["prompt_label"] = label
         attempts.append(rec)
         if rec["outcome"] == "pass":

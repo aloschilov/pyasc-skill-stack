@@ -51,9 +51,9 @@ jobs:
     # fallback if the box is offline.
     runs-on: [self-hosted, gpu]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.10"
 
@@ -77,7 +77,7 @@ jobs:
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Log in to ghcr.io
         uses: docker/login-action@v3
@@ -152,9 +152,9 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.10"
 
@@ -177,11 +177,26 @@ jobs:
       - name: Pull pyasc-sim-perf image
         id: perf_image
         run: |
-          if docker pull "$PYASC_PERF_IMAGE"; then
+          # Retry the pull a few times with backoff: the image is built+pushed
+          # manually from the arm64 host and is normally present, so a failed
+          # pull is almost always a transient ghcr/network blip rather than a
+          # genuinely missing tag. Only declare it unavailable (clean skip)
+          # after the retries are exhausted, so a transient blip no longer
+          # silently drops the whole perf measurement for the night.
+          available=false
+          for attempt in 1 2 3; do
+            if docker pull "$PYASC_PERF_IMAGE"; then
+              available=true
+              break
+            fi
+            echo "::warning::perf image pull attempt $attempt/3 failed; retrying..."
+            sleep $((attempt * 15))
+          done
+          if [ "$available" = "true" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::perf image $PYASC_PERF_IMAGE unavailable; skipping perf measurement this run (rebuild+push the arm64 image with docker/build-perf-image.sh --push)"
+            echo "::warning::perf image $PYASC_PERF_IMAGE unavailable after 3 attempts; skipping perf measurement this run (if the tag is genuinely missing, rebuild+push the arm64 image with docker/build-perf-image.sh --push)"
           fi
         env:
           PYASC_PERF_IMAGE: ${{ env.PYASC_PERF_IMAGE }}
@@ -223,7 +238,7 @@ jobs:
 
       - name: Upload perf evidence artifact
         if: steps.perf_image.outputs.available == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: evidence-perf
           path: |
@@ -263,12 +278,18 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly')
     strategy:
       fail-fast: false
+      # Serialize the protocol legs: all four hit the same dashscope/glm-5
+      # key, and running them in parallel trips the provider's per-key QPS
+      # limit (opencode then returns an instant exit-0/0-token no-op and the
+      # P6 gate fails). See docs/perf-methodology/phase-3-budget.md
+      # "Provider rate-limit head-room".
+      max-parallel: 1
       matrix:
         protocol_id: ["P2", "P3", "P4", "P6"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.10"
 
@@ -410,7 +431,7 @@ jobs:
       # (`*-generative-cloud-default-<protocol_id_lower>.json`).
       - name: Upload evidence artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: evidence-cloud-${{ matrix.protocol_id }}
           path: evidence/*-generative-cloud-default-${{ env.PROTOCOL_ID_LOWER }}.json
@@ -418,7 +439,7 @@ jobs:
 
       - name: Upload generated kernel archive
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: generative-archive-cloud-${{ matrix.protocol_id }}
           path: generative-archive/
@@ -462,9 +483,9 @@ jobs:
     env:
       OLLAMA_BASE_URL: "http://127.0.0.1:11434/v1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.10"
 
@@ -569,7 +590,7 @@ jobs:
       # merge step in `skills-value-report`.
       - name: Upload evidence artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: evidence-${{ matrix.profile }}-${{ matrix.skills_mode }}
           path: evidence/*-generative-${{ matrix.profile }}-${{ matrix.skills_mode }}.json
@@ -577,7 +598,7 @@ jobs:
 
       - name: Upload generated kernel archive
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: generative-archive-${{ matrix.profile }}-${{ matrix.skills_mode }}
           path: generative-archive/
@@ -603,12 +624,12 @@ jobs:
       (github.event_name == 'schedule' ||
        (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly'))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # We commit back to main, so fetch full history.
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.10"
 
@@ -616,7 +637,7 @@ jobs:
         run: pip install pyyaml
 
       - name: Download all evidence artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: artifacts/
           pattern: evidence-*
@@ -744,7 +765,7 @@ jobs:
 
       - name: Upload merged evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: evidence-merged
           path: evidence/
@@ -752,7 +773,7 @@ jobs:
 
       - name: Upload OpenCode skills-intervention markdown
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: skills-value-report
           path: skills-value-report.md
