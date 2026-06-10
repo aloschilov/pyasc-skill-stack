@@ -278,12 +278,14 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly')
     strategy:
       fail-fast: false
-      # Serialize the protocol legs: all four hit the same dashscope/glm-5
-      # key, and running them in parallel trips the provider's per-key QPS
-      # limit (opencode then returns an instant exit-0/0-token no-op and the
-      # P6 gate fails). See docs/perf-methodology/phase-3-budget.md
-      # "Provider rate-limit head-room".
-      max-parallel: 1
+      # Protocol legs run in parallel (one dashscope request in flight per leg,
+      # i.e. the 4-way "parallel across protocols" design of
+      # docs/perf-methodology/phase-3-budget.md). The instant exit-0/0-token
+      # no-ops that previously failed every backtick-heavy P3/P4/P6 op were NOT
+      # provider QPS contention — they were shell command-substitution mangling
+      # the prompt in the `script -qc` wrapper, fixed in
+      # tests/tools/collect_generative_evidence.py (shlex.quote). Serializing
+      # the legs (max-parallel: 1) only quadrupled wall-clock without helping.
       matrix:
         protocol_id: ["P2", "P3", "P4", "P6"]
     steps:

@@ -31,6 +31,7 @@ import glob
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -1091,7 +1092,17 @@ def run_one_attempt(
         env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
 
         fmt_flag = f" --format {agent_format}" if agent_format else ""
-        opencode_cmd = f'opencode run "{prompt}" --dir "{project}"{fmt_flag}'
+        # `script -qc` runs this string through `sh -c`, so EVERY interpolated
+        # value must be shell-quoted. The guided prompts embed asc2 API snippets
+        # wrapped in backticks (e.g. `asc2.load(...)`); inside a double-quoted
+        # `"..."` those backticks trigger command substitution, which silently
+        # mangles the prompt to empty and makes opencode exit 0 with zero tokens
+        # (the "instant no-op" that failed every backtick-heavy P3/P4/P6 op).
+        # shlex.quote single-quotes the values so they reach opencode verbatim.
+        opencode_cmd = (
+            f"opencode run {shlex.quote(prompt)} "
+            f"--dir {shlex.quote(str(project))}{fmt_flag}"
+        )
         cmd = ["script", "-qc", opencode_cmd, "/dev/null"]
 
         print(f"  [attempt {attempt_num}] running opencode "
