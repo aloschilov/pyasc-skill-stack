@@ -99,10 +99,10 @@ def bmm_kernel(a_ptr: asc.GlobalAddress, b_ptr: asc.GlobalAddress, c_ptr: asc.Gl
     # unrolled range (A stays resident in L0A across the N sweep).
     for i in range(m_tiles):
         m_off = i * m_tile
-        a_i = asc2.copy(a_l1, [m_tile, k], offsets=[m_off, 0], location=asc2.TileLocation.L0A)
+        a_i = asc2.load(a_l1, [m_tile, k], offsets=[m_off, 0], location=asc2.TileLocation.L0A)
         for j in asc2.range(n_tiles, unroll_factor=2, parallel=True):
             n_off = j * n_tile
-            b_j = asc2.copy(b_l1, [k, n_tile], offsets=[0, n_off], location=asc2.TileLocation.L0B)
+            b_j = asc2.load(b_l1, [k, n_tile], offsets=[0, n_off], location=asc2.TileLocation.L0B)
             c_ij = a_i @ b_j
             c_ij = c_ij.to(asc2.float16)
             asc2.store(c_ij, c_gm, offsets=[a_row0 + m_off, n_off])
