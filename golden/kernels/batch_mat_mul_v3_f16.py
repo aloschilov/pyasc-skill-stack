@@ -86,23 +86,16 @@ def bmm_kernel(a_ptr: asc.GlobalAddress, b_ptr: asc.GlobalAddress, c_ptr: asc.Gl
     b_row0 = bi * k
     m_tiles = m // m_tile
     n_tiles = n // n_tile
-    # Stage the whole per-batch A[m,k] and B[k,n] into L1 once (each GM element is
-    # read a single time over MTE2), then feed L0A/L0B from fast on-chip L1 copies.
-    # Without L1 staging the direct GM->L0 loads re-fetch B for every m-tile, and
-    # the loads serialise with the MMAD; L1 staging + copy overlap is what closes
-    # the gap to the (L1-buffered, pipelined) aclnnBatchMatMul reference.
-    a_l1 = asc2.load(a_gm, [m, k], offsets=[a_row0, 0], location=asc2.TileLocation.L1)
-    b_l1 = asc2.load(b_gm, [k, n], offsets=[b_row0, 0], location=asc2.TileLocation.L1)
-    # Pipeline the N tile loop (parallel=True + unroll_factor=2): the L1->L0B copy
-    # of the next n-tile overlaps the MMAD of the current one, mirroring the
-    # double-buffered inner loop of test_matmul_tiled.py. The M loop stays a plain
-    # unrolled range (A stays resident in L0A across the N sweep).
+    # Direct GM->L0A/L0B loads for each tile. The M loop loads A tiles once per
+    # m-tile (A stays resident in L0A across the N sweep). The N loop loads B
+    # tiles with parallel=True + unroll_factor=2 to overlap the next B load with
+    # the current MMAD, mirroring test_matmul_tiled.py's double-buffering.
     for i in range(m_tiles):
         m_off = i * m_tile
-        a_i = asc2.load(a_l1, [m_tile, k], offsets=[m_off, 0], location=asc2.TileLocation.L0A)
+        a_i = asc2.load(a_gm, [m_tile, k], offsets=[a_row0 + m_off, 0], location=asc2.TileLocation.L0A)
         for j in asc2.range(n_tiles, unroll_factor=2, parallel=True):
             n_off = j * n_tile
-            b_j = asc2.load(b_l1, [k, n_tile], offsets=[0, n_off], location=asc2.TileLocation.L0B)
+            b_j = asc2.load(b_gm, [k, n_tile], offsets=[b_row0, n_off], location=asc2.TileLocation.L0B)
             c_ij = a_i @ b_j
             c_ij = c_ij.to(asc2.float16)
             asc2.store(c_ij, c_gm, offsets=[a_row0 + m_off, n_off])
