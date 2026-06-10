@@ -1,6 +1,6 @@
 {
   "schema_version": "2",
-  "generated_at": "2026-06-10T10:55:26Z",
+  "generated_at": "2026-06-10T04:35:57Z",
   "partial_run": false,
   "legs_status": {
     "needs": {
@@ -10,11 +10,11 @@
     "partial_run": false,
     "legs": [
       {
-        "name": "nightly-gate",
+        "name": "local-stability-gate",
         "conclusion": "skipped"
       },
       {
-        "name": "local-stability-gate",
+        "name": "nightly-gate",
         "conclusion": "skipped"
       }
     ]
@@ -1990,7 +1990,7 @@
       "elapsed_delta_avg_s": 198.21,
       "on_last_run_at": "2026-06-08T09:00:06Z",
       "off_last_run_at": "2026-06-08T08:03:21Z",
-      "off_max_staleness_days": 2,
+      "off_max_staleness_days": 1,
       "failure_mode_counts_on": {
         "F8_correctness": 1
       },
@@ -2413,27 +2413,6 @@
             "pass_pp_ci_high": 38.7,
             "tokens_pct": 215.6
           }
-        },
-        {
-          "date": "2026-06-10",
-          "P3-P2": {
-            "pass_pp": 91.7,
-            "pass_pp_ci_low": 55.3,
-            "pass_pp_ci_high": 98.5,
-            "tokens_pct": 34.3
-          },
-          "P4-P3": {
-            "pass_pp": -8.4,
-            "pass_pp_ci_low": -37.3,
-            "pass_pp_ci_high": 21.3,
-            "tokens_pct": -17.2
-          },
-          "P6-P4": {
-            "pass_pp": 10.0,
-            "pass_pp_ci_low": -16.1,
-            "pass_pp_ci_high": 38.7,
-            "tokens_pct": 215.6
-          }
         }
       ]
     },
@@ -2464,7 +2443,7 @@
       "elapsed_delta_avg_s": -130.13,
       "on_last_run_at": "2026-06-08T10:29:19Z",
       "off_last_run_at": "2026-06-08T10:56:01Z",
-      "off_max_staleness_days": 2,
+      "off_max_staleness_days": 1,
       "failure_mode_counts_on": {
         "F10_no_artifact": 12
       },
@@ -2542,7 +2521,7 @@
       "elapsed_delta_avg_s": -478.88,
       "on_last_run_at": "2026-06-08T08:10:45Z",
       "off_last_run_at": "2026-06-08T09:46:17Z",
-      "off_max_staleness_days": 2,
+      "off_max_staleness_days": 1,
       "failure_mode_counts_on": {
         "F10_no_artifact": 12
       },
