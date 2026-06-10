@@ -45,6 +45,13 @@ EXIT_PASS = 0
 EXIT_FAIL = 1
 EXIT_SKIP = 2
 
+# Runtime dependencies a golden kernel may import at module load. If any of
+# these is missing the environment is only partially provisioned (e.g. a
+# self-hosted runner whose active python3.10 lacks the editable pyasc install
+# or torch) rather than the kernel being wrong, so the JIT pre-check SKIPs
+# (exit 2) instead of FAILing — same contract as "asc not importable" below.
+_SKIPPABLE_MISSING_MODULES = frozenset({"asc", "asc2", "torch", "torch_npu"})
+
 
 def _try_import_asc():
     """Return (asc_module, None) or (None, error_message)."""
@@ -329,6 +336,40 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(json.dumps(payload, indent=2))
         else:
             print(f"FAIL: {payload['error']}", file=sys.stderr)
+        return EXIT_FAIL
+    except ModuleNotFoundError as e:
+        # A missing *runtime* dependency (asc/asc2/torch) means the environment
+        # is only partially provisioned, not that the kernel is broken — treat
+        # it like the "pyasc not importable" skip above (exit 2) so the gate
+        # does not flake on self-hosted runner environment drift. Any other
+        # missing module is still a genuine FAIL.
+        missing = (e.name or "").split(".")[0]
+        if missing in _SKIPPABLE_MISSING_MODULES:
+            payload = {
+                "status": "skip",
+                "exit_code": EXIT_SKIP,
+                "reason": f"runtime dependency not importable: {missing}",
+                "import_error": str(e),
+                "kernels": [],
+            }
+            if args.json:
+                print(json.dumps(payload, indent=2))
+            else:
+                print(f"SKIP: runtime dependency '{missing}' not available "
+                      f"(partial environment): {e}", file=sys.stderr)
+            return EXIT_SKIP
+        payload = {
+            "status": "fail",
+            "exit_code": EXIT_FAIL,
+            "error": f"{type(e).__name__}: {e}",
+            "traceback": traceback.format_exc(),
+            "kernels": [],
+        }
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print(f"FAIL: {payload['error']}", file=sys.stderr)
+            traceback.print_exc()
         return EXIT_FAIL
     except Exception as e:
         payload = {
