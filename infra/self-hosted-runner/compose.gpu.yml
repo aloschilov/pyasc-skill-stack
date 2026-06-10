@@ -15,6 +15,14 @@
 # Ephemeral vs persistent + the registration credential live in .env
 # (ACCESS_TOKEN=PAT + EPHEMERAL=true for fresh-per-job, or RUNNER_TOKEN=a
 # registration token for a persistent runner). Labels: gpu (+ self-hosted,linux,x64).
+#
+# Runner reusage (CONFIGURED_ACTIONS_RUNNER_FILES_DIR) + no auto-deregistration:
+# the registration token is single-use and short-lived, so on ANY container
+# restart (GitHub pushes a one-time RunnerRefreshConfigMessage / session-restart
+# right after first registration; reboots; etc.) the base image must NOT try to
+# re-register. With these set, the entrypoint detects the existing (non-expiring)
+# runner credentials in the persisted /actions-runner and just resumes, instead
+# of crash-looping on "already configured" with a dead token.
 x-gpu-runner: &gpu-runner
   image: pyasc-ci-runner:latest
   env_file: .env
@@ -35,6 +43,8 @@ services:
       LABELS: gpu
       DISABLE_AUTO_UPDATE: "true"
       START_DOCKER_SERVICE: "false"
+      CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /actions-runner-persist
+      DISABLE_AUTOMATIC_DEREGISTRATION: "true"
       RUNNER_WORKDIR: ${AR_BASE}/work-1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -47,6 +57,8 @@ services:
       LABELS: gpu
       DISABLE_AUTO_UPDATE: "true"
       START_DOCKER_SERVICE: "false"
+      CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /actions-runner-persist
+      DISABLE_AUTOMATIC_DEREGISTRATION: "true"
       RUNNER_WORKDIR: ${AR_BASE}/work-2
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -59,6 +71,8 @@ services:
       LABELS: gpu
       DISABLE_AUTO_UPDATE: "true"
       START_DOCKER_SERVICE: "false"
+      CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /actions-runner-persist
+      DISABLE_AUTOMATIC_DEREGISTRATION: "true"
       RUNNER_WORKDIR: ${AR_BASE}/work-3
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

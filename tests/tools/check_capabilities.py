@@ -245,6 +245,7 @@ _ALLOWED_PARTITIONING: set[str] = {
     "tile_per_core",
     "block_grid",
     "host_dispatcher",
+    "batch_per_core",
 }
 _ALLOWED_ACCUMULATOR_DTYPE: set[str | None] = {"float16", "float32", None}
 _ALLOWED_IDENTITY: set[str | None] = {"0", "1", "-inf", "+inf", None}
@@ -264,6 +265,7 @@ _KNOWN_UNSUPPORTED_REGIMES: set[str] = {
     "abl1_full",
     "al1_full",
     "bl1_full",
+    "broadcast_batch",
     "dynamic_num_cols",
     "dynamic_num_cols_not_8_aligned_in_full_row",
     "dynamic_num_rows",

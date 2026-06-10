@@ -700,6 +700,7 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
       - 256
     golden_status: confirmed
     golden: golden/kernels/batch_mat_mul_v3_f16.py
+    golden_evidence: evidence/batch_mat_mul_v3-f16-golden.json
     generative_status: not_attempted
     semantic_check:
     - asc2.matmul

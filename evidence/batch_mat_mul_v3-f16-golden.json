@@ -1,0 +1,17 @@
+{
+  "schema_version": "3",
+  "kind": "golden",
+  "operation": "batch_mat_mul_v3",
+  "dtype": "float16",
+  "kernel_path": "golden/kernels/batch_mat_mul_v3_f16.py",
+  "date": "2026-06-10T06:00:00Z",
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed"
+  },
+  "runtime_verified": true,
+  "notes": "Golden batch_mat_mul_v3 kernel verified on CANN 9.0.0 Ascend950PR_9599 simulator with torch.Tensor inputs. Batch-per-core L1-staged MN-block + parallel N-tile pipeline pattern."
+}

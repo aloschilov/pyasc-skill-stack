@@ -54,12 +54,14 @@ def main() -> int:
         "abs": [32, 4096], "add": [32, 4096], "reduce_sum": [32, 4096],
         "tanh": [32, 4096], "drop_out_do_mask": [32, 4096],
         "rms_norm": [8, 256], "batch_norm_v3": [32, 64, 64], "apply_adam": [32, 4096],
+        "batch_mat_mul_v3": [16, 256, 256],
     }
     aclnn_entry = {
         "abs": "aclnnAbs", "add": "aclnnAdd", "reduce_sum": "aclnnReduceSum",
         "tanh": "aclnnTanh", "drop_out_do_mask": "aclnnDropoutDoMask",
         "rms_norm": "aclnnRmsNorm", "batch_norm_v3": "aclnnBatchNorm",
         "apply_adam": "aclnnApplyAdam",
+        "batch_mat_mul_v3": "aclnnBatchMatMul",
     }
     for op in ref.OP_SPECS:
         dtype = "f16" if op in ("abs", "add", "tanh", "drop_out_do_mask") else "f32"

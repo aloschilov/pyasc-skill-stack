@@ -20,6 +20,9 @@ services:
       LABELS: arm64
       DISABLE_AUTO_UPDATE: "true"
       START_DOCKER_SERVICE: "false"
+      # Reuse existing runner credentials across restarts (see compose.gpu.yml).
+      CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /actions-runner-persist
+      DISABLE_AUTOMATIC_DEREGISTRATION: "true"
       RUNNER_WORKDIR: ${AR_BASE}/work
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
