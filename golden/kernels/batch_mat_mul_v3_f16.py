@@ -2,7 +2,7 @@
 """Golden kernel: batch_mat_mul_v3/float16 (CUBE-only)
 
 Batched matrix multiplication ``C[b] = A[b] @ B[b]`` for float16 inputs with a
-float32 cube accumulator, cast back to float16 on store. This is the initial
+float32 cube accumulator, stored as float32 output. This is the initial
 CUBE-only operator-generation demo: the operator runs entirely on the cube unit
 (``asc2.matmul`` / ``@`` -> L0C), with the batch axis distributed across cores.
 
@@ -10,8 +10,6 @@ Composed from the asc2 cube patterns:
   - MN-block tiling: pyasc-v2-eval/python/test/asc2/kernels/test_matmul_mnblock.py
     (mirrored by golden/kernels/matmul_f16.py) -- per (m,n) block, load A->L0A,
     B->L0B, ``A @ B`` -> L0C.
-  - f32->f16 cast on the result tile: pyasc-v2-eval/python/test/asc2/kernels/
-    test_matmul_fixpipe.py (``c.to(asc2.float16)`` before store).
 
 Reference for the perf gate: the canonical ops-nn BatchMatMulV3 operator
 (``aclnnBatchMatMul``), measured on the same Ascend950PR_9599 / dav_3510 camodel.
@@ -22,7 +20,7 @@ Cell metadata (mirrors capabilities.yaml; do not drift):
   - shape_regime: fixed
   - reduce_axis: -1               # K is the reduction axis (per batch)
   - output_shape: [B, M, N]
-  - accumulator_dtype: float32    # cube accumulator is always f32
+  - accumulator_dtype: float32    # cube accumulator is always f32, output also f32
   - identity: "0"
   - tail_behavior: aligned_only
   - padding: null
@@ -38,8 +36,8 @@ Non-obvious constraints:
     cube buffers; the full K dimension is loaded into one A tile (K fits at
     M_TILE=128, K=256 -> 64 KiB L0A). All of M, K, N, M_TILE, N_TILE MUST be
     multiples of 16.
-  - Dtype: f16 inputs, f32 cube accumulate, f16 output (``.to(asc2.float16)``
-    on the L0C result tile before store).
+  - Dtype: f16 inputs, f32 cube accumulate, f32 output (cube accumulator is
+    always f32 and stored directly without casting).
   - CRITICAL platform: Ascend950PR_9599 (C310) is the only platform exposing the
     cube unit; this kernel will not run elsewhere.
   - CRITICAL host buffers: inputs MUST be torch.Tensor (numpy is silently zeroed
@@ -97,7 +95,6 @@ def bmm_kernel(a_ptr: asc.GlobalAddress, b_ptr: asc.GlobalAddress, c_ptr: asc.Gl
             n_off = j * n_tile
             b_j = asc2.load(b_gm, [k, n_tile], offsets=[b_row0, n_off], location=asc2.TileLocation.L0B)
             c_ij = a_i @ b_j
-            c_ij = c_ij.to(asc2.float16)
             asc2.store(c_ij, c_gm, offsets=[a_row0 + m_off, n_off])
 
 
@@ -110,13 +107,13 @@ def bmm_launch(a: torch.Tensor, b: torch.Tensor,
         a: [B, M, K] float16 tensor.
         b: [B, K, N] float16 tensor.
     Returns:
-        [B, M, N] float16 tensor (C[b] = A[b] @ B[b]).
+        [B, M, N] float32 tensor (C[b] = A[b] @ B[b]).
     """
     batch, m, k = a.shape
     _, _, n = b.shape
     a2d = a.reshape(batch * m, k).contiguous()
     b2d = b.reshape(batch * k, n).contiguous()
-    c2d = torch.zeros((batch * m, n), dtype=torch.float16)
+    c2d = torch.zeros((batch * m, n), dtype=torch.float32)
     bmm_kernel[core_num](a2d, b2d, c2d, a2d.shape, b2d.shape, c2d.shape,
                          m, k, n, m_tile, n_tile)
     return c2d.reshape(batch, m, n)
@@ -138,7 +135,7 @@ def run_kernel(backend: config.Backend, platform: config.Platform):
         a = torch.rand((batch, m, k), dtype=dtype)
         b = torch.rand((batch, k, n), dtype=dtype)
         c = bmm_launch(a, b, m_tile, n_tile, core_num=batch)
-        c_ref = torch.bmm(a.to(torch.float32), b.to(torch.float32)).to(torch.float16)
+        c_ref = torch.bmm(a.to(torch.float32), b.to(torch.float32))
         torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2)
         logging.info(f"[PASS] Kernel output verified for [{batch},{m},{k}]x[{batch},{k},{n}].")
 
