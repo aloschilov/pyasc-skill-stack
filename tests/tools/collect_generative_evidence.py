@@ -795,6 +795,74 @@ def invoke_runtime_verify(
     )
 
 
+def _kernel_path_diagnostics(
+    kernel_path: Path,
+    project_dir: Path,
+    rel_kernel: Path,
+    *,
+    timeout: int,
+) -> dict:
+    """Explain why a host-visible kernel is 'File not found' inside the sim.
+
+    The docker backend bind-mounts ``project_dir`` at ``/workspace`` and looks
+    for ``rel_kernel`` there. When the generated ``kernel.py`` is a *symlink*
+    whose target lives outside the mounted project, the host ``is_file()``
+    follows it (so static verify + ``find_kernel`` succeed) but the container
+    cannot resolve the target and ``run_and_verify.py`` reports
+    ``File not found``. This captures the host-side symlink/resolve state and
+    the container's actual view of the mount so a failing nightly self-explains
+    in its uploaded evidence (instead of leaving a deleted tempdir to guess at).
+
+    Best-effort: never raises — diagnostics must not mask the verify result.
+    """
+    info: dict = {"rel_kernel": str(rel_kernel)}
+    try:
+        info["is_symlink"] = kernel_path.is_symlink()
+        if kernel_path.is_symlink():
+            try:
+                info["symlink_target"] = os.readlink(kernel_path)
+            except OSError as exc:
+                info["symlink_target_error"] = str(exc)
+        resolved = kernel_path.resolve()
+        info["resolved"] = str(resolved)
+        info["resolved_exists"] = resolved.exists()
+        try:
+            resolved.relative_to(project_dir.resolve())
+            info["resolved_inside_project"] = True
+        except ValueError:
+            info["resolved_inside_project"] = False
+        try:
+            info["host_parent_listing"] = sorted(
+                p.name + (f"@ -> {os.readlink(p)}" if p.is_symlink() else "")
+                for p in kernel_path.parent.iterdir()
+            )
+        except OSError as exc:
+            info["host_parent_listing_error"] = str(exc)
+    except OSError as exc:
+        info["host_error"] = str(exc)
+
+    try:
+        _, out, err = _run(
+            [
+                "docker", "run", "--rm",
+                "-v", f"{project_dir}:/workspace", "-w", "/workspace",
+                DOCKER_IMAGE, "sh", "-c",
+                "echo '--- ls /workspace ---'; ls -la /workspace; "
+                f"echo '--- ls kernel dir ---'; ls -la '/workspace/{rel_kernel.parent}' 2>&1; "
+                f"echo '--- readlink kernel ---'; readlink '/workspace/{rel_kernel}' 2>&1",
+            ],
+            # The sim image is already pulled by the job before any verify,
+            # so this is a warm `ls`; cap it tight so a cold/odd image can
+            # never balloon the diagnostics (host-side signals above are the
+            # decisive ones anyway).
+            timeout=30,
+        )
+        info["container_view"] = (out or "") + (err or "")
+    except Exception as exc:  # noqa: BLE001 - diagnostics only, must not raise
+        info["container_view_error"] = str(exc)
+    return info
+
+
 def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
                       platform: str = "Ascend950PR_9599") -> dict:
     """Run simulator verification inside the Docker container.
@@ -853,6 +921,20 @@ def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
             detail = f"... {traceback_line}\n{detail}"
         result["detail"] = detail
         result["shapes_verified"] = []
+
+    if result["status"] == "fail":
+        # Capture *why* the container couldn't run the kernel. The dominant
+        # nightly failure is a host-visible-but-container-missing kernel.py
+        # (symlink escaping the mounted project) — see
+        # :func:`_kernel_path_diagnostics`.
+        result["path_diagnostics"] = _kernel_path_diagnostics(
+            kernel_path, project_dir, rel_kernel, timeout=timeout,
+        )
+        print(
+            f"  [verify] runtime FAIL ({result.get('detail', '')[:60]!r}); "
+            f"path diagnostics: {json.dumps(result['path_diagnostics'])}",
+            file=sys.stderr,
+        )
 
     return result
 
@@ -1272,16 +1354,33 @@ def _finalize_attempt(
         # the model that the project's resolved opencode.json declares.
         tokens["model"] = resolve_configured_model(project)
 
-    if archive_dir and kernel and kernel.is_file() and overall_pass:
+    if archive_dir and kernel and kernel.is_file():
+        # Archive passing kernels (the usual case) AND failed attempts that
+        # nonetheless produced a kernel, so a red nightly carries the actual
+        # generated kernel.py + path diagnostics for post-mortem (the project
+        # tempdir is deleted at end-of-run and can't be inspected otherwise).
         dtype_short = dtype.replace("float", "f")
+        status_tag = "" if overall_pass else "-FAIL"
         archive_dest = (
             Path(archive_dir)
-            / f"{op}-{dtype_short}-{profile}-{skills_mode}-a{attempt_num}"
+            / f"{op}-{dtype_short}-{profile}-{skills_mode}-a{attempt_num}{status_tag}"
         )
         archive_dest.mkdir(parents=True, exist_ok=True)
+        # shutil.copy2 follows symlinks, so this captures the *real* kernel
+        # content even when kernel.py is the outside-pointing symlink behind
+        # the docker "File not found".
         for item in kernel.parent.iterdir():
             if item.is_file():
-                shutil.copy2(item, archive_dest / item.name)
+                try:
+                    shutil.copy2(item, archive_dest / item.name)
+                except OSError as exc:
+                    print(f"  [attempt {attempt_num}] archive copy skipped "
+                          f"{item.name}: {exc}", file=sys.stderr)
+        diag = verification.get("path_diagnostics")
+        if diag:
+            (archive_dest / "_path_diagnostics.json").write_text(
+                json.dumps(diag, indent=2) + "\n"
+            )
         print(f"  [attempt {attempt_num}] archived kernel to: {archive_dest}")
 
     record = {
