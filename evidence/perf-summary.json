@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T22:53:03Z",
+  "generated_at": "2026-06-11T03:43:07Z",
   "gate": 0.7,
   "counts": {
     "pass": 5,
@@ -19,7 +19,7 @@
       ],
       "arch": "Ascend950PR_9599",
       "gate": 0.7,
-      "ref_ticks": 4521,
+      "ref_ticks": 4505,
       "gen_ticks": null,
       "ratio": null,
       "status": "gen_blocked",
@@ -27,9 +27,9 @@
       "kernel_source": "live_regen (opencode 1.15.10, dashscope/glm-5, oracle_guided, attempt-1)",
       "perf_miss_note": "",
       "comparability_note": "",
-      "evidence_file": "evidence/perf-vs-ascendc/abs-float16-20260610T172803.json",
+      "evidence_file": "evidence/perf-vs-ascendc/abs-float16-20260610T234532.json",
       "source": "measured",
-      "measured_at": "2026-06-10T17:28:03Z"
+      "measured_at": "2026-06-10T23:45:32Z"
     },
     {
       "cell": "add/float16",
@@ -41,7 +41,7 @@
       ],
       "arch": "Ascend950PR_9599",
       "gate": 0.7,
-      "ref_ticks": 4436,
+      "ref_ticks": 4440,
       "gen_ticks": null,
       "ratio": null,
       "status": "gen_blocked",
@@ -49,9 +49,9 @@
       "kernel_source": "live_regen (opencode 1.15.10, dashscope/glm-5, oracle_guided, attempt-1)",
       "perf_miss_note": "",
       "comparability_note": "",
-      "evidence_file": "evidence/perf-vs-ascendc/add-float16-20260610T172803.json",
+      "evidence_file": "evidence/perf-vs-ascendc/add-float16-20260610T234532.json",
       "source": "measured",
-      "measured_at": "2026-06-10T17:28:03Z"
+      "measured_at": "2026-06-10T23:45:32Z"
     },
     {
       "cell": "apply_adam/float32",
@@ -129,17 +129,17 @@
       ],
       "arch": "Ascend950PR_9599",
       "gate": 0.7,
-      "ref_ticks": 5082,
-      "gen_ticks": 6388,
-      "ratio": 0.7956,
+      "ref_ticks": 5065,
+      "gen_ticks": 6392,
+      "ratio": 0.7924,
       "status": "pass",
       "reference_source": "ops-math canonical operator (drop_out_do_mask, aclnnop/aclnn_dropout_do_mask.h), build.sh --pkg --soc=ascend950",
       "kernel_source": "vetted golden (golden/kernels/drop_out_do_mask_f16.py, dense-mask two-load wide-tile)",
       "perf_miss_note": "",
       "comparability_note": "dense float16 keep-mask vs canonical bit-packed uint8 mask; dominant per-element multiply+scale cost is identical; reference is the true aclnnDropoutDoMask.",
-      "evidence_file": "evidence/perf-vs-ascendc/drop_out_do_mask-float16-20260610T172803.json",
+      "evidence_file": "evidence/perf-vs-ascendc/drop_out_do_mask-float16-20260610T234532.json",
       "source": "measured",
-      "measured_at": "2026-06-10T17:28:03Z"
+      "measured_at": "2026-06-10T23:45:32Z"
     },
     {
       "cell": "reduce_sum/float32",
@@ -151,7 +151,7 @@
       ],
       "arch": "Ascend950PR_9599",
       "gate": 0.7,
-      "ref_ticks": 10122,
+      "ref_ticks": 10102,
       "gen_ticks": null,
       "ratio": null,
       "status": "gen_blocked",
@@ -159,9 +159,9 @@
       "kernel_source": "live_regen (opencode 1.15.10, dashscope/glm-5, oracle_guided, attempt-1)",
       "perf_miss_note": "",
       "comparability_note": "",
-      "evidence_file": "evidence/perf-vs-ascendc/reduce_sum-float32-20260610T172803.json",
+      "evidence_file": "evidence/perf-vs-ascendc/reduce_sum-float32-20260610T234532.json",
       "source": "measured",
-      "measured_at": "2026-06-10T17:28:03Z"
+      "measured_at": "2026-06-10T23:45:32Z"
     },
     {
       "cell": "rms_norm/float16",
@@ -215,17 +215,17 @@
       ],
       "arch": "Ascend950PR_9599",
       "gate": 0.7,
-      "ref_ticks": 3921,
-      "gen_ticks": 5278,
-      "ratio": 0.7429,
+      "ref_ticks": 3922,
+      "gen_ticks": 5285,
+      "ratio": 0.7421,
       "status": "pass",
       "reference_source": "ops-math canonical operator (tanh, aclnnop/aclnn_tanh.h), build.sh --pkg --soc=ascend950",
       "kernel_source": "vetted golden (golden/kernels/tanh_f16.py, wide-tile TILE_SIZE=2048)",
       "perf_miss_note": "",
       "comparability_note": "",
-      "evidence_file": "evidence/perf-vs-ascendc/tanh-float16-20260610T172803.json",
+      "evidence_file": "evidence/perf-vs-ascendc/tanh-float16-20260610T234532.json",
       "source": "measured",
-      "measured_at": "2026-06-10T17:28:03Z"
+      "measured_at": "2026-06-10T23:45:32Z"
     }
   ]
 }
