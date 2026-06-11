@@ -328,7 +328,22 @@ def create_test_project(
     template (resolved via ``resolve_opencode_config``) with the skill
     section toggled to match ``skills_mode``.
     """
-    tmp = Path(tempfile.mkdtemp(prefix=f"{prefix}."))
+    # The project is bind-mounted into the simulator container during runtime
+    # verification (`docker run -v <project>:/workspace`). On the self-hosted
+    # CI runners the GitHub Actions runner is ITSELF a container that drives the
+    # *host* docker daemon through a shared /var/run/docker.sock, and only the
+    # runner work tree (RUNNER_TEMP, under RUNNER_WORKDIR) is bind-mounted into
+    # the runner at an *identical* host path. A project created under /tmp thus
+    # lives in the runner container's private overlay fs, so the host daemon
+    # mounts an EMPTY /workspace and run_and_verify.py reports "File not found"
+    # for every op (the real cause of the nightly P6 runtime-verify regression,
+    # confirmed on the runner host). Anchoring the tempdir under RUNNER_TEMP
+    # keeps the path identical on host and runner so the bind mount resolves.
+    # Falls back to the system temp dir for local (non-CI) runs, where the
+    # daemon already shares the host filesystem.
+    _runner_temp = os.environ.get("RUNNER_TEMP") or ""
+    tmp_base = _runner_temp if _runner_temp and os.path.isdir(_runner_temp) else None
+    tmp = Path(tempfile.mkdtemp(prefix=f"{prefix}.", dir=tmp_base))
 
     if skills_mode == "on":
         for subdir in ("skills", "golden"):
