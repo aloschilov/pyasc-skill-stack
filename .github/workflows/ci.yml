@@ -449,11 +449,11 @@ jobs:
 
   # ==========================================================================
   # Local-stability gate: the same OpenCode skills intervention as the
-  # nightly cloud leg, but against small local models served from a
-  # sidecar Ollama instance.
+  # nightly cloud leg, but against local models served from the Mac's
+  # native (Metal) Ollama.
   #
   # This measures the "stability" axis of the OpenCode skills
-  # intervention: does mounting the pyasc skills let smaller models
+  # intervention: does mounting the pyasc skills let local models
   # produce viable kernels they cannot produce under raw OpenCode? Both
   # legs hold OpenCode harness, prompt, timeout, max attempts, and
   # evaluator constant — only the skill modules differ. Failing on both
@@ -461,16 +461,25 @@ jobs:
   # evidence the skills are useless (see
   # docs/evaluation-methodology.md "Local-model interpretation").
   #
-  # Local inference on GitHub-hosted runners is markedly slower than the
-  # cloud profile, so this job is marked continue-on-error and is not
-  # part of the merge-blocking gate. The companion
+  # qwen3-coder:30b is the model confirmed to clear the agentic harness
+  # (docs/local-model-feasibility.md); the 7b/llama legs remain as the
+  # smaller-model baselines. Local inference is slower than the cloud
+  # profile and prerequisites are host-managed, so this job is marked
+  # continue-on-error, is not part of the merge-blocking gate, and skips
+  # cleanly when a model/image is unavailable. The companion
   # `skills-value-report` job ingests whatever evidence this job
   # produces.
   # ==========================================================================
   local-stability-gate:
-    # Self-hosted RTX 4090 box, label `gpu`: in-job `ollama serve` runs on the
-    # GPU (--gpus all) with a shared model cache, instead of CPU on a hosted runner.
-    runs-on: [self-hosted, gpu]
+    # Self-hosted arm64 runner on the MacBook (198.18.0.1), label `arm64`, via
+    # Docker Desktop's Linux/arm64 VM (infra/self-hosted-runner/compose.arm64.yml).
+    # The 30B model only fits with Metal on the 128 GB Mac (the 24 GB 4090 OOMs),
+    # so this gate runs on the Mac. Because the runner is a Linux container, an
+    # in-container `ollama serve` would be CPU-only; we instead drive the Mac's
+    # NATIVE (Metal) Ollama via host.docker.internal. Models are host-managed
+    # (pre-pulled on the host, like the pre-loaded perf image), and a missing
+    # daemon/model/image is a clean skip rather than a hard failure.
+    runs-on: [self-hosted, arm64]
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
@@ -479,11 +488,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: [local-qwen-coder-7b, local-llama-3.1-8b]
+        profile: [local-qwen-coder-7b, local-llama-3.1-8b, local-qwen3-coder-30b]
         # See comment in nightly-gate for why these are quoted.
         skills_mode: ["on", "off"]
     env:
-      OLLAMA_BASE_URL: "http://127.0.0.1:11434/v1"
+      # Reach the macOS host's native (Metal) Ollama from the Docker Desktop VM.
+      OLLAMA_BASE_URL: "http://host.docker.internal:11434/v1"
     steps:
       - uses: actions/checkout@v4
 
@@ -501,38 +511,62 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull pyasc-sim image
-        run: docker pull ${{ env.PYASC_SIM_IMAGE }}
-
       - name: Install opencode
         run: npm install -g opencode-ai @ai-sdk/openai-compatible
 
-      - name: Install Ollama
-        run: curl -fsSL https://ollama.com/install.sh | sh
-
-      - name: Start Ollama
-        run: |
-          nohup ollama serve > /tmp/ollama.log 2>&1 &
-          # Wait for the daemon to be ready.
-          for i in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:11434/api/tags > /dev/null; then
-              echo "Ollama ready after ${i}s"
-              break
-            fi
-            sleep 1
-          done
-
-      - name: Pull model
+      # Preflight + skip guard. The Mac's native Ollama and its models are
+      # host-managed (we neither install nor `ollama pull` in-job), and the
+      # multiarch pyasc-sim image is pulled here. If the host Ollama is
+      # unreachable, the matrix model is not pulled on the host, or the sim
+      # image cannot be pulled, this leg cleanly skips (report-only gate) so a
+      # missing prerequisite never hard-fails the nightly run or uploads stale
+      # evidence. Mirrors the perf-gate's pull-availability guard.
+      - name: Preflight (host Ollama model + sim image)
+        id: preflight
         env:
           PROFILE: ${{ matrix.profile }}
+          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
+          PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
         run: |
+          set +e
+          available=true
+
           case "$PROFILE" in
-            local-qwen-coder-7b) ollama pull qwen2.5-coder:7b ;;
-            local-llama-3.1-8b)  ollama pull llama3.1:8b ;;
+            local-qwen-coder-7b)   MODEL="qwen2.5-coder:7b" ;;
+            local-llama-3.1-8b)    MODEL="llama3.1:8b" ;;
+            local-qwen3-coder-30b) MODEL="qwen3-coder:30b" ;;
             *) echo "::error::unknown profile $PROFILE"; exit 1 ;;
           esac
 
+          # The /api/tags endpoint lives at the daemon root, not under /v1.
+          OLLAMA_ROOT="${OLLAMA_BASE_URL%/v1}"
+          if ! curl -sf "$OLLAMA_ROOT/api/tags" -o /tmp/ollama_tags.json; then
+            echo "::warning::host Ollama unreachable at $OLLAMA_ROOT/api/tags; skipping $PROFILE leg (start native Ollama with OLLAMA_HOST=0.0.0.0:11434)"
+            available=false
+          elif ! grep -q "\"$MODEL\"" /tmp/ollama_tags.json; then
+            echo "::warning::model $MODEL not pulled on host Ollama; skipping $PROFILE leg (run: ollama pull $MODEL)"
+            available=false
+          fi
+
+          # Pull the multiarch sim image (arm64 variant resolves here). Retry a
+          # few times; a persistent failure is a clean skip, not a hard error.
+          if [ "$available" = "true" ]; then
+            pulled=false
+            for attempt in 1 2 3; do
+              if docker pull "$PYASC_SIM_IMAGE"; then pulled=true; break; fi
+              echo "::warning::pyasc-sim pull attempt $attempt/3 failed; retrying..."
+              sleep $((attempt * 15))
+            done
+            if [ "$pulled" != "true" ]; then
+              echo "::warning::pyasc-sim image $PYASC_SIM_IMAGE unavailable after 3 attempts; skipping $PROFILE leg"
+              available=false
+            fi
+          fi
+
+          echo "available=$available" >> "$GITHUB_OUTPUT"
+
       - name: Run OpenCode skills-intervention leg (profile=${{ matrix.profile }}, skills_mode=${{ matrix.skills_mode }})
+        if: steps.preflight.outputs.available == 'true'
         env:
           NODE_TLS_REJECT_UNAUTHORIZED: "0"
           PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
@@ -607,6 +641,137 @@ jobs:
           if-no-files-found: ignore
 
   # ==========================================================================
+  # Cloud DashScope gate: the same OpenCode skills intervention as the
+  # nightly cloud-default leg, but against the Alibaba DashScope models
+  # (glm-5, glm-5.1, qwen3.7-max) recently added alongside the local
+  # harness-clearing model. Each profile embeds the DashScope provider and
+  # reads the key from ${DASHSCOPE_API_KEY} (substituted into the profile
+  # template) — the key is never committed; CI injects it from the
+  # `DASHSCOPE_API_KEY` repo secret. If the secret is absent the whole leg
+  # skips cleanly (report-only, non-merge-blocking), so the gate is inert
+  # until the secret is configured.
+  # ==========================================================================
+  cloud-dashscope-gate:
+    runs-on: [self-hosted, gpu]
+    needs: [merge-gate]
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly')
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [cloud-glm-5, cloud-glm-5.1, cloud-qwen3.7-max]
+        # See comment in nightly-gate for why these are quoted.
+        skills_mode: ["on", "off"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      # Skip the whole leg if the DashScope key is not configured, instead of
+      # hard-failing. Mirrors the perf-gate's availability guard.
+      - name: Check DashScope secret
+        id: secret
+        env:
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+        run: |
+          if [ -z "$DASHSCOPE_API_KEY" ]; then
+            echo "::warning::DASHSCOPE_API_KEY secret is not set; skipping cloud-dashscope leg"
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to ghcr.io
+        if: steps.secret.outputs.available == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull pyasc-sim image
+        if: steps.secret.outputs.available == 'true'
+        run: docker pull ${{ env.PYASC_SIM_IMAGE }}
+
+      - name: Install opencode
+        if: steps.secret.outputs.available == 'true'
+        run: npm install -g opencode-ai @ai-sdk/openai-compatible
+
+      - name: Run OpenCode skills-intervention leg (profile=${{ matrix.profile }}, skills_mode=${{ matrix.skills_mode }})
+        if: steps.secret.outputs.available == 'true'
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: "0"
+          PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
+          PROFILE: ${{ matrix.profile }}
+          SKILLS_MODE: ${{ matrix.skills_mode }}
+          # Substituted into the profile template's ${DASHSCOPE_API_KEY}.
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+        run: |
+          mkdir -p generative-archive
+          declare -a OPS=(
+            "abs:float16"
+            "abs:float32"
+            "add:float16"
+            "reduce_sum:float32"
+            "reduce_sum:float16"
+            "gelu:float16"
+            "gelu:float32"
+            "leaky_relu:float16"
+            "softmax:float16"
+            "matmul:float16"
+            "rms_norm:float16"
+            "rms_norm:float32"
+          )
+          CI_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          DOCKER_TO=1500
+          PASS=0
+          TOTAL=${#OPS[@]}
+          for entry in "${OPS[@]}"; do
+            op="${entry%%:*}"
+            dtype="${entry##*:}"
+            echo "=== Generative evidence: $op / $dtype ($PROFILE, skills_mode=$SKILLS_MODE) ==="
+            if python3.10 tests/tools/collect_generative_evidence.py \
+                --op "$op" --dtype "$dtype" \
+                --runtime --runtime-backend auto --timeout 420 \
+                --docker-timeout "$DOCKER_TO" \
+                --archive-dir generative-archive \
+                --ci-run-url "$CI_RUN_URL" \
+                --model-profile "$PROFILE" \
+                --skills-mode "$SKILLS_MODE" \
+                --max-attempts 3 \
+                --notes "Cloud DashScope run ($PROFILE, skills=$SKILLS_MODE)"; then
+              PASS=$((PASS + 1))
+            else
+              echo "  All attempts failed for $op/$dtype"
+            fi
+            echo ""
+          done
+          echo "=== Cloud DashScope summary ($PROFILE/$SKILLS_MODE): $PASS/$TOTAL passed ==="
+
+      - name: Upload evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-${{ matrix.profile }}-${{ matrix.skills_mode }}
+          path: evidence/*-generative-${{ matrix.profile }}-${{ matrix.skills_mode }}.json
+          if-no-files-found: ignore
+
+      - name: Upload generated kernel archive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generative-archive-${{ matrix.profile }}-${{ matrix.skills_mode }}
+          path: generative-archive/
+          if-no-files-found: ignore
+
+  # ==========================================================================
   # OpenCode skills-intervention report: merge evidence from every
   # matrix leg, run the comparison aggregator (which classifies each
   # off-leg's comparability and computes the validity-aware clean
@@ -620,7 +785,7 @@ jobs:
   # ==========================================================================
   skills-value-report:
     runs-on: ubuntu-latest
-    needs: [nightly-gate, local-stability-gate, perf-gate]
+    needs: [nightly-gate, local-stability-gate, cloud-dashscope-gate, perf-gate]
     if: >-
       always() &&
       (github.event_name == 'schedule' ||

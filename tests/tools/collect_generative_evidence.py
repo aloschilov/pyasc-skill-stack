@@ -135,8 +135,12 @@ DOCKER_IMAGE = os.environ.get(
 PROFILE_DIR = REPO_ROOT / "docker" / "opencode-profiles"
 KNOWN_PROFILES = {
     "cloud-default",
+    "cloud-glm-5",
+    "cloud-glm-5.1",
+    "cloud-qwen3.7-max",
     "local-qwen-coder-7b",
     "local-llama-3.1-8b",
+    "local-qwen3-coder-30b",
 }
 SCHEMA_VERSION = "4"
 DEFAULT_PYASC_EVAL_ROOT = "/home/aloschilov/workspace/pyasc-v2-eval"
