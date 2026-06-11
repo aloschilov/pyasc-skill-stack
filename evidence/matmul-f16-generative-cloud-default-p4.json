@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: tiled matrix multiplication c = a @ b (float16 inputs, float32 output via cube accumulator). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output (cube accumulator). Layout: contiguous. Axis: -1 (K axis, contracted). Tiling: block_grid; inside @asc2.jit, use asc2.tensor for a/b/c and asc2.load with location=asc2.TileLocation.L0A for the left operand and asc2.TileLocation.L0B for the right operand, then compute `a_tile @ b_tile` (or asc2.matmul), then asc2.store the float32 result; tile sizes must be multiples of 16; pick small shapes that fit L0A/L0B (each \u2264 64 KiB) \u2014 start with m=k=n=16, core_num=1, m_tile=n_tile=16; matmul requires the cube unit on Ascend950PR_9599 (the only CI platform). Tail: aligned_only \u2014 shapes must be 16-multiples; unsupported_regimes lists non_16_multiple_shapes, k_tiled, abl1_full / al1_full / bl1_full. Accumulator: float32 (cube accumulator, mandatory). Tolerance: atol=1e-2, rtol=1e-2 against c_ref = a.to(torch.float32) @ b.to(torch.float32); verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2); host inputs MUST be torch.Tensor (a, b dtype=torch.float16; c zero-init torch.float32) because the C310 simulator silently produces zeros for matmul fed numpy arrays. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-08T07:24:25Z",
+  "date": "2026-06-11T09:45:31Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim:py3.11@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
   },
   "agent": {
     "platform": "opencode",
@@ -27,42 +27,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 37068,
-    "output": 3781,
-    "cache_read": 170841,
-    "total": 40849
+    "input": 29997,
+    "output": 2180,
+    "cache_read": 182841,
+    "total": 32177
   },
-  "elapsed_total_s": 197.12,
+  "elapsed_total_s": 109.26,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 83.69,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 16542,
-        "output": 1977,
-        "cache_read": 47476,
-        "total": 18519,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "guided",
-      "elapsed_s": 113.43,
+      "elapsed_s": 109.26,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 20526,
-        "output": 1804,
-        "cache_read": 123365,
-        "total": 22330,
+        "input": 29997,
+        "output": 2180,
+        "cache_read": 182841,
+        "total": 32177,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -165,7 +147,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P4)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",
@@ -200,6 +182,17 @@
       "skipped": false,
       "tokens_total": 21896,
       "elapsed_s": 125.31
+    },
+    {
+      "date": "2026-06-08T07:24:25Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 40849,
+      "elapsed_s": 197.12
     }
   ]
 }

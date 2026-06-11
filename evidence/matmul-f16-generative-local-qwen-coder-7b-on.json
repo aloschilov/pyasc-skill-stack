@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a tiled matmul operator on Ascend950PR_9599 (C310) for float16 inputs producing float32 output. Use small shapes such as M=K=N=16 or (M=32, K=16, N=32). Inputs must be torch.Tensor (numpy buffers are silently zeroed by the C310 simulator path for matmul). Load A to asc2.TileLocation.L0A and B to L0B, then compute `a @ b` (or asc2.matmul) and asc2.store the float32 result.",
   "kernel_path": "",
-  "date": "2026-06-08T07:39:33Z",
+  "date": "2026-06-11T08:28:56Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim:py3.11@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
   },
   "agent": {
     "platform": "opencode",
@@ -25,24 +25,24 @@
   "model_profile": "local-qwen-coder-7b",
   "model": "ollama/qwen2.5-coder:7b",
   "tokens": {
-    "input": 12285,
-    "output": 663,
+    "input": 23601,
+    "output": 2110,
     "cache_read": 0,
-    "total": 12948
+    "total": 25711
   },
-  "elapsed_total_s": 899.47,
+  "elapsed_total_s": 281.55,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 253.98,
+      "elapsed_s": 127.13,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4095,
-        "output": 18,
+        "input": 7740,
+        "output": 998,
         "cache_read": 0,
-        "total": 4113,
+        "total": 8738,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 283.13,
+      "elapsed_s": 11.31,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4095,
-        "output": 192,
+        "input": 7784,
+        "output": 21,
         "cache_read": 0,
-        "total": 4287,
+        "total": 7805,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 362.36,
+      "elapsed_s": 143.11,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4095,
-        "output": 453,
+        "input": 8077,
+        "output": 1091,
         "cache_read": 0,
-        "total": 4548,
+        "total": 9168,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -107,7 +107,7 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen-coder-7b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
   "history": [
     {
       "date": "2026-05-18T10:54:07Z",
@@ -119,6 +119,17 @@
       "skipped": false,
       "tokens_total": 12633,
       "elapsed_s": 2136.69
+    },
+    {
+      "date": "2026-06-08T07:39:33Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 12948,
+      "elapsed_s": 899.47
     }
   ]
 }

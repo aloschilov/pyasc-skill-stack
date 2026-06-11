@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu-float16/kernel.py",
-  "date": "2026-06-08T08:27:14Z",
+  "date": "2026-06-11T10:58:36Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,41 +13,42 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim:py3.11@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
   },
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md"
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 283291,
-    "output": 26634,
-    "cache_read": 1245170,
-    "total": 309925
+    "input": 325531,
+    "output": 25782,
+    "cache_read": 1293317,
+    "total": 351313
   },
-  "elapsed_total_s": 1064.18,
+  "elapsed_total_s": 1066.47,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 337.39,
-      "exit": 0,
+      "elapsed_s": 420.03,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 98135,
-        "output": 8638,
-        "cache_read": 388394,
-        "total": 106773,
+        "input": 132403,
+        "output": 5652,
+        "cache_read": 320222,
+        "total": 138055,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -58,14 +59,14 @@
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 306.79,
+      "elapsed_s": 285.14,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 73370,
-        "output": 8625,
-        "cache_read": 392077,
-        "total": 81995,
+        "input": 124319,
+        "output": 9865,
+        "cache_read": 403449,
+        "total": 134184,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -76,14 +77,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 420.0,
-      "exit": 124,
+      "elapsed_s": 361.3,
+      "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 111786,
-        "output": 9371,
-        "cache_read": 464699,
-        "total": 121157,
+        "input": 68809,
+        "output": 10265,
+        "cache_read": 569646,
+        "total": 79074,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -97,8 +98,23 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: 0.7046  , 0.9053  , 0.721   , 0.1774  , 0.8584  , 0.653   ,...\nax absolute difference: 0.981\nMax relative difference: 0.99\n x: array([[8.522e-03, 1.790e-03, 2.642e-04, 6.401e-03, 3.656e-03, 4.673e-03,\n        7.987e-04, 3.706e-03, 6.435e-03, 3.551e-03, 8.316e-03, 7.904e-03,\n        7.046e-03, 9.056e-03, 7.214e-03, 1.774e-03, 8.583e-03, 6.531e-03,...\n y: array([[0.852   , 0.179   , 0.02641 , 0.64    , 0.3655  , 0.4673  ,\n        0.07983 , 0.3706  , 0.6436  , 0.355   , 0.831   , 0.7905  ,\n        0.7046  , 0.9053  , 0.721   , 0.1774  , 0.8584  , 0.653   ,...\n",
-    "shapes_verified": []
+    "detail": "Exit code 1: 0.7046  , 0.9053  , 0.721   , 0.1774  , 0.8584  , 0.653   ,...\n00%)\nMax absolute difference: 0.981\nMax relative difference: 0.99\n x: array([8.522e-03, 1.790e-03, 2.642e-04, 6.401e-03, 3.656e-03, 4.673e-03,\n       7.987e-04, 3.706e-03, 6.435e-03, 3.551e-03, 8.316e-03, 7.904e-03,\n       7.046e-03, 9.056e-03, 7.214e-03, 1.774e-03, 8.583e-03, 6.531e-03,...\n y: array([0.852   , 0.179   , 0.02641 , 0.64    , 0.3655  , 0.4673  ,\n       0.07983 , 0.3706  , 0.6436  , 0.355   , 0.831   , 0.7905  ,\n       0.7046  , 0.9053  , 0.721   , 0.1774  , 0.8584  , 0.653   ,...\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/leaky_relu-float16/kernel.py",
+      "is_symlink": false,
+      "resolved": "/home/loschilov_aa/ar/work-1/_temp/gen-leaky_relu-float16-a3.vz5btw9g/teams/pyasc-kernel-dev-team/kernels/leaky_relu-float16/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        "README.md",
+        "conftest.py",
+        "docs",
+        "kernel.py",
+        "test"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 216\ndrwx------ 4 root root   4096 Jun 11 10:53 .\ndrwxr-xr-x 1 root root   4096 Jun 11 10:58 ..\ndrwxr-xr-x 7 root root   4096 Jun 11 10:47 .git\n-rw-r--r-- 1 root root 188555 Jun 11 10:53 agent-output.txt\nlrwxrwxrwx 1 root root     71 Jun 11 10:47 golden -> /home/loschilov_aa/ar/work-1/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root    440 Jun 11 10:47 opencode.json\nlrwxrwxrwx 1 root root     71 Jun 11 10:47 skills -> /home/loschilov_aa/ar/work-1/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x 3 root root   4096 Jun  9 15:09 teams\n--- ls kernel dir ---\ntotal 28\ndrwxr-xr-x 4 root root 4096 Jun 11 10:49 .\ndrwxr-xr-x 3 root root 4096 Jun 11 10:47 ..\n-rw-r--r-- 1 root root  611 Jun 11 10:47 README.md\n-rw-r--r-- 1 root root  441 Jun 11 10:47 conftest.py\ndrwxr-xr-x 2 root root 4096 Jun 11 10:52 docs\n-rw-r--r-- 1 root root 3205 Jun 11 10:49 kernel.py\ndrwxr-xr-x 2 root root 4096 Jun 11 10:47 test\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
     "passed": true,
@@ -186,7 +202,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P6)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",
@@ -221,6 +237,17 @@
       "skipped": false,
       "tokens_total": 78780,
       "elapsed_s": 240.03
+    },
+    {
+      "date": "2026-06-08T08:27:14Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 309925,
+      "elapsed_s": 1064.18
     }
   ]
 }

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-08T07:28:21Z",
+  "date": "2026-06-11T10:38:24Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim:py3.11@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
   },
   "agent": {
     "platform": "opencode",
@@ -27,42 +27,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 73626,
-    "output": 4783,
-    "cache_read": 364796,
-    "total": 78409
+    "input": 45387,
+    "output": 4519,
+    "cache_read": 344862,
+    "total": 49906
   },
-  "elapsed_total_s": 343.88,
+  "elapsed_total_s": 320.51,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 51.51,
+      "elapsed_s": 173.07,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7075,
-        "output": 791,
-        "cache_read": 18040,
-        "total": 7866,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "guided",
-      "elapsed_s": 112.61,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 22103,
-        "output": 1683,
-        "cache_read": 128778,
-        "total": 23786,
+        "input": 26998,
+        "output": 2014,
+        "cache_read": 250522,
+        "total": 29012,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -71,16 +53,34 @@
       "runtime_status": "fail"
     },
     {
-      "n": 3,
+      "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 179.76,
+      "elapsed_s": 70.14,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 44448,
-        "output": 2309,
-        "cache_read": 217978,
-        "total": 46757,
+        "input": 11819,
+        "output": 1156,
+        "cache_read": 32855,
+        "total": 12975,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 77.3,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 6570,
+        "output": 1349,
+        "cache_read": 61485,
+        "total": 7919,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -94,8 +94,23 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: 0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\nements: 128 / 128 (100%)\nMax absolute difference: 0.9808121\nMax relative difference: 0.99001324\n x: array([8.522034e-03, 1.790047e-03, 2.641678e-04, 6.401062e-03,\n       3.656387e-03, 4.673004e-03, 7.987022e-04, 3.705978e-03,\n       6.435394e-03, 3.551483e-03, 8.316040e-03, 7.904053e-03,...\n y: array([0.852051, 0.178955, 0.026413, 0.640137, 0.365479, 0.467285,\n       0.079834, 0.370605, 0.643555, 0.35498 , 0.831055, 0.790527,\n       0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\n",
-    "shapes_verified": []
+    "detail": "Exit code 1: 0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\n: 128 / 128 (100%)\nMax absolute difference: 0.9808121\nMax relative difference: 0.99001324\n x: array([[8.522034e-03, 1.790047e-03, 2.641678e-04, 6.401062e-03,\n        3.656387e-03, 4.673004e-03, 7.987022e-04, 3.705978e-03,\n        6.435394e-03, 3.551483e-03, 8.316040e-03, 7.904053e-03,...\n y: array([[0.852051, 0.178955, 0.026413, 0.640137, 0.365479, 0.467285,\n        0.079834, 0.370605, 0.643555, 0.35498 , 0.831055, 0.790527,\n        0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "kernel.py",
+      "is_symlink": false,
+      "resolved": "/home/loschilov_aa/ar/work-3/_temp/gen-leaky_relu-float16-a3.jkqq8nub/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        ".git",
+        "agent-output.txt",
+        "golden@ -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden",
+        "kernel.py",
+        "opencode.json"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 56\ndrwx------ 3 root root  4096 Jun 11 10:32 .\ndrwxr-xr-x 1 root root  4096 Jun 11 10:38 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 10:30 .git\n-rw-r--r-- 1 root root 30254 Jun 11 10:32 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 10:30 golden -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  3388 Jun 11 10:31 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 10:30 opencode.json\n--- ls kernel dir ---\ntotal 56\ndrwx------ 3 root root  4096 Jun 11 10:32 .\ndrwxr-xr-x 1 root root  4096 Jun 11 10:38 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 10:30 .git\n-rw-r--r-- 1 root root 30254 Jun 11 10:32 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 10:30 golden -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  3388 Jun 11 10:31 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 10:30 opencode.json\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
     "passed": true,
@@ -183,7 +198,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -218,6 +233,17 @@
       "skipped": false,
       "tokens_total": 45934,
       "elapsed_s": 240.02
+    },
+    {
+      "date": "2026-06-08T07:28:21Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 78409,
+      "elapsed_s": 343.88
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-11T06:48:37Z",
+  "generated_at": "2026-06-11T11:27:32Z",
   "flag": "--cce-simd-vf-fusion",
   "counts": {
     "improved": 3,
@@ -8,7 +8,7 @@
     "gen_blocked": 3,
     "total": 10
   },
-  "median_speedup": 1.0005,
+  "median_speedup": 0.9999,
   "cells": [
     {
       "cell": "abs/float16",
@@ -19,7 +19,7 @@
         4096
       ],
       "arch": "Ascend950PR_9599",
-      "ref_ticks": 4517,
+      "ref_ticks": 4457,
       "ticks_off": null,
       "ticks_on": null,
       "fusion_speedup": null,
@@ -28,8 +28,8 @@
       "gate": 0.7,
       "status": "gen_blocked",
       "flag": "--cce-simd-vf-fusion",
-      "evidence_file": "evidence/vf-fusion/abs-float16-20260611T003822.json",
-      "measured_at": "2026-06-11T00:38:22Z",
+      "evidence_file": "evidence/vf-fusion/abs-float16-20260611T091445.json",
+      "measured_at": "2026-06-11T09:14:45Z",
       "source": "measured"
     },
     {
@@ -41,7 +41,7 @@
         4096
       ],
       "arch": "Ascend950PR_9599",
-      "ref_ticks": 4409,
+      "ref_ticks": 4426,
       "ticks_off": null,
       "ticks_on": null,
       "fusion_speedup": null,
@@ -50,8 +50,8 @@
       "gate": 0.7,
       "status": "gen_blocked",
       "flag": "--cce-simd-vf-fusion",
-      "evidence_file": "evidence/vf-fusion/add-float16-20260611T003822.json",
-      "measured_at": "2026-06-11T00:38:22Z",
+      "evidence_file": "evidence/vf-fusion/add-float16-20260611T091445.json",
+      "measured_at": "2026-06-11T09:14:45Z",
       "source": "measured"
     },
     {
@@ -64,16 +64,16 @@
       ],
       "arch": "Ascend950PR_9599",
       "ref_ticks": null,
-      "ticks_off": 19450,
+      "ticks_off": 19447,
       "ticks_on": 17678,
-      "fusion_speedup": 1.1002,
+      "fusion_speedup": 1.1001,
       "ratio_off": null,
       "ratio_on": null,
       "gate": 0.7,
       "status": "improved",
       "flag": "--cce-simd-vf-fusion",
-      "evidence_file": "evidence/vf-fusion/apply_adam-float32-20260611T003822.json",
-      "measured_at": "2026-06-11T00:38:22Z",
+      "evidence_file": "evidence/vf-fusion/apply_adam-float32-20260611T091445.json",
+      "measured_at": "2026-06-11T09:14:45Z",
       "source": "measured"
     },
     {
@@ -87,16 +87,16 @@
       ],
       "arch": "Ascend950PR_9599",
       "ref_ticks": null,
-      "ticks_off": 26055,
-      "ticks_on": 26043,
-      "fusion_speedup": 1.0005,
+      "ticks_off": 26047,
+      "ticks_on": 26049,
+      "fusion_speedup": 0.9999,
       "ratio_off": null,
       "ratio_on": null,
       "gate": 0.7,
       "status": "neutral",
       "flag": "--cce-simd-vf-fusion",
-      "evidence_file": "evidence/vf-fusion/batch_mat_mul_v3-float16-20260611T003822.json",
-      "measured_at": "2026-06-11T00:38:22Z",
+      "evidence_file": "evidence/vf-fusion/batch_mat_mul_v3-float16-20260611T091445.json",
+      "measured_at": "2026-06-11T09:14:45Z",
       "source": "measured"
     },
     {
@@ -110,16 +110,16 @@
       ],
       "arch": "Ascend950PR_9599",
       "ref_ticks": null,
-      "ticks_off": 64158,
-      "ticks_on": 62502,
-      "fusion_speedup": 1.0265,
+      "ticks_off": 64108,
+      "ticks_on": 62500,
+      "fusion_speedup": 1.0257,
       "ratio_off": null,
       "ratio_on": null,
       "gate": 0.7,
       "status": "improved",
       "flag": "--cce-simd-vf-fusion",
-      "evidence_file": "evidence/vf-fusion/batch_norm_v3-float32-20260611T003822.json",
-      "measured_at": "2026-06-11T00:38:22Z",
+      "evidence_file": "evidence/vf-fusion/batch_norm_v3-float32-20260611T091445.json",
+      "measured_at": "2026-06-11T09:14:45Z",
       "source": "measured"
     },
     {
@@ -131,17 +131,17 @@
         4096
       ],
       "arch": "Ascend950PR_9599",
-      "ref_ticks": 5042,
-      "ticks_off": 6378,
-      "ticks_on": 6392,
-      "fusion_speedup": 0.9978,
-      "ratio_off": 0.7905,
-      "ratio_on": 0.7888,
+      "ref_ticks": 5051,
+      "ticks_off": 6372,
+      "ticks_on": 6388,
+      "fusion_speedup": 0.9975,
+      "ratio_off": 0.7927,
+      "ratio_on": 0.7907,
       "gate": 0.7,
       "status": "neutral",
       "flag": "--cce-simd-vf-fusion",
-      "evidence_file": "evidence/vf-fusion/drop_out_do_mask-float16-20260611T003822.json",
-      "measured_at": "2026-06-11T00:38:22Z",
+      "evidence_file": "evidence/vf-fusion/drop_out_do_mask-float16-20260611T091445.json",
+      "measured_at": "2026-06-11T09:14:45Z",
       "source": "measured"
     },
     {
@@ -153,7 +153,7 @@
         4096
       ],
       "arch": "Ascend950PR_9599",
-      "ref_ticks": 10110,
+      "ref_ticks": 10083,
       "ticks_off": null,
       "ticks_on": null,
       "fusion_speedup": null,
@@ -162,8 +162,8 @@
       "gate": 0.7,
       "status": "gen_blocked",
       "flag": "--cce-simd-vf-fusion",
-      "evidence_file": "evidence/vf-fusion/reduce_sum-float32-20260611T003822.json",
-      "measured_at": "2026-06-11T00:38:22Z",
+      "evidence_file": "evidence/vf-fusion/reduce_sum-float32-20260611T091445.json",
+      "measured_at": "2026-06-11T09:14:45Z",
       "source": "measured"
     },
     {
@@ -176,16 +176,16 @@
       ],
       "arch": "Ascend950PR_9599",
       "ref_ticks": null,
-      "ticks_off": 3935,
-      "ticks_on": 5100,
-      "fusion_speedup": 0.7716,
+      "ticks_off": 3925,
+      "ticks_on": 5104,
+      "fusion_speedup": 0.769,
       "ratio_off": null,
       "ratio_on": null,
       "gate": 0.7,
       "status": "regressed",
       "flag": "--cce-simd-vf-fusion",
-      "evidence_file": "evidence/vf-fusion/rms_norm-float16-20260611T003822.json",
-      "measured_at": "2026-06-11T00:38:22Z",
+      "evidence_file": "evidence/vf-fusion/rms_norm-float16-20260611T091445.json",
+      "measured_at": "2026-06-11T09:14:45Z",
       "source": "measured"
     },
     {
@@ -206,8 +206,8 @@
       "gate": 0.7,
       "status": "improved",
       "flag": "--cce-simd-vf-fusion",
-      "evidence_file": "evidence/vf-fusion/rms_norm-float32-20260611T003822.json",
-      "measured_at": "2026-06-11T00:38:22Z",
+      "evidence_file": "evidence/vf-fusion/rms_norm-float32-20260611T091445.json",
+      "measured_at": "2026-06-11T09:14:45Z",
       "source": "measured"
     },
     {
@@ -219,17 +219,17 @@
         4096
       ],
       "arch": "Ascend950PR_9599",
-      "ref_ticks": 3915,
-      "ticks_off": 5274,
-      "ticks_on": 5276,
-      "fusion_speedup": 0.9996,
-      "ratio_off": 0.7423,
-      "ratio_on": 0.742,
+      "ref_ticks": 3894,
+      "ticks_off": 5276,
+      "ticks_on": 5277,
+      "fusion_speedup": 0.9998,
+      "ratio_off": 0.7381,
+      "ratio_on": 0.7379,
       "gate": 0.7,
       "status": "neutral",
       "flag": "--cce-simd-vf-fusion",
-      "evidence_file": "evidence/vf-fusion/tanh-float16-20260611T003822.json",
-      "measured_at": "2026-06-11T00:38:22Z",
+      "evidence_file": "evidence/vf-fusion/tanh-float16-20260611T091445.json",
+      "measured_at": "2026-06-11T09:14:45Z",
       "source": "measured"
     }
   ]

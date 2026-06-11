@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Operator: RMSNorm: y = x * gamma * rsqrt(mean(x\u00b2, axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float32 (gamma is float32 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; use asc2.reduce_sum for sum_sq accumulation; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (matches dtype). Tolerance: atol=1e-4, rtol=1e-4 for both regimes ((8, 256) and (8, 1055)) against a torch reference; host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-08T07:33:48Z",
+  "date": "2026-06-11T10:02:44Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim:py3.11@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
   },
   "agent": {
     "platform": "opencode",
@@ -27,39 +27,92 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 19980,
-    "output": 3070,
-    "cache_read": 232170,
-    "total": 23050
+    "input": 100701,
+    "output": 13141,
+    "cache_read": 1297107,
+    "total": 113842
   },
-  "elapsed_total_s": 153.4,
+  "elapsed_total_s": 785.72,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 153.4,
-      "exit": 0,
-      "outcome": "pass",
+      "elapsed_s": 420.0,
+      "exit": 124,
+      "outcome": "fail",
       "tokens": {
-        "input": 19980,
-        "output": 3070,
-        "cache_read": 232170,
-        "total": 23050,
+        "input": 56448,
+        "output": 6758,
+        "cache_read": 957163,
+        "total": 63206,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 84.99,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 19423,
+        "output": 2127,
+        "cache_read": 68588,
+        "total": 21550,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 280.73,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 24830,
+        "output": 4256,
+        "cache_read": 271356,
+        "total": 29086,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
-    "shapes_verified": []
+    "status": "fail",
+    "detail": "Exit code 1: TypeError: issubclass() arg 1 must be a class\n1.15/lib/python3.11/site-packages/asc/runtime/jit.py\", line 210, in _run\n    runtime_args, constexprs = self.split_args(call_args, annotations)\n                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/asc/codegen/function.py\", line 125, in split_args\n    if issubclass(get_origin(ann_type) or ann_type, ConstExpr):\n       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: issubclass() arg 1 must be a class\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "kernel.py",
+      "is_symlink": false,
+      "resolved": "/home/loschilov_aa/ar/work-2/_temp/gen-rms_norm-float32-a3.ueyhx8np/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        ".git",
+        "AGENTS.md",
+        "__pycache__",
+        "agent-output.txt",
+        "golden@ -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden",
+        "kernel.py",
+        "opencode.json"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 140\ndrwx------ 4 root root  4096 Jun 11 10:02 .\ndrwxr-xr-x 1 root root  4096 Jun 11 10:02 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 09:57 .git\n-rw-r--r-- 1 root root  9269 Jun 10 04:35 AGENTS.md\ndrwxr-xr-x 2 root root  4096 Jun 11 10:02 __pycache__\n-rw-r--r-- 1 root root 94748 Jun 11 10:02 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 09:57 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  7472 Jun 11 10:02 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 09:57 opencode.json\n--- ls kernel dir ---\ntotal 140\ndrwx------ 4 root root  4096 Jun 11 10:02 .\ndrwxr-xr-x 1 root root  4096 Jun 11 10:02 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 09:57 .git\n-rw-r--r-- 1 root root  9269 Jun 10 04:35 AGENTS.md\ndrwxr-xr-x 2 root root  4096 Jun 11 10:02 __pycache__\n-rw-r--r-- 1 root root 94748 Jun 11 10:02 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 09:57 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  7472 Jun 11 10:02 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 09:57 opencode.json\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
     "passed": true,
@@ -149,7 +202,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P4)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",
@@ -173,6 +226,17 @@
       "skipped": false,
       "tokens_total": 28504,
       "elapsed_s": 240.05
+    },
+    {
+      "date": "2026-06-08T07:33:48Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 23050,
+      "elapsed_s": 153.4
     }
   ]
 }

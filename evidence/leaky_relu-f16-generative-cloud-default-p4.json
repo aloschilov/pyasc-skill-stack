@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-08T07:15:01Z",
+  "date": "2026-06-11T09:41:18Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim:py3.11@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
   },
   "agent": {
     "platform": "opencode",
@@ -27,24 +27,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 92323,
-    "output": 6693,
-    "cache_read": 616799,
-    "total": 99016
+    "input": 88411,
+    "output": 4351,
+    "cache_read": 574039,
+    "total": 92762
   },
-  "elapsed_total_s": 549.66,
+  "elapsed_total_s": 335.1,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 218.27,
+      "elapsed_s": 233.79,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 55898,
-        "output": 3336,
-        "cache_read": 261151,
-        "total": 59234,
+        "input": 74254,
+        "output": 2214,
+        "cache_read": 544729,
+        "total": 76468,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -55,14 +55,14 @@
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 194.22,
+      "elapsed_s": 46.48,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 21434,
-        "output": 1983,
-        "cache_read": 278879,
-        "total": 23417,
+        "input": 9599,
+        "output": 1056,
+        "cache_read": 12098,
+        "total": 10655,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -73,14 +73,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 137.17,
+      "elapsed_s": 54.83,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 14991,
-        "output": 1374,
-        "cache_read": 76769,
-        "total": 16365,
+        "input": 4558,
+        "output": 1081,
+        "cache_read": 17212,
+        "total": 5639,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -94,8 +94,24 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'ConstExpr'\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 25, in <module>\n    x_ptr, y_ptr, size: int, TILE_SIZE: asc2.ConstExpr[int]\n                                        ^^^^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'ConstExpr'\n",
-    "shapes_verified": []
+    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'ConstExpr'\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 24, in <module>\n    TILE_SIZE: asc2.ConstExpr[int],\n               ^^^^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'ConstExpr'\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "kernel.py",
+      "is_symlink": false,
+      "resolved": "/home/loschilov_aa/ar/work-2/_temp/gen-leaky_relu-float16-a3.hznzndb3/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        ".git",
+        "AGENTS.md",
+        "agent-output.txt",
+        "golden@ -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden",
+        "kernel.py",
+        "opencode.json"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 44\ndrwx------ 3 root root 4096 Jun 11 09:41 .\ndrwxr-xr-x 1 root root 4096 Jun 11 09:41 ..\ndrwxr-xr-x 7 root root 4096 Jun 11 09:40 .git\n-rw-r--r-- 1 root root 9269 Jun 10 04:35 AGENTS.md\n-rw-r--r-- 1 root root 6760 Jun 11 09:41 agent-output.txt\nlrwxrwxrwx 1 root root   71 Jun 11 09:40 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root 3476 Jun 11 09:40 kernel.py\n-rw-r--r-- 1 root root  383 Jun 11 09:40 opencode.json\n--- ls kernel dir ---\ntotal 44\ndrwx------ 3 root root 4096 Jun 11 09:41 .\ndrwxr-xr-x 1 root root 4096 Jun 11 09:41 ..\ndrwxr-xr-x 7 root root 4096 Jun 11 09:40 .git\n-rw-r--r-- 1 root root 9269 Jun 10 04:35 AGENTS.md\n-rw-r--r-- 1 root root 6760 Jun 11 09:41 agent-output.txt\nlrwxrwxrwx 1 root root   71 Jun 11 09:40 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root 3476 Jun 11 09:40 kernel.py\n-rw-r--r-- 1 root root  383 Jun 11 09:40 opencode.json\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
     "passed": true,
@@ -183,7 +199,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P4)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",
@@ -218,6 +234,17 @@
       "skipped": false,
       "tokens_total": 35945,
       "elapsed_s": 240.1
+    },
+    {
+      "date": "2026-06-08T07:15:01Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 99016,
+      "elapsed_s": 549.66
     }
   ]
 }

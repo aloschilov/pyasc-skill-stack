@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: RMSNorm: y = x * gamma * rsqrt(mean(x\u00b2, axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float16 (gamma is float16 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; cast loaded tiles to float32 via `.to(asc.float32)` before accumulating sum_sq via asc2.reduce_sum, then cast back via `.to(x.dtype)` before asc2.store; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (sum_sq is fp32 even when the input is fp16). Tolerance: atol=2e-2, rtol=2e-2 for the full_row regime (8, 256) and atol=5e-2, rtol=5e-2 for the split_d regime (8, 1055), both against a torch reference; host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path and surface as `0., 0., 0.` tail bands in any downstream comparison. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-08T07:40:03Z",
+  "date": "2026-06-11T11:00:52Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim:py3.11@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
   },
   "agent": {
     "platform": "opencode",
@@ -27,39 +27,90 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 50614,
-    "output": 3497,
-    "cache_read": 207344,
-    "total": 54111
+    "input": 122250,
+    "output": 25731,
+    "cache_read": 577379,
+    "total": 147981
   },
-  "elapsed_total_s": 182.9,
+  "elapsed_total_s": 902.87,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 182.9,
+      "elapsed_s": 158.15,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 50614,
-        "output": 3497,
-        "cache_read": 207344,
-        "total": 54111,
+        "input": 20229,
+        "output": 4719,
+        "cache_read": 80184,
+        "total": 24948,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "pass"
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 420.02,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 58330,
+        "output": 12090,
+        "cache_read": 285353,
+        "total": 70420,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 324.7,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 43691,
+        "output": 8922,
+        "cache_read": 211842,
+        "total": 52613,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
-    "shapes_verified": []
+    "status": "fail",
+    "detail": "Exit code 1: NameError: name 'asc2' is not defined. Did you mean: 'asc'?\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 58, in <module>\n    @asc2.jit\n     ^^^^\nNameError: name 'asc2' is not defined. Did you mean: 'asc'?\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "kernel.py",
+      "is_symlink": false,
+      "resolved": "/home/loschilov_aa/ar/work-3/_temp/gen-rms_norm-float16-a3.ntpsb4nk/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        ".git",
+        "agent-output.txt",
+        "golden@ -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden",
+        "kernel.py",
+        "opencode.json"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 164\ndrwx------ 3 root root   4096 Jun 11 11:00 .\ndrwxr-xr-x 1 root root   4096 Jun 11 11:00 ..\ndrwxr-xr-x 7 root root   4096 Jun 11 10:55 .git\n-rw-r--r-- 1 root root 134666 Jun 11 11:00 agent-output.txt\nlrwxrwxrwx 1 root root     71 Jun 11 10:55 golden -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root   8891 Jun 11 10:59 kernel.py\n-rw-r--r-- 1 root root    383 Jun 11 10:55 opencode.json\n--- ls kernel dir ---\ntotal 164\ndrwx------ 3 root root   4096 Jun 11 11:00 .\ndrwxr-xr-x 1 root root   4096 Jun 11 11:00 ..\ndrwxr-xr-x 7 root root   4096 Jun 11 10:55 .git\n-rw-r--r-- 1 root root 134666 Jun 11 11:00 agent-output.txt\nlrwxrwxrwx 1 root root     71 Jun 11 10:55 golden -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root   8891 Jun 11 10:59 kernel.py\n-rw-r--r-- 1 root root    383 Jun 11 10:55 opencode.json\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
     "passed": true,
@@ -71,13 +122,13 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 10.0,
     "threshold": 12,
-    "accepted": true,
+    "accepted": false,
     "checks": {
       "jit_decorator": {
-        "passed": true,
-        "detail": "2 JIT function(s)"
+        "passed": false,
+        "detail": "missing"
       },
       "no_return_value": {
         "passed": true,
@@ -88,28 +139,28 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
+        "passed": false,
+        "detail": "missing asc2.load/asc2.store"
       },
       "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
+        "passed": false,
+        "detail": "missing asc2.tensor"
       },
       "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
+        "passed": false,
+        "detail": "no range call in kernel"
       },
       "verification": {
         "passed": true,
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
+        "passed": false,
+        "detail": "no launch pattern"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -132,8 +183,8 @@
         "detail": "verify x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
-        "passed": false,
-        "detail": "numeric shape tuples found inside JIT function"
+        "passed": true,
+        "detail": "shapes parameterized"
       },
       "semantic_api_usage": {
         "passed": true,
@@ -147,9 +198,9 @@
       "allow_legacy_apis": false
     }
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -184,6 +235,17 @@
       "skipped": false,
       "tokens_total": 27627,
       "elapsed_s": 240.1
+    },
+    {
+      "date": "2026-06-08T07:40:03Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 54111,
+      "elapsed_s": 182.9
     }
   ]
 }

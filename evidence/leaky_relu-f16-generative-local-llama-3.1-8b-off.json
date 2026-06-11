@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator on Ascend950PR_9599 (C310) for float16 with alpha=0.01 and shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "",
-  "date": "2026-06-08T08:58:20Z",
+  "date": "2026-06-11T08:29:29Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim:py3.11@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
   },
   "agent": {
     "platform": "opencode",
@@ -23,29 +23,29 @@
   },
   "skills_mode": "off",
   "model_profile": "local-llama-3.1-8b",
-  "model": "llama3.1:8b",
+  "model": "ollama/llama3.1:8b",
   "tokens": {
-    "input": 14841,
-    "output": 660,
+    "input": 21024,
+    "output": 378,
     "cache_read": 0,
-    "total": 15501
+    "total": 21402
   },
-  "elapsed_total_s": 1929.87,
+  "elapsed_total_s": 19.59,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1004.15,
+      "elapsed_s": 6.42,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 6651,
-        "output": 245,
+        "input": 6954,
+        "output": 119,
         "cache_read": 0,
-        "total": 6896,
+        "total": 7073,
         "cost_usd": 0.0
       },
-      "model": "llama3.1:8b",
+      "model": "ollama/llama3.1:8b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 430.37,
+      "elapsed_s": 6.76,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4095,
-        "output": 123,
+        "input": 6948,
+        "output": 175,
         "cache_read": 0,
-        "total": 4218,
+        "total": 7123,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 495.35,
+      "elapsed_s": 6.41,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4095,
-        "output": 292,
+        "input": 7122,
+        "output": 84,
         "cache_read": 0,
-        "total": 4387,
+        "total": 7206,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -107,7 +107,7 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-llama-3.1-8b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
   "history": [
     {
       "date": "2026-05-16T10:29:14Z",
@@ -119,6 +119,17 @@
       "skipped": false,
       "tokens_total": 13708,
       "elapsed_s": 2599.82
+    },
+    {
+      "date": "2026-06-08T08:58:20Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 15501,
+      "elapsed_s": 1929.87
     }
   ]
 }

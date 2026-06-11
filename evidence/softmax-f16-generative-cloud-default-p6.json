@@ -4,8 +4,8 @@
   "operation": "softmax",
   "dtype": "float16",
   "prompt": "Operator: softmax along last axis (out[i, :] = softmax(x[i, :]) so each row sums to 1); use asc2.softmax on a block of full rows. Input shapes: [32, 4096] ONLY (full-row regime; do not test other shapes \u2014 split_row is a separate cell, deferred to Phase 5/8). Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via block-of-rows distribution: block_size = ceildiv(num_rows, CORE_NUM), start_row = block_idx * block_size; each row fits in UB. Tail: aligned_only (split_row and long_rows_exceeding_UB are unsupported). Accumulator: float32 (softmax exp accumulates in fp32 internally). Tolerance: atol=5e-2, rtol=5e-2 against numpy reference computed as shifted = x - x.max(axis=1, keepdims=True); e = np.exp(shifted); expected = e / e.sum(axis=1, keepdims=True); verify in float32: np.testing.assert_allclose(out.astype(np.float32), expected.astype(np.float32), atol=5e-2, rtol=5e-2). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_float16/kernel.py",
-  "date": "2026-06-08T08:35:03Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
+  "date": "2026-06-11T11:05:25Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,41 +13,42 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim:py3.11@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
   },
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md"
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 85979,
-    "output": 10820,
-    "cache_read": 659147,
-    "total": 96799
+    "input": 90617,
+    "output": 9754,
+    "cache_read": 485967,
+    "total": 100371
   },
-  "elapsed_total_s": 420.01,
+  "elapsed_total_s": 381.5,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 420.01,
-      "exit": 124,
+      "elapsed_s": 381.5,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 85979,
-        "output": 10820,
-        "cache_read": 659147,
-        "total": 96799,
+        "input": 90617,
+        "output": 9754,
+        "cache_read": 485967,
+        "total": 100371,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -151,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P6)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",
@@ -175,6 +176,17 @@
       "skipped": false,
       "tokens_total": 75665,
       "elapsed_s": 240.05
+    },
+    {
+      "date": "2026-06-08T08:35:03Z",
+      "overall_pass": true,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 96799,
+      "elapsed_s": 420.01
     }
   ]
 }

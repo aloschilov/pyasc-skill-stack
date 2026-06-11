@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
   "kernel_path": "",
-  "date": "2026-06-08T09:36:32Z",
+  "date": "2026-06-11T08:29:47Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim:py3.11@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
   },
   "agent": {
     "platform": "opencode",
@@ -23,29 +23,29 @@
   },
   "skills_mode": "off",
   "model_profile": "local-llama-3.1-8b",
-  "model": "llama3.1:8b",
+  "model": "ollama/llama3.1:8b",
   "tokens": {
-    "input": 15214,
-    "output": 1452,
+    "input": 21158,
+    "output": 249,
     "cache_read": 0,
-    "total": 16666
+    "total": 21407
   },
-  "elapsed_total_s": 2291.14,
+  "elapsed_total_s": 17.35,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1199.27,
+      "elapsed_s": 6.28,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7024,
-        "output": 490,
+        "input": 6974,
+        "output": 44,
         "cache_read": 0,
-        "total": 7514,
+        "total": 7018,
         "cost_usd": 0.0
       },
-      "model": "llama3.1:8b",
+      "model": "ollama/llama3.1:8b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 541.78,
+      "elapsed_s": 6.92,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4095,
-        "output": 514,
+        "input": 6974,
+        "output": 146,
         "cache_read": 0,
-        "total": 4609,
+        "total": 7120,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 550.09,
+      "elapsed_s": 4.15,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4095,
-        "output": 448,
+        "input": 7210,
+        "output": 59,
         "cache_read": 0,
-        "total": 4543,
+        "total": 7269,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-llama-3.1-8b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
+  "history": [
+    {
+      "date": "2026-06-08T09:36:32Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 16666,
+      "elapsed_s": 2291.14
+    }
+  ]
 }
