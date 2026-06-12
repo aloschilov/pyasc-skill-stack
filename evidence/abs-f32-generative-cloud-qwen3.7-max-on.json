@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f32/kernel.py",
-  "date": "2026-06-12T03:08:12Z",
+  "date": "2026-06-12T14:38:01Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -29,29 +29,29 @@
   },
   "skills_mode": "on",
   "model_profile": "cloud-qwen3.7-max",
-  "model": "dashscope/qwen3.7-max",
+  "model": "qwen3.7-max",
   "tokens": {
-    "input": 78751,
-    "output": 8377,
-    "cache_read": 710656,
-    "total": 87128
+    "input": 73768,
+    "output": 6475,
+    "cache_read": 494720,
+    "total": 80243
   },
-  "elapsed_total_s": 326.33,
+  "elapsed_total_s": 322.01,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 326.33,
+      "elapsed_s": 322.01,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 78751,
-        "output": 8377,
-        "cache_read": 710656,
-        "total": 87128,
+        "input": 73768,
+        "output": 6475,
+        "cache_read": 494720,
+        "total": 80243,
         "cost_usd": 0.0
       },
-      "model": "dashscope/qwen3.7-max",
+      "model": "qwen3.7-max",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "pass"
@@ -73,7 +73,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -130,8 +130,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -151,6 +151,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T03:08:12Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 87128,
+      "elapsed_s": 326.33
+    }
+  ]
 }

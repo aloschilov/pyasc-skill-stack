@@ -4,8 +4,8 @@
   "operation": "reduce_sum",
   "dtype": "float16",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float16, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
-  "kernel_path": "",
-  "date": "2026-06-12T01:40:36Z",
+  "kernel_path": "kernel.py",
+  "date": "2026-06-12T12:41:23Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,33 +19,35 @@
     "platform": "opencode",
     "timeout_s": 420,
     "completed": true,
-    "artifacts_found": []
+    "artifacts_found": [
+      "kernel.py"
+    ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-qwen3.7-max",
-  "model": "dashscope/qwen3.7-max",
+  "model": "qwen3.7-max",
   "tokens": {
-    "input": 191197,
-    "output": 8666,
-    "cache_read": 947328,
-    "total": 199863
+    "input": 96807,
+    "output": 3628,
+    "cache_read": 325888,
+    "total": 100435
   },
-  "elapsed_total_s": 282.7,
+  "elapsed_total_s": 768.35,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 108.76,
-      "exit": 0,
+      "elapsed_s": 420.1,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 72007,
-        "output": 2984,
-        "cache_read": 307200,
-        "total": 74991,
+        "input": 22178,
+        "output": 732,
+        "cache_read": 33536,
+        "total": 22910,
         "cost_usd": 0.0
       },
-      "model": "dashscope/qwen3.7-max",
+      "model": "qwen3.7-max",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -53,60 +55,129 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 98.44,
+      "elapsed_s": 348.25,
       "exit": 0,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 65105,
-        "output": 3133,
-        "cache_read": 362368,
-        "total": 68238,
+        "input": 74629,
+        "output": 2896,
+        "cache_read": 292352,
+        "total": 77525,
         "cost_usd": 0.0
       },
-      "model": "dashscope/qwen3.7-max",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "primary",
-      "elapsed_s": 75.5,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 54085,
-        "output": 2549,
-        "cache_read": 277760,
-        "total": 56634,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/qwen3.7-max",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
+      "model": "qwen3.7-max",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
     }
   ],
   "verification": {
-    "mode": "static_only",
-    "status": "fail",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "no kernel found",
-    "markers_found": []
+    "passed": true,
+    "detail": "found ['asc2.reduce_sum', '.sum(']",
+    "markers_found": [
+      "asc2.reduce_sum",
+      ".sum("
+    ]
   },
   "score": {
-    "value": 0.0,
+    "value": 15.0,
     "threshold": 12,
-    "accepted": false,
-    "checks": {},
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.reduce_sum', '.sum(']"
+      }
+    },
     "failure_category": null,
-    "gating_detail": {}
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T01:40:36Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 199863,
+      "elapsed_s": 282.7
+    }
+  ]
 }

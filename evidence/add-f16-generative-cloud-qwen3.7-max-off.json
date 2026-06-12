@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an element-wise add operator (out = x + y) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "",
-  "date": "2026-06-12T01:23:59Z",
+  "date": "2026-06-12T12:13:03Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,31 +18,31 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 62958,
-    "output": 5682,
-    "cache_read": 262272,
-    "total": 68640
+    "input": 103507,
+    "output": 6107,
+    "cache_read": 378496,
+    "total": 109614
   },
-  "elapsed_total_s": 916.43,
+  "elapsed_total_s": 957.7,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.01,
-      "exit": 124,
+      "elapsed_s": 117.6,
+      "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 13697,
-        "output": 640,
-        "cache_read": 35456,
-        "total": 14337,
+        "input": 61892,
+        "output": 2684,
+        "cache_read": 202368,
+        "total": 64576,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 295.47,
-      "exit": 0,
+      "elapsed_s": 420.0,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 32202,
-        "output": 3644,
-        "cache_read": 157568,
-        "total": 35846,
+        "input": 25796,
+        "output": 2683,
+        "cache_read": 136448,
+        "total": 28479,
         "cost_usd": 0.0
       },
       "model": "qwen3.7-max",
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "primary",
-      "elapsed_s": 200.95,
-      "exit": 0,
+      "elapsed_s": 420.1,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 17059,
-        "output": 1398,
-        "cache_read": 69248,
-        "total": 18457,
+        "input": 15819,
+        "output": 740,
+        "cache_read": 39680,
+        "total": 16559,
         "cost_usd": 0.0
       },
       "model": "qwen3.7-max",
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T01:23:59Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 68640,
+      "elapsed_s": 916.43
+    }
+  ]
 }

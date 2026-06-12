@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-11T23:10:41Z",
+  "date": "2026-06-12T13:41:40Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -20,33 +20,31 @@
     "timeout_s": 420,
     "completed": true,
     "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "verification.md"
+      "kernel.py"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 14577,
-    "output": 4798,
-    "cache_read": 172605,
-    "total": 19375
+    "input": 71867,
+    "output": 6680,
+    "cache_read": 186839,
+    "total": 78547
   },
-  "elapsed_total_s": 220.72,
+  "elapsed_total_s": 420.24,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 43.57,
+      "elapsed_s": 224.3,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 2323,
-        "output": 873,
-        "cache_read": 32674,
-        "total": 3196,
+        "input": 24214,
+        "output": 3286,
+        "cache_read": 84792,
+        "total": 27500,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -57,14 +55,14 @@
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 103.48,
+      "elapsed_s": 91.95,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7864,
-        "output": 1550,
-        "cache_read": 88178,
-        "total": 9414,
+        "input": 21253,
+        "output": 1743,
+        "cache_read": 32456,
+        "total": 22996,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -75,60 +73,45 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 73.67,
+      "elapsed_s": 103.99,
       "exit": 0,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 4390,
-        "output": 2375,
-        "cache_read": 51753,
-        "total": 6765,
+        "input": 26400,
+        "output": 1651,
+        "cache_read": 69591,
+        "total": 28051,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
+      "static_verify": "pass",
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: ModuleNotFoundError: No module named 'ascendcl'\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 3, in <module>\n    import ascendcl as acl\nModuleNotFoundError: No module named 'ascendcl'\n",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "kernel.py",
-      "is_symlink": false,
-      "resolved": "/home/loschilov_aa/ar/work-2/_temp/gen-abs-float16-a3.a1qhrbsr/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        ".git",
-        "agent-output.txt",
-        "design.md",
-        "golden@ -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden",
-        "kernel.py",
-        "opencode.json",
-        "verification.md"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 52\ndrwx------ 3 root root  4096 Jun 11 23:10 .\ndrwxr-xr-x 1 root root  4096 Jun 11 23:10 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 23:09 .git\n-rw-r--r-- 1 root root 19015 Jun 11 23:10 agent-output.txt\n-rw-r--r-- 1 root root  1681 Jun 11 23:10 design.md\nlrwxrwxrwx 1 root root    71 Jun 11 23:09 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  2371 Jun 11 23:09 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 23:09 opencode.json\n-rw-r--r-- 1 root root  1750 Jun 11 23:10 verification.md\n--- ls kernel dir ---\ntotal 52\ndrwx------ 3 root root  4096 Jun 11 23:10 .\ndrwxr-xr-x 1 root root  4096 Jun 11 23:10 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 23:09 .git\n-rw-r--r-- 1 root root 19015 Jun 11 23:10 agent-output.txt\n-rw-r--r-- 1 root root  1681 Jun 11 23:10 design.md\nlrwxrwxrwx 1 root root    71 Jun 11 23:09 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  2371 Jun 11 23:09 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 23:09 opencode.json\n-rw-r--r-- 1 root root  1750 Jun 11 23:10 verification.md\n--- readlink kernel ---"
-    }
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "shapes_verified": []
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "none of ['asc2.abs'] found in kernel source",
-    "markers_found": []
+    "passed": true,
+    "detail": "found ['asc2.abs']",
+    "markers_found": [
+      "asc2.abs"
+    ]
   },
   "score": {
-    "value": 9.0,
+    "value": 16.0,
     "threshold": 12,
-    "accepted": false,
+    "accepted": true,
     "checks": {
       "jit_decorator": {
-        "passed": false,
-        "detail": "missing"
+        "passed": true,
+        "detail": "1 JIT function(s)"
       },
       "no_return_value": {
         "passed": true,
@@ -139,28 +122,28 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
+        "passed": true,
+        "detail": "load+store"
       },
       "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
+        "passed": true,
+        "detail": "present"
       },
       "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
+        "passed": true,
+        "detail": "range/asc2.range present"
       },
       "verification": {
         "passed": true,
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
+        "passed": true,
+        "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -168,7 +151,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
+        "detail": "expected>=1 params, found 2"
       },
       "output_dtype": {
         "passed": true,
@@ -187,22 +170,20 @@
         "detail": "shapes parameterized"
       },
       "semantic_api_usage": {
-        "passed": false,
-        "detail": "none of ['asc2.abs'] found in source"
+        "passed": true,
+        "detail": "found ['asc2.abs']"
       }
     },
-    "failure_category": "F_legacy_api_import",
+    "failure_category": null,
     "gating_detail": {
-      "legacy_api_findings": [
-        "import ascendcl"
-      ],
+      "legacy_api_findings": [],
       "missing_asc2_import": false,
       "allow_legacy_apis": false
     }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -259,6 +240,17 @@
       "skipped": false,
       "tokens_total": 10481,
       "elapsed_s": 116.88
+    },
+    {
+      "date": "2026-06-11T23:10:41Z",
+      "overall_pass": false,
+      "score": 9.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 19375,
+      "elapsed_s": 220.72
     }
   ]
 }

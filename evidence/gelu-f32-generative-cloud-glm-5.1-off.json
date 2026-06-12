@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096]. Use the lean exp/sigmoid restatement of the tanh/Pad\u00e9 form (mathematically identical to PyTorch's gelu(approximate='tanh'), but cheaper per tile and within the sim budget) - GELU(x) = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))). Use asc2.exp; do NOT use asc2.tanh (it pushed the cell over the 150s sim budget) and do NOT use asc2.erf (simulator erf is too noisy on float32 \u2014 this is documented in the cell's regime_note).",
   "kernel_path": "",
-  "date": "2026-06-12T03:43:16Z",
+  "date": "2026-06-12T15:49:28Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -23,29 +23,29 @@
   },
   "skills_mode": "off",
   "model_profile": "cloud-glm-5.1",
-  "model": "glm-5.1",
+  "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 141074,
-    "output": 8047,
-    "cache_read": 821120,
-    "total": 149121
+    "input": 329483,
+    "output": 11462,
+    "cache_read": 1180416,
+    "total": 340945
   },
-  "elapsed_total_s": 1009.56,
+  "elapsed_total_s": 932.33,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.05,
-      "exit": 124,
+      "elapsed_s": 413.49,
+      "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 6752,
-        "output": 304,
-        "cache_read": 13568,
-        "total": 7056,
+        "input": 219203,
+        "output": 3887,
+        "cache_read": 546816,
+        "total": 223090,
         "cost_usd": 0.0
       },
-      "model": "glm-5.1",
+      "model": "dashscope/glm-5.1",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 356.69,
+      "elapsed_s": 232.01,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 61009,
-        "output": 4611,
-        "cache_read": 462592,
-        "total": 65620,
+        "input": 47962,
+        "output": 3202,
+        "cache_read": 270720,
+        "total": 51164,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "primary",
-      "elapsed_s": 232.82,
+      "elapsed_s": 286.83,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 73313,
-        "output": 3132,
-        "cache_read": 344960,
-        "total": 76445,
+        "input": 62318,
+        "output": 4373,
+        "cache_read": 362880,
+        "total": 66691,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T03:43:16Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 149121,
+      "elapsed_s": 1009.56
+    }
+  ]
 }

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "",
-  "date": "2026-06-12T02:17:29Z",
+  "date": "2026-06-12T14:32:18Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -23,29 +23,29 @@
   },
   "skills_mode": "off",
   "model_profile": "cloud-glm-5.1",
-  "model": "dashscope/glm-5.1",
+  "model": "glm-5.1",
   "tokens": {
-    "input": 282258,
-    "output": 7206,
-    "cache_read": 735104,
-    "total": 289464
+    "input": 259049,
+    "output": 8749,
+    "cache_read": 856064,
+    "total": 267798
   },
-  "elapsed_total_s": 1182.61,
+  "elapsed_total_s": 1053.41,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.1,
+      "elapsed_s": 420.01,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 98891,
-        "output": 1150,
-        "cache_read": 109824,
-        "total": 100041,
+        "input": 24274,
+        "output": 716,
+        "cache_read": 55808,
+        "total": 24990,
         "cost_usd": 0.0
       },
-      "model": "dashscope/glm-5.1",
+      "model": "glm-5.1",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 420.01,
-      "exit": 124,
+      "elapsed_s": 379.98,
+      "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 73909,
-        "output": 3061,
-        "cache_read": 380160,
-        "total": 76970,
+        "input": 163542,
+        "output": 4084,
+        "cache_read": 387072,
+        "total": 167626,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "primary",
-      "elapsed_s": 342.5,
+      "elapsed_s": 253.42,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 109458,
-        "output": 2995,
-        "cache_read": 245120,
-        "total": 112453,
+        "input": 71233,
+        "output": 3949,
+        "cache_read": 413184,
+        "total": 75182,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T02:17:29Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 289464,
+      "elapsed_s": 1182.61
+    }
+  ]
 }

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
   "kernel_path": "",
-  "date": "2026-06-12T02:27:07Z",
+  "date": "2026-06-12T13:30:53Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,49 +18,31 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "cloud-qwen3.7-max",
-  "model": "qwen3.7-max",
+  "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 202915,
-    "output": 7406,
-    "cache_read": 782720,
-    "total": 210321
+    "input": 172555,
+    "output": 5830,
+    "cache_read": 761984,
+    "total": 178385
   },
-  "elapsed_total_s": 454.82,
+  "elapsed_total_s": 1260.18,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 240.07,
-      "exit": 0,
+      "elapsed_s": 420.01,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 79822,
-        "output": 3386,
-        "cache_read": 327808,
-        "total": 83208,
-        "cost_usd": 0.0
-      },
-      "model": "qwen3.7-max",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 154.66,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 69474,
-        "output": 2875,
-        "cache_read": 351872,
-        "total": 72349,
+        "input": 103902,
+        "output": 4730,
+        "cache_read": 730624,
+        "total": 108632,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -69,16 +51,34 @@
       "runtime_status": "fail"
     },
     {
-      "n": 3,
+      "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 60.09,
-      "exit": 0,
+      "elapsed_s": 420.07,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 53619,
-        "output": 1145,
-        "cache_read": 103040,
-        "total": 54764,
+        "input": 3124,
+        "output": 247,
+        "cache_read": 12544,
+        "total": 3371,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3.7-max",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 420.1,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 65529,
+        "output": 853,
+        "cache_read": 18816,
+        "total": 66382,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T02:27:07Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 210321,
+      "elapsed_s": 454.82
+    }
+  ]
 }

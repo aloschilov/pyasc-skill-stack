@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.",
   "kernel_path": "",
-  "date": "2026-06-11T23:20:31Z",
+  "date": "2026-06-12T15:53:52Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 52098,
-    "output": 3575,
-    "cache_read": 247924,
-    "total": 55673
+    "input": 41625,
+    "output": 7680,
+    "cache_read": 371746,
+    "total": 49305
   },
-  "elapsed_total_s": 161.65,
+  "elapsed_total_s": 337.03,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 35.95,
+      "elapsed_s": 169.26,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 3190,
-        "output": 990,
-        "cache_read": 45956,
-        "total": 4180,
+        "input": 8840,
+        "output": 3753,
+        "cache_read": 191899,
+        "total": 12593,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "minimal",
-      "elapsed_s": 55.3,
+      "elapsed_s": 83.79,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 18792,
-        "output": 1184,
-        "cache_read": 87675,
-        "total": 19976,
+        "input": 20642,
+        "output": 2017,
+        "cache_read": 112109,
+        "total": 22659,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "minimal",
-      "elapsed_s": 70.4,
+      "elapsed_s": 83.98,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 30116,
-        "output": 1401,
-        "cache_read": 114293,
-        "total": 31517,
+        "input": 12143,
+        "output": 1910,
+        "cache_read": 67738,
+        "total": 14053,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -107,7 +107,7 @@
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",
@@ -153,6 +153,17 @@
       "skipped": false,
       "tokens_total": 35220,
       "elapsed_s": 189.52
+    },
+    {
+      "date": "2026-06-11T23:20:31Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 55673,
+      "elapsed_s": 161.65
     }
   ]
 }

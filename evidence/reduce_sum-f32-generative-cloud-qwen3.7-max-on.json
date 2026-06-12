@@ -4,8 +4,8 @@
   "operation": "reduce_sum",
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float32, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
-  "date": "2026-06-12T03:17:19Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/kernel.py",
+  "date": "2026-06-12T15:02:43Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 79042,
-    "output": 8269,
-    "cache_read": 678144,
-    "total": 87311
+    "input": 80797,
+    "output": 7846,
+    "cache_read": 530688,
+    "total": 88643
   },
-  "elapsed_total_s": 273.06,
+  "elapsed_total_s": 282.36,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 273.06,
+      "elapsed_s": 282.36,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 79042,
-        "output": 8269,
-        "cache_read": 678144,
-        "total": 87311,
+        "input": 80797,
+        "output": 7846,
+        "cache_read": 530688,
+        "total": 88643,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -74,7 +74,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -131,8 +131,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -152,6 +152,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T03:17:19Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 87311,
+      "elapsed_s": 273.06
+    }
+  ]
 }

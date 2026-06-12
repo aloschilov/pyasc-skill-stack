@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Create an RMSNorm capability for float16 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_f16/kernel.py",
-  "date": "2026-06-12T04:51:35Z",
+  "date": "2026-06-12T14:06:09Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -22,18 +22,17 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md",
-      "acceptance_review.md"
+      "self_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 75067,
-    "output": 8612,
-    "cache_read": 908928,
-    "total": 83679
+    "input": 68289,
+    "output": 7085,
+    "cache_read": 568448,
+    "total": 75374
   },
   "elapsed_total_s": 420.01,
   "attempts": [
@@ -44,10 +43,10 @@
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 75067,
-        "output": 8612,
-        "cache_read": 908928,
-        "total": 83679,
+        "input": 68289,
+        "output": 7085,
+        "cache_read": 568448,
+        "total": 75374,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -152,6 +151,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T04:51:35Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 83679,
+      "elapsed_s": 420.01
+    }
+  ]
 }

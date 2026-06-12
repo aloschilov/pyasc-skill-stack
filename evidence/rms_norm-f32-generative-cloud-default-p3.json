@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Operator: RMSNorm: y = x * gamma * rsqrt(mean(x\u00b2, axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float32 (gamma is float32 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; use asc2.reduce_sum for sum_sq accumulation; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (matches dtype). Tolerance: atol=1e-4, rtol=1e-4 for both regimes ((8, 256) and (8, 1055)) against a torch reference; host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-12T00:34:57Z",
+  "date": "2026-06-12T15:30:51Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,34 +18,35 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md"
+      "design.md",
+      "verification.md"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 151102,
-    "output": 15381,
-    "cache_read": 1899215,
-    "total": 166483
+    "input": 134368,
+    "output": 17299,
+    "cache_read": 1606717,
+    "total": 151667
   },
-  "elapsed_total_s": 707.57,
+  "elapsed_total_s": 1167.92,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 287.57,
-      "exit": 0,
+      "elapsed_s": 420.01,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 39108,
-        "output": 8629,
-        "cache_read": 317237,
-        "total": 47737,
+        "input": 57228,
+        "output": 5151,
+        "cache_read": 614029,
+        "total": 62379,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -56,14 +57,32 @@
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 420.0,
+      "elapsed_s": 420.01,
       "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 44273,
+        "output": 4650,
+        "cache_read": 678104,
+        "total": 48923,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 327.9,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 111994,
-        "output": 6752,
-        "cache_read": 1581978,
-        "total": 118746,
+        "input": 32867,
+        "output": 7498,
+        "cache_read": 314584,
+        "total": 40365,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -168,7 +187,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -214,6 +233,17 @@
       "skipped": false,
       "tokens_total": 44800,
       "elapsed_s": 393.95
+    },
+    {
+      "date": "2026-06-12T00:34:57Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 166483,
+      "elapsed_s": 707.57
     }
   ]
 }

@@ -4,8 +4,8 @@
   "operation": "softmax",
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
-  "date": "2026-06-12T04:14:49Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_float16/kernel.py",
+  "date": "2026-06-12T16:14:13Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,37 +18,36 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
+      "acceptance_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 111531,
-    "output": 10728,
-    "cache_read": 718208,
-    "total": 122259
+    "input": 107950,
+    "output": 6408,
+    "cache_read": 526080,
+    "total": 114358
   },
-  "elapsed_total_s": 217.57,
+  "elapsed_total_s": 420.0,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 217.57,
-      "exit": 0,
+      "elapsed_s": 420.0,
+      "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 111531,
-        "output": 10728,
-        "cache_read": 718208,
-        "total": 122259,
+        "input": 107950,
+        "output": 6408,
+        "cache_read": 526080,
+        "total": 114358,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -152,6 +151,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T04:14:49Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 122259,
+      "elapsed_s": 217.57
+    }
+  ]
 }

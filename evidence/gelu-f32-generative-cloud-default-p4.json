@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Operator: GELU activation, tanh/Pad\u00e9 approximation form expressed via the lean exp/sigmoid restatement: out = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))). Mathematically identical to 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3))), but uses asc2.exp + add + div (one fewer asc2 op per tile, no tanh dependency) and lands inside the simulator budget. DO NOT use asc2.tanh \u2014 Phase 9 evidence shows that variant timed out at the 150s sim limit. DO NOT use asc2.erf \u2014 simulator erf is too noisy on float32. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: Pattern A (rank-consistent 1D flatten) \u2014 host launcher flattens each test shape to 1D (size = product of dims); the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. Pin TILE_SIZE=64, CORE_NUM=16 (wider tiles trigger a wide-tile lowering bug on C310 that writes only the first 64 elements). Compute `GELU_C = 0.044715` and `NEG_SQRT_EIGHT_OVER_PI = -math.sqrt(8.0 / math.pi)` as Python module-level constants OUTSIDE the @asc2.jit body. Inside the kernel: `x_cub = x * x * x; inner = (x_cub * GELU_C + x) * NEG_SQRT_EIGHT_OVER_PI; out = x / (asc2.exp(inner) + 1)`. Tile-on-left rule: every scalar-times-Tile multiplication MUST place the Tile on the left (`x_cub * GELU_C`, NOT `GELU_C * x_cub`). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against the canonical numpy reference `0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3)))` (mathematically identical at the assert_close level). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-12T00:14:49Z",
+  "date": "2026-06-12T12:47:19Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,7 +18,7 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -27,24 +27,42 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 24303,
-    "output": 2658,
-    "cache_read": 475307,
-    "total": 26961
+    "input": 42790,
+    "output": 6204,
+    "cache_read": 596493,
+    "total": 48994
   },
-  "elapsed_total_s": 166.9,
+  "elapsed_total_s": 537.99,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 166.9,
+      "elapsed_s": 117.95,
       "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 23528,
+        "output": 1304,
+        "cache_read": 48157,
+        "total": 24832,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 420.04,
+      "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 24303,
-        "output": 2658,
-        "cache_read": 475307,
-        "total": 26961,
+        "input": 19262,
+        "output": 4900,
+        "cache_read": 548336,
+        "total": 24162,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -63,11 +81,9 @@
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['asc2.tanh', '0.044715', 'asc2.erf', 'gelu']",
+    "detail": "found ['0.044715', 'gelu']",
     "markers_found": [
-      "asc2.tanh",
       "0.044715",
-      "asc2.erf",
       "gelu"
     ]
   },
@@ -138,7 +154,7 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['asc2.tanh', '0.044715', 'asc2.erf', 'gelu']"
+        "detail": "found ['0.044715', 'gelu']"
       }
     },
     "failure_category": null,
@@ -150,7 +166,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P4)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",
@@ -229,6 +245,17 @@
       "skipped": false,
       "tokens_total": 32734,
       "elapsed_s": 147.41
+    },
+    {
+      "date": "2026-06-12T00:14:49Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 26961,
+      "elapsed_s": 166.9
     }
   ]
 }

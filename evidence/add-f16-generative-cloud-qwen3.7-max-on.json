@@ -4,8 +4,8 @@
   "operation": "add",
   "dtype": "float16",
   "prompt": "Help me develop an element-wise add operator (out = x + y) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_float16/kernel.py",
-  "date": "2026-06-12T03:12:26Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
+  "date": "2026-06-12T14:57:40Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 69686,
-    "output": 7573,
-    "cache_read": 575744,
-    "total": 77259
+    "input": 82077,
+    "output": 7440,
+    "cache_read": 701312,
+    "total": 89517
   },
-  "elapsed_total_s": 226.64,
+  "elapsed_total_s": 348.51,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 226.64,
+      "elapsed_s": 348.51,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 69686,
-        "output": 7573,
-        "cache_read": 575744,
-        "total": 77259,
+        "input": 82077,
+        "output": 7440,
+        "cache_read": 701312,
+        "total": 89517,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -152,6 +152,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T03:12:26Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 77259,
+      "elapsed_s": 226.64
+    }
+  ]
 }

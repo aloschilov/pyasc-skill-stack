@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator on Ascend950PR_9599 (C310) for float16 with alpha=0.01 and shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "",
-  "date": "2026-06-12T03:57:47Z",
+  "date": "2026-06-12T16:01:04Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,31 +18,31 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 282930,
-    "output": 10167,
-    "cache_read": 864128,
-    "total": 293097
+    "input": 52749,
+    "output": 7514,
+    "cache_read": 425984,
+    "total": 60263
   },
-  "elapsed_total_s": 870.54,
+  "elapsed_total_s": 695.6,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 239.14,
+      "elapsed_s": 146.01,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 196770,
-        "output": 3907,
-        "cache_read": 320384,
-        "total": 200677,
+        "input": 29358,
+        "output": 3959,
+        "cache_read": 183040,
+        "total": 33317,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -53,17 +53,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 403.23,
+      "elapsed_s": 129.5,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 43289,
-        "output": 3167,
-        "cache_read": 250112,
-        "total": 46456,
+        "input": 18230,
+        "output": 2922,
+        "cache_read": 163712,
+        "total": 21152,
         "cost_usd": 0.0
       },
-      "model": "glm-5.1",
+      "model": "dashscope/glm-5.1",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "primary",
-      "elapsed_s": 228.17,
-      "exit": 0,
+      "elapsed_s": 420.09,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 42871,
-        "output": 3093,
-        "cache_read": 293632,
-        "total": 45964,
+        "input": 5161,
+        "output": 633,
+        "cache_read": 79232,
+        "total": 5794,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T03:57:47Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 293097,
+      "elapsed_s": 870.54
+    }
+  ]
 }

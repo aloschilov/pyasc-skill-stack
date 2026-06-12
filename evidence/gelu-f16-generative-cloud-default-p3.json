@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. Place `asc2.sqrt(0.5)` INSIDE the @asc2.jit body (not at module level \u2014 module-level `asc2.*` raises `AttributeError: 'NoneType' object has no attribute 'create_math_SqrtOp'`). TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-11T23:50:57Z",
+  "date": "2026-06-12T14:20:21Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -27,90 +27,39 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 29151,
-    "output": 4844,
-    "cache_read": 209529,
-    "total": 33995
+    "input": 6433,
+    "output": 1684,
+    "cache_read": 64366,
+    "total": 8117
   },
-  "elapsed_total_s": 330.53,
+  "elapsed_total_s": 100.78,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 26.05,
+      "elapsed_s": 100.78,
       "exit": 0,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 2670,
-        "output": 773,
-        "cache_read": 14116,
-        "total": 3443,
+        "input": 6433,
+        "output": 1684,
+        "cache_read": 64366,
+        "total": 8117,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "guided",
-      "elapsed_s": 222.71,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 16382,
-        "output": 2420,
-        "cache_read": 145773,
-        "total": 18802,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 81.77,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 10099,
-        "output": 1651,
-        "cache_read": 49640,
-        "total": 11750,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
+      "static_verify": "pass",
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'from_numpy'\n 128)\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 94, in <module>\n    main()\n  File \"/workspace/kernel.py\", line 84, in main\n    if not test_shape(shape):\n           ^^^^^^^^^^^^^^^^^\n  File \"/workspace/kernel.py\", line 62, in test_shape\n    out_np = gelu_host(x_np)\n             ^^^^^^^^^^^^^^^\n  File \"/workspace/kernel.py\", line 42, in gelu_host\n    x_ptr = asc2.from_numpy(x_flat)\n            ^^^^^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'from_numpy'\n",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "kernel.py",
-      "is_symlink": false,
-      "resolved": "/home/loschilov_aa/ar/work-2/_temp/gen-gelu-float16-a3.p0fr1iq4/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        ".git",
-        "agent-output.txt",
-        "golden@ -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden",
-        "kernel.py",
-        "opencode.json"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 48\ndrwx------ 3 root root  4096 Jun 11 23:50 .\ndrwxr-xr-x 1 root root  4096 Jun 11 23:50 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 23:49 .git\n-rw-r--r-- 1 root root 23057 Jun 11 23:50 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 23:49 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  2848 Jun 11 23:50 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 23:49 opencode.json\n--- ls kernel dir ---\ntotal 48\ndrwx------ 3 root root  4096 Jun 11 23:50 .\ndrwxr-xr-x 1 root root  4096 Jun 11 23:50 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 23:49 .git\n-rw-r--r-- 1 root root 23057 Jun 11 23:50 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 23:49 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  2848 Jun 11 23:50 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 23:49 opencode.json\n--- readlink kernel ---"
-    }
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
@@ -121,7 +70,7 @@
     ]
   },
   "score": {
-    "value": 13.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -134,8 +83,8 @@
         "detail": "OK"
       },
       "no_banned_constructs": {
-        "passed": false,
-        "detail": "found: With"
+        "passed": true,
+        "detail": "OK"
       },
       "asc2_load_store": {
         "passed": true,
@@ -154,12 +103,12 @@
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
+        "passed": true,
+        "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -167,7 +116,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 3"
+        "detail": "expected>=1 params, found 2"
       },
       "output_dtype": {
         "passed": true,
@@ -197,9 +146,9 @@
       "allow_legacy_apis": false
     }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -256,6 +205,17 @@
       "skipped": false,
       "tokens_total": 15423,
       "elapsed_s": 138.48
+    },
+    {
+      "date": "2026-06-11T23:50:57Z",
+      "overall_pass": false,
+      "score": 13.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 33995,
+      "elapsed_s": 330.53
     }
   ]
 }

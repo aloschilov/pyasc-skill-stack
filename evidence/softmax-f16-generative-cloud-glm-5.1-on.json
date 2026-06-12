@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
-  "date": "2026-06-12T04:36:24Z",
+  "date": "2026-06-12T13:50:33Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -30,10 +30,10 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 127588,
-    "output": 7629,
-    "cache_read": 758144,
-    "total": 135217
+    "input": 112145,
+    "output": 7750,
+    "cache_read": 798208,
+    "total": 119895
   },
   "elapsed_total_s": 420.01,
   "attempts": [
@@ -44,10 +44,10 @@
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 127588,
-        "output": 7629,
-        "cache_read": 758144,
-        "total": 135217,
+        "input": 112145,
+        "output": 7750,
+        "cache_read": 798208,
+        "total": 119895,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -73,7 +73,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 14.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -130,8 +130,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x2, shape loop=no"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -151,6 +151,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T04:36:24Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 135217,
+      "elapsed_s": 420.01
+    }
+  ]
 }

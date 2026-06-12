@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Create an RMSNorm capability for float16 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
   "kernel_path": "",
-  "date": "2026-06-12T02:45:17Z",
+  "date": "2026-06-12T14:03:30Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "qwen3.7-max",
   "tokens": {
-    "input": 133375,
-    "output": 13644,
-    "cache_read": 586624,
-    "total": 147019
+    "input": 107264,
+    "output": 8539,
+    "cache_read": 285568,
+    "total": 115803
   },
-  "elapsed_total_s": 681.92,
+  "elapsed_total_s": 952.05,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 258.68,
+      "elapsed_s": 302.76,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 33385,
-        "output": 4500,
-        "cache_read": 163968,
-        "total": 37885,
+        "input": 21331,
+        "output": 795,
+        "cache_read": 35584,
+        "total": 22126,
         "cost_usd": 0.0
       },
       "model": "qwen3.7-max",
@@ -53,17 +53,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 146.15,
+      "elapsed_s": 400.32,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 76575,
-        "output": 5062,
-        "cache_read": 330368,
-        "total": 81637,
+        "input": 68804,
+        "output": 7053,
+        "cache_read": 226944,
+        "total": 75857,
         "cost_usd": 0.0
       },
-      "model": "dashscope/qwen3.7-max",
+      "model": "qwen3.7-max",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "primary",
-      "elapsed_s": 277.09,
+      "elapsed_s": 248.97,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 23415,
-        "output": 4082,
-        "cache_read": 92288,
-        "total": 27497,
+        "input": 17129,
+        "output": 691,
+        "cache_read": 23040,
+        "total": 17820,
         "cost_usd": 0.0
       },
       "model": "qwen3.7-max",
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T02:45:17Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 147019,
+      "elapsed_s": 681.92
+    }
+  ]
 }

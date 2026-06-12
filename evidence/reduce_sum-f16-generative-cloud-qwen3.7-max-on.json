@@ -4,8 +4,8 @@
   "operation": "reduce_sum",
   "dtype": "float16",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float16, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
-  "date": "2026-06-12T03:33:37Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
+  "date": "2026-06-12T15:24:02Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,7 +18,7 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
       "design.md",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 231188,
-    "output": 24883,
-    "cache_read": 1894272,
-    "total": 256071
+    "input": 308961,
+    "output": 24279,
+    "cache_read": 2303744,
+    "total": 333240
   },
-  "elapsed_total_s": 926.35,
+  "elapsed_total_s": 1221.23,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 279.38,
-      "exit": 0,
+      "elapsed_s": 420.01,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 75601,
-        "output": 7092,
-        "cache_read": 610688,
-        "total": 82693,
+        "input": 93706,
+        "output": 8922,
+        "cache_read": 720384,
+        "total": 102628,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -59,14 +59,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 397.33,
+      "elapsed_s": 381.22,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 78174,
-        "output": 8490,
-        "cache_read": 742528,
-        "total": 86664,
+        "input": 123950,
+        "output": 7827,
+        "cache_read": 681088,
+        "total": 131777,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -77,14 +77,14 @@
     {
       "n": 3,
       "prompt_label": "primary",
-      "elapsed_s": 249.64,
-      "exit": 0,
+      "elapsed_s": 420.0,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 77413,
-        "output": 9301,
-        "cache_read": 541056,
-        "total": 86714,
+        "input": 91305,
+        "output": 7530,
+        "cache_read": 902272,
+        "total": 98835,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -101,9 +101,9 @@
     "detail": "Exit code 1: -79.0625  , -463.      ,   -5.96875 ,  -80.375   ,   14.109375,...\n%)\nMax absolute difference: 0.25\nMax relative difference: 0.01570681\n x: array([  78.5    , -186.125  ,  494.25   , -406.25   ,  308.     ,\n        253.25   ,  -71.8125 , -127.75   , -169.     ,   -8.625  ,\n        -79.25   , -463.     ,   -5.875  ,  -80.5    ,   14.0625 ,...\n y: array([  78.375   , -186.125   ,  494.25    , -406.25    ,  307.75    ,\n        253.25    ,  -71.75    , -127.875   , -169.25    ,   -8.648438,\n        -79.0625  , -463.      ,   -5.96875 ,  -80.375   ,   14.109375,...\n",
     "shapes_verified": [],
     "path_diagnostics": {
-      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
+      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
       "is_symlink": false,
-      "resolved": "/home/loschilov_aa/ar/work-2/_temp/gen-reduce_sum-float16-a3.wtk313gp/teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
+      "resolved": "/home/loschilov_aa/ar/work-2/_temp/gen-reduce_sum-float16-a3.mu923vax/teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
       "resolved_exists": true,
       "resolved_inside_project": true,
       "host_parent_listing": [
@@ -113,7 +113,7 @@
         "kernel.py",
         "test"
       ],
-      "container_view": "--- ls /workspace ---\ntotal 216\ndrwx------ 4 root root   4096 Jun 12 03:33 .\ndrwxr-xr-x 1 root root   4096 Jun 12 03:33 ..\ndrwxr-xr-x 7 root root   4096 Jun 12 03:29 .git\n-rw-r--r-- 1 root root 188745 Jun 12 03:33 agent-output.txt\nlrwxrwxrwx 1 root root     71 Jun 12 03:29 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root    841 Jun 12 03:29 opencode.json\nlrwxrwxrwx 1 root root     71 Jun 12 03:29 skills -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x 3 root root   4096 Jun 10 04:35 teams\n--- ls kernel dir ---\ntotal 28\ndrwxr-xr-x 4 root root 4096 Jun 12 03:30 .\ndrwxr-xr-x 3 root root 4096 Jun 12 03:29 ..\n-rw-r--r-- 1 root root  595 Jun 12 03:29 README.md\n-rw-r--r-- 1 root root  441 Jun 12 03:29 conftest.py\ndrwxr-xr-x 2 root root 4096 Jun 12 03:33 docs\n-rw-r--r-- 1 root root 3201 Jun 12 03:30 kernel.py\ndrwxr-xr-x 2 root root 4096 Jun 12 03:29 test\n--- readlink kernel ---"
+      "container_view": "--- ls /workspace ---\ntotal 220\ndrwx------ 4 root root   4096 Jun 12 15:23 .\ndrwxr-xr-x 1 root root   4096 Jun 12 15:24 ..\ndrwxr-xr-x 7 root root   4096 Jun 12 15:16 .git\n-rw-r--r-- 1 root root 196156 Jun 12 15:23 agent-output.txt\nlrwxrwxrwx 1 root root     71 Jun 12 15:16 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root    841 Jun 12 15:16 opencode.json\nlrwxrwxrwx 1 root root     71 Jun 12 15:16 skills -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x 3 root root   4096 Jun 10 04:35 teams\n--- ls kernel dir ---\ntotal 28\ndrwxr-xr-x 4 root root 4096 Jun 12 15:18 .\ndrwxr-xr-x 3 root root 4096 Jun 12 15:17 ..\n-rw-r--r-- 1 root root  603 Jun 12 15:17 README.md\n-rw-r--r-- 1 root root  441 Jun 12 15:17 conftest.py\ndrwxr-xr-x 2 root root 4096 Jun 12 15:23 docs\n-rw-r--r-- 1 root root 2992 Jun 12 15:18 kernel.py\ndrwxr-xr-x 2 root root 4096 Jun 12 15:17 test\n--- readlink kernel ---"
     }
   },
   "semantic_check": {
@@ -125,7 +125,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -182,8 +182,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -203,6 +203,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T03:33:37Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 256071,
+      "elapsed_s": 926.35
+    }
+  ]
 }

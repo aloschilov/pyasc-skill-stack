@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Create an RMSNorm capability for float16 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
   "kernel_path": "",
-  "date": "2026-06-12T04:38:55Z",
+  "date": "2026-06-12T16:56:46Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -23,29 +23,29 @@
   },
   "skills_mode": "off",
   "model_profile": "cloud-glm-5.1",
-  "model": "glm-5.1",
+  "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 117831,
-    "output": 13911,
-    "cache_read": 682112,
-    "total": 131742
+    "input": 91514,
+    "output": 13921,
+    "cache_read": 790912,
+    "total": 105435
   },
-  "elapsed_total_s": 978.81,
+  "elapsed_total_s": 987.53,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 376.19,
+      "elapsed_s": 274.33,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 20088,
-        "output": 4016,
-        "cache_read": 128512,
-        "total": 24104,
+        "input": 45978,
+        "output": 4776,
+        "cache_read": 345984,
+        "total": 50754,
         "cost_usd": 0.0
       },
-      "model": "glm-5.1",
+      "model": "dashscope/glm-5.1",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 388.71,
+      "elapsed_s": 342.27,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 22782,
-        "output": 4928,
-        "cache_read": 250496,
-        "total": 27710,
+        "input": 19299,
+        "output": 4144,
+        "cache_read": 134272,
+        "total": 23443,
         "cost_usd": 0.0
       },
       "model": "glm-5.1",
@@ -71,17 +71,17 @@
     {
       "n": 3,
       "prompt_label": "primary",
-      "elapsed_s": 213.91,
+      "elapsed_s": 370.93,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 74961,
-        "output": 4967,
-        "cache_read": 303104,
-        "total": 79928,
+        "input": 26237,
+        "output": 5001,
+        "cache_read": 310656,
+        "total": 31238,
         "cost_usd": 0.0
       },
-      "model": "dashscope/glm-5.1",
+      "model": "glm-5.1",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T04:38:55Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 131742,
+      "elapsed_s": 978.81
+    }
+  ]
 }

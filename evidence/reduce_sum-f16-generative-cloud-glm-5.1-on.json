@@ -4,8 +4,8 @@
   "operation": "reduce_sum",
   "dtype": "float16",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float16, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
-  "date": "2026-06-12T03:46:27Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
+  "date": "2026-06-12T12:43:30Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -23,32 +23,31 @@
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
+      "acceptance_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 117273,
-    "output": 8453,
-    "cache_read": 747520,
-    "total": 125726
+    "input": 72666,
+    "output": 8295,
+    "cache_read": 750336,
+    "total": 80961
   },
-  "elapsed_total_s": 420.01,
+  "elapsed_total_s": 420.02,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.01,
+      "elapsed_s": 420.02,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 117273,
-        "output": 8453,
-        "cache_read": 747520,
-        "total": 125726,
+        "input": 72666,
+        "output": 8295,
+        "cache_read": 750336,
+        "total": 80961,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -152,6 +151,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T03:46:27Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 125726,
+      "elapsed_s": 420.01
+    }
+  ]
 }

@@ -4,8 +4,8 @@
   "operation": "softmax",
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
-  "kernel_path": "kernels/softmax_f16/kernel.py",
-  "date": "2026-06-12T04:23:33Z",
+  "kernel_path": "kernels/row_softmax_f16/kernel.py",
+  "date": "2026-06-12T17:01:21Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,39 +13,57 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim-perf@sha256:06c63106dad54d573a0a22ed9a99585b519af19a49ae6ddbc583d931ecba64bf"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
   },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
-      "design.md"
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
   "model": "qwen3-coder:30b",
   "tokens": {
-    "input": 297195,
-    "output": 2519,
+    "input": 437209,
+    "output": 1624,
     "cache_read": 0,
-    "total": 299714
+    "total": 438833
   },
-  "elapsed_total_s": 106.68,
+  "elapsed_total_s": 1306.32,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 106.68,
+      "elapsed_s": 106.31,
       "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 234794,
+        "output": 741,
+        "cache_read": 0,
+        "total": 235535,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 1200.01,
+      "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 297195,
-        "output": 2519,
+        "input": 202415,
+        "output": 883,
         "cache_read": 0,
-        "total": 299714,
+        "total": 203298,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
@@ -149,6 +167,18 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T04:23:33Z",
+      "overall_pass": true,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 299714,
+      "elapsed_s": 106.68
+    }
+  ]
 }

@@ -4,8 +4,8 @@
   "operation": "gelu",
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf via np.vectorize (np.erf and scipy.special.erf are not available).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu/kernel.py",
-  "date": "2026-06-12T03:55:32Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_float16/kernel.py",
+  "date": "2026-06-12T16:26:21Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim-perf@sha256:06c63106dad54d573a0a22ed9a99585b519af19a49ae6ddbc583d931ecba64bf"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
   },
   "agent": {
     "platform": "opencode",
@@ -21,46 +21,100 @@
     "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md"
+      "design.md",
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "qwen3-coder:30b",
+  "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 781485,
-    "output": 6292,
+    "input": 590378,
+    "output": 4978,
     "cache_read": 0,
-    "total": 787777
+    "total": 595356
   },
-  "elapsed_total_s": 347.83,
+  "elapsed_total_s": 1388.41,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 347.83,
+      "elapsed_s": 8.13,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 781485,
-        "output": 6292,
+        "input": 8324,
+        "output": 72,
         "cache_read": 0,
-        "total": 787777,
+        "total": 8396,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 1200.09,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 48371,
+        "output": 349,
+        "cache_read": 0,
+        "total": 48720,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 180.19,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 533683,
+        "output": 4557,
+        "cache_read": 0,
+        "total": 538240,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
-    "shapes_verified": []
+    "status": "fail",
+    "detail": "Exit code 1: AttributeError: 'Tile' object has no attribute '__rmul__'\n) from e\nasc.codegen.errors.CodegenError: at <source>:12:17:\n        tile_offset = base_offset + i * tile_size\n        x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])\n        # GELU computation: 0.5 * x * (1 + erf(x / sqrt(2)))\n        # Note: placing asc2.sqrt(0.5) inside jit body as required\n                 ^\n        gelu_x = 0.5 * x * (1 + asc2.erf(x / asc2.sqrt(2.0)))\n        asc2.store(gelu_x, out_gm, offsets=[tile_offset])\nAttributeError: 'Tile' object has no attribute '__rmul__'\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/gelu_float16/kernel.py",
+      "is_symlink": false,
+      "resolved": "/Users/aloschilov/ar/work/_temp/gen-gelu-float16-a3.zgcw47ni/teams/pyasc-kernel-dev-team/kernels/gelu_float16/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        "README.md",
+        "__pycache__",
+        "conftest.py",
+        "docs",
+        "kernel.py",
+        "test"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 152\ndrwx------  8 root root    256 Jun 12 16:26 .\ndrwxr-xr-x  1 root root   4096 Jun 12 16:26 ..\ndrwxr-xr-x 10 root root    320 Jun 12 16:23 .git\n-rw-r--r--  1 root root 144535 Jun 12 16:26 agent-output.txt\nlrwxr-xr-x  1 root root     68 Jun 12 16:23 golden -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r--  1 root root    668 Jun 12 16:23 opencode.json\nlrwxr-xr-x  1 root root     68 Jun 12 16:23 skills -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x  3 root root     96 Jun 10 11:49 teams\n--- ls kernel dir ---\ntotal 12\ndrwxr-xr-x 8 root root  256 Jun 12 16:25 .\ndrwxr-xr-x 3 root root   96 Jun 12 16:23 ..\n-rw-r--r-- 1 root root  599 Jun 12 16:23 README.md\ndrwxr-xr-x 3 root root   96 Jun 12 16:25 __pycache__\n-rw-r--r-- 1 root root  441 Jun 12 16:23 conftest.py\ndrwxr-xr-x 5 root root  160 Jun 12 16:25 docs\n-rw-r--r-- 1 root root 3800 Jun 12 16:24 kernel.py\ndrwxr-xr-x 2 root root   64 Jun 12 16:23 test\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
     "passed": true,
@@ -149,6 +203,18 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T03:55:32Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 787777,
+      "elapsed_s": 347.83
+    }
+  ]
 }

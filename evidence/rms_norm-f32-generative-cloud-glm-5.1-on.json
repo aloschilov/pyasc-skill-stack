@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Create an RMSNorm capability for float32 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_f32/kernel.py",
-  "date": "2026-06-12T04:59:25Z",
+  "date": "2026-06-12T14:14:13Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -22,32 +22,31 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md",
-      "acceptance_review.md"
+      "self_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 151371,
-    "output": 7492,
-    "cache_read": 623616,
-    "total": 158863
+    "input": 68592,
+    "output": 6341,
+    "cache_read": 469248,
+    "total": 74933
   },
-  "elapsed_total_s": 420.02,
+  "elapsed_total_s": 420.01,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.02,
+      "elapsed_s": 420.01,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 151371,
-        "output": 7492,
-        "cache_read": 623616,
-        "total": 158863,
+        "input": 68592,
+        "output": 6341,
+        "cache_read": 469248,
+        "total": 74933,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -74,7 +73,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 13.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -111,8 +110,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -131,8 +130,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x2, shape loop=no"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": false,
@@ -152,6 +151,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T04:59:25Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 158863,
+      "elapsed_s": 420.02
+    }
+  ]
 }

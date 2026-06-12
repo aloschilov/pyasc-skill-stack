@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float32, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
   "kernel_path": "",
-  "date": "2026-06-12T02:57:48Z",
+  "date": "2026-06-12T15:08:25Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "glm-5.1",
   "tokens": {
-    "input": 287330,
-    "output": 6613,
-    "cache_read": 564608,
-    "total": 293943
+    "input": 143212,
+    "output": 7709,
+    "cache_read": 727808,
+    "total": 150921
   },
-  "elapsed_total_s": 789.58,
+  "elapsed_total_s": 821.1,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.01,
+      "elapsed_s": 420.0,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 80478,
-        "output": 1004,
-        "cache_read": 91008,
-        "total": 81482,
+        "input": 15303,
+        "output": 2079,
+        "cache_read": 127488,
+        "total": 17382,
         "cost_usd": 0.0
       },
       "model": "glm-5.1",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 210.74,
+      "elapsed_s": 164.3,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 137369,
-        "output": 3244,
-        "cache_read": 228096,
-        "total": 140613,
+        "input": 60301,
+        "output": 2819,
+        "cache_read": 226048,
+        "total": 63120,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "primary",
-      "elapsed_s": 158.83,
+      "elapsed_s": 236.8,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 69483,
-        "output": 2365,
-        "cache_read": 245504,
-        "total": 71848,
+        "input": 67608,
+        "output": 2811,
+        "cache_read": 374272,
+        "total": 70419,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T02:57:48Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 293943,
+      "elapsed_s": 789.58
+    }
+  ]
 }

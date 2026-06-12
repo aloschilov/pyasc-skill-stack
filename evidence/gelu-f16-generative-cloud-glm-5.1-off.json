@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf via np.vectorize (np.erf and scipy.special.erf are not available).",
   "kernel_path": "",
-  "date": "2026-06-12T03:26:26Z",
+  "date": "2026-06-12T15:33:56Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 238880,
-    "output": 7021,
-    "cache_read": 562432,
-    "total": 245901
+    "input": 198872,
+    "output": 8761,
+    "cache_read": 570368,
+    "total": 207633
   },
-  "elapsed_total_s": 880.93,
+  "elapsed_total_s": 868.24,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 296.02,
+      "elapsed_s": 309.73,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 169987,
-        "output": 3288,
-        "cache_read": 306560,
-        "total": 173275,
+        "input": 126670,
+        "output": 3311,
+        "cache_read": 273664,
+        "total": 129981,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 420.01,
+      "elapsed_s": 420.0,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 16331,
-        "output": 741,
-        "cache_read": 41344,
-        "total": 17072,
+        "input": 33562,
+        "output": 2214,
+        "cache_read": 94976,
+        "total": 35776,
         "cost_usd": 0.0
       },
       "model": "glm-5.1",
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "primary",
-      "elapsed_s": 164.9,
+      "elapsed_s": 138.51,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 52562,
-        "output": 2992,
-        "cache_read": 214528,
-        "total": 55554,
+        "input": 38640,
+        "output": 3236,
+        "cache_read": 201728,
+        "total": 41876,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T03:26:26Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 245901,
+      "elapsed_s": 880.93
+    }
+  ]
 }

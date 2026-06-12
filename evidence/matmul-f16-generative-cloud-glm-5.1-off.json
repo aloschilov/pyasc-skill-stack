@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a tiled matmul operator on Ascend950PR_9599 (C310) for float16 inputs producing float32 output. Use small shapes such as M=K=N=16 or (M=32, K=16, N=32). Inputs must be torch.Tensor (numpy buffers are silently zeroed by the C310 simulator path for matmul). Load A to asc2.TileLocation.L0A and B to L0B, then compute `a @ b` (or asc2.matmul) and asc2.store the float32 result.",
   "kernel_path": "",
-  "date": "2026-06-12T04:22:36Z",
+  "date": "2026-06-12T16:40:18Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,31 +18,31 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 166615,
-    "output": 8794,
-    "cache_read": 888064,
-    "total": 175409
+    "input": 276507,
+    "output": 11541,
+    "cache_read": 2183936,
+    "total": 288048
   },
-  "elapsed_total_s": 688.63,
+  "elapsed_total_s": 1260.01,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 200.61,
-      "exit": 0,
+      "elapsed_s": 420.0,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 61689,
-        "output": 3421,
-        "cache_read": 440320,
-        "total": 65110,
+        "input": 120275,
+        "output": 5069,
+        "cache_read": 1262976,
+        "total": 125344,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 191.81,
-      "exit": 0,
+      "elapsed_s": 420.01,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 80740,
-        "output": 3542,
-        "cache_read": 396928,
-        "total": 84282,
+        "input": 82182,
+        "output": 5008,
+        "cache_read": 770816,
+        "total": 87190,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "primary",
-      "elapsed_s": 296.21,
-      "exit": 0,
+      "elapsed_s": 420.0,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 24186,
-        "output": 1831,
-        "cache_read": 50816,
-        "total": 26017,
+        "input": 74050,
+        "output": 1464,
+        "cache_read": 150144,
+        "total": 75514,
         "cost_usd": 0.0
       },
       "model": "glm-5.1",
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "history": [
+    {
+      "date": "2026-06-12T04:22:36Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 175409,
+      "elapsed_s": 688.63
+    }
+  ]
 }
