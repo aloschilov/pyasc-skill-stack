@@ -1,24 +1,8 @@
 {
   "schema_version": "2",
-  "generated_at": "2026-06-12T09:00:20Z",
+  "generated_at": "2026-06-12T08:35:56Z",
   "partial_run": false,
-  "legs_status": {
-    "needs": {
-      "nightly-gate": "skipped",
-      "local-stability-gate": "skipped"
-    },
-    "partial_run": false,
-    "legs": [
-      {
-        "name": "nightly-gate",
-        "conclusion": "skipped"
-      },
-      {
-        "name": "local-stability-gate",
-        "conclusion": "skipped"
-      }
-    ]
-  },
+  "legs_status": null,
   "cells": [
     {
       "op": "abs",
@@ -4417,27 +4401,6 @@
             "pass_pp_ci_low": -16.1,
             "pass_pp_ci_high": 38.7,
             "tokens_pct": 205.8
-          }
-        },
-        {
-          "date": "2026-06-12",
-          "P3-P2": {
-            "pass_pp": 58.3,
-            "pass_pp_ci_low": 22.5,
-            "pass_pp_ci_high": 80.7,
-            "tokens_pct": 28.2
-          },
-          "P4-P3": {
-            "pass_pp": 33.4,
-            "pass_pp_ci_low": -1.8,
-            "pass_pp_ci_high": 60.6,
-            "tokens_pct": -43.4
-          },
-          "P6-P4": {
-            "pass_pp": 1.6,
-            "pass_pp_ci_low": -22.5,
-            "pass_pp_ci_high": 29.3,
-            "tokens_pct": 316.0
           }
         },
         {
