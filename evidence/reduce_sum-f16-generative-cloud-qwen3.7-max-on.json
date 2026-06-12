@@ -1,0 +1,208 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "reduce_sum",
+  "dtype": "float16",
+  "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float16, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
+  "date": "2026-06-12T03:33:37Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "cloud-qwen3.7-max",
+  "model": "dashscope/qwen3.7-max",
+  "tokens": {
+    "input": 231188,
+    "output": 24883,
+    "cache_read": 1894272,
+    "total": 256071
+  },
+  "elapsed_total_s": 926.35,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 279.38,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 75601,
+        "output": 7092,
+        "cache_read": 610688,
+        "total": 82693,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/qwen3.7-max",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 397.33,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 78174,
+        "output": 8490,
+        "cache_read": 742528,
+        "total": 86664,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/qwen3.7-max",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 249.64,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 77413,
+        "output": 9301,
+        "cache_read": 541056,
+        "total": 86714,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/qwen3.7-max",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Exit code 1: -79.0625  , -463.      ,   -5.96875 ,  -80.375   ,   14.109375,...\n%)\nMax absolute difference: 0.25\nMax relative difference: 0.01570681\n x: array([  78.5    , -186.125  ,  494.25   , -406.25   ,  308.     ,\n        253.25   ,  -71.8125 , -127.75   , -169.     ,   -8.625  ,\n        -79.25   , -463.     ,   -5.875  ,  -80.5    ,   14.0625 ,...\n y: array([  78.375   , -186.125   ,  494.25    , -406.25    ,  307.75    ,\n        253.25    ,  -71.75    , -127.875   , -169.25    ,   -8.648438,\n        -79.0625  , -463.      ,   -5.96875 ,  -80.375   ,   14.109375,...\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
+      "is_symlink": false,
+      "resolved": "/home/loschilov_aa/ar/work-2/_temp/gen-reduce_sum-float16-a3.wtk313gp/teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        "README.md",
+        "conftest.py",
+        "docs",
+        "kernel.py",
+        "test"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 216\ndrwx------ 4 root root   4096 Jun 12 03:33 .\ndrwxr-xr-x 1 root root   4096 Jun 12 03:33 ..\ndrwxr-xr-x 7 root root   4096 Jun 12 03:29 .git\n-rw-r--r-- 1 root root 188745 Jun 12 03:33 agent-output.txt\nlrwxrwxrwx 1 root root     71 Jun 12 03:29 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root    841 Jun 12 03:29 opencode.json\nlrwxrwxrwx 1 root root     71 Jun 12 03:29 skills -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x 3 root root   4096 Jun 10 04:35 teams\n--- ls kernel dir ---\ntotal 28\ndrwxr-xr-x 4 root root 4096 Jun 12 03:30 .\ndrwxr-xr-x 3 root root 4096 Jun 12 03:29 ..\n-rw-r--r-- 1 root root  595 Jun 12 03:29 README.md\n-rw-r--r-- 1 root root  441 Jun 12 03:29 conftest.py\ndrwxr-xr-x 2 root root 4096 Jun 12 03:33 docs\n-rw-r--r-- 1 root root 3201 Jun 12 03:30 kernel.py\ndrwxr-xr-x 2 root root 4096 Jun 12 03:29 test\n--- readlink kernel ---"
+    }
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.reduce_sum', '.sum(']",
+    "markers_found": [
+      "asc2.reduce_sum",
+      ".sum("
+    ]
+  },
+  "score": {
+    "value": 16.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.reduce_sum', '.sum(']"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "history": []
+}

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-11T10:38:24Z",
+  "date": "2026-06-11T23:59:28Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -20,49 +20,33 @@
     "timeout_s": 420,
     "completed": true,
     "artifacts_found": [
-      "kernel.py"
+      "kernel.py",
+      "design.md",
+      "verification.md"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 45387,
-    "output": 4519,
-    "cache_read": 344862,
-    "total": 49906
+    "input": 21965,
+    "output": 8195,
+    "cache_read": 266115,
+    "total": 30160
   },
-  "elapsed_total_s": 320.51,
+  "elapsed_total_s": 264.04,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 173.07,
+      "elapsed_s": 34.2,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 26998,
-        "output": 2014,
-        "cache_read": 250522,
-        "total": 29012,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "guided",
-      "elapsed_s": 70.14,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 11819,
-        "output": 1156,
-        "cache_read": 32855,
-        "total": 12975,
+        "input": 2348,
+        "output": 933,
+        "cache_read": 22445,
+        "total": 3281,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -71,21 +55,39 @@
       "runtime_status": "fail"
     },
     {
-      "n": 3,
+      "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 77.3,
+      "elapsed_s": 119.81,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 6570,
-        "output": 1349,
-        "cache_read": 61485,
-        "total": 7919,
+        "input": 13088,
+        "output": 2910,
+        "cache_read": 175364,
+        "total": 15998,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
-      "static_verify": "pass",
+      "static_verify": "fail",
+      "runtime_status": "pass"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 110.03,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 6529,
+        "output": 4352,
+        "cache_read": 68306,
+        "total": 10881,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
@@ -94,22 +96,24 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: 0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\n: 128 / 128 (100%)\nMax absolute difference: 0.9808121\nMax relative difference: 0.99001324\n x: array([[8.522034e-03, 1.790047e-03, 2.641678e-04, 6.401062e-03,\n        3.656387e-03, 4.673004e-03, 7.987022e-04, 3.705978e-03,\n        6.435394e-03, 3.551483e-03, 8.316040e-03, 7.904053e-03,...\n y: array([[0.852051, 0.178955, 0.026413, 0.640137, 0.365479, 0.467285,\n        0.079834, 0.370605, 0.643555, 0.35498 , 0.831055, 0.790527,\n        0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\n",
+    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'Model'\nCreating models for platform Ascend950PR_9599\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 187, in <module>\n    main()\n  File \"/workspace/kernel.py\", line 182, in main\n    model = create_model(shape)\n            ^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/kernel.py\", line 67, in create_model\n    model = asc2.Model()\n            ^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'Model'\n",
     "shapes_verified": [],
     "path_diagnostics": {
       "rel_kernel": "kernel.py",
       "is_symlink": false,
-      "resolved": "/home/loschilov_aa/ar/work-3/_temp/gen-leaky_relu-float16-a3.jkqq8nub/kernel.py",
+      "resolved": "/home/loschilov_aa/ar/work-2/_temp/gen-leaky_relu-float16-a3.5fd380z7/kernel.py",
       "resolved_exists": true,
       "resolved_inside_project": true,
       "host_parent_listing": [
         ".git",
         "agent-output.txt",
-        "golden@ -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden",
+        "design.md",
+        "golden@ -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden",
         "kernel.py",
-        "opencode.json"
+        "opencode.json",
+        "verification.md"
       ],
-      "container_view": "--- ls /workspace ---\ntotal 56\ndrwx------ 3 root root  4096 Jun 11 10:32 .\ndrwxr-xr-x 1 root root  4096 Jun 11 10:38 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 10:30 .git\n-rw-r--r-- 1 root root 30254 Jun 11 10:32 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 10:30 golden -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  3388 Jun 11 10:31 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 10:30 opencode.json\n--- ls kernel dir ---\ntotal 56\ndrwx------ 3 root root  4096 Jun 11 10:32 .\ndrwxr-xr-x 1 root root  4096 Jun 11 10:38 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 10:30 .git\n-rw-r--r-- 1 root root 30254 Jun 11 10:32 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 10:30 golden -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  3388 Jun 11 10:31 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 10:30 opencode.json\n--- readlink kernel ---"
+      "container_view": "--- ls /workspace ---\ntotal 64\ndrwx------ 3 root root  4096 Jun 11 23:59 .\ndrwxr-xr-x 1 root root  4096 Jun 11 23:59 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 23:57 .git\n-rw-r--r-- 1 root root 27840 Jun 11 23:59 agent-output.txt\n-rw-r--r-- 1 root root  2779 Jun 11 23:58 design.md\nlrwxrwxrwx 1 root root    71 Jun 11 23:57 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  5535 Jun 11 23:58 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 23:57 opencode.json\n-rw-r--r-- 1 root root  2932 Jun 11 23:59 verification.md\n--- ls kernel dir ---\ntotal 64\ndrwx------ 3 root root  4096 Jun 11 23:59 .\ndrwxr-xr-x 1 root root  4096 Jun 11 23:59 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 23:57 .git\n-rw-r--r-- 1 root root 27840 Jun 11 23:59 agent-output.txt\n-rw-r--r-- 1 root root  2779 Jun 11 23:58 design.md\nlrwxrwxrwx 1 root root    71 Jun 11 23:57 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  5535 Jun 11 23:58 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 23:57 opencode.json\n-rw-r--r-- 1 root root  2932 Jun 11 23:59 verification.md\n--- readlink kernel ---"
     }
   },
   "semantic_check": {
@@ -120,13 +124,13 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 10.0,
     "threshold": 12,
-    "accepted": true,
+    "accepted": false,
     "checks": {
       "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
+        "passed": false,
+        "detail": "missing"
       },
       "no_return_value": {
         "passed": true,
@@ -137,28 +141,28 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
+        "passed": false,
+        "detail": "missing asc2.load/asc2.store"
       },
       "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
+        "passed": false,
+        "detail": "missing asc2.tensor"
       },
       "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
+        "passed": false,
+        "detail": "no range call in kernel"
       },
       "verification": {
         "passed": true,
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
+        "passed": false,
+        "detail": "no launch pattern"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -166,7 +170,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 2"
+        "detail": "skipped (no --op or op not in arity table)"
       },
       "output_dtype": {
         "passed": true,
@@ -196,9 +200,9 @@
       "allow_legacy_apis": false
     }
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -244,6 +248,17 @@
       "skipped": false,
       "tokens_total": 78409,
       "elapsed_s": 343.88
+    },
+    {
+      "date": "2026-06-11T10:38:24Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 49906,
+      "elapsed_s": 320.51
     }
   ]
 }

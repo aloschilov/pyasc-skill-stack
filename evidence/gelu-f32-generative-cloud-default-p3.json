@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Operator: GELU activation, tanh/Pad\u00e9 approximation form expressed via the lean exp/sigmoid restatement: out = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))). Mathematically identical to 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3))), but uses asc2.exp + add + div (one fewer asc2 op per tile, no tanh dependency) and lands inside the simulator budget. DO NOT use asc2.tanh \u2014 Phase 9 evidence shows that variant timed out at the 150s sim limit. DO NOT use asc2.erf \u2014 simulator erf is too noisy on float32. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: Pattern A (rank-consistent 1D flatten) \u2014 host launcher flattens each test shape to 1D (size = product of dims); the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. Pin TILE_SIZE=64, CORE_NUM=16 (wider tiles trigger a wide-tile lowering bug on C310 that writes only the first 64 elements). Compute `GELU_C = 0.044715` and `NEG_SQRT_EIGHT_OVER_PI = -math.sqrt(8.0 / math.pi)` as Python module-level constants OUTSIDE the @asc2.jit body. Inside the kernel: `x_cub = x * x * x; inner = (x_cub * GELU_C + x) * NEG_SQRT_EIGHT_OVER_PI; out = x / (asc2.exp(inner) + 1)`. Tile-on-left rule: every scalar-times-Tile multiplication MUST place the Tile on the left (`x_cub * GELU_C`, NOT `GELU_C * x_cub`). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against the canonical numpy reference `0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3)))` (mathematically identical at the assert_close level). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-11T10:19:33Z",
+  "date": "2026-06-11T23:54:49Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -27,24 +27,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 98555,
-    "output": 9430,
-    "cache_read": 857340,
-    "total": 107985
+    "input": 17432,
+    "output": 3423,
+    "cache_read": 161996,
+    "total": 20855
   },
-  "elapsed_total_s": 682.98,
+  "elapsed_total_s": 214.24,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 420.0,
-      "exit": 124,
+      "elapsed_s": 64.75,
+      "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 68457,
-        "output": 4638,
-        "cache_read": 668846,
-        "total": 73095,
+        "input": 6501,
+        "output": 824,
+        "cache_read": 38975,
+        "total": 7325,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -55,14 +55,14 @@
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 141.77,
+      "elapsed_s": 45.97,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 13748,
-        "output": 3629,
-        "cache_read": 84437,
-        "total": 17377,
+        "input": 3496,
+        "output": 739,
+        "cache_read": 22931,
+        "total": 4235,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -73,14 +73,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 121.21,
+      "elapsed_s": 103.52,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 16350,
-        "output": 1163,
-        "cache_read": 104057,
-        "total": 17513,
+        "input": 7435,
+        "output": 1860,
+        "cache_read": 100090,
+        "total": 9295,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -94,22 +94,22 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: ModuleNotFoundError: No module named 'ascend'\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 3, in <module>\n    import ascend.asc2 as asc2\nModuleNotFoundError: No module named 'ascend'\n",
+    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'array'\nTesting shape: [1, 128]\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 80, in <module>\n    test_gelu()\n  File \"/workspace/kernel.py\", line 57, in test_gelu\n    x_ptr = asc2.array(x_host)\n            ^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'array'\n",
     "shapes_verified": [],
     "path_diagnostics": {
       "rel_kernel": "kernel.py",
       "is_symlink": false,
-      "resolved": "/home/loschilov_aa/ar/work-3/_temp/gen-gelu-float32-a3.w2a_b7js/kernel.py",
+      "resolved": "/home/loschilov_aa/ar/work-2/_temp/gen-gelu-float32-a3.moqk05sx/kernel.py",
       "resolved_exists": true,
       "resolved_inside_project": true,
       "host_parent_listing": [
         ".git",
         "agent-output.txt",
-        "golden@ -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden",
+        "golden@ -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden",
         "kernel.py",
         "opencode.json"
       ],
-      "container_view": "--- ls /workspace ---\ntotal 48\ndrwx------ 3 root root  4096 Jun 11 10:19 .\ndrwxr-xr-x 1 root root  4096 Jun 11 10:19 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 10:17 .git\n-rw-r--r-- 1 root root 23585 Jun 11 10:19 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 10:17 golden -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  1665 Jun 11 10:17 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 10:17 opencode.json\n--- ls kernel dir ---\ntotal 48\ndrwx------ 3 root root  4096 Jun 11 10:19 .\ndrwxr-xr-x 1 root root  4096 Jun 11 10:19 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 10:17 .git\n-rw-r--r-- 1 root root 23585 Jun 11 10:19 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 10:17 golden -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  1665 Jun 11 10:17 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 10:17 opencode.json\n--- readlink kernel ---"
+      "container_view": "--- ls /workspace ---\ntotal 60\ndrwx------ 3 root root  4096 Jun 11 23:54 .\ndrwxr-xr-x 1 root root  4096 Jun 11 23:54 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 23:53 .git\n-rw-r--r-- 1 root root 36267 Jun 11 23:54 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 23:53 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  2254 Jun 11 23:54 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 23:53 opencode.json\n--- ls kernel dir ---\ntotal 60\ndrwx------ 3 root root  4096 Jun 11 23:54 .\ndrwxr-xr-x 1 root root  4096 Jun 11 23:54 ..\ndrwxr-xr-x 7 root root  4096 Jun 11 23:53 .git\n-rw-r--r-- 1 root root 36267 Jun 11 23:54 agent-output.txt\nlrwxrwxrwx 1 root root    71 Jun 11 23:53 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root  2254 Jun 11 23:54 kernel.py\n-rw-r--r-- 1 root root   383 Jun 11 23:53 opencode.json\n--- readlink kernel ---"
     }
   },
   "semantic_check": {
@@ -121,9 +121,9 @@
     ]
   },
   "score": {
-    "value": 12.0,
+    "value": 13.0,
     "threshold": 12,
-    "accepted": false,
+    "accepted": true,
     "checks": {
       "jit_decorator": {
         "passed": true,
@@ -135,7 +135,7 @@
       },
       "no_banned_constructs": {
         "passed": false,
-        "detail": "found: With"
+        "detail": "found: Break, Break"
       },
       "asc2_load_store": {
         "passed": true,
@@ -146,8 +146,8 @@
         "detail": "present"
       },
       "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
+        "passed": true,
+        "detail": "range/asc2.range present"
       },
       "verification": {
         "passed": true,
@@ -190,16 +190,16 @@
         "detail": "found ['0.044715', 'gelu']"
       }
     },
-    "failure_category": "F_missing_asc2_import",
+    "failure_category": null,
     "gating_detail": {
       "legacy_api_findings": [],
-      "missing_asc2_import": true,
+      "missing_asc2_import": false,
       "allow_legacy_apis": false
     }
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27329239384",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -267,6 +267,17 @@
       "skipped": false,
       "tokens_total": 40644,
       "elapsed_s": 170.42
+    },
+    {
+      "date": "2026-06-11T10:19:33Z",
+      "overall_pass": false,
+      "score": 12.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 107985,
+      "elapsed_s": 682.98
     }
   ]
 }

@@ -1,0 +1,156 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "matmul",
+  "dtype": "float16",
+  "prompt": "Help me develop a tiled matmul operator on Ascend950PR_9599 (C310) for float16 inputs producing float32 output. Use small shapes such as M=K=N=16 or (M=32, K=16, N=32). Inputs must be torch.Tensor (numpy buffers are silently zeroed by the C310 simulator path for matmul). Load A to asc2.TileLocation.L0A and B to L0B, then compute `a @ b` (or asc2.matmul) and asc2.store the float32 result.",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16_f32/kernel.py",
+  "date": "2026-06-12T04:18:05Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "cloud-qwen3.7-max",
+  "model": "dashscope/qwen3.7-max",
+  "tokens": {
+    "input": 144168,
+    "output": 7586,
+    "cache_read": 514560,
+    "total": 151754
+  },
+  "elapsed_total_s": 178.98,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 178.98,
+      "exit": 0,
+      "outcome": "pass",
+      "tokens": {
+        "input": 144168,
+        "output": 7586,
+        "cache_read": 514560,
+        "total": 151754,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/qwen3.7-max",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['@ ']",
+    "markers_found": [
+      "@ "
+    ]
+  },
+  "score": {
+    "value": 15.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=3 params, found 3"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['@ ']"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "history": []
+}

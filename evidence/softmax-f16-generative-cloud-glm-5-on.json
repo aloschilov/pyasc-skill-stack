@@ -1,0 +1,207 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "softmax",
+  "dtype": "float16",
+  "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
+  "date": "2026-06-12T02:32:57Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": false,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "cloud-glm-5",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 220427,
+    "output": 29427,
+    "cache_read": 1722142,
+    "total": 249854
+  },
+  "elapsed_total_s": 1151.48,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 311.45,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 67560,
+        "output": 7551,
+        "cache_read": 583544,
+        "total": 75111,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 420.0,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 79894,
+        "output": 11679,
+        "cache_read": 564577,
+        "total": 91573,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 420.03,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 72973,
+        "output": 10197,
+        "cache_read": 574021,
+        "total": 83170,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Exit code 1: 1.144409e-03, 2.503395e-05],\nrt_same_pos\n    raise AssertionError(msg)\nAssertionError: \nNot equal to tolerance rtol=0.05, atol=0.05\n\nx and y +inf location mismatch:\n x: array([[5.564690e-04, 6.556511e-07, 1.192093e-07, ...,          inf,\n                 inf,          inf],\n       [8.721352e-04, 6.208420e-04, 5.364418e-07, ...,          inf,...\n y: array([[5.564690e-04, 6.556511e-07, 1.192093e-07, ..., 1.059175e-04,\n        1.144409e-03, 2.503395e-05],\n       [8.721352e-04, 6.208420e-04, 5.364418e-07, ..., 4.172325e-07,...\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
+      "is_symlink": false,
+      "resolved": "/home/loschilov_aa/ar/work-2/_temp/gen-softmax-float16-a3.764rhosh/teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        "README.md",
+        "conftest.py",
+        "docs",
+        "kernel.py",
+        "test"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 236\ndrwx------ 4 root root   4096 Jun 12 02:32 .\ndrwxr-xr-x 1 root root   4096 Jun 12 02:32 ..\ndrwxr-xr-x 7 root root   4096 Jun 12 02:25 .git\n-rw-r--r-- 1 root root 211472 Jun 12 02:32 agent-output.txt\nlrwxrwxrwx 1 root root     71 Jun 12 02:25 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root    822 Jun 12 02:25 opencode.json\nlrwxrwxrwx 1 root root     71 Jun 12 02:25 skills -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x 3 root root   4096 Jun 10 04:35 teams\n--- ls kernel dir ---\ntotal 32\ndrwxr-xr-x 4 root root 4096 Jun 12 02:28 .\ndrwxr-xr-x 3 root root 4096 Jun 12 02:25 ..\n-rw-r--r-- 1 root root  597 Jun 12 02:25 README.md\n-rw-r--r-- 1 root root  441 Jun 12 02:25 conftest.py\ndrwxr-xr-x 2 root root 4096 Jun 12 02:31 docs\n-rw-r--r-- 1 root root 5424 Jun 12 02:28 kernel.py\ndrwxr-xr-x 2 root root 4096 Jun 12 02:25 test\n--- readlink kernel ---"
+    }
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.softmax', 'softmax']",
+    "markers_found": [
+      "asc2.softmax",
+      "softmax"
+    ]
+  },
+  "score": {
+    "value": 16.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x2, shape loop=no"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.softmax', 'softmax']"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Cloud DashScope run (cloud-glm-5, skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "history": []
+}

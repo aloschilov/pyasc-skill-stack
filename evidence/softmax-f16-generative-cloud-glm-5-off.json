@@ -1,0 +1,112 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "softmax",
+  "dtype": "float16",
+  "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
+  "kernel_path": "",
+  "date": "2026-06-12T06:11:26Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-glm-5",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 178448,
+    "output": 19359,
+    "cache_read": 701259,
+    "total": 197807
+  },
+  "elapsed_total_s": 820.94,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 79.14,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 25876,
+        "output": 929,
+        "cache_read": 92993,
+        "total": 26805,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 420.02,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 109742,
+        "output": 8807,
+        "cache_read": 410983,
+        "total": 118549,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 321.78,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 42830,
+        "output": 9623,
+        "cache_read": 197283,
+        "total": 52453,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
+  },
+  "static_verify": "fail",
+  "notes": "Cloud DashScope run (cloud-glm-5, skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "history": []
+}

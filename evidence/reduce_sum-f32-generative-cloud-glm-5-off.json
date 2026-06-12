@@ -1,0 +1,112 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "reduce_sum",
+  "dtype": "float32",
+  "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float32, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
+  "kernel_path": "",
+  "date": "2026-06-12T05:14:01Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-glm-5",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 67210,
+    "output": 7762,
+    "cache_read": 435983,
+    "total": 74972
+  },
+  "elapsed_total_s": 677.29,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 184.43,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 29991,
+        "output": 4910,
+        "cache_read": 236113,
+        "total": 34901,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 278.43,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 31753,
+        "output": 2533,
+        "cache_read": 163429,
+        "total": 34286,
+        "cost_usd": 0.0
+      },
+      "model": "glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 214.43,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 5466,
+        "output": 319,
+        "cache_read": 36441,
+        "total": 5785,
+        "cost_usd": 0.0
+      },
+      "model": "glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
+  },
+  "static_verify": "fail",
+  "notes": "Cloud DashScope run (cloud-glm-5, skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "history": []
+}

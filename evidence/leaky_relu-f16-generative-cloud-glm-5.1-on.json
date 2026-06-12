@@ -1,0 +1,207 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "leaky_relu",
+  "dtype": "float16",
+  "prompt": "Help me develop a leaky_relu operator on Ascend950PR_9599 (C310) for float16 with alpha=0.01 and shapes [1,128], [4,2048], [32,4096].",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu/kernel.py",
+  "date": "2026-06-12T04:29:03Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "cloud-glm-5.1",
+  "model": "dashscope/glm-5.1",
+  "tokens": {
+    "input": 206027,
+    "output": 13905,
+    "cache_read": 1912192,
+    "total": 219932
+  },
+  "elapsed_total_s": 1181.6,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 420.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 76816,
+        "output": 5012,
+        "cache_read": 896768,
+        "total": 81828,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5.1",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 420.1,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 63338,
+        "output": 1024,
+        "cache_read": 307968,
+        "total": 64362,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5.1",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 341.49,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 65873,
+        "output": 7869,
+        "cache_read": 707456,
+        "total": 73742,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5.1",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Exit code 1: 1.434570e+00, -1.451111e-02,  3.310547e+00,  2.904297e+00,...\n/ 128 (46.9%)\nMax absolute difference: 4.8571777\nMax relative difference: 0.9900023\n x: array([ 3.518677e-02, -3.210449e-02, -4.736328e-02,  1.399994e-02,\n       -1.345825e-02, -3.274918e-03, -4.205322e-02, -1.295471e-02,\n        1.435089e-02, -1.451111e-02,  3.311157e-02,  2.905273e-02,...\n y: array([ 3.517578e+00, -3.210449e-02, -4.736328e-02,  1.399414e+00,\n       -1.345825e-02, -3.274918e-03, -4.205322e-02, -1.295471e-02,\n        1.434570e+00, -1.451111e-02,  3.310547e+00,  2.904297e+00,...\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/leaky_relu/kernel.py",
+      "is_symlink": false,
+      "resolved": "/home/loschilov_aa/ar/work-3/_temp/gen-leaky_relu-float16-a3.z_z81xzj/teams/pyasc-kernel-dev-team/kernels/leaky_relu/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        "README.md",
+        "conftest.py",
+        "docs",
+        "kernel.py",
+        "test"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 220\ndrwx------ 4 root root   4096 Jun 12 04:28 .\ndrwxr-xr-x 1 root root   4096 Jun 12 04:29 ..\ndrwxr-xr-x 7 root root   4096 Jun 12 04:23 .git\n-rw-r--r-- 1 root root 194365 Jun 12 04:28 agent-output.txt\nlrwxrwxrwx 1 root root     71 Jun 12 04:23 golden -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root    828 Jun 12 04:23 opencode.json\nlrwxrwxrwx 1 root root     71 Jun 12 04:23 skills -> /home/loschilov_aa/ar/work-3/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x 3 root root   4096 Jun  9 15:08 teams\n--- ls kernel dir ---\ntotal 28\ndrwxr-xr-x 4 root root 4096 Jun 12 04:25 .\ndrwxr-xr-x 3 root root 4096 Jun 12 04:23 ..\n-rw-r--r-- 1 root root  595 Jun 12 04:23 README.md\n-rw-r--r-- 1 root root  441 Jun 12 04:23 conftest.py\ndrwxr-xr-x 2 root root 4096 Jun 12 04:28 docs\n-rw-r--r-- 1 root root 3860 Jun 12 04:25 kernel.py\ndrwxr-xr-x 2 root root 4096 Jun 12 04:23 test\n--- readlink kernel ---"
+    }
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.where']",
+    "markers_found": [
+      "asc2.where"
+    ]
+  },
+  "score": {
+    "value": 16.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.where']"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "history": []
+}

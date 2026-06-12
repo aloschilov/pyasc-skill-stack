@@ -1,0 +1,206 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "abs",
+  "dtype": "float16",
+  "prompt": "Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
+  "kernel_path": "kernel.py",
+  "date": "2026-06-12T00:17:47Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim-perf@sha256:06c63106dad54d573a0a22ed9a99585b519af19a49ae6ddbc583d931ecba64bf"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "verification.md"
+    ]
+  },
+  "skills_mode": "off",
+  "model_profile": "local-qwen3-coder-30b",
+  "model": "ollama/qwen3-coder:30b",
+  "tokens": {
+    "input": 491895,
+    "output": 8920,
+    "cache_read": 0,
+    "total": 500815
+  },
+  "elapsed_total_s": 189.73,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 17.89,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 7279,
+        "output": 85,
+        "cache_read": 0,
+        "total": 7364,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 112.62,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 356956,
+        "output": 5267,
+        "cache_read": 0,
+        "total": 362223,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 59.22,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 127660,
+        "output": 3568,
+        "cache_read": 0,
+        "total": 131228,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Kernel executed but verification unclear: Abs operator implementation ready for Ascend950PR_9599 platform\nInput shapes: [1, 128], [4, 2048], [32, 4096]\nOutput shape: same as input\nData type: float16\nTiling strategy: 1D with TILE_SIZE=128, CORE_NUM=16\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "kernel.py",
+      "is_symlink": false,
+      "resolved": "/Users/aloschilov/ar/work/_temp/gen-abs-float16-a3.8pjsf2a6/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        ".git",
+        "README.md",
+        "agent-output.txt",
+        "design.md",
+        "golden@ -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden",
+        "kernel.py",
+        "opencode.json",
+        "verification.md"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 60\ndrwx------ 10 root root   320 Jun 12 00:17 .\ndrwxr-xr-x  1 root root  4096 Jun 12 00:17 ..\ndrwxr-xr-x 10 root root   320 Jun 12 00:16 .git\n-rw-r--r--  1 root root  1185 Jun 12 00:16 README.md\n-rw-r--r--  1 root root 35583 Jun 12 00:17 agent-output.txt\n-rw-r--r--  1 root root  1629 Jun 12 00:17 design.md\nlrwxr-xr-x  1 root root    68 Jun 12 00:16 golden -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r--  1 root root  2090 Jun 12 00:17 kernel.py\n-rw-r--r--  1 root root   611 Jun 12 00:16 opencode.json\n-rw-r--r--  1 root root  1790 Jun 12 00:17 verification.md\n--- ls kernel dir ---\ntotal 60\ndrwx------ 10 root root   320 Jun 12 00:17 .\ndrwxr-xr-x  1 root root  4096 Jun 12 00:17 ..\ndrwxr-xr-x 10 root root   320 Jun 12 00:16 .git\n-rw-r--r--  1 root root  1185 Jun 12 00:16 README.md\n-rw-r--r--  1 root root 35583 Jun 12 00:17 agent-output.txt\n-rw-r--r--  1 root root  1629 Jun 12 00:17 design.md\nlrwxr-xr-x  1 root root    68 Jun 12 00:16 golden -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r--  1 root root  2090 Jun 12 00:17 kernel.py\n-rw-r--r--  1 root root   611 Jun 12 00:16 opencode.json\n-rw-r--r--  1 root root  1790 Jun 12 00:17 verification.md\n--- readlink kernel ---"
+    }
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "none of ['asc2.abs'] found in kernel source",
+    "markers_found": []
+  },
+  "score": {
+    "value": 7.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {
+      "jit_decorator": {
+        "passed": false,
+        "detail": "missing"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": false,
+        "detail": "missing asc2.load/asc2.store"
+      },
+      "asc2_tensor": {
+        "passed": false,
+        "detail": "missing asc2.tensor"
+      },
+      "loop_range": {
+        "passed": false,
+        "detail": "no range call in kernel"
+      },
+      "verification": {
+        "passed": false,
+        "detail": "no allclose/assert_close call"
+      },
+      "launch_pattern": {
+        "passed": false,
+        "detail": "no launch pattern"
+      },
+      "global_address": {
+        "passed": false,
+        "detail": "missing GlobalAddress type"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": false,
+        "detail": "none of ['asc2.abs'] found in source"
+      }
+    },
+    "failure_category": "F_missing_asc2_import",
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": true,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "history": []
+}

@@ -1,0 +1,112 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "reduce_sum",
+  "dtype": "float16",
+  "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float16, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
+  "kernel_path": "",
+  "date": "2026-06-12T01:41:21Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim-perf@sha256:06c63106dad54d573a0a22ed9a99585b519af19a49ae6ddbc583d931ecba64bf"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": false,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "local-qwen3-coder-30b",
+  "model": "ollama/qwen3-coder:30b",
+  "tokens": {
+    "input": 24524,
+    "output": 249,
+    "cache_read": 0,
+    "total": 24773
+  },
+  "elapsed_total_s": 2405.78,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 5.76,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 7284,
+        "output": 78,
+        "cache_read": 0,
+        "total": 7362,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 1200.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 17240,
+        "output": 171,
+        "cache_read": 0,
+        "total": 17411,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 1200.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "history": []
+}

@@ -1,0 +1,154 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "softmax",
+  "dtype": "float16",
+  "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
+  "kernel_path": "kernels/softmax_f16/kernel.py",
+  "date": "2026-06-12T04:23:33Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim-perf@sha256:06c63106dad54d573a0a22ed9a99585b519af19a49ae6ddbc583d931ecba64bf"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "local-qwen3-coder-30b",
+  "model": "qwen3-coder:30b",
+  "tokens": {
+    "input": 297195,
+    "output": 2519,
+    "cache_read": 0,
+    "total": 299714
+  },
+  "elapsed_total_s": 106.68,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 106.68,
+      "exit": 0,
+      "outcome": "pass",
+      "tokens": {
+        "input": 297195,
+        "output": 2519,
+        "cache_read": 0,
+        "total": 299714,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.softmax', 'softmax']",
+    "markers_found": [
+      "asc2.softmax",
+      "softmax"
+    ]
+  },
+  "score": {
+    "value": 14.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": false,
+        "detail": "no range call in kernel"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.softmax', 'softmax']"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "history": []
+}

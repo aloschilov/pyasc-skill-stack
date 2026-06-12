@@ -1,0 +1,68 @@
+{
+  "cell": "rms_norm/float32",
+  "op": "rms_norm",
+  "dtype": "float32",
+  "shape": [
+    8,
+    256
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": null,
+  "ticks_off": 5094,
+  "ticks_on": 4887,
+  "fusion_speedup": 1.0424,
+  "ratio_off": null,
+  "ratio_on": null,
+  "gate": 0.7,
+  "status": "improved",
+  "flag": "--cce-simd-vf-fusion",
+  "ref_detail": null,
+  "gen_detail_off": {
+    "cell": "kernels",
+    "kernel": "/workspace/golden/kernels/rms_norm_f32.py",
+    "dtype": "float32",
+    "shape": [
+      8,
+      256
+    ],
+    "n_elements": 2048,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 5094,
+    "gen_ticks_runs": [
+      5092,
+      5096,
+      5094
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0008,
+    "vf_fusion": "false",
+    "wall_ms_last": 7961.01,
+    "camodel_log": "/workspace/evidence/perf/_build_cache/logs/probe_kernels_8x256_vf-false.run3.log"
+  },
+  "gen_detail_on": {
+    "cell": "kernels",
+    "kernel": "/workspace/golden/kernels/rms_norm_f32.py",
+    "dtype": "float32",
+    "shape": [
+      8,
+      256
+    ],
+    "n_elements": 2048,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 4887,
+    "gen_ticks_runs": [
+      4891,
+      4887,
+      4882
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0018,
+    "vf_fusion": "true",
+    "wall_ms_last": 7402.43,
+    "camodel_log": "/workspace/evidence/perf/_build_cache/logs/probe_kernels_8x256_vf-true.run3.log"
+  }
+}

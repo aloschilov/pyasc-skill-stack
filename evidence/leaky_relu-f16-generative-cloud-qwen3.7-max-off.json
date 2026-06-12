@@ -1,0 +1,112 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "leaky_relu",
+  "dtype": "float16",
+  "prompt": "Help me develop a leaky_relu operator on Ascend950PR_9599 (C310) for float16 with alpha=0.01 and shapes [1,128], [4,2048], [32,4096].",
+  "kernel_path": "",
+  "date": "2026-06-12T02:19:32Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": false,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-qwen3.7-max",
+  "model": "dashscope/qwen3.7-max",
+  "tokens": {
+    "input": 212375,
+    "output": 10569,
+    "cache_read": 849792,
+    "total": 222944
+  },
+  "elapsed_total_s": 847.37,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 252.19,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 74825,
+        "output": 5291,
+        "cache_read": 285952,
+        "total": 80116,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/qwen3.7-max",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 175.17,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 62762,
+        "output": 3827,
+        "cache_read": 404480,
+        "total": 66589,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/qwen3.7-max",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 420.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 74788,
+        "output": 1451,
+        "cache_read": 159360,
+        "total": 76239,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3.7-max",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
+  },
+  "static_verify": "fail",
+  "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "history": []
+}

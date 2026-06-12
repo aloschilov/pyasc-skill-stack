@@ -1,0 +1,211 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "rms_norm",
+  "dtype": "float16",
+  "prompt": "Create an RMSNorm capability for float16 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
+  "kernel_path": "kernel.py",
+  "date": "2026-06-12T05:13:26Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim-perf@sha256:06c63106dad54d573a0a22ed9a99585b519af19a49ae6ddbc583d931ecba64bf"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "verification.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "local-qwen3-coder-30b",
+  "model": "qwen3-coder:30b",
+  "tokens": {
+    "input": 755637,
+    "output": 15877,
+    "cache_read": 0,
+    "total": 771514
+  },
+  "elapsed_total_s": 1773.19,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 231.08,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 199628,
+        "output": 4321,
+        "cache_read": 0,
+        "total": 203949,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 1200.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 8319,
+        "output": 242,
+        "cache_read": 0,
+        "total": 8561,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 342.1,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 547690,
+        "output": 11314,
+        "cache_read": 0,
+        "total": 559004,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Exit code 1: AttributeError: module 'asc' has no attribute 'block_idx'. Did you mean: 'BlockMode'?\nocal/python3.11.15/lib/python3.11/ast.py\", line 428, in generic_visit\n    self.visit(value)\n  File \"/usr/local/python3.11.15/lib/python3.11/ast.py\", line 418, in visit\n    return visitor(node)\n           ^^^^^^^^^^^^^\n  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/asc/codegen/dependencies_finder.py\", line 155, in visit_Attribute\n    ret = getattr(lhs, node.attr)\n          ^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: module 'asc' has no attribute 'block_idx'. Did you mean: 'BlockMode'?\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "kernel.py",
+      "is_symlink": false,
+      "resolved": "/Users/aloschilov/ar/work/_temp/gen-rms_norm-float16-a3.b8yocp04/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        ".git",
+        "agent-output.txt",
+        "baseline_test.py",
+        "docs",
+        "golden@ -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden",
+        "kernel.py",
+        "opencode.json",
+        "simple_test.py",
+        "skills@ -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/skills",
+        "teams"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 152\ndrwx------ 12 root root    384 Jun 12 05:13 .\ndrwxr-xr-x  1 root root   4096 Jun 12 05:13 ..\ndrwxr-xr-x 10 root root    320 Jun 12 05:07 .git\n-rw-r--r--  1 root root 130527 Jun 12 05:13 agent-output.txt\n-rw-r--r--  1 root root    634 Jun 12 05:12 baseline_test.py\ndrwxr-xr-x  4 root root    128 Jun 12 05:13 docs\nlrwxr-xr-x  1 root root     68 Jun 12 05:07 golden -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r--  1 root root   6158 Jun 12 05:12 kernel.py\n-rw-r--r--  1 root root    668 Jun 12 05:07 opencode.json\n-rw-r--r--  1 root root   1023 Jun 12 05:12 simple_test.py\nlrwxr-xr-x  1 root root     68 Jun 12 05:07 skills -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x  3 root root     96 Jun 10 11:49 teams\n--- ls kernel dir ---\ntotal 152\ndrwx------ 12 root root    384 Jun 12 05:13 .\ndrwxr-xr-x  1 root root   4096 Jun 12 05:13 ..\ndrwxr-xr-x 10 root root    320 Jun 12 05:07 .git\n-rw-r--r--  1 root root 130527 Jun 12 05:13 agent-output.txt\n-rw-r--r--  1 root root    634 Jun 12 05:12 baseline_test.py\ndrwxr-xr-x  4 root root    128 Jun 12 05:13 docs\nlrwxr-xr-x  1 root root     68 Jun 12 05:07 golden -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r--  1 root root   6158 Jun 12 05:12 kernel.py\n-rw-r--r--  1 root root    668 Jun 12 05:07 opencode.json\n-rw-r--r--  1 root root   1023 Jun 12 05:12 simple_test.py\nlrwxr-xr-x  1 root root     68 Jun 12 05:07 skills -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x  3 root root     96 Jun 10 11:49 teams\n--- readlink kernel ---"
+    }
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['split_d', 'full_row']",
+    "markers_found": [
+      "split_d",
+      "full_row"
+    ]
+  },
+  "score": {
+    "value": 12.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "2 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": false,
+        "detail": "missing asc2.tensor"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": false,
+        "detail": "no launch pattern"
+      },
+      "global_address": {
+        "passed": false,
+        "detail": "missing GlobalAddress type"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x2, shape loop=no"
+      },
+      "no_hardcoded_shapes": {
+        "passed": false,
+        "detail": "numeric shape tuples found inside JIT function"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['split_d', 'full_row']"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27382442923",
+  "history": []
+}

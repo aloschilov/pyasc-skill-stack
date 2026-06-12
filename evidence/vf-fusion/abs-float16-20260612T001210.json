@@ -1,0 +1,49 @@
+{
+  "cell": "abs/float16",
+  "op": "abs",
+  "dtype": "float16",
+  "shape": [
+    32,
+    4096
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 4475,
+  "ticks_off": null,
+  "ticks_on": null,
+  "fusion_speedup": null,
+  "ratio_off": null,
+  "ratio_on": null,
+  "gate": 0.7,
+  "status": "gen_blocked",
+  "gen_blocker": "cached kernel not found: /workspace/teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
+  "flag": "--cce-simd-vf-fusion",
+  "ref_detail": {
+    "cell": "abs/float16",
+    "op": "abs",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 4475,
+    "ref_ticks_runs": [
+      4478,
+      4469,
+      4475
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.002,
+    "wall_ms_last": 8817.32,
+    "reference_kind": "canonical_only",
+    "reference_repo": "ops-math",
+    "reference_source": "ops-math canonical operator (abs, aclnnop/aclnn_abs.h), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=abs",
+    "camodel_log": "/workspace/evidence/perf/_build_cache/logs/perf_abs_f16_32x4096.run3.log"
+  },
+  "gen_detail_off": null,
+  "gen_detail_on": null
+}
