@@ -102,7 +102,17 @@ ENV PYASC_SRC=/opt/pyasc
 # Default path pins PYASC_GIT_REV (a SHA on origin/v2). The PYASC_GIT_REF
 # fallback exists for ad-hoc callers that still need refs/merge-requests/N/head
 # or similar; it must resolve to something git fetch understands.
-RUN git clone "${PYASC_GIT_URL}" "${PYASC_SRC}" \
+# The git_credentials secret is OPTIONAL (required=false): on networks where
+# gitcode.com serves the repo anonymously the clone just works, but some egress
+# paths (e.g. the arm64 Docker Desktop VM) get an HTTP 401 and need credentials.
+# The secret is mounted only for this RUN and is never written into a layer, so
+# no token is baked into the image history.
+RUN --mount=type=secret,id=git_credentials,target=/run/secrets/git_credentials,required=false \
+    if [ -s /run/secrets/git_credentials ]; then \
+        install -m600 /run/secrets/git_credentials /root/.git-credentials \
+     && git config --global credential.helper store ; \
+    fi \
+ && git clone "${PYASC_GIT_URL}" "${PYASC_SRC}" \
  && cd "${PYASC_SRC}" \
  && if [ -n "${PYASC_GIT_REF}" ]; then \
         git fetch origin "+${PYASC_GIT_REF}:pyasc-ref" \
@@ -111,10 +121,17 @@ RUN git clone "${PYASC_GIT_URL}" "${PYASC_SRC}" \
         git fetch origin v2 \
      && git checkout "${PYASC_GIT_REV}" ; \
     fi \
- && git --no-pager log -1 --format='pyasc revision: %H (%s)'
+ && git --no-pager log -1 --format='pyasc revision: %H (%s)' \
+ && rm -f /root/.git-credentials
 
 ENV PYASC_SETUP_CLANG_LLD=1 \
     PYASC_SETUP_CCACHE=1
+# Cap the native-extension compile parallelism (cmake --build --parallel N).
+# Empty (default) uses all cores; set this on memory-constrained build hosts
+# (e.g. a Docker Desktop VM with a small RAM cap) to avoid the LLVM/MLIR
+# compile OOMing. Does not affect the produced image content.
+ARG PYASC_SETUP_JOBS=
+ENV PYASC_SETUP_JOBS=${PYASC_SETUP_JOBS}
 RUN cd "${PYASC_SRC}" \
  && pip install --no-cache-dir -r requirements-build.txt \
  && pip install --no-cache-dir --no-build-isolation .
