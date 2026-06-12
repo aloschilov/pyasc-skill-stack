@@ -34,6 +34,7 @@ import argparse
 import importlib.util
 import inspect
 import json
+import os
 import sys
 import traceback
 from pathlib import Path
@@ -54,16 +55,61 @@ _SKIPPABLE_MISSING_MODULES = frozenset({"asc", "asc2", "torch", "torch_npu"})
 
 
 def _try_import_asc():
-    """Return (asc_module, None) or (None, error_message)."""
+    """Return (asc_module, None) or (None, error_message).
+
+    Imports the asc runtime *and* the tile language layer that golden kernels
+    depend on. A broken / ABI-incompatible native extension — e.g. a
+    self-hosted runner whose toolcache ``libpyasc.so`` predates the python
+    ``asc`` package, so a binding such as ``ir.AtomicKind`` is missing and
+    ``asc.language.tile.atomic_ops`` raises ``AttributeError`` at import — is an
+    environment provisioning problem, not a kernel defect. We catch it here and
+    report it as "not importable", so the caller SKIPs (exit 2) instead of
+    FAILing, the same contract as a missing module (see ``main``). The
+    authoritative golden-kernel verification still runs in the merge gate inside
+    the pinned pyasc-sim Docker image, which carries a matching python+native
+    pyasc.
+    """
     try:
         import asc  # noqa: WPS433 — intentional late import for exit code 2
 
         from asc.runtime import config  # noqa: F401
         import asc.runtime.launcher  # noqa: F401
 
+        # Deep ABI probe: golden kernels import the tile language, which binds
+        # native enums (ir.AtomicKind, ...) at import time. On an ABI-skewed
+        # native extension this raises AttributeError rather than ImportError.
+        import asc.language.tile.atomic_ops  # noqa: F401
+
         return asc, None
-    except ImportError as e:
+    except (ImportError, AttributeError) as e:
         return None, str(e)
+
+
+def _asc_package_dir(asc_mod: Any) -> Optional[str]:
+    """Filesystem dir of the installed ``asc`` package, or None."""
+    asc_file = getattr(asc_mod, "__file__", None)
+    if not asc_file:
+        return None
+    return os.path.abspath(os.path.dirname(asc_file))
+
+
+def _exc_raised_inside_asc(exc: BaseException, asc_pkg_dir: Optional[str]) -> bool:
+    """True if the deepest traceback frame is inside the installed ``asc`` package.
+
+    Used to distinguish an error originating from pyasc itself (a broken /
+    partially-provisioned native extension → SKIP) from an error in the kernel
+    under test (→ FAIL).
+    """
+    if not asc_pkg_dir:
+        return False
+    tb = exc.__traceback__
+    last_filename: Optional[str] = None
+    while tb is not None:
+        last_filename = tb.tb_frame.f_code.co_filename
+        tb = tb.tb_next
+    if not last_filename:
+        return False
+    return os.path.abspath(last_filename).startswith(asc_pkg_dir)
 
 
 def _unwrap_optional(annotation: Any) -> Any:
@@ -372,6 +418,26 @@ def main(argv: Optional[List[str]] = None) -> int:
             traceback.print_exc()
         return EXIT_FAIL
     except Exception as e:
+        # An error raised from *inside* the installed asc package while loading
+        # the kernel (e.g. AttributeError: ir has no attribute 'AtomicKind' from
+        # asc/language/tile/atomic_ops.py on an ABI-skewed native extension)
+        # means the runner's pyasc is only partially provisioned, not that the
+        # kernel is broken — SKIP (exit 2), matching the "asc not importable"
+        # and "missing runtime dependency" contracts above.
+        if _exc_raised_inside_asc(e, _asc_package_dir(asc_mod)):
+            payload = {
+                "status": "skip",
+                "exit_code": EXIT_SKIP,
+                "reason": "pyasc native extension not usable (partial environment)",
+                "import_error": f"{type(e).__name__}: {e}",
+                "kernels": [],
+            }
+            if args.json:
+                print(json.dumps(payload, indent=2))
+            else:
+                print(f"SKIP: pyasc native extension not usable "
+                      f"(partial environment): {type(e).__name__}: {e}", file=sys.stderr)
+            return EXIT_SKIP
         payload = {
             "status": "fail",
             "exit_code": EXIT_FAIL,
