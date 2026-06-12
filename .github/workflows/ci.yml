@@ -642,9 +642,10 @@ jobs:
 
   # ==========================================================================
   # Cloud DashScope gate: the same OpenCode skills intervention as the
-  # nightly cloud-default leg, but against the Alibaba DashScope models
-  # (glm-5, glm-5.1, qwen3.7-max) recently added alongside the local
-  # harness-clearing model. Each profile embeds the DashScope provider and
+  # nightly cloud-default leg, but against the additional Alibaba DashScope
+  # models (glm-5.1, qwen3.7-max). glm-5 itself is covered by the nightly
+  # cloud-default leg (which pins dashscope/glm-5), so it is not duplicated
+  # here. Each profile embeds the DashScope provider and
   # reads the key from ${DASHSCOPE_API_KEY} (substituted into the profile
   # template) — the key is never committed; CI injects it from the
   # `DASHSCOPE_API_KEY` repo secret. If the secret is absent the whole leg
@@ -661,7 +662,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: [cloud-glm-5, cloud-glm-5.1, cloud-qwen3.7-max]
+        profile: [cloud-glm-5.1, cloud-qwen3.7-max]
         # See comment in nightly-gate for why these are quoted.
         skills_mode: ["on", "off"]
     steps:

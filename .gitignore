@@ -4,25 +4,33 @@ __pycache__/
 .eval-history/
 
 # Agent-generated kernel outputs (test artifacts from opencode runs).
-# The single tracked kernel is `add/` (no dtype suffix); every directory
-# named after a typed kernel (e.g. add_f16/, reduce_sum_f32/, abs_float32/)
-# is a transient agent scratch dir and must stay untracked.
-teams/pyasc-kernel-dev-team/kernels/abs_f16/
+# Typed kernel directories (e.g. gelu_f16/, abs_float32/, matmul_f16/) are
+# transient agent scratch dirs and must stay untracked. The exception is the
+# perf-vs-AscendC demo cache cells, whose vetted kernel.py IS tracked
+# (mirroring tanh_f16/, drop_out_do_mask_f16/, apply_adam_f32/,
+# batch_norm_v3_f32/, which live outside this list): for those we ignore the
+# scratch (docs/, test/, README.md, conftest.py, __pycache__) but keep
+# kernel.py committed so the cached perf-gate cell is wired offline.
 teams/pyasc-kernel-dev-team/kernels/abs_f32/
 teams/pyasc-kernel-dev-team/kernels/abs_float32/
-teams/pyasc-kernel-dev-team/kernels/add_f16/
 teams/pyasc-kernel-dev-team/kernels/gelu_f16/
 teams/pyasc-kernel-dev-team/kernels/gelu_f32/
 teams/pyasc-kernel-dev-team/kernels/leaky_relu_f16/
 teams/pyasc-kernel-dev-team/kernels/matmul_f16/
 teams/pyasc-kernel-dev-team/kernels/neg_f16/
 teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/
-teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/
 teams/pyasc-kernel-dev-team/kernels/rms_norm_f16/
 teams/pyasc-kernel-dev-team/kernels/rms_norm_f32/
 teams/pyasc-kernel-dev-team/kernels/softmax_f16/
 teams/pyasc-kernel-dev-team/kernels/sub_f16/
 teams/pyasc-kernel-dev-team/kernels/vadd_f32_1024/
+# Perf-demo cache cells: ignore the scratch, track the vetted kernel.py.
+teams/pyasc-kernel-dev-team/kernels/abs_f16/*
+!teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py
+teams/pyasc-kernel-dev-team/kernels/add_f16/*
+!teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py
+teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/*
+!teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/kernel.py
 
 # Matrix-run orchestrator logs (forensic records; kept on disk only).
 run-matrix-log-*.csv

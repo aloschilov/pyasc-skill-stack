@@ -135,7 +135,6 @@ DOCKER_IMAGE = os.environ.get(
 PROFILE_DIR = REPO_ROOT / "docker" / "opencode-profiles"
 KNOWN_PROFILES = {
     "cloud-default",
-    "cloud-glm-5",
     "cloud-glm-5.1",
     "cloud-qwen3.7-max",
     "local-qwen-coder-7b",
