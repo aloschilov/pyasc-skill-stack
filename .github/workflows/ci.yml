@@ -46,10 +46,10 @@ jobs:
   # PR gate: L1 unit tests + static checks (no Docker, no CANN)
   # ==========================================================================
   pr-gate:
-    # Self-hosted RTX 4090 box (192.168.0.229), label `gpu`. See
-    # infra/self-hosted-runner/. GitHub-hosted ubuntu-latest is the documented
-    # fallback if the box is offline.
-    runs-on: [self-hosted, gpu]
+    # GitHub-hosted ubuntu-latest: this gate is pure static checks + L1 unit
+    # tests (no Docker, no CANN), so it needs no self-hosted runner. (Formerly
+    # ran on the RTX 4090 `gpu` box, now retired from CI.)
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -70,7 +70,12 @@ jobs:
   # and pushed to ghcr.io.  CI only pulls it.
   # ==========================================================================
   merge-gate:
-    runs-on: [self-hosted, gpu]
+    # GitHub-hosted ubuntu-latest (amd64): pulls the amd64 leg of the multiarch
+    # pyasc-sim image and runs the camodel golden-kernel sim natively. No GPU is
+    # used. NB the hosted 6h job cap vs TIMEOUT=1500 per kernel below: if the
+    # heaviest goldens push total wall-clock near the cap, lower their timeout.
+    # (Formerly ran on the RTX 4090 `gpu` box, now retired from CI.)
+    runs-on: ubuntu-latest
     needs: [pr-gate]
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
@@ -142,8 +147,8 @@ jobs:
   perf-gate:
     # Self-hosted arm64 runner on the MacBook (198.18.0.1) via Docker Desktop's
     # Linux/arm64 VM, label `arm64`. The perf image (camodel sims + pyasc native
-    # extension) is arm64-only, so it cannot run on the amd64 `gpu` box; this
-    # runner pulls/runs it through the Docker Desktop daemon. See
+    # extension) is arm64-only, so it requires this arm64 runner; it
+    # pulls/runs it through the Docker Desktop daemon. See
     # infra/self-hosted-runner/compose.arm64.yml.
     runs-on: [self-hosted, arm64]
     needs: [merge-gate]
@@ -271,21 +276,25 @@ jobs:
   # the aggregator see a consistent evidence directory.
   # ==========================================================================
   nightly-gate:
-    runs-on: [self-hosted, gpu]
+    # Self-hosted arm64 Mac runner (label `arm64`): cloud DashScope inference +
+    # camodel docker sim verify, no GPU. opencode runs in-image via
+    # --agent-backend docker (image pulled below). Since the Mac is now the only
+    # self-hosted runner, the P2/P3/P4/P6 legs SERIALIZE on it rather than
+    # running in parallel as the matrix nominally allows. (Formerly ran on the
+    # RTX 4090 `gpu` box, now retired from CI.)
+    runs-on: [self-hosted, arm64]
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly')
     strategy:
       fail-fast: false
-      # Protocol legs run in parallel (one dashscope request in flight per leg,
-      # i.e. the 4-way "parallel across protocols" design of
-      # docs/perf-methodology/phase-3-budget.md). The instant exit-0/0-token
+      # The matrix nominally fans the protocol legs out, but with a single arm64
+      # runner they queue and run one at a time. The instant exit-0/0-token
       # no-ops that previously failed every backtick-heavy P3/P4/P6 op were NOT
       # provider QPS contention — they were shell command-substitution mangling
       # the prompt in the `script -qc` wrapper, fixed in
-      # tests/tools/collect_generative_evidence.py (shlex.quote). Serializing
-      # the legs (max-parallel: 1) only quadrupled wall-clock without helping.
+      # tests/tools/collect_generative_evidence.py (shlex.quote).
       matrix:
         protocol_id: ["P2", "P3", "P4", "P6"]
     steps:
@@ -654,7 +663,10 @@ jobs:
   # until the secret is configured.
   # ==========================================================================
   cloud-dashscope-gate:
-    runs-on: [self-hosted, gpu]
+    # Self-hosted arm64 Mac runner (label `arm64`): cloud DashScope inference +
+    # camodel docker sim verify, no GPU. (Formerly ran on the RTX 4090 `gpu`
+    # box, now retired from CI.)
+    runs-on: [self-hosted, arm64]
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||

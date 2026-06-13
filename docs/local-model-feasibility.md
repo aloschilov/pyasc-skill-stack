@@ -6,6 +6,13 @@
 > failures and what is required to unblock them. It is a feasibility probe, not
 > a full sweep.
 
+> **Update (2026-06-13): the RTX 4090 box (`192.168.0.229`) has been retired
+> from CI and is no longer accessible.** The findings below are kept as the
+> historical record of the spike. CI no longer runs on the 4090: `pr-gate` and
+> `merge-gate` moved to GitHub-hosted `ubuntu-latest`, and the nightly
+> generative gates (`nightly-gate`, `cloud-dashscope-gate`) now run alongside
+> the local-stability/perf gates on the arm64 Mac.
+
 ## TL;DR
 
 - The local `F10_no_artifact` failures are **not** primarily context

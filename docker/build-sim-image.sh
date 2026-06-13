@@ -9,21 +9,25 @@
 # is built NATIVELY on its own host and the two single-arch tags are then
 # stitched into a multiarch manifest with `docker buildx imagetools create`.
 #
-# Typical workflow (run on the respective native hosts, like build-perf-image.sh
-# — CI only `docker pull`s the published tag):
+# Typical workflow (CI only `docker pull`s the published tag):
 #
-#   # On the amd64 box (e.g. the RTX 4090 host):
-#   docker/build-sim-image.sh --arch amd64 --push
-#
-#   # On the arm64 box (the Apple-silicon Mac, Docker Desktop logged in to ghcr):
+#   # arm64 leg, NATIVE on the aarch64 host (this script's --arch refuses a
+#   # cross-arch native build, since compiling CANN+pyasc+LLVM under emulation
+#   # is impractical):
 #   docker/build-sim-image.sh --arch arm64 --push
 #
 #   # On either host, once both single-arch tags are pushed:
 #   docker/build-sim-image.sh --merge
 #
-# After --merge, `docker buildx imagetools inspect ghcr.io/<owner>/pyasc-sim:py3.11`
-# lists both linux/amd64 and linux/arm64, and PYASC_SIM_IMAGE resolves to the
-# right arch on both the amd64 `gpu` jobs and the arm64 Mac `local-stability-gate`.
+# NB: the amd64 native build host (the RTX 4090 box) has been RETIRED. There is
+# no amd64 machine left, so the amd64 leg is now produced by layering onto the
+# already-published amd64 base under QEMU `buildx` emulation on the arm64 host
+# (apt + npm only -- no native compile -- so emulation is tolerable), or in a
+# GitHub Actions amd64 build. The amd64 leg is still needed: the GitHub-hosted
+# (amd64) merge-gate pulls it. After --merge, `docker buildx imagetools inspect
+# ghcr.io/<owner>/pyasc-sim:py3.11` lists both linux/amd64 and linux/arm64, and
+# PYASC_SIM_IMAGE resolves to the right arch on the hosted merge-gate (amd64)
+# and the arm64 Mac nightly/cloud/local-stability gates.
 #
 # Env overrides:
 #   OWNER       ghcr owner used to derive the image (default: aloschilov)

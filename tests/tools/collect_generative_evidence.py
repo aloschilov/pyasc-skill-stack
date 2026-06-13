@@ -1087,10 +1087,12 @@ def resolve_configured_model(project_dir: Path) -> str | None:
       1. The project-local ``<project>/opencode.json`` (which is what we
          wrote via ``build_opencode_json``). Local profiles pin a model
          here explicitly.
-      2. The global ``~/.config/opencode/opencode.json``. The cloud
-         profile inherits its provider/model from there via the CI's
-         ``OPENCODE_CONFIG`` secret, so this is where we discover the
-         model id for cloud-default runs.
+      2. The global ``~/.config/opencode/opencode.json``, kept only as a
+         defensive fallback for ad-hoc local setups. (Historically the
+         cloud-default profile inherited its provider/model from here; it is
+         now self-contained -- it embeds the DashScope provider + model
+         inline -- so candidate 1 above always carries the model and this
+         fallback is no longer exercised in CI.)
 
     For each candidate we take the first
     ``provider.<provider_id>.models.<model_id>`` entry — each profile
