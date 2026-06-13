@@ -306,15 +306,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull pyasc-sim image
+        # The single pyasc-sim image now carries node + opencode as well as the
+        # pyasc runtime + simulator, so opencode runs INSIDE it (--agent-backend
+        # docker below) -- no host npm install or global opencode config needed.
         run: docker pull ${{ env.PYASC_SIM_IMAGE }}
-
-      - name: Install opencode
-        run: npm install -g opencode-ai @ai-sdk/openai-compatible
-
-      - name: Configure opencode provider
-        run: |
-          mkdir -p ~/.config/opencode
-          echo '${{ secrets.OPENCODE_CONFIG }}' > ~/.config/opencode/opencode.json
 
       # Lowercase the protocol id once so subsequent steps (artifact
       # glob, summary) can reference it without re-shell-quoting.
@@ -332,6 +327,9 @@ jobs:
           NODE_TLS_REJECT_UNAUTHORIZED: "0"
           PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
           PROTOCOL_ID: ${{ matrix.protocol_id }}
+          # Substituted into the self-contained cloud-default profile template's
+          # ${DASHSCOPE_API_KEY} (replaces the old ~/.config/opencode global config).
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
         run: |
           mkdir -p generative-archive
           declare -a OPS=(
@@ -365,6 +363,7 @@ jobs:
             if python3.10 tests/tools/collect_generative_evidence.py \
                 --op "$op" --dtype "$dtype" \
                 --runtime --runtime-backend auto --timeout 420 \
+                --agent-backend docker \
                 --docker-timeout "$DOCKER_TO" \
                 --archive-dir generative-archive \
                 --ci-run-url "$CI_RUN_URL" \
@@ -511,8 +510,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install opencode
-        run: npm install -g opencode-ai @ai-sdk/openai-compatible
+      # opencode runs INSIDE the pyasc-sim image (--agent-backend docker below),
+      # which now carries node + opencode, so no host npm install is needed. The
+      # image is pulled by the preflight step.
 
       # Preflight + skip guard. The Mac's native Ollama and its models are
       # host-managed (we neither install nor `ollama pull` in-job), and the
@@ -602,6 +602,7 @@ jobs:
             if python3.10 tests/tools/collect_generative_evidence.py \
                 --op "$op" --dtype "$dtype" \
                 --runtime --runtime-backend auto --timeout 1200 \
+                --agent-backend docker \
                 --docker-timeout "$DOCKER_TO" \
                 --archive-dir generative-archive \
                 --ci-run-url "$CI_RUN_URL" \
@@ -698,12 +699,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull pyasc-sim image
+        # opencode runs INSIDE this image (--agent-backend docker below), which
+        # now carries node + opencode; no host npm install or global config.
         if: steps.secret.outputs.available == 'true'
         run: docker pull ${{ env.PYASC_SIM_IMAGE }}
-
-      - name: Install opencode
-        if: steps.secret.outputs.available == 'true'
-        run: npm install -g opencode-ai @ai-sdk/openai-compatible
 
       - name: Run OpenCode skills-intervention leg (profile=${{ matrix.profile }}, skills_mode=${{ matrix.skills_mode }})
         if: steps.secret.outputs.available == 'true'
@@ -741,6 +740,7 @@ jobs:
             if python3.10 tests/tools/collect_generative_evidence.py \
                 --op "$op" --dtype "$dtype" \
                 --runtime --runtime-backend auto --timeout 420 \
+                --agent-backend docker \
                 --docker-timeout "$DOCKER_TO" \
                 --archive-dir generative-archive \
                 --ci-run-url "$CI_RUN_URL" \

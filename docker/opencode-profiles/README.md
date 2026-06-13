@@ -41,7 +41,7 @@ runtime — keep templates skills-agnostic so the same file works for both
 
 | File | Purpose |
 |------|---------|
-| `cloud-default.json` | The canonical cloud reference profile. Pins `model: dashscope/glm-5` explicitly (so the resolved model never drifts with the global default), while inheriting the DashScope provider + API key from `~/.config/opencode/opencode.json` (configured separately, e.g. from the `OPENCODE_CONFIG` GitHub secret). The template also adds baseline permissions. This is the profile the nightly P2/P3/P4/P6 decomposition runs against, so glm-5 is represented here and is not duplicated as a separate `cloud-dashscope-gate` leg. |
+| `cloud-default.json` | The canonical cloud reference profile. Pins `model: dashscope/glm-5` explicitly (so the resolved model never drifts with the global default) and embeds the DashScope provider + `${DASHSCOPE_API_KEY}` inline, so the resolved per-project `opencode.json` is fully self-contained — it no longer depends on a global `~/.config/opencode/opencode.json`. The template also adds baseline permissions. This is the profile the nightly P2/P3/P4/P6 decomposition runs against, so glm-5 is represented here and is not duplicated as a separate `cloud-dashscope-gate` leg. |
 | `cloud-glm-5.1.json` | Routes every request to `glm-5.1` on Alibaba DashScope's OpenAI-compatible endpoint. Requires `DASHSCOPE_API_KEY` in the environment (substituted into `${DASHSCOPE_API_KEY}`). |
 | `cloud-qwen3.7-max.json` | Same as `cloud-glm-5.1.json` but pins `qwen3.7-max`. Requires `DASHSCOPE_API_KEY`. |
 | `local-qwen-coder-7b.json` | Routes every request to `qwen2.5-coder:7b` served by Ollama at `${OLLAMA_BASE_URL}` (default `http://127.0.0.1:11434/v1` via opencode CLI defaults). |

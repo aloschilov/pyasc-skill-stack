@@ -1146,6 +1146,36 @@ def _is_transient_noop(rec: dict) -> bool:
         return False
 
 
+def _chown_project_to_host(project: Path) -> None:
+    """Reclaim ownership of container-written files before teardown.
+
+    When opencode generation and/or simulator verification run in the
+    pyasc-sim container, the Linux docker daemon runs as root, so bind-mount
+    writes (the generated kernel, _build_cache, opencode state) land root-owned
+    on the host. The unprivileged runner user then cannot rmtree them, leaking
+    files under RUNNER_TEMP (the rmtree uses ignore_errors=True). A throwaway
+    container chowns the whole mount back to the host uid:gid. On Docker Desktop
+    (Mac) ownership is already mapped to the invoking user, so this is a
+    harmless no-op.
+    """
+    getuid = getattr(os, "getuid", None)
+    getgid = getattr(os, "getgid", None)
+    if getuid is None or getgid is None:
+        return  # non-POSIX host; nothing to reclaim
+    code, _out, err = _run(
+        [
+            "docker", "run", "--rm",
+            "-v", f"{project}:/workspace",
+            DOCKER_IMAGE,
+            "chown", "-R", f"{getuid()}:{getgid()}", "/workspace",
+        ],
+        timeout=120,
+    )
+    if code != 0:
+        print(f"  WARNING: chown-back of {project} failed (rc={code}): "
+              f"{err.strip()[:200]}", file=sys.stderr)
+
+
 def run_one_attempt(
     *,
     attempt_num: int,
@@ -1163,6 +1193,7 @@ def run_one_attempt(
     keep_project: bool,
     agent_format: str = "json",
     agents_md_path: Path | None = None,
+    agent_backend: str = "host",
 ) -> dict:
     """Run a single agent attempt end-to-end and return a result dict.
 
@@ -1183,7 +1214,10 @@ def run_one_attempt(
     exit_code = 1
     elapsed = 0.0
 
-    asc_path_before = _snapshot_asc_file()
+    # The pyasc-mutation guard only makes sense for the host backend: in the
+    # docker backend opencode runs inside the pyasc-sim container and physically
+    # cannot touch a host pyasc install, so we skip the host-file snapshots.
+    asc_path_before = _snapshot_asc_file() if agent_backend == "host" else None
     asc_path_after: str | None = asc_path_before
     asc_root_mutated = False
 
@@ -1192,18 +1226,48 @@ def run_one_attempt(
         env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
 
         fmt_flag = f" --format {agent_format}" if agent_format else ""
-        # `script -qc` runs this string through `sh -c`, so EVERY interpolated
-        # value must be shell-quoted. The guided prompts embed asc2 API snippets
-        # wrapped in backticks (e.g. `asc2.load(...)`); inside a double-quoted
-        # `"..."` those backticks trigger command substitution, which silently
-        # mangles the prompt to empty and makes opencode exit 0 with zero tokens
-        # (the "instant no-op" that failed every backtick-heavy P3/P4/P6 op).
-        # shlex.quote single-quotes the values so they reach opencode verbatim.
-        opencode_cmd = (
-            f"opencode run {shlex.quote(prompt)} "
-            f"--dir {shlex.quote(str(project))}{fmt_flag}"
-        )
-        cmd = ["script", "-qc", opencode_cmd, "/dev/null"]
+        if agent_backend == "docker":
+            # Run opencode INSIDE the same image used for verification, so no
+            # host/runner needs node or opencode on PATH -- generation joins the
+            # verify step that already runs here. The project is bind-mounted at
+            # /workspace (its self-contained opencode.json carries the provider),
+            # and the prompt is read from a file inside the mount, which sidesteps
+            # the backtick/quoting hazard entirely: command substitution inside a
+            # double-quoted "$(cat ...)" does not re-parse the prompt's own quotes
+            # or backticks. `--add-host` makes host.docker.internal resolve on the
+            # Linux daemon (no-op on Docker Desktop, which provides it natively),
+            # so local-model legs reach the host's Ollama; cloud legs use
+            # DASHSCOPE_API_KEY for external egress.
+            (project / ".agent-prompt.txt").write_text(prompt)
+            inner_cmd = (
+                'opencode run "$(cat /workspace/.agent-prompt.txt)" '
+                f"--dir /workspace{fmt_flag}"
+            )
+            cmd = [
+                "docker", "run", "--rm",
+                "--add-host", "host.docker.internal:host-gateway",
+            ]
+            for var in ("OLLAMA_BASE_URL", "DASHSCOPE_API_KEY",
+                        "NODE_TLS_REJECT_UNAUTHORIZED"):
+                if env.get(var):
+                    cmd += ["-e", f"{var}={env[var]}"]
+            cmd += [
+                "-v", f"{project}:/workspace", "-w", "/workspace",
+                DOCKER_IMAGE, "script", "-qc", inner_cmd, "/dev/null",
+            ]
+        else:
+            # `script -qc` runs this string through `sh -c`, so EVERY interpolated
+            # value must be shell-quoted. The guided prompts embed asc2 API snippets
+            # wrapped in backticks (e.g. `asc2.load(...)`); inside a double-quoted
+            # `"..."` those backticks trigger command substitution, which silently
+            # mangles the prompt to empty and makes opencode exit 0 with zero tokens
+            # (the "instant no-op" that failed every backtick-heavy P3/P4/P6 op).
+            # shlex.quote single-quotes the values so they reach opencode verbatim.
+            opencode_cmd = (
+                f"opencode run {shlex.quote(prompt)} "
+                f"--dir {shlex.quote(str(project))}{fmt_flag}"
+            )
+            cmd = ["script", "-qc", opencode_cmd, "/dev/null"]
 
         print(f"  [attempt {attempt_num}] running opencode "
               f"(profile={profile}, skills_mode={skills_mode}, "
@@ -1226,7 +1290,8 @@ def run_one_attempt(
             if isinstance(partial_err, bytes):
                 partial_err = partial_err.decode("utf-8", errors="replace")
             agent_output.write_text(partial_out + partial_err)
-            asc_path_after = _snapshot_asc_file()
+            if agent_backend == "host":
+                asc_path_after = _snapshot_asc_file()
             asc_root_mutated = (
                 bool(asc_path_before) and bool(asc_path_after)
                 and asc_path_before != asc_path_after
@@ -1234,7 +1299,7 @@ def run_one_attempt(
             if asc_root_mutated:
                 print(f"  [attempt {attempt_num}] CRITICAL: pyasc root mutated "
                       f"during agent run: {asc_path_before} -> {asc_path_after}")
-            return _finalize_attempt(
+            record = _finalize_attempt(
                 attempt_num=attempt_num, elapsed=elapsed, exit_code=124,
                 project=project, op=op, dtype=dtype,
                 runtime=runtime, runtime_backend=runtime_backend,
@@ -1246,6 +1311,9 @@ def run_one_attempt(
                 asc_path_after=asc_path_after,
                 asc_root_mutated=asc_root_mutated,
             )
+            if agent_backend == "docker":
+                _chown_project_to_host(project)
+            return record
         elapsed = time.monotonic() - t0
         agent_output.write_text((result.stdout or "") + (result.stderr or ""))
         print(f"  [attempt {attempt_num}] agent exited (code={exit_code}, "
@@ -1257,7 +1325,8 @@ def run_one_attempt(
         elapsed = time.monotonic() - t0 if "t0" in dir() else 0.0
         print(f"  [attempt {attempt_num}] agent error: {exc}")
 
-    asc_path_after = _snapshot_asc_file()
+    if agent_backend == "host":
+        asc_path_after = _snapshot_asc_file()
     asc_root_mutated = (
         bool(asc_path_before) and bool(asc_path_after)
         and asc_path_before != asc_path_after
@@ -1266,7 +1335,7 @@ def run_one_attempt(
         print(f"  [attempt {attempt_num}] CRITICAL: pyasc root mutated "
               f"during agent run: {asc_path_before} -> {asc_path_after}")
 
-    return _finalize_attempt(
+    record = _finalize_attempt(
         attempt_num=attempt_num, elapsed=elapsed, exit_code=exit_code,
         project=project, op=op, dtype=dtype,
         runtime=runtime, runtime_backend=runtime_backend,
@@ -1278,6 +1347,9 @@ def run_one_attempt(
         asc_path_after=asc_path_after,
         asc_root_mutated=asc_root_mutated,
     )
+    if agent_backend == "docker":
+        _chown_project_to_host(project)
+    return record
 
 
 def _finalize_attempt(
@@ -1491,6 +1563,14 @@ def main() -> None:
                         default="json",
                         help="opencode --format mode (default: json so tokens "
                              "can be extracted)")
+    parser.add_argument("--agent-backend",
+                        choices=["auto", "host", "docker"], default="auto",
+                        help="Where to run opencode generation: 'host' invokes "
+                             "opencode on PATH directly (local dev); 'docker' "
+                             "runs opencode inside the pyasc-sim image (same "
+                             "image as verify, so no runner needs node/opencode "
+                             "on PATH); 'auto' (default) resolves to host. CI "
+                             "passes --agent-backend docker.")
     parser.add_argument("--protocol-id", choices=sorted(PROTOCOL_TABLE.keys()),
                         default=None,
                         help="Phase 0 protocol id (P2/P3/P4/P6). Derives "
@@ -1507,6 +1587,11 @@ def main() -> None:
                              "when the resolved protocol asks for it. Useful "
                              "for local ablations.")
     args = parser.parse_args()
+
+    # 'auto' preserves the historical host behavior for local dev; CI is
+    # explicit (--agent-backend docker) so generation runs in the pyasc-sim
+    # image alongside verification.
+    agent_backend = "host" if args.agent_backend == "auto" else args.agent_backend
 
     protocol_resolved: dict | None = None
     if args.protocol_id:
@@ -1627,7 +1712,10 @@ def main() -> None:
             )
 
     print(f"  Generative evidence for {args.op}/{args.dtype}")
-    print(f"  Profile: {args.model_profile}, skills_mode: {args.skills_mode}")
+    print(f"  Profile: {args.model_profile}, skills_mode: {args.skills_mode}, "
+          f"agent_backend: {agent_backend}")
+    if agent_backend == "docker":
+        print(f"  opencode runs inside {DOCKER_IMAGE}")
     if args.protocol_id:
         print(
             f"  Protocol: {args.protocol_id} "
@@ -1667,6 +1755,7 @@ def main() -> None:
             keep_project=args.keep_project,
             agent_format=args.agent_format,
             agents_md_path=agents_md_path,
+            agent_backend=agent_backend,
         )
         rec = run_one_attempt(**attempt_kwargs)
         # A transient no-op (instant exit-0/0-token bail, typically a

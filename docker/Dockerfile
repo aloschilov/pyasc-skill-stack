@@ -145,6 +145,29 @@ RUN PYASC_SITE=$(python3 -c "import asc, os; print(os.path.dirname(asc.__file__)
  && grep -q "create_asctile_RmsNormOp" "${PYASC_SITE}/language/tile/unary_ops.py" \
  && echo "rms_norm casing patched"
 
+# OpenCode agent runtime. The generative-evidence harness runs `opencode run`
+# INSIDE this image (docker-out-of-docker), so no host/runner needs Node or
+# opencode on PATH -- generation joins the verification step that already runs
+# here. Node 24 + the OpenAI-compatible provider mirror the self-hosted runner
+# image (infra/self-hosted-runner/Dockerfile); `script` (util-linux) for the
+# PTY wrapper ships in the ubuntu base. Kept as the last layer so the heavy
+# pyasc build above stays cached when only the agent toolchain changes.
+ARG NODE_MAJOR=24
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends gnupg \
+ && install -m 0755 -d /etc/apt/keyrings \
+ && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+      | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+ && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
+      > /etc/apt/sources.list.d/nodesource.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends nodejs \
+ && node --version && npm --version \
+ && npm install -g opencode-ai @ai-sdk/openai-compatible \
+ && opencode --version \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
 RUN python3 -c "import numpy; print(f'numpy: {numpy.__version__}')" && \
     python3 -c "import torch; print(f'torch: {torch.__version__}')" && \
     python3 -c "import asc, asc2; print('asc, asc2: OK')" || \
