@@ -70,32 +70,33 @@ jobs:
   # and pushed to ghcr.io.  CI only pulls it.
   # ==========================================================================
   merge-gate:
-    # GitHub-hosted ubuntu-latest (amd64): pulls the amd64 leg of the multiarch
-    # pyasc-sim image and runs the camodel golden-kernel sim natively. No GPU is
-    # used. (Formerly ran on the RTX 4090 `gpu` box, now retired from CI.)
+    # Self-hosted arm64 runner (the MacBook Docker Desktop Linux/arm64 VM,
+    # label `arm64`; see infra/self-hosted-runner/compose.arm64.yml) -- the
+    # same runner the perf-gate uses.
     #
-    # SHARDED across independent runners. The camodel sims are memory-bandwidth
-    # bound: running several at once in ONE VM does not scale (a 4-way in-VM
-    # parallel run was ~43 min, vs ~46 min serial -- per-kernel time inflated
-    # ~3.7x because the sims saturate the shared memory bus, which is also why
-    # CPU% looks low). So we fan the 17 goldens out over `shard` independent
-    # hosted runners (each with its own full memory bandwidth); every shard
-    # verifies its subset SERIALLY. Wall-clock drops from ~46 min to the busiest
-    # shard (~13-16 min incl. image pull). All shards must pass for the gate.
-    runs-on: ubuntu-latest
+    # WHY ARM64 (not GitHub-hosted amd64): the golden sims must run on the same
+    # architecture kernels are developed and perf-measured on. The amd64 leg of
+    # the multiarch pyasc-sim image ships a pyasc build whose asc IR lowering
+    # has no bf16 type -- asc/language/core/dtype.py `to_ir()` lacks a
+    # `bfloat16 -> get_bf16_type` factory entry and raises
+    # "Unsupported DataType name: bfloat16" at compile time -- so bfloat16
+    # goldens (e.g. layer_norm_v4_bf16) cannot be verified there at all. The
+    # arm64 build supports bf16, so verifying every golden on the arm64 runner
+    # keeps the environment consistent. The multiarch PYASC_SIM_IMAGE tag
+    # resolves to its arm64 leg automatically on this runner.
+    #
+    # SINGLE SERIAL JOB (no sharding): there is one arm64 runner, and the
+    # camodel sims are memory-bandwidth bound -- running several at once in ONE
+    # VM does not scale (a 4-way in-VM run was ~43 min vs ~46 min serial). So
+    # the previous amd64 fan-out over independent GitHub-hosted runners has no
+    # arm64 equivalent; verifying all goldens serially on the one runner is
+    # both simplest and about as fast as any in-VM parallelism would be.
+    runs-on: [self-hosted, arm64]
     needs: [pr-gate]
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch'
-    strategy:
-      fail-fast: false
-      matrix:
-        # Round-robin (kernel index % SHARD_COUNT == shard) assigns goldens to
-        # shards; keep SHARD_COUNT below in sync with this list length.
-        shard: [0, 1, 2, 3]
-    env:
-      SHARD_COUNT: "4"
     steps:
       - uses: actions/checkout@v4
 
@@ -109,52 +110,47 @@ jobs:
       - name: Pull pyasc-sim image
         run: docker pull ${{ env.PYASC_SIM_IMAGE }}
 
-      - name: Simulator verification of golden kernels (shard ${{ matrix.shard }})
+      - name: Simulator verification of golden kernels
         run: |
           set -uo pipefail
-          # All goldens verified on C310 (Ascend950PR_9599); 910B1 is no
-          # longer a CI target. Heavy CANN simulator runs (esp. matmul,
-          # gelu_f32) need a large nofile ulimit and a generous timeout.
+          # All goldens verified on C310 (Ascend950PR_9599) on arm64. Heavy
+          # CANN simulator runs (esp. matmul, gelu_f32) need a large nofile
+          # ulimit and a generous timeout.
           PLATFORM=Ascend950PR_9599
           TIMEOUT=1500
           IMAGE="${{ env.PYASC_SIM_IMAGE }}"
-          SHARD=${{ matrix.shard }}
-          SHARDS=${SHARD_COUNT}
           total=$(ls golden/kernels/*.py | wc -l | tr -d ' ')
-          echo "Shard $SHARD/$SHARDS verifying its slice of $total goldens (platform=$PLATFORM)"
-          FAILED=0; idx=0; ran=0
+          echo "Verifying $total goldens serially on arm64 (platform=$PLATFORM)"
+          FAILED=0; ran=0
           for kernel in golden/kernels/*.py; do
             [ -f "$kernel" ] || continue
-            if [ "$(( idx % SHARDS ))" -eq "$SHARD" ]; then
-              base="$(basename "$kernel")"
-              echo "--- [shard $SHARD] Verifying $base ---"
-              start=$(date +%s)
-              if docker run --rm \
-                --ulimit nofile=65536:65536 \
-                -v "$PWD":/workspace:ro \
-                -w /workspace \
-                "$IMAGE" \
-                python3.11 tests/tools/run_and_verify.py "$kernel" \
-                  --mode simulator --platform "$PLATFORM" --timeout "$TIMEOUT"; then
-                echo "[PASS] $base ($(( $(date +%s) - start ))s)"
-              else
-                echo "[FAIL] $base ($(( $(date +%s) - start ))s)"
-                FAILED=$((FAILED + 1))
-              fi
-              ran=$((ran + 1))
+            base="$(basename "$kernel")"
+            echo "--- Verifying $base ---"
+            start=$(date +%s)
+            if docker run --rm \
+              --ulimit nofile=65536:65536 \
+              -v "$PWD":/workspace:ro \
+              -w /workspace \
+              "$IMAGE" \
+              python3.11 tests/tools/run_and_verify.py "$kernel" \
+                --mode simulator --platform "$PLATFORM" --timeout "$TIMEOUT"; then
+              echo "[PASS] $base ($(( $(date +%s) - start ))s)"
+            else
+              echo "[FAIL] $base ($(( $(date +%s) - start ))s)"
+              FAILED=$((FAILED + 1))
             fi
-            idx=$((idx + 1))
+            ran=$((ran + 1))
           done
-          echo "shard $SHARD ran $ran kernel(s); $FAILED failed"
+          echo "ran $ran kernel(s); $FAILED failed"
           if [ "$ran" -eq 0 ]; then
-            echo "ERROR: shard $SHARD verified 0 kernels (SHARD_COUNT vs matrix mismatch?)"
+            echo "ERROR: verified 0 kernels"
             exit 1
           fi
           if [ "$FAILED" -gt 0 ]; then
-            echo "ERROR: $FAILED golden kernel(s) failed simulator verification in shard $SHARD"
+            echo "ERROR: $FAILED golden kernel(s) failed simulator verification"
             exit 1
           fi
-          echo "Shard $SHARD: all $ran kernel(s) passed."
+          echo "All $ran kernel(s) passed."
 
   # ==========================================================================
   # Perf gate (REPORT-ONLY): measure perf-vs-AscendC for every demo cell in

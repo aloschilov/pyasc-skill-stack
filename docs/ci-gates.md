@@ -37,6 +37,16 @@ Runs in under 5 minutes. Requires CANN simulator environment.
 
 Requires: `source $HOME/Ascend/cann/set_env.sh` and `LD_LIBRARY_PATH` set. See [cann-setup.md](cann-setup.md).
 
+The GitHub Actions `merge-gate` job runs on the **self-hosted arm64 runner**
+(same host as `perf-gate`), not GitHub-hosted amd64. The amd64 leg of the
+multiarch `pyasc-sim` image ships a pyasc build with no bf16 IR lowering
+(`asc/language/core/dtype.py` raises `Unsupported DataType name: bfloat16`),
+so `bfloat16` goldens (e.g. `layer_norm_v4_bf16`) can only be verified on
+arm64. Verifying every golden on the one arm64 runner keeps the environment
+consistent with where kernels are developed and perf-measured; the sims run
+serially (the camodel is memory-bandwidth bound, so in-VM parallelism does
+not help).
+
 ## Nightly gate (`--tier nightly`)
 
 Runs in 15-30 minutes. Requires opencode CLI and CANN simulator.
