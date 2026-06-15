@@ -72,9 +72,10 @@ jobs:
   merge-gate:
     # GitHub-hosted ubuntu-latest (amd64): pulls the amd64 leg of the multiarch
     # pyasc-sim image and runs the camodel golden-kernel sim natively. No GPU is
-    # used. NB the hosted 6h job cap vs TIMEOUT=1500 per kernel below: if the
-    # heaviest goldens push total wall-clock near the cap, lower their timeout.
-    # (Formerly ran on the RTX 4090 `gpu` box, now retired from CI.)
+    # used. The goldens are verified concurrently (bounded by nproc), so the
+    # verify wall-clock is governed by the slowest single kernel (TIMEOUT=1500),
+    # comfortably under the hosted 6h job cap. (Formerly ran on the RTX 4090
+    # `gpu` box, now retired from CI.)
     runs-on: ubuntu-latest
     needs: [pr-gate]
     if: >-
@@ -96,34 +97,63 @@ jobs:
 
       - name: Simulator verification of golden kernels
         run: |
-          FAILED=0
+          set -uo pipefail
           # All goldens verified on C310 (Ascend950PR_9599); 910B1 is no
           # longer a CI target. Heavy CANN simulator runs (esp. matmul,
           # gelu_f32) need a large nofile ulimit and a generous timeout.
+          #
+          # The 17 golden kernels are mutually independent, and each CANN sim is
+          # essentially single-threaded, so the old serial for-loop pinned ~1
+          # core and left the rest of the hosted runner idle (~46 min wall-clock
+          # for the verify step). Run them concurrently, bounded by core count,
+          # so wall-clock is governed by the heaviest kernel rather than the sum.
           PLATFORM=Ascend950PR_9599
           TIMEOUT=1500
-          for kernel in golden/kernels/*.py; do
-            [ -f "$kernel" ] || continue
-            base=$(basename "$kernel")
-            echo "--- Verifying: $base (platform=$PLATFORM) ---"
+          IMAGE="${{ env.PYASC_SIM_IMAGE }}"
+          JOBS="${MERGE_GATE_JOBS:-$(nproc)}"
+          RESULTS="$(mktemp -d)"
+          ROOT="$PWD"
+          export IMAGE PLATFORM TIMEOUT RESULTS ROOT
+          total=$(ls golden/kernels/*.py | wc -l | tr -d ' ')
+          echo "Verifying $total golden kernels with $JOBS parallel workers (platform=$PLATFORM)"
+
+          verify_one() {
+            kernel="$1"
+            base="$(basename "$kernel")"
+            start=$(date +%s)
             if docker run --rm \
               --ulimit nofile=65536:65536 \
-              -v "$(pwd)":/workspace:ro \
+              -v "$ROOT":/workspace:ro \
               -w /workspace \
-              ${{ env.PYASC_SIM_IMAGE }} \
+              "$IMAGE" \
               python3.11 tests/tools/run_and_verify.py "$kernel" \
-                --mode simulator --platform "$PLATFORM" --timeout "$TIMEOUT"; then
-              echo "[PASS] $base"
+                --mode simulator --platform "$PLATFORM" --timeout "$TIMEOUT" \
+                > "$RESULTS/$base.log" 2>&1; then
+              echo "PASS" > "$RESULTS/$base.status"
             else
-              echo "[FAIL] $base"
-              FAILED=$((FAILED + 1))
+              echo "FAIL" > "$RESULTS/$base.status"
             fi
+            echo "  finished $base in $(( $(date +%s) - start ))s [$(cat "$RESULTS/$base.status")]"
+          }
+          export -f verify_one
+
+          # Each verify_one always exits 0 (status captured to a file), so xargs
+          # runs the whole batch; the pass/fail tally is aggregated afterwards.
+          ls golden/kernels/*.py | xargs -P "$JOBS" -I {} bash -c 'verify_one "$@"' _ {}
+
+          FAILED=0
+          for kernel in golden/kernels/*.py; do
+            base="$(basename "$kernel")"
+            status="$(cat "$RESULTS/$base.status" 2>/dev/null || echo FAIL)"
+            echo "=================== $base [$status] ==================="
+            cat "$RESULTS/$base.log" 2>/dev/null || echo "(no log captured)"
+            [ "$status" = "PASS" ] || FAILED=$((FAILED + 1))
           done
           if [ "$FAILED" -gt 0 ]; then
             echo "ERROR: $FAILED golden kernel(s) failed simulator verification"
             exit 1
           fi
-          echo "All golden kernels passed."
+          echo "All $total golden kernels passed."
 
   # ==========================================================================
   # Perf gate (REPORT-ONLY): measure perf-vs-AscendC for every demo cell in
