@@ -1,0 +1,17 @@
+{
+  "schema_version": "3",
+  "kind": "golden",
+  "operation": "layer_norm_v4",
+  "dtype": "bfloat16",
+  "kernel_path": "golden/kernels/layer_norm_v4_bf16.py",
+  "date": "2026-06-15T18:00:00Z",
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed"
+  },
+  "runtime_verified": true,
+  "notes": "Golden kernel verified on the CANN 9.0.0 simulator (Ascend950PR_9599 / C310 / arch35) in Docker via tests/tools/run_and_verify.py --mode simulator. High-level LayerNorm (mean subtraction + beta) with full_row and split_d kernels plus a host-side N-D flatten dispatcher: any N-D input flattens on the host to [rows, last_dim] and normalizes over the last axis. bf16 input/output with float32 accumulator: loaded tiles cast via .to(asc.float32), output cast back via .to(x.dtype) before asc2.store. Variance computed as E[x^2] - mean^2 (merged sum_x + sum_x2 pass) so host zero padding does not bias the statistics. Inputs are torch.Tensor (numpy is silently zeroed on the C310 path). Verified shapes (8, 4096) [full_row] and (8, 1024) [full_row] against torch.nn.functional.layer_norm."
+}

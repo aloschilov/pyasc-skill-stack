@@ -3,6 +3,19 @@
 
 High-level LayerNorm (mean subtraction + beta) with full_row and split_d
 kernels plus a host-side N-D flatten dispatcher. bf16 in / f32 reduce.
+
+Cell metadata (mirrors capabilities.yaml; do not drift):
+  - shape_regime: dynamic         # full_row vs split_d via dispatcher
+  - reduce_axis: -1
+  - output_shape: same_as_input
+  - accumulator_dtype: float32
+  - identity: "0"
+  - tail_behavior: host_dispatcher
+  - padding: null                 # split_d uses host zero-pad to tile_cols
+  - partitioning: host_dispatcher
+  - unsupported_regimes: []
+  - dispatcher_note: layer_norm_v4_launch(x, gamma, beta, eps) picks
+    full_row when num_cols % 8 == 0 and num_cols*4*6 <= 64KB, else split_d.
 """
 
 import argparse

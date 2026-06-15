@@ -1,0 +1,17 @@
+{
+  "schema_version": "3",
+  "kind": "golden",
+  "operation": "layer_norm_v4",
+  "dtype": "float32",
+  "kernel_path": "golden/kernels/layer_norm_v4_f32.py",
+  "date": "2026-06-15T18:00:00Z",
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed"
+  },
+  "runtime_verified": true,
+  "notes": "Golden kernel verified on the CANN 9.0.0 simulator (Ascend950PR_9599 / C310 / arch35) in Docker via tests/tools/run_and_verify.py --mode simulator. High-level LayerNorm (mean subtraction + beta) with full_row and split_d kernels plus a host-side N-D flatten dispatcher: any N-D input flattens on the host to [rows, last_dim] and normalizes over the last axis. Variance computed as E[x^2] - mean^2 (merged sum_x + sum_x2 pass) so host zero padding does not bias the statistics. full_row when num_cols % 8 == 0 and num_cols*4*6 <= 64 KiB UB budget; otherwise split_d (tile_cols=64). Inputs are torch.Tensor (numpy is silently zeroed on the C310 path). Verified shapes cover both 2-D and 3-D inputs and both dispatcher paths: [8,768], [8,152], [8,256], [8,4096], [8,384], [4,52,10], [2,3,250], [2,3,512], [4,5,32], [4,5,16], [2,4,16], [4,3,64], [4,4,128], [2,3,384], [2,4,512], [2,3,160], [2,3,64] against torch.nn.functional.layer_norm (atol=rtol=2e-2 full_row, 5e-2 split_d)."
+}
