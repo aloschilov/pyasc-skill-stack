@@ -37,15 +37,20 @@ Runs in under 5 minutes. Requires CANN simulator environment.
 
 Requires: `source $HOME/Ascend/cann/set_env.sh` and `LD_LIBRARY_PATH` set. See [cann-setup.md](cann-setup.md).
 
-The GitHub Actions `merge-gate` job runs on the **self-hosted arm64 runner**
-(same host as `perf-gate`), not GitHub-hosted amd64. The amd64 leg of the
-multiarch `pyasc-sim` image ships a pyasc build with no bf16 IR lowering
+The GitHub Actions `merge-gate` job runs on GitHub-hosted **amd64**
+(`ubuntu-latest`), sharded across 4 runners for speed, and verifies every
+golden **except** `bfloat16` ones. The amd64 leg of the multiarch `pyasc-sim`
+image ships a pyasc build with no bf16 IR lowering
 (`asc/language/core/dtype.py` raises `Unsupported DataType name: bfloat16`),
-so `bfloat16` goldens (e.g. `layer_norm_v4_bf16`) can only be verified on
-arm64. Verifying every golden on the one arm64 runner keeps the environment
-consistent with where kernels are developed and perf-measured; the sims run
-serially (the camodel is memory-bandwidth bound, so in-VM parallelism does
-not help).
+so `bfloat16` goldens (e.g. `layer_norm_v4_bf16`) cannot compile there.
+
+Those bf16 goldens are verified by a separate **`merge-gate-bf16`** job on the
+**self-hosted arm64 runner** (same host as `perf-gate`), where the multiarch
+image resolves to its arm64 leg and bf16 is supported. That job is
+**non-blocking** (`continue-on-error: true`) and runs **only on the nightly
+schedule / `workflow_dispatch`**, never on push: the single self-hosted runner
+can be offline, so it must not block merges to `main`. A bf16 regression or a
+down runner is reported in the run for follow-up rather than failing CI.
 
 ## Nightly gate (`--tier nightly`)
 
