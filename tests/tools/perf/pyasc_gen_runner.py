@@ -33,6 +33,11 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+_TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+from repo_paths import repo_relative  # noqa: E402
+
 DEFAULT_EVAL_ROOT = Path(
     os.environ.get("PYASC_EVAL_ROOT", "/home/aloschilov/workspace/pyasc-v2-eval")
 )
@@ -355,7 +360,7 @@ def measure(kernel_path: Path, shape: list[int], dtype: str, *, eval_root: Path,
     spread = (max(ticks) - min(ticks)) / median if median else 0.0
     return {
         "cell": f"{kernel_path.parent.name}",
-        "kernel": str(kernel_path),
+        "kernel": repo_relative(kernel_path),
         "dtype": dtype,
         "shape": shape,
         "n_elements": n,
@@ -368,7 +373,7 @@ def measure(kernel_path: Path, shape: list[int], dtype: str, *, eval_root: Path,
         "gen_ticks_spread": round(spread, 4),
         "vf_fusion": vf or None,
         "wall_ms_last": wall,
-        "camodel_log": str(last_log),
+        "camodel_log": repo_relative(last_log),
     }
 
 

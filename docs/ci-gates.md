@@ -24,6 +24,7 @@ Runs in under 30 seconds. Suitable for pre-commit hooks and PR checks.
 
 1. `run-tests.sh --fast` -- L1 structural and content validation (skills, agents, teams)
 2. JIT verification of all golden kernels via `pytest_verify_kernel.py` -- confirms pyasc JIT compilation works without needing the simulator
+3. `check_evidence_paths.py` -- rejects machine-specific `/home/` or `/Users/` paths in committed perf evidence JSON
 
 No network, no simulator, no opencode required.
 
@@ -55,7 +56,11 @@ schedule / `workflow_dispatch tier=nightly`, alongside `nightly-gate`.
 For each cell the harness ([tests/tools/demo_vector_ops.py](../tests/tools/demo_vector_ops.py)
 `--all`) builds the canonical `ops-math`/`ops-nn` AscendC reference and the
 generated pyasc kernel on the same `Ascend950PR_9599` camodel, then computes
-`ratio = ref_ticks / gen_ticks`. The 0.70 gate is **reported, never enforced**,
+`ratio = ref_ticks / gen_ticks`. The demo cell list is **derived automatically**
+from every `perf_ratio_demo` block in `capabilities.yaml` (via
+[tests/tools/load_capability_cells.py](../tests/tools/load_capability_cells.py)),
+so adding a new kernel only requires updating capabilities + harness op wiring,
+not a hand-maintained `CELLS` table. The 0.70 gate is **reported, never enforced**,
 so documented honest misses (`apply_adam` ~0.46, `batch_norm_v3` ~0.10) stay
 green.
 
@@ -89,6 +94,16 @@ green.
   `evidence/vf-fusion/*.json` ride the same `evidence-perf` artifact and are
   committed by `skills-value-report`. The dashboard renders them in a **Compiler
   SIMD fusion** panel.
+
+Committed perf evidence uses **repo-relative paths** only (`golden/kernels/...`,
+`evidence/perf/_build_cache/logs/...`). The PR gate runs
+[tests/tools/check_evidence_paths.py](../tests/tools/check_evidence_paths.py) to
+reject `/home/` and `/Users/` prefixes in perf/vf-fusion JSON.
+
+The GitHub Actions `nightly-gate` (and local-stability matrix legs) discover
+generative cells from `capabilities.yaml` via
+[tests/tools/list_generative_cells.py](../tests/tools/list_generative_cells.py)
+(every cell with a non-empty `prompt` on `Ascend950PR_9599`).
 
 ## Environment variables
 

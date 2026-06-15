@@ -37,11 +37,11 @@
     "reference_kind": "canonical_only",
     "reference_source": "ops-math canonical operator (math/reduce_sum), build.sh --pkg --soc=ascend950",
     "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=reduce_sum",
-    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_reduce_sum_f32_32x4096.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_reduce_sum_f32_32x4096.run3.log"
   },
   "gen_detail": {
     "cell": "reduce_sum_f32",
-    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/kernel.py",
+    "kernel": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/kernel.py",
     "dtype": "float32",
     "shape": [
       32,
@@ -60,6 +60,6 @@
     "gen_ticks_method": "median_of_3",
     "gen_ticks_spread": 0.0004,
     "wall_ms_last": 19772.2,
-    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_reduce_sum_f32_32x4096.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_reduce_sum_f32_32x4096.run3.log"
   }
 }

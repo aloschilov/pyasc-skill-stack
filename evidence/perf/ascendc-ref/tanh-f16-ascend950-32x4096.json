@@ -23,5 +23,5 @@
   "reference_repo": "ops-math",
   "reference_source": "ops-math canonical operator (tanh, aclnnop/aclnn_tanh.h), build.sh --pkg --soc=ascend950",
   "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=tanh",
-  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_tanh_f16_32x4096.run3.log"
+  "camodel_log": "evidence/perf/_build_cache/logs/perf_tanh_f16_32x4096.run3.log"
 }

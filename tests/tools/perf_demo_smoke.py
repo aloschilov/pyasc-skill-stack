@@ -9,7 +9,7 @@ simulator (those are exercised by the live demo, not by CI):
   * every op spec names a known reference repo + an aclnn header + a body fn;
   * the C++ driver source generates for each op (contains its aclnn call);
   * the per-op gen-side input builders produce well-formed arg specs;
-  * the gen probe's launch-selection prefers the public, op-named dispatcher.
+  * capabilities perf_ratio_demo cells are auto-wired into the demo map.
 
 Exits non-zero with a diagnostic on the first failure.
 """
@@ -22,6 +22,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PERF_DIR = REPO_ROOT / "tests" / "tools" / "perf"
+TOOLS_DIR = REPO_ROOT / "tests" / "tools"
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+from load_capability_cells import load_capabilities_yaml, load_perf_cells  # noqa: E402
 
 
 def _load(name: str, path: Path):
@@ -32,13 +36,24 @@ def _load(name: str, path: Path):
     return mod
 
 
+def _count_perf_ratio_cells(cap: dict) -> int:
+    total = 0
+    for op in cap.get("operations", []):
+        for cell in op.get("cells", []):
+            if cell.get("perf_ratio_demo"):
+                total += 1
+    return total
+
+
 def main() -> int:
     ref = _load("ascendc_ref_runner", PERF_DIR / "ascendc_ref_runner.py")
     gen = _load("pyasc_gen_runner", PERF_DIR / "pyasc_gen_runner.py")
     demo = _load("demo_vector_ops", REPO_ROOT / "tests" / "tools" / "demo_vector_ops.py")
+    cap = load_capabilities_yaml()
 
     known_repos = {"ops-math", "ops-nn"}
     failures: list[str] = []
+    expected_cells = _count_perf_ratio_cells(cap)
 
     # 1. op spec integrity
     for op, spec in ref.OP_SPECS.items():
@@ -49,12 +64,12 @@ def main() -> int:
         if not callable(spec["body"]):
             failures.append(f"OP_SPECS[{op}].body is not callable")
 
-    # 2. driver source generates for each op + contains its aclnn entry point
+    # 2. driver source generates for representative ops
     op_shapes = {
         "abs": [32, 4096], "add": [32, 4096], "reduce_sum": [32, 4096],
         "tanh": [32, 4096], "drop_out_do_mask": [32, 4096],
         "rms_norm": [8, 256], "batch_norm_v3": [32, 64, 64], "apply_adam": [32, 4096],
-        "batch_mat_mul_v3": [16, 256, 256],
+        "batch_mat_mul_v3": [16, 256, 256], "layer_norm_v4": [1024, 768],
     }
     aclnn_entry = {
         "abs": "aclnnAbs", "add": "aclnnAdd", "reduce_sum": "aclnnReduceSum",
@@ -62,11 +77,16 @@ def main() -> int:
         "rms_norm": "aclnnRmsNorm", "batch_norm_v3": "aclnnBatchNorm",
         "apply_adam": "aclnnApplyAdam",
         "batch_mat_mul_v3": "aclnnBatchMatMul",
+        "layer_norm_v4": "aclnnLayerNorm",
     }
     for op in ref.OP_SPECS:
+        if op not in op_shapes:
+            continue
         dtype = "f16" if op in ("abs", "add", "tanh", "drop_out_do_mask") else "f32"
         if op == "rms_norm":
             dtype = "f16"
+        if op == "layer_norm_v4":
+            dtype = "f32"
         try:
             src = ref._driver_source(op, dtype, op_shapes[op])
         except Exception as exc:  # noqa: BLE001
@@ -77,7 +97,12 @@ def main() -> int:
         if "REF_DRIVER_DONE" not in src:
             failures.append(f"driver source for {op} missing REF_DRIVER_DONE sentinel")
 
-    # 3. cell->op->dtype maps consistent
+    # 3. cell->op->dtype maps consistent with capabilities
+    if len(ref.CELL_TO_OP_DTYPE) != expected_cells:
+        failures.append(
+            f"CELL_TO_OP_DTYPE has {len(ref.CELL_TO_OP_DTYPE)} entries, "
+            f"expected {expected_cells} from perf_ratio_demo"
+        )
     for cell, (op, dtype) in ref.CELL_TO_OP_DTYPE.items():
         if op not in ref.OP_SPECS:
             failures.append(f"CELL_TO_OP_DTYPE[{cell}] op {op} not in OP_SPECS")
@@ -97,7 +122,14 @@ def main() -> int:
     if gen.arg_specs_for("tanh/float16", [32, 4096], "float16") is not None:
         failures.append("elementwise tanh must use the auto (None) input path")
 
-    # 5. demo cells all resolve to a ref op + dtype
+    # 5. demo cells loaded from capabilities
+    if len(demo.CELLS) != expected_cells:
+        failures.append(
+            f"demo CELLS has {len(demo.CELLS)} entries, expected {expected_cells}"
+        )
+    curated = load_perf_cells(cap, REPO_ROOT)
+    if set(demo.CELLS) != set(curated):
+        failures.append("demo CELLS keys differ from load_perf_cells()")
     for cell, spec in demo.CELLS.items():
         if spec["ref_op"] not in ref.OP_SPECS:
             failures.append(f"demo CELLS[{cell}].ref_op {spec['ref_op']} not in OP_SPECS")
@@ -105,21 +137,18 @@ def main() -> int:
             failures.append(f"demo CELLS[{cell}].ref_dtype {spec['ref_dtype']} invalid")
         if not isinstance(spec["shape"], list):
             failures.append(f"demo CELLS[{cell}].shape must be a list")
-
-    # 6. the 5 requested operators are all wired into the demo
-    requested = {"tanh", "drop_out_do_mask", "rms_norm", "batch_norm_v3", "apply_adam"}
-    demo_ops = {spec["ref_op"] for spec in demo.CELLS.values()}
-    missing = requested - demo_ops
-    if missing:
-        failures.append(f"requested operators not wired into demo CELLS: {sorted(missing)}")
+        if not spec["kernel"].exists():
+            failures.append(f"demo CELLS[{cell}].kernel missing: {spec['kernel']}")
 
     if failures:
         print("PERF DEMO SMOKE: FAIL", file=sys.stderr)
         for f in failures:
             print(f"  - {f}", file=sys.stderr)
         return 1
-    print(f"PERF DEMO SMOKE: PASS ({len(ref.OP_SPECS)} op specs, "
-          f"{len(demo.CELLS)} demo cells, 5/5 requested ops wired)")
+    print(
+        f"PERF DEMO SMOKE: PASS ({len(ref.OP_SPECS)} op specs, "
+        f"{len(demo.CELLS)} demo cells from capabilities)"
+    )
     return 0
 
 

@@ -40,11 +40,11 @@
     "reference_repo": "ops-nn",
     "reference_source": "ops-nn canonical operator (rms_norm, aclnnop/aclnn_rms_norm.h), build.sh --pkg --soc=ascend950",
     "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=rms_norm",
-    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_rms_norm_f16_8x256.run2.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_rms_norm_f16_8x256.run2.log"
   },
   "gen_detail_off": {
     "cell": "kernels",
-    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/golden/kernels/rms_norm_f16.py",
+    "kernel": "golden/kernels/rms_norm_f16.py",
     "dtype": "float16",
     "shape": [
       8,
@@ -63,11 +63,11 @@
     "gen_ticks_spread": 0.0005,
     "vf_fusion": "false",
     "wall_ms_last": 10684.4,
-    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_kernels_8x256_vf-false.run2.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_8x256_vf-false.run2.log"
   },
   "gen_detail_on": {
     "cell": "kernels",
-    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/golden/kernels/rms_norm_f16.py",
+    "kernel": "golden/kernels/rms_norm_f16.py",
     "dtype": "float16",
     "shape": [
       8,
@@ -86,6 +86,6 @@
     "gen_ticks_spread": 0.0,
     "vf_fusion": "true",
     "wall_ms_last": 13029.7,
-    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_kernels_8x256_vf-true.run2.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_8x256_vf-true.run2.log"
   }
 }

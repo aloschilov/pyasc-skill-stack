@@ -69,6 +69,14 @@ run_pr_gate() {
             fi
         fi
     done
+
+    echo ""
+    echo "--- Evidence path hygiene (no /home or /Users paths) ---"
+    if $PYTHON "$TOOLS_DIR/check_evidence_paths.py"; then
+        echo ""
+    else
+        FAILED=$((FAILED + 1))
+    fi
 }
 
 # ============================================

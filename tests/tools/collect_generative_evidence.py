@@ -49,6 +49,10 @@ except ImportError:
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+from repo_paths import portable_pyasc_revision, relativize_evidence  # noqa: E402
+
 EVIDENCE_DIR = REPO_ROOT / "evidence"
 VERIFY_SCRIPT = SCRIPT_DIR / "verify_kernel.py"
 SCORE_SCRIPT = SCRIPT_DIR / "score_kernel.py"
@@ -1999,6 +2003,9 @@ def main() -> None:
             pass
 
     evidence["history"] = history
+    evidence["pyasc_revision"] = portable_pyasc_revision(
+        evidence.get("pyasc_revision", {}), root=REPO_ROOT)
+    evidence = relativize_evidence(evidence, root=REPO_ROOT)
 
     if args.dry_run:
         print()

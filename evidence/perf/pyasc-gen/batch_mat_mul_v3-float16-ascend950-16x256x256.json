@@ -1,6 +1,6 @@
 {
   "cell": "kernels",
-  "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/golden/kernels/batch_mat_mul_v3_f16.py",
+  "kernel": "golden/kernels/batch_mat_mul_v3_f16.py",
   "dtype": "float16",
   "shape": [
     16,
@@ -21,5 +21,5 @@
   "gen_ticks_spread": 0.0,
   "vf_fusion": null,
   "wall_ms_last": 65587.6,
-  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_kernels_16x256x256_default.run3.log"
+  "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_16x256x256_default.run3.log"
 }

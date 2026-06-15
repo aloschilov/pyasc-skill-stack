@@ -22,5 +22,5 @@
   "reference_kind": "canonical_only",
   "reference_source": "ops-math canonical operator (math/reduce_sum), build.sh --pkg --soc=ascend950",
   "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=reduce_sum",
-  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_reduce_sum_f32_32x4096.run3.log"
+  "camodel_log": "evidence/perf/_build_cache/logs/perf_reduce_sum_f32_32x4096.run3.log"
 }

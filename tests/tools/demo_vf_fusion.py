@@ -43,6 +43,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS_DIR = Path(__file__).resolve().parent
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+from repo_paths import relativize_evidence  # noqa: E402
+
 EVIDENCE = REPO_ROOT / "evidence" / "vf-fusion"
 
 # Reuse the perf orchestrator's cell map + runner handles (it loads
@@ -208,7 +212,8 @@ def main(argv: list[str] | None = None) -> int:
         for r in results:
             tag = r["cell"].replace("/", "-")
             out = EVIDENCE / f"{tag}-{ts}.json"
-            out.write_text(json.dumps(r, indent=2) + "\n")
+            payload = relativize_evidence(r, root=REPO_ROOT)
+            out.write_text(json.dumps(payload, indent=2) + "\n")
             print(f"[evidence] {r['cell']} -> {out}")
     return 0
 

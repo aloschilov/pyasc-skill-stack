@@ -38,11 +38,11 @@
     "reference_repo": "ops-nn",
     "reference_source": "ops-nn canonical operator (layer_norm_v4, aclnnop/aclnn_layer_norm.h), build.sh --pkg --soc=ascend950",
     "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=layer_norm_v4",
-    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_layer_norm_v4_f32_1024x768.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_layer_norm_v4_f32_1024x768.run3.log"
   },
   "gen_detail": {
     "cell": "kernels",
-    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/golden/kernels/layer_norm_v4_f32.py",
+    "kernel": "golden/kernels/layer_norm_v4_f32.py",
     "dtype": "float32",
     "shape": [
       1024,
@@ -62,6 +62,6 @@
     "gen_ticks_spread": 0.5308,
     "vf_fusion": null,
     "wall_ms_last": 821490.0,
-    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_kernels_1024x768_default.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_1024x768_default.run3.log"
   }
 }

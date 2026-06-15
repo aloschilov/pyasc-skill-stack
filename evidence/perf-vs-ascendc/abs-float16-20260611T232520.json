@@ -39,7 +39,7 @@
     "reference_repo": "ops-math",
     "reference_source": "ops-math canonical operator (abs, aclnnop/aclnn_abs.h), build.sh --pkg --soc=ascend950",
     "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=abs",
-    "camodel_log": "/workspace/evidence/perf/_build_cache/logs/perf_abs_f16_32x4096.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_abs_f16_32x4096.run3.log"
   },
   "gen_detail": null
 }

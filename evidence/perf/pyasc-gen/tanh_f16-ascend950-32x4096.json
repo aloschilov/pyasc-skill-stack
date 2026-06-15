@@ -19,5 +19,5 @@
   "gen_ticks_method": "median_of_3",
   "gen_ticks_spread": 0.0009,
   "wall_ms_last": 29509.3,
-  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_tanh_f16_32x4096.run3.log"
+  "camodel_log": "evidence/perf/_build_cache/logs/probe_tanh_f16_32x4096.run3.log"
 }

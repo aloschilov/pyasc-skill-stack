@@ -48,6 +48,12 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+_TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+from load_capability_cells import load_capabilities_yaml, load_cell_to_op_dtype  # noqa: E402
+from repo_paths import repo_relative  # noqa: E402
+
 DEFAULT_OPS_MATH = Path(
     os.environ.get("OPS_MATH_HOME", "/home/aloschilov/workspace/ops-math")
 )
@@ -469,21 +475,8 @@ OP_SPECS = {
                       "header": "aclnnop/aclnn_layer_norm.h", "body": _layer_norm_v4_body},
 }
 
-# Demo cell -> (op spec key, dtype).
-CELL_TO_OP_DTYPE = {
-    "abs/float16": ("abs", "f16"),
-    "add/float16": ("add", "f16"),
-    "reduce_sum/float32": ("reduce_sum", "f32"),
-    "tanh/float16": ("tanh", "f16"),
-    "drop_out_do_mask/float16": ("drop_out_do_mask", "f16"),
-    "rms_norm/float16": ("rms_norm", "f16"),
-    "rms_norm/float32": ("rms_norm", "f32"),
-    "batch_norm_v3/float32": ("batch_norm_v3", "f32"),
-    "apply_adam/float32": ("apply_adam", "f32"),
-    "batch_mat_mul_v3/float16": ("batch_mat_mul_v3", "f16"),
-    "layer_norm_v4/bfloat16": ("layer_norm_v4", "bf16"),
-    "layer_norm_v4/float32": ("layer_norm_v4", "f32"),
-}
+# Demo cell -> (op spec key, dtype), derived from capabilities perf_ratio_demo.
+CELL_TO_OP_DTYPE = load_cell_to_op_dtype(load_capabilities_yaml())
 
 
 def _driver_source(op: str, dtype: str, shape: list[int]) -> str:
@@ -882,7 +875,7 @@ def measure(op: str, dtype: str, shape: list[int], *, ascend: Path,
         "reference_repo": repo.name,
         "reference_source": f"{repo.name} canonical operator ({build_op}, {spec['header']}), build.sh --pkg --soc=ascend950",
         "build_cmd": f"bash build.sh --pkg --soc=ascend950 --ops={build_op}",
-        "camodel_log": str(log),
+        "camodel_log": repo_relative(log),
     }
 
 

@@ -20,7 +20,7 @@
   "ref_detail": null,
   "gen_detail_off": {
     "cell": "kernels",
-    "kernel": "/workspace/golden/kernels/batch_norm_v3_f32.py",
+    "kernel": "golden/kernels/batch_norm_v3_f32.py",
     "dtype": "float32",
     "shape": [
       32,
@@ -41,11 +41,11 @@
     "gen_ticks_spread": 0.0008,
     "vf_fusion": "false",
     "wall_ms_last": 114704.0,
-    "camodel_log": "/workspace/evidence/perf/_build_cache/logs/probe_kernels_32x64x64_vf-false.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_32x64x64_vf-false.run3.log"
   },
   "gen_detail_on": {
     "cell": "kernels",
-    "kernel": "/workspace/golden/kernels/batch_norm_v3_f32.py",
+    "kernel": "golden/kernels/batch_norm_v3_f32.py",
     "dtype": "float32",
     "shape": [
       32,
@@ -66,6 +66,6 @@
     "gen_ticks_spread": 0.0002,
     "vf_fusion": "true",
     "wall_ms_last": 109118.0,
-    "camodel_log": "/workspace/evidence/perf/_build_cache/logs/probe_kernels_32x64x64_vf-true.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_32x64x64_vf-true.run3.log"
   }
 }

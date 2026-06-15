@@ -38,6 +38,12 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+_TOOLS_DIR = Path(__file__).resolve().parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+from load_capability_cells import load_capabilities_yaml, load_perf_cells  # noqa: E402
+from repo_paths import relativize_evidence, repo_relative  # noqa: E402
+
 PERF_DIR = Path(__file__).resolve().parent / "perf"
 EVIDENCE = REPO_ROOT / "evidence" / "perf-vs-ascendc"
 GATE = 0.70
@@ -53,80 +59,10 @@ def _load(mod_name: str, path: Path):
 _ref = _load("ascendc_ref_runner", PERF_DIR / "ascendc_ref_runner.py")
 _gen = _load("pyasc_gen_runner", PERF_DIR / "pyasc_gen_runner.py")
 
-KERNELS_ROOT = REPO_ROOT / "teams" / "pyasc-kernel-dev-team" / "kernels"
-
-GOLDEN_ROOT = REPO_ROOT / "golden" / "kernels"
-
 # cell -> {ref op/dtype, gen kernel path + dtype, comparability shape}.
-# ``ref_op`` keys into ascendc_ref_runner.OP_SPECS (which knows the source repo
-# ops-math vs ops-nn). ``kernel`` is the generated/golden pyasc kernel measured
-# on the same camodel at the same ``shape``. Cells whose kernel does not exist
-# yet record honestly as ref-captured + gen_blocked rather than fabricating.
-CELLS = {
-    "abs/float16": {
-        "ref_op": "abs", "ref_dtype": "f16",
-        "kernel": KERNELS_ROOT / "abs_f16" / "kernel.py", "gen_dtype": "float16",
-        "shape": [32, 4096],
-    },
-    "add/float16": {
-        "ref_op": "add", "ref_dtype": "f16",
-        "kernel": KERNELS_ROOT / "add_f16" / "kernel.py", "gen_dtype": "float16",
-        "shape": [32, 4096],
-    },
-    "reduce_sum/float32": {
-        "ref_op": "reduce_sum", "ref_dtype": "f32",
-        "kernel": KERNELS_ROOT / "reduce_sum_f32" / "kernel.py", "gen_dtype": "float32",
-        "shape": [32, 4096],
-    },
-    "tanh/float16": {
-        "ref_op": "tanh", "ref_dtype": "f16",
-        "kernel": KERNELS_ROOT / "tanh_f16" / "kernel.py", "gen_dtype": "float16",
-        "shape": [32, 4096],
-    },
-    "drop_out_do_mask/float16": {
-        "ref_op": "drop_out_do_mask", "ref_dtype": "f16",
-        "kernel": KERNELS_ROOT / "drop_out_do_mask_f16" / "kernel.py", "gen_dtype": "float16",
-        "shape": [32, 4096],
-    },
-    "rms_norm/float16": {
-        "ref_op": "rms_norm", "ref_dtype": "f16",
-        "kernel": GOLDEN_ROOT / "rms_norm_f16.py", "gen_dtype": "float16",
-        "shape": [8, 256],
-    },
-    "rms_norm/float32": {
-        "ref_op": "rms_norm", "ref_dtype": "f32",
-        "kernel": GOLDEN_ROOT / "rms_norm_f32.py", "gen_dtype": "float32",
-        "shape": [8, 256],
-    },
-    "apply_adam/float32": {
-        "ref_op": "apply_adam", "ref_dtype": "f32",
-        "kernel": KERNELS_ROOT / "apply_adam_f32" / "kernel.py", "gen_dtype": "float32",
-        "shape": [32, 4096],
-    },
-    "batch_norm_v3/float32": {
-        "ref_op": "batch_norm_v3", "ref_dtype": "f32",
-        "kernel": GOLDEN_ROOT / "batch_norm_v3_f32.py", "gen_dtype": "float32",
-        "shape": [32, 64, 64],
-    },
-    # CUBE-only operator-generation demo: batched matmul, measured against the
-    # canonical ops-nn BatchMatMulV3 (aclnnBatchMatMul). Square contract shape
-    # [B, M, K] with N=K -> [16,256,256] x [16,256,256] = [16,256,256].
-    "batch_mat_mul_v3/float16": {
-        "ref_op": "batch_mat_mul_v3", "ref_dtype": "f16",
-        "kernel": GOLDEN_ROOT / "batch_mat_mul_v3_f16.py", "gen_dtype": "float16",
-        "shape": [16, 256, 256],
-    },
-    "layer_norm_v4/bfloat16": {
-        "ref_op": "layer_norm_v4", "ref_dtype": "bf16",
-        "kernel": GOLDEN_ROOT / "layer_norm_v4_bf16.py", "gen_dtype": "bfloat16",
-        "shape": [2000, 4096],
-    },
-    "layer_norm_v4/float32": {
-        "ref_op": "layer_norm_v4", "ref_dtype": "f32",
-        "kernel": GOLDEN_ROOT / "layer_norm_v4_f32.py", "gen_dtype": "float32",
-        "shape": [1024, 768],
-    },
-}
+# Loaded from capabilities.yaml perf_ratio_demo blocks so new kernels are picked
+# up automatically by perf-gate (--all) without editing this file.
+CELLS = load_perf_cells(load_capabilities_yaml(), REPO_ROOT)
 
 
 def _regen(cell: str, dest_kernel: Path, *, verbose: bool) -> dict:
@@ -177,8 +113,11 @@ def _regen(cell: str, dest_kernel: Path, *, verbose: bool) -> dict:
     shutil.copy2(src, dest_kernel)
     if verbose:
         print(f"[regen] {cell}: landed fresh kernel {src} -> {dest_kernel}")
-    return {"archived_kernel": str(src), "landed_kernel": str(dest_kernel),
-            "archive_dir": str(archive_dir)}
+    return {
+        "archived_kernel": repo_relative(src),
+        "landed_kernel": repo_relative(dest_kernel),
+        "archive_dir": repo_relative(archive_dir),
+    }
 
 
 def run_cell(cell: str, *, runs: int, regen: bool, verbose: bool) -> dict:
@@ -298,7 +237,8 @@ def main(argv: list[str] | None = None) -> int:
         for r in results:
             tag = r["cell"].replace("/", "-")
             out = EVIDENCE / f"{tag}-{ts}.json"
-            out.write_text(json.dumps(r, indent=2) + "\n")
+            payload = relativize_evidence(r, root=REPO_ROOT)
+            out.write_text(json.dumps(payload, indent=2) + "\n")
             print(f"[evidence] {r['cell']} -> {out}")
 
     if failures:

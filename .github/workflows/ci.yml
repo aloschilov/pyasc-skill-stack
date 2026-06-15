@@ -372,20 +372,7 @@ jobs:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
         run: |
           mkdir -p generative-archive
-          declare -a OPS=(
-            "abs:float16"
-            "abs:float32"
-            "add:float16"
-            "reduce_sum:float32"
-            "reduce_sum:float16"
-            "gelu:float16"
-            "gelu:float32"
-            "leaky_relu:float16"
-            "softmax:float16"
-            "matmul:float16"
-            "rms_norm:float16"
-            "rms_norm:float32"
-          )
+          mapfile -t OPS < <(python3.10 tests/tools/list_generative_cells.py --platform Ascend950PR_9599)
           CI_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           # Uniform 1500s docker timeout (matches merge-gate post-C310 migration).
           # Pre-migration nightly used 300s/600s on Ascend910B1, but the C310
@@ -614,20 +601,7 @@ jobs:
           SKILLS_MODE: ${{ matrix.skills_mode }}
         run: |
           mkdir -p generative-archive
-          declare -a OPS=(
-            "abs:float16"
-            "abs:float32"
-            "add:float16"
-            "reduce_sum:float32"
-            "reduce_sum:float16"
-            "gelu:float16"
-            "gelu:float32"
-            "leaky_relu:float16"
-            "softmax:float16"
-            "matmul:float16"
-            "rms_norm:float16"
-            "rms_norm:float32"
-          )
+          mapfile -t OPS < <(python3.10 tests/tools/list_generative_cells.py --platform Ascend950PR_9599)
           CI_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           # Local inference is slow on GitHub-hosted runners; give each
           # attempt a longer per-prompt timeout but keep --max-attempts low
@@ -758,20 +732,7 @@ jobs:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
         run: |
           mkdir -p generative-archive
-          declare -a OPS=(
-            "abs:float16"
-            "abs:float32"
-            "add:float16"
-            "reduce_sum:float32"
-            "reduce_sum:float16"
-            "gelu:float16"
-            "gelu:float32"
-            "leaky_relu:float16"
-            "softmax:float16"
-            "matmul:float16"
-            "rms_norm:float16"
-            "rms_norm:float32"
-          )
+          mapfile -t OPS < <(python3.10 tests/tools/list_generative_cells.py --platform Ascend950PR_9599)
           CI_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           DOCKER_TO=1500
           PASS=0

@@ -41,11 +41,11 @@
     "reference_repo": "ops-math",
     "reference_source": "ops-math canonical operator (tanh, aclnnop/aclnn_tanh.h), build.sh --pkg --soc=ascend950",
     "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=tanh",
-    "camodel_log": "/workspace/evidence/perf/_build_cache/logs/perf_tanh_f16_32x4096.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_tanh_f16_32x4096.run3.log"
   },
   "gen_detail_off": {
     "cell": "tanh_f16",
-    "kernel": "/workspace/teams/pyasc-kernel-dev-team/kernels/tanh_f16/kernel.py",
+    "kernel": "teams/pyasc-kernel-dev-team/kernels/tanh_f16/kernel.py",
     "dtype": "float16",
     "shape": [
       32,
@@ -65,11 +65,11 @@
     "gen_ticks_spread": 0.0009,
     "vf_fusion": "false",
     "wall_ms_last": 16114.3,
-    "camodel_log": "/workspace/evidence/perf/_build_cache/logs/probe_tanh_f16_32x4096_vf-false.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_tanh_f16_32x4096_vf-false.run3.log"
   },
   "gen_detail_on": {
     "cell": "tanh_f16",
-    "kernel": "/workspace/teams/pyasc-kernel-dev-team/kernels/tanh_f16/kernel.py",
+    "kernel": "teams/pyasc-kernel-dev-team/kernels/tanh_f16/kernel.py",
     "dtype": "float16",
     "shape": [
       32,
@@ -89,6 +89,6 @@
     "gen_ticks_spread": 0.0013,
     "vf_fusion": "true",
     "wall_ms_last": 16043.6,
-    "camodel_log": "/workspace/evidence/perf/_build_cache/logs/probe_tanh_f16_32x4096_vf-true.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_tanh_f16_32x4096_vf-true.run3.log"
   }
 }

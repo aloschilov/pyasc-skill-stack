@@ -35,11 +35,11 @@
     "reference_kind": "canonical_only",
     "reference_source": "ops-math canonical operator (math/abs), build.sh --pkg --soc=ascend950",
     "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=abs",
-    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_abs_f16_32x4096.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_abs_f16_32x4096.run3.log"
   },
   "gen_detail": {
     "cell": "abs_f16",
-    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
+    "kernel": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
     "dtype": "float16",
     "shape": [
       32,
@@ -58,6 +58,6 @@
     "gen_ticks_method": "median_of_3",
     "gen_ticks_spread": 0.0011,
     "wall_ms_last": 13739.0,
-    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_abs_f16_32x4096.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_abs_f16_32x4096.run3.log"
   }
 }

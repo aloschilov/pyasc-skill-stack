@@ -40,11 +40,11 @@
     "reference_repo": "ops-nn",
     "reference_source": "ops-nn canonical operator (batch_mat_mul_v3, aclnnop/aclnn_batch_matmul.h), build.sh --pkg --soc=ascend950",
     "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=batch_mat_mul_v3",
-    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_batch_mat_mul_v3_f16_16x256x256.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_batch_mat_mul_v3_f16_16x256x256.run3.log"
   },
   "gen_detail": {
     "cell": "kernels",
-    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/golden/kernels/batch_mat_mul_v3_f16.py",
+    "kernel": "golden/kernels/batch_mat_mul_v3_f16.py",
     "dtype": "float16",
     "shape": [
       16,
@@ -65,6 +65,6 @@
     "gen_ticks_spread": 0.0001,
     "vf_fusion": null,
     "wall_ms_last": 977487.0,
-    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_kernels_16x256x256_default.run3.log"
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_16x256x256_default.run3.log"
   }
 }

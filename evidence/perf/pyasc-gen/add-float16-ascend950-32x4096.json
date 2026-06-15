@@ -1,6 +1,6 @@
 {
   "cell": "add_f16",
-  "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
+  "kernel": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
   "dtype": "float16",
   "shape": [
     32,
@@ -20,5 +20,5 @@
   "gen_ticks_spread": 0.0011,
   "vf_fusion": null,
   "wall_ms_last": 12169.0,
-  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_add_f16_32x4096_default.run3.log"
+  "camodel_log": "evidence/perf/_build_cache/logs/probe_add_f16_32x4096_default.run3.log"
 }

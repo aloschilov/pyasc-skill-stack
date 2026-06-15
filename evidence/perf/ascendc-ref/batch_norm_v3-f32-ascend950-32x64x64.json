@@ -24,5 +24,5 @@
   "reference_repo": "ops-nn",
   "reference_source": "ops-nn canonical operator (batch_norm_v3, aclnnop/aclnn_batch_norm.h), build.sh --pkg --soc=ascend950",
   "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=batch_norm_v3",
-  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_batch_norm_v3_f32_32x64x64.run3.log"
+  "camodel_log": "evidence/perf/_build_cache/logs/perf_batch_norm_v3_f32_32x64x64.run3.log"
 }
