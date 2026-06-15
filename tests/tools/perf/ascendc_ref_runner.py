@@ -68,6 +68,7 @@ ARCH_PIN = "Ascend950PR_9599"
 DTYPES = {
     "f16": {"acl": "ACL_FLOAT16", "ctype": "uint16_t", "init": "0xBC00", "name": "float16"},
     "f32": {"acl": "ACL_FLOAT", "ctype": "float", "init": "-1.0f", "name": "float32"},
+    "bf16": {"acl": "ACL_BF16", "ctype": "uint16_t", "init": "0xBF80", "name": "bfloat16"},
 }
 
 
@@ -362,6 +363,50 @@ def _apply_adam_body(dt: dict, shape: list[int]) -> str:
 """
 
 
+def _layer_norm_v4_body(dt: dict, shape: list[int]) -> str:
+    # aclnnLayerNorm(input, normalizedShape, weight, bias, eps, out, mean, rstd):
+    # x/out at shape, weight/bias [last], normalizedShape=[last], mean/rstd at
+    # leading+[1] (always fp32).  Mirrors ops-nn/norm/layer_norm_v4 example.
+    if len(shape) < 2:
+        raise RefError("layer_norm_v4 driver expects rank >= 2")
+    last = shape[-1]
+    n = 1
+    for d in shape:
+        n *= d
+    mr_elems = n // last
+    shape_lit = ", ".join(str(d) for d in shape)
+    mr_shape = shape[:-1] + [1]
+    mr_lit = ", ".join(str(d) for d in mr_shape)
+    return f"""
+  std::vector<int64_t> xShape = {{ {shape_lit} }};
+  std::vector<int64_t> wbShape = {{ {last} }};
+  std::vector<int64_t> mrShape = {{ {mr_lit} }};
+  void *xAddr=nullptr,*wAddr=nullptr,*bAddr=nullptr,*oAddr=nullptr,*mAddr=nullptr,*rAddr=nullptr;
+  aclTensor *x=nullptr,*w=nullptr,*b=nullptr,*o=nullptr,*mean=nullptr,*rstd=nullptr;
+  aclIntArray *norm=nullptr;
+  std::vector<{dt['ctype']}> xh({n}, {dt['init']}), wh({last}, {dt['init']}), bh({last}, {dt['init']}), oh({n}, 0);
+  std::vector<float> mh({mr_elems}, 0), rh({mr_elems}, 0);
+  std::vector<int64_t> normData = {{ {last} }};
+  if (CreateAclTensor(xh, xShape, &xAddr, aclDataType::{dt['acl']}, &x)) return 1;
+  if (CreateAclTensor(wh, wbShape, &wAddr, aclDataType::{dt['acl']}, &w)) return 1;
+  if (CreateAclTensor(bh, wbShape, &bAddr, aclDataType::{dt['acl']}, &b)) return 1;
+  if (CreateAclTensor(oh, xShape, &oAddr, aclDataType::{dt['acl']}, &o)) return 1;
+  if (CreateAclTensor(mh, mrShape, &mAddr, aclDataType::ACL_FLOAT, &mean)) return 1;
+  if (CreateAclTensor(rh, mrShape, &rAddr, aclDataType::ACL_FLOAT, &rstd)) return 1;
+  norm = aclCreateIntArray(normData.data(), normData.size());
+  double eps = 1e-5;
+  uint64_t ws=0; aclOpExecutor* exe;
+  ACL_CALL(aclnnLayerNormGetWorkspaceSize(x, norm, w, b, eps, o, mean, rstd, &ws, &exe));
+  void* wsAddr=nullptr; if (ws>0) ACL_CALL(aclrtMalloc(&wsAddr, ws, ACL_MEM_MALLOC_HUGE_FIRST));
+  ACL_CALL(aclnnLayerNorm(wsAddr, ws, exe, stream));
+  ACL_CALL(aclrtSynchronizeStream(stream));
+  if (ws>0) aclrtFree(wsAddr);
+  aclrtFree(xAddr); aclrtFree(wAddr); aclrtFree(bAddr); aclrtFree(oAddr); aclrtFree(mAddr); aclrtFree(rAddr);
+  aclDestroyTensor(x); aclDestroyTensor(w); aclDestroyTensor(b); aclDestroyTensor(o);
+  aclDestroyTensor(mean); aclDestroyTensor(rstd); aclDestroyIntArray(norm);
+"""
+
+
 def _batch_mat_mul_v3_body(dt: dict, shape: list[int]) -> str:
     # aclnnBatchMatMul(self, mat2, out, cubeMathType): batched GEMM on the cube
     # unit.  self [B,M,K], mat2 [B,K,N], out [B,M,N].  The comparability contract
@@ -420,6 +465,8 @@ OP_SPECS = {
                    "header": "aclnnop/aclnn_apply_adam.h", "body": _apply_adam_body},
     "batch_mat_mul_v3": {"repo": "ops-nn", "build_op": "batch_mat_mul_v3",
                          "header": "aclnnop/aclnn_batch_matmul.h", "body": _batch_mat_mul_v3_body},
+    "layer_norm_v4": {"repo": "ops-nn", "build_op": "layer_norm_v4",
+                      "header": "aclnnop/aclnn_layer_norm.h", "body": _layer_norm_v4_body},
 }
 
 # Demo cell -> (op spec key, dtype).
@@ -434,6 +481,8 @@ CELL_TO_OP_DTYPE = {
     "batch_norm_v3/float32": ("batch_norm_v3", "f32"),
     "apply_adam/float32": ("apply_adam", "f32"),
     "batch_mat_mul_v3/float16": ("batch_mat_mul_v3", "f16"),
+    "layer_norm_v4/bfloat16": ("layer_norm_v4", "bf16"),
+    "layer_norm_v4/float32": ("layer_norm_v4", "f32"),
 }
 
 

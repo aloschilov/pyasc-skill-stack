@@ -721,6 +721,88 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
       kernel_source: vetted golden (golden/kernels/batch_mat_mul_v3_f16.py, batch-per-core L1-staged MN-block, parallel N-tile pipeline)
       perf_note: 'Initial CUBE-only operator-generation demo. Clears 0.70 against the canonical aclnnBatchMatMul. Levers applied: L1 staging of per-batch A/B (each GM element read once) + a double-buffered (parallel=True, unroll_factor=2) N-tile loop with N_TILE=64 so the 2-deep L0B copy/MMAD pipeline fits the 64 KiB L0B budget. gen 23434 (direct GM->L0) -> 21620 (L1) -> 18758 (pipelined). Reference required repairing the aarch64 CANN install with the Ascend-cann-A3-ops package, which ships libophost_comm_legacy.so (the matmul cache-tiling impl the aclnn tiling step dlopens); without it the whole matmul aclnn family cannot tile on this camodel. See docs/perf-vs-ascendc-demo.md "CUBE BatchMatMulV3".'
       evidence: evidence/perf/ascendc-ref/batch_mat_mul_v3-f16-ascend950-16x256x256.json
+- name: layer_norm_v4
+  tier: advanced
+  asc2_api: two-kernel + host dispatcher (full_row, split_d) + N-D flatten
+  note: 'LayerNormV4 (mean subtraction + beta) on Ascend950PR_9599. High-level asc2 golden vs canonical ops-nn layer_norm_v4 aclnnLayerNorm (apples-to-apples). Any N-D input flattens on the host to [rows, last_dim] (normalize over last axis); mean/rstd are ACL_FLOAT (bf16 in still uses f32 stats). full_row when num_cols % 8 == 0 and num_cols * 4 * 6 <= 64 KiB UB budget for f32 intermediates; otherwise split_d (tile_cols=64, merged sum_x+sum_x2 pass, variance via E[x²]-mean² so padding does not bias). Inputs MUST be torch.Tensor. HONEST PERF: float32 gate [1024,768] measures ref 16471 / gen 33442 (ratio ~0.49, FAIL) — two reductions + beta materialize more UB traffic than RMSNorm; wide gate shapes (bf16 [2000,4096], 3D f32 [4096,50,32]) exceed the camodel harness wall-clock budget on this host.'
+  cells:
+  - dtype: bfloat16
+    platform: Ascend950PR_9599
+    shape_regime: dynamic_nd
+    reduce_axis: -1
+    output_shape: same_as_input
+    accumulator_dtype: float32
+    identity: '0'
+    tail_behavior: host_flatten_and_align_pad
+    padding: null
+    partitioning: row_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: true
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Create a LayerNormV4 capability for bfloat16 on Ascend950PR_9599: mean/var/rstd + (x-mean)*rstd*gamma+beta, last-axis normalize with N-D flatten. Gate shape [2000,4096].'
+    shapes:
+    - - 2000
+      - 4096
+    - - 2000
+      - 1024
+    golden_status: confirmed
+    golden: golden/kernels/layer_norm_v4_bf16.py
+    generative_status: not_attempted
+    semantic_check:
+    - asc2.reduce_sum
+    - asc2.rsqrt
+    - full_row
+    - split_d
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: dynamic_nd
+    reduce_axis: -1
+    output_shape: same_as_input
+    accumulator_dtype: float32
+    identity: '0'
+    tail_behavior: host_flatten_and_align_pad
+    padding: null
+    partitioning: row_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: true
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Create a LayerNormV4 capability for float32 on Ascend950PR_9599: mean/var/rstd + (x-mean)*rstd*gamma+beta, last-axis normalize with N-D flatten. Gate shape [1024,768].'
+    shapes:
+    - - 1024
+      - 768
+    - - 4096
+      - 50
+      - 32
+    golden_status: confirmed
+    golden: golden/kernels/layer_norm_v4_f32.py
+    generative_status: not_attempted
+    semantic_check:
+    - asc2.reduce_sum
+    - asc2.rsqrt
+    - full_row
+    - split_d
+    perf_ratio_demo:
+      ref_source: ops-nn/norm/layer_norm_v4 (aclnnLayerNorm, canonical_only)
+      shape: [1024, 768]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      ref_ticks: 16471
+      gen_ticks: 33442
+      last_ratio: 0.49
+      status: fail
+      perf_miss_note: 'Measured 3-run medians on camodel. full_row at cols=768 materializes more f32 intermediates (mean, xc, rstd, gamma, beta) than RMSNorm; gen ~2x slower than fused regbase reference. Levers tried: CORE_NUM 32/16/8, merged split_d stats pass; forcing split_d for cols>512 reverted (JIT timeout). 3D gate [4096,50,32] not measured (ref harness timeout).'
+      kernel_source: vetted golden (golden/kernels/layer_norm_v4_f32.py, full_row+split_d dispatcher)
+      evidence: evidence/perf-vs-ascendc/layer_norm_v4-float32-20260615T173338.json
 - name: rms_norm
   tier: advanced
   asc2_api: two-kernel + host dispatcher (full_row, split_d)

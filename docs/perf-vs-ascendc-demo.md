@@ -24,6 +24,8 @@ reference, now across **two** canonical reference repos —
 | apply_adam/float32        | ops-nn   |      8107 |     17670 |  0.46 | FAIL    |
 | batch_norm_v3/float32     | ops-nn   |      6110 |     62588 |  0.10 | FAIL    |
 | batch_mat_mul_v3/float16  | ops-nn   |     14651 |     18758 |  0.78 | PASS    |
+| layer_norm_v4/float32       | ops-nn   |     16471 |     33442 |  0.49 | FAIL    |
+| layer_norm_v4/bfloat16      | ops-nn   |    (slow) |    (slow) |   -   | TIMEOUT |
 ```
 
 (3-run medians; elementwise/optimizer cells `[32,4096]`, rms_norm `[8,256]`,
@@ -157,6 +159,37 @@ canonical ops-nn **BatchMatMulV3** (`aclnnBatchMatMul`).
   (`libophost_comm_legacy/legacy/math/nn/cv/transformer.so`) and unblocked the
   reference. The harness now symlinks the built-in opp into the custom build root
   (`_ensure_builtin_opp_link`) so the custom op's relative legacy lookup resolves.
+
+## LayerNormV4 (high-level pyasc vs canonical aclnnLayerNorm) — FAIL 0.49
+
+Apples-to-apples normalization demo: the golden implements LayerNorm math
+(mean subtraction + beta) with the **high-level `asc2` API**; the reference is
+the canonical ops-nn **`layer_norm_v4`** `aclnnLayerNorm` (same op the C310
+camodel runs for `aclnnLayerNorm`).
+
+- **Contract:** `layer_norm_v4/float32` @ `[1024, 768]` (gate shape from the
+  workload list; last-axis normalize, N-D inputs flattened on the host to
+  `[rows, cols]`). **ref 16471 / gen 33442 → ratio 0.49, FAIL** (3-run medians).
+- **Kernel provenance:** vetted golden
+  [`golden/kernels/layer_norm_v4_f32.py`](/home/aloschilov/workspace/pyasc-skill-stack/golden/kernels/layer_norm_v4_f32.py)
+  (+ bf16 sibling `layer_norm_v4_bf16.py`): `full_row` when the f32-intermediate
+  budget fits UB (`num_cols % 8 == 0` and `num_cols * 4 * 6 <= 64 KiB`),
+  otherwise `split_d` (tile_cols=64, merged mean+variance pass using
+  `E[x²] − mean²` so host zero-padding does not bias variance). Inputs MUST be
+  `torch.Tensor` (C310 numpy gotcha). bf16 in / f32 reduce for stats (matches
+  aclnn mean+rstd as `ACL_FLOAT`).
+- **Comparability:** same class as `rms_norm` (regbase SIMT reference vs
+  high-level pyasc tiles), but LayerNorm carries **two reductions + beta** per
+  row and materializes more f32 intermediates in the full_row path, so the gen
+  side stays ~2× slower than the fused reference at `[1024, 768]`.
+- **Levers tried (no hand-edited ticks):** `CORE_NUM` 32→16→8; merged split_d
+  stats pass (one tile loop for `sum_x` + `sum_x2`); forcing split_d for
+  `num_cols > 512` (reverted — JIT compile exceeded the 1200 s gen-probe budget).
+- **Gate shapes not fully measured on this camodel host:** `layer_norm_v4/bfloat16`
+  @ `[2000, 4096]` and `layer_norm_v4/float32` @ `[4096, 50, 32]` exceed the
+  harness per-run wall-clock budget (~600 s ref / ~1200 s gen) on the slow
+  `Ascend950PR_9599` simulator; correctness for all listed last-dim regimes is
+  covered in the golden `run_kernel` tests (reduced row counts, same `cols`).
 
 ## How it works
 

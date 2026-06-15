@@ -853,6 +853,37 @@ dim only. Prompts that mention "first or last dimension" should be
 answered with the last-dim form above; the runtime contract above is
 what makes the row dim dynamic.
 
+#### LayerNormV4 delta (vs RMSNorm)
+
+LayerNorm adds **mean subtraction**, a **beta** vector, and optional mean/rstd
+side outputs. The golden pattern mirrors RMSNorm's host dispatcher but uses a
+**two-stat** row kernel:
+
+```python
+# full_row (when num_cols % 8 == 0 and num_cols * 4 * 6 <= UB_BUDGET_BYTES)
+mean = asc2.reduce_sum(x_f32, 1, keep_dims=True) / num_cols
+mean_b = asc2.broadcast_to(mean, 1, padded_cols)
+sum_x2 = asc2.reduce_sum(x_f32 * x_f32, 1, keep_dims=True) / num_cols
+var = sum_x2 - mean * mean          # E[x²] − mean² (padding-safe)
+rstd = asc2.rsqrt(var + epsilon)
+y = (x_f32 - mean_b) * rstd_b * gamma + beta
+```
+
+**N-D contract:** flatten any input to `[rows, last_dim]` on the host
+(`rows = numel // last_dim`), launch, reshape `y` back. `normalizedShape=[last]`
+for the aclnn reference; mean/rstd shapes are `leading_dims + [1]`, dtypes
+`ACL_FLOAT` even when input is bf16.
+
+**split_d:** stream `tile_cols=64`; merge the mean+variance tile loops
+(`sum_x` and `sum_x2` in one pass); use `asc2.full([1, tile_cols], mean, ...)`
+to subtract a `PlainValue` mean from a tile (tile − scalar is unsupported);
+compute `rstd` via `1.0 / asc2.sqrt(var + eps)` (scalar `rsqrt` needs a Tile).
+
+**bf16:** build probe inputs as f32 numpy → `torch.bfloat16`; keep stats in f32
+inside the kernel (`.to(asc.float32)` on loads).
+
+See `golden/kernels/layer_norm_v4_f32.py` and `layer_norm_v4_bf16.py`.
+
 ## Common Mistakes
 
 > These mistakes cause runtime failures even when static verification passes.

@@ -58,6 +58,10 @@ CELL_TO_KERNEL = {
     # CUBE-only demo: measured kernel is the committed golden (no regen path yet).
     "batch_mat_mul_v3/float16": (
         REPO_ROOT / "golden" / "kernels" / "batch_mat_mul_v3_f16.py", "float16"),
+    "layer_norm_v4/bfloat16": (
+        REPO_ROOT / "golden" / "kernels" / "layer_norm_v4_bf16.py", "bfloat16"),
+    "layer_norm_v4/float32": (
+        REPO_ROOT / "golden" / "kernels" / "layer_norm_v4_f32.py", "float32"),
 }
 
 
@@ -99,6 +103,15 @@ def _batch_mat_mul_v3_inputs(shape: list[int], dtype: str) -> list:
     ]
 
 
+def _layer_norm_v4_inputs(shape: list[int], dtype: str) -> list:
+    last = shape[-1]
+    return [
+        {"kind": "tensor", "shape": shape, "dtype": dtype, "fw": "torch"},
+        {"kind": "tensor", "shape": [last], "dtype": dtype, "fw": "torch"},
+        {"kind": "tensor", "shape": [last], "dtype": dtype, "fw": "torch"},
+    ]
+
+
 def arg_specs_for(cell: str, shape: list[int], dtype: str) -> list | None:
     op = cell.split("/")[0]
     builder = _CELL_INPUT_BUILDERS.get(op)
@@ -109,6 +122,7 @@ _CELL_INPUT_BUILDERS = {
     "rms_norm": _rms_norm_inputs,
     "batch_norm_v3": _batch_norm_v3_inputs,
     "batch_mat_mul_v3": _batch_mat_mul_v3_inputs,
+    "layer_norm_v4": _layer_norm_v4_inputs,
 }
 
 
@@ -203,7 +217,16 @@ def _make_tensor(shape, dtype, fw):
     if dtype == "uint8":
         arr = rng.integers(0, 256, size=shape, dtype=np.uint8)
     else:
-        arr = (rng.random(shape, dtype=np.float32) * 10 - 5).astype(_npdt(dtype))
+        arr = (rng.random(shape, dtype=np.float32) * 10 - 5)
+        if dtype == "bfloat16":
+            if fw == "torch":
+                if torch is None:
+                    print("PROBE_ERROR torch required but unavailable")
+                    sys.exit(4)
+                return torch.from_numpy(np.ascontiguousarray(arr)).to(torch.bfloat16)
+            print("PROBE_ERROR bfloat16 requires torch framework")
+            sys.exit(4)
+        arr = arr.astype(_npdt(dtype))
     if fw == "torch":
         if torch is None:
             print("PROBE_ERROR torch required but unavailable")

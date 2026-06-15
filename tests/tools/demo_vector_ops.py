@@ -116,6 +116,16 @@ CELLS = {
         "kernel": GOLDEN_ROOT / "batch_mat_mul_v3_f16.py", "gen_dtype": "float16",
         "shape": [16, 256, 256],
     },
+    "layer_norm_v4/bfloat16": {
+        "ref_op": "layer_norm_v4", "ref_dtype": "bf16",
+        "kernel": GOLDEN_ROOT / "layer_norm_v4_bf16.py", "gen_dtype": "bfloat16",
+        "shape": [2000, 4096],
+    },
+    "layer_norm_v4/float32": {
+        "ref_op": "layer_norm_v4", "ref_dtype": "f32",
+        "kernel": GOLDEN_ROOT / "layer_norm_v4_f32.py", "gen_dtype": "float32",
+        "shape": [1024, 768],
+    },
 }
 
 

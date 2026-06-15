@@ -86,6 +86,7 @@ matmul work:
 | Resource | Path | Use |
 |----------|------|-----|
 | BatchMatMulV3 canonical op | `~/workspace/ops-nn/matmul/batch_mat_mul_v3/` | `aclnnBatchMatMul` reference for the `batch_mat_mul_v3/float16` perf cell (op_host tiling, op_kernel/arch35, examples/test_aclnn_batchmatmul.cpp) |
+| LayerNormV4 canonical op | `~/workspace/ops-nn/norm/layer_norm_v4/` | `aclnnLayerNorm` reference for the `layer_norm_v4/{bfloat16,float32}` perf cells (`aclnnop/aclnn_layer_norm.h`, examples/test_aclnn_layer_norm_v4.cpp). On C310, public `aclnnLayerNorm` routes to the V4 arch35 kernels. |
 | MatMulV3 / FusedMatMul deps | `~/workspace/ops-nn/matmul/mat_mul_v3/`, `.../fused_mat_mul/` | Pulled in by the batch_mat_mul_v3 build; share the `op_cache_tiling` legacy path |
 | AscendC matmul sample (kernel-direct) | `~/workspace/samples/operator/ascendc/tutorials/MatmulCustomSample/KernelLaunch/MatmulInvocationNeo/` | Self-contained single-GEMM cube kernel + host `MultiCoreMatmulTiling`; grounds cube skill guidance |
 | AscendC matmul sample (framework) | `.../MatmulCustomSample/FrameworkLaunch/` | aclnn-invocation single/multi-core matmul custom op |

@@ -1,0 +1,24 @@
+{
+  "cell": "kernels",
+  "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/golden/kernels/layer_norm_v4_f32.py",
+  "dtype": "float32",
+  "shape": [
+    1024,
+    768
+  ],
+  "n_elements": 786432,
+  "arch": "Ascend950PR_9599",
+  "metric": "camodel_total_tick",
+  "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+  "gen_ticks": 33442,
+  "gen_ticks_runs": [
+    33407,
+    33442,
+    51157
+  ],
+  "gen_ticks_method": "median_of_3",
+  "gen_ticks_spread": 0.5308,
+  "vf_fusion": null,
+  "wall_ms_last": 821490.0,
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_kernels_1024x768_default.run3.log"
+}

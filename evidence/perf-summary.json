@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-06-14T21:52:22Z",
+  "generated_at": "2026-06-15T17:01:20Z",
   "gate": 0.7,
   "counts": {
     "pass": 7,
-    "fail": 3,
+    "fail": 4,
     "gen_blocked": 0,
     "unknown": 0,
-    "total": 10
+    "total": 11
   },
   "cells": [
     {
@@ -140,6 +140,28 @@
       "evidence_file": "evidence/perf-vs-ascendc/drop_out_do_mask-float16-20260614T014323.json",
       "source": "measured",
       "measured_at": "2026-06-14T01:43:23Z"
+    },
+    {
+      "cell": "layer_norm_v4/float32",
+      "op": "layer_norm_v4",
+      "dtype": "float32",
+      "shape": [
+        1024,
+        768
+      ],
+      "arch": "Ascend950PR_9599",
+      "gate": 0.7,
+      "ref_ticks": 16471,
+      "gen_ticks": 33442,
+      "ratio": 0.4925,
+      "status": "fail",
+      "reference_source": "ops-nn canonical operator (layer_norm_v4, aclnnop/aclnn_layer_norm.h), build.sh --pkg --soc=ascend950",
+      "kernel_source": "vetted golden (golden/kernels/layer_norm_v4_f32.py, full_row+split_d dispatcher)",
+      "perf_miss_note": "Measured 3-run medians on camodel. full_row at cols=768 materializes more f32 intermediates (mean, xc, rstd, gamma, beta) than RMSNorm; gen ~2x slower than fused regbase reference. Levers tried: CORE_NUM 32/16/8, merged split_d stats pass; forcing split_d for cols>512 reverted (JIT timeout). 3D gate [4096,50,32] not measured (ref harness timeout).",
+      "comparability_note": "",
+      "evidence_file": "evidence/perf-vs-ascendc/layer_norm_v4-float32-20260615T173338.json",
+      "source": "measured",
+      "measured_at": "2026-06-15T17:33:38Z"
     },
     {
       "cell": "reduce_sum/float32",
