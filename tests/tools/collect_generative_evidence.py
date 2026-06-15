@@ -37,6 +37,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from string import Template
@@ -1169,6 +1170,38 @@ def _is_transient_noop(rec: dict) -> bool:
         return False
 
 
+def _docker_container_name(op: str, dtype: str, attempt_num: int) -> str:
+    """A unique, docker-legal container name for one generation attempt.
+
+    The name lets us force-remove a leaked container after the outer
+    ``subprocess.run`` timeout (see :func:`_force_remove_container`).
+    """
+    slug = re.sub(r"[^a-zA-Z0-9_.-]", "-", f"{op}-{dtype}")
+    return f"pyasc-gen-{slug}-a{attempt_num}-{uuid.uuid4().hex[:8]}"
+
+
+def _force_remove_container(name: str | None) -> None:
+    """Best-effort ``docker rm -f`` of a (possibly leaked) container.
+
+    ``docker run --rm`` only removes the container when it STOPS. When the
+    generation ``subprocess.run`` times out, Python SIGKILLs the ``docker run``
+    CLI client but the container keeps running detached in the daemon, so
+    ``--rm`` never fires and the orphaned ``script -qc opencode`` wrapper
+    busy-loops at ~50-90% CPU forever (observed: 30+ such orphans accumulated
+    on the Mac runner, one per timed-out nightly leg). Force-removing by name
+    on the timeout/error paths guarantees teardown. Never raises.
+    """
+    if not name:
+        return
+    try:
+        subprocess.run(
+            ["docker", "rm", "-f", name],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (subprocess.SubprocessError, OSError):
+        pass  # teardown is best-effort; do not mask the real result
+
+
 def _chown_project_to_host(project: Path) -> None:
     """Reclaim ownership of container-written files before teardown.
 
@@ -1244,6 +1277,7 @@ def run_one_attempt(
     asc_path_before = _snapshot_asc_file() if agent_backend == "host" else None
     asc_path_after: str | None = asc_path_before
     asc_root_mutated = False
+    container_name: str | None = None
 
     try:
         env = os.environ.copy()
@@ -1267,8 +1301,13 @@ def run_one_attempt(
                 'opencode run "$(cat /workspace/.agent-prompt.txt)" '
                 f"--dir /workspace{fmt_flag}"
             )
+            # Named so a leaked container (subprocess timeout SIGKILLs the
+            # docker CLI client, but the detached container keeps running and
+            # --rm never fires) can be force-removed on the timeout/error
+            # paths below. See _force_remove_container.
+            container_name = _docker_container_name(op, dtype, attempt_num)
             cmd = [
-                "docker", "run", "--rm",
+                "docker", "run", "--rm", "--name", container_name,
                 "--add-host", "host.docker.internal:host-gateway",
             ]
             for var in ("OLLAMA_BASE_URL", "DASHSCOPE_API_KEY",
@@ -1307,6 +1346,9 @@ def run_one_attempt(
         except subprocess.TimeoutExpired as exc:
             elapsed = time.monotonic() - t0
             print(f"  [attempt {attempt_num}] timed out after {timeout}s")
+            # The docker CLI client is dead but the container keeps running;
+            # force-remove it so it does not leak and busy-loop on the runner.
+            _force_remove_container(container_name)
             partial_out = exc.stdout or b""
             partial_err = exc.stderr or b""
             if isinstance(partial_out, bytes):
@@ -1348,6 +1390,8 @@ def run_one_attempt(
     except Exception as exc:
         elapsed = time.monotonic() - t0 if "t0" in dir() else 0.0
         print(f"  [attempt {attempt_num}] agent error: {exc}")
+        # Same leak guard for any non-timeout failure mid-run.
+        _force_remove_container(container_name)
 
     if agent_backend == "host":
         asc_path_after = _snapshot_asc_file()
