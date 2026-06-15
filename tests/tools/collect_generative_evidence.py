@@ -301,20 +301,37 @@ def build_opencode_json(
     return cfg
 
 
+def _materialize_workspace_tree(
+    src: Path, dest: Path, *, agent_backend: str,
+) -> None:
+    """Place *src* at *dest* as a symlink (host) or real copy (docker).
+
+    The docker agent backend bind-mounts only the project at
+    ``/workspace``, so host-absolute symlinks to ``REPO_ROOT/{skills,golden}``
+    dangle inside the container and the agent cannot read the skill stack.
+    """
+    if agent_backend == "docker":
+        shutil.copytree(src, dest)
+    else:
+        dest.symlink_to(src)
+
+
 def create_test_project(
     prefix: str,
     skills_mode: str = "on",
     profile: str = "cloud-default",
     opencode_config_override: str | None = None,
     agents_md_path: Path | None = None,
+    agent_backend: str = "host",
 ) -> Path:
     """Create a fresh isolated project directory for one agent run.
 
     Layout depends on ``skills_mode``:
-      * ``"on"`` — symlink ``skills/`` and ``golden/``; copy ``teams/``
-        (which contains the skill-stack ``AGENTS.md`` that activates
-        the skill workflow).
-      * ``"off"`` — symlink only ``golden/`` (kept as reference data so
+      * ``"on"`` — materialize ``skills/`` and ``golden/`` (symlink on the
+        host backend, real copy on the docker backend so the bind-mounted
+        ``/workspace`` is self-contained); copy ``teams/`` (which contains
+        the skill-stack ``AGENTS.md`` that activates the skill workflow).
+      * ``"off"`` — materialize only ``golden/`` (kept as reference data so
         the input surface is comparable); do not copy ``teams/`` or link
         ``skills/``. The resulting workspace has no ``AGENTS.md`` and no
         ``SKILL.md`` files visible to the agent.
@@ -352,7 +369,9 @@ def create_test_project(
         for subdir in ("skills", "golden"):
             src = REPO_ROOT / subdir
             if src.exists():
-                (tmp / subdir).symlink_to(src)
+                _materialize_workspace_tree(
+                    src, tmp / subdir, agent_backend=agent_backend,
+                )
         teams_src = REPO_ROOT / "teams"
         if teams_src.exists():
             # Copy team metadata (AGENTS.md, quickstart, …) but NOT the
@@ -375,7 +394,9 @@ def create_test_project(
         # comparable, but no skills, no teams/AGENTS.md.
         src = REPO_ROOT / "golden"
         if src.exists():
-            (tmp / "golden").symlink_to(src)
+            _materialize_workspace_tree(
+                src, tmp / "golden", agent_backend=agent_backend,
+            )
 
     if agents_md_path is not None:
         src = Path(agents_md_path)
@@ -406,7 +427,7 @@ def create_test_project(
 def find_kernel(project_dir: Path, op: str) -> Path | None:
     """Search for the generated kernel.py, preferring paths containing the op name.
 
-    Excludes symlinked read-only directories (skills/, golden/) to avoid
+    Excludes read-only reference directories (skills/, golden/) to avoid
     picking up golden reference kernels instead of the agent-generated one.
     """
     exclude_prefixes = (
@@ -1210,6 +1231,7 @@ def run_one_attempt(
         profile=profile,
         opencode_config_override=opencode_config_override,
         agents_md_path=agents_md_path,
+        agent_backend=agent_backend,
     )
     agent_output = project / "agent-output.txt"
     agent_completed = False
@@ -1671,7 +1693,7 @@ def main() -> None:
             print(f"  WARN: fallback variant '{args.fallback_variant}' not "
                   f"defined in capabilities.yaml; ignoring", file=sys.stderr)
 
-    if shutil.which("opencode") is None:
+    if agent_backend == "host" and shutil.which("opencode") is None:
         print("SKIP: opencode CLI not found on PATH", file=sys.stderr)
         sys.exit(2)
 
