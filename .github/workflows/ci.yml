@@ -72,16 +72,30 @@ jobs:
   merge-gate:
     # GitHub-hosted ubuntu-latest (amd64): pulls the amd64 leg of the multiarch
     # pyasc-sim image and runs the camodel golden-kernel sim natively. No GPU is
-    # used. The goldens are verified concurrently (bounded by nproc), so the
-    # verify wall-clock is governed by the slowest single kernel (TIMEOUT=1500),
-    # comfortably under the hosted 6h job cap. (Formerly ran on the RTX 4090
-    # `gpu` box, now retired from CI.)
+    # used. (Formerly ran on the RTX 4090 `gpu` box, now retired from CI.)
+    #
+    # SHARDED across independent runners. The camodel sims are memory-bandwidth
+    # bound: running several at once in ONE VM does not scale (a 4-way in-VM
+    # parallel run was ~43 min, vs ~46 min serial -- per-kernel time inflated
+    # ~3.7x because the sims saturate the shared memory bus, which is also why
+    # CPU% looks low). So we fan the 17 goldens out over `shard` independent
+    # hosted runners (each with its own full memory bandwidth); every shard
+    # verifies its subset SERIALLY. Wall-clock drops from ~46 min to the busiest
+    # shard (~13-16 min incl. image pull). All shards must pass for the gate.
     runs-on: ubuntu-latest
     needs: [pr-gate]
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        # Round-robin (kernel index % SHARD_COUNT == shard) assigns goldens to
+        # shards; keep SHARD_COUNT below in sync with this list length.
+        shard: [0, 1, 2, 3]
+    env:
+      SHARD_COUNT: "4"
     steps:
       - uses: actions/checkout@v4
 
@@ -95,65 +109,52 @@ jobs:
       - name: Pull pyasc-sim image
         run: docker pull ${{ env.PYASC_SIM_IMAGE }}
 
-      - name: Simulator verification of golden kernels
+      - name: Simulator verification of golden kernels (shard ${{ matrix.shard }})
         run: |
           set -uo pipefail
           # All goldens verified on C310 (Ascend950PR_9599); 910B1 is no
           # longer a CI target. Heavy CANN simulator runs (esp. matmul,
           # gelu_f32) need a large nofile ulimit and a generous timeout.
-          #
-          # The 17 golden kernels are mutually independent, and each CANN sim is
-          # essentially single-threaded, so the old serial for-loop pinned ~1
-          # core and left the rest of the hosted runner idle (~46 min wall-clock
-          # for the verify step). Run them concurrently, bounded by core count,
-          # so wall-clock is governed by the heaviest kernel rather than the sum.
           PLATFORM=Ascend950PR_9599
           TIMEOUT=1500
           IMAGE="${{ env.PYASC_SIM_IMAGE }}"
-          JOBS="${MERGE_GATE_JOBS:-$(nproc)}"
-          RESULTS="$(mktemp -d)"
-          ROOT="$PWD"
-          export IMAGE PLATFORM TIMEOUT RESULTS ROOT
+          SHARD=${{ matrix.shard }}
+          SHARDS=${SHARD_COUNT}
           total=$(ls golden/kernels/*.py | wc -l | tr -d ' ')
-          echo "Verifying $total golden kernels with $JOBS parallel workers (platform=$PLATFORM)"
-
-          verify_one() {
-            kernel="$1"
-            base="$(basename "$kernel")"
-            start=$(date +%s)
-            if docker run --rm \
-              --ulimit nofile=65536:65536 \
-              -v "$ROOT":/workspace:ro \
-              -w /workspace \
-              "$IMAGE" \
-              python3.11 tests/tools/run_and_verify.py "$kernel" \
-                --mode simulator --platform "$PLATFORM" --timeout "$TIMEOUT" \
-                > "$RESULTS/$base.log" 2>&1; then
-              echo "PASS" > "$RESULTS/$base.status"
-            else
-              echo "FAIL" > "$RESULTS/$base.status"
-            fi
-            echo "  finished $base in $(( $(date +%s) - start ))s [$(cat "$RESULTS/$base.status")]"
-          }
-          export -f verify_one
-
-          # Each verify_one always exits 0 (status captured to a file), so xargs
-          # runs the whole batch; the pass/fail tally is aggregated afterwards.
-          ls golden/kernels/*.py | xargs -P "$JOBS" -I {} bash -c 'verify_one "$@"' _ {}
-
-          FAILED=0
+          echo "Shard $SHARD/$SHARDS verifying its slice of $total goldens (platform=$PLATFORM)"
+          FAILED=0; idx=0; ran=0
           for kernel in golden/kernels/*.py; do
-            base="$(basename "$kernel")"
-            status="$(cat "$RESULTS/$base.status" 2>/dev/null || echo FAIL)"
-            echo "=================== $base [$status] ==================="
-            cat "$RESULTS/$base.log" 2>/dev/null || echo "(no log captured)"
-            [ "$status" = "PASS" ] || FAILED=$((FAILED + 1))
+            [ -f "$kernel" ] || continue
+            if [ "$(( idx % SHARDS ))" -eq "$SHARD" ]; then
+              base="$(basename "$kernel")"
+              echo "--- [shard $SHARD] Verifying $base ---"
+              start=$(date +%s)
+              if docker run --rm \
+                --ulimit nofile=65536:65536 \
+                -v "$PWD":/workspace:ro \
+                -w /workspace \
+                "$IMAGE" \
+                python3.11 tests/tools/run_and_verify.py "$kernel" \
+                  --mode simulator --platform "$PLATFORM" --timeout "$TIMEOUT"; then
+                echo "[PASS] $base ($(( $(date +%s) - start ))s)"
+              else
+                echo "[FAIL] $base ($(( $(date +%s) - start ))s)"
+                FAILED=$((FAILED + 1))
+              fi
+              ran=$((ran + 1))
+            fi
+            idx=$((idx + 1))
           done
-          if [ "$FAILED" -gt 0 ]; then
-            echo "ERROR: $FAILED golden kernel(s) failed simulator verification"
+          echo "shard $SHARD ran $ran kernel(s); $FAILED failed"
+          if [ "$ran" -eq 0 ]; then
+            echo "ERROR: shard $SHARD verified 0 kernels (SHARD_COUNT vs matrix mismatch?)"
             exit 1
           fi
-          echo "All $total golden kernels passed."
+          if [ "$FAILED" -gt 0 ]; then
+            echo "ERROR: $FAILED golden kernel(s) failed simulator verification in shard $SHARD"
+            exit 1
+          fi
+          echo "Shard $SHARD: all $ran kernel(s) passed."
 
   # ==========================================================================
   # Perf gate (REPORT-ONLY): measure perf-vs-AscendC for every demo cell in
