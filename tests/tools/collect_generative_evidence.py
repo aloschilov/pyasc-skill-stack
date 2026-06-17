@@ -145,6 +145,7 @@ KNOWN_PROFILES = {
     "local-qwen-coder-7b",
     "local-llama-3.1-8b",
     "local-qwen3-coder-30b",
+    "local-gpt-oss-120b",
 }
 SCHEMA_VERSION = "4"
 DEFAULT_PYASC_EVAL_ROOT = "/home/aloschilov/workspace/pyasc-v2-eval"

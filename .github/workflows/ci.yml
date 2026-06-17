@@ -86,7 +86,7 @@ jobs:
     # bfloat16 goldens are EXCLUDED here: the amd64 pyasc build has no bf16 IR
     # type (asc/language/core/dtype.py raises "Unsupported DataType name:
     # bfloat16"), so they cannot compile on amd64. They are verified on the
-    # arm64 `merge-gate-bf16` job instead (see below).
+    # arm64 `perf-gate` job instead (nightly, non-blocking).
     runs-on: ubuntu-latest
     needs: [pr-gate]
     if: >-
@@ -134,7 +134,7 @@ jobs:
             case "$base" in
               *_bf16.py)
                 # bf16 unsupported on amd64 pyasc build; verified on arm64
-                # merge-gate-bf16 job. Skip globally (not counted in any shard).
+                # perf-gate (nightly). Skip globally (not counted in any shard).
                 echo "SKIP $base (bf16 verified on arm64, not amd64)"
                 continue ;;
             esac
@@ -169,76 +169,6 @@ jobs:
           echo "Shard $SHARD: all $ran kernel(s) passed."
 
   # ==========================================================================
-  # bf16 golden verification (arm64) -- NON-BLOCKING, schedule/dispatch-only.
-  #
-  # The amd64 pyasc build has no bf16 IR lowering, so bfloat16 goldens can only
-  # be verified on the arm64 build. They run on the self-hosted arm64 runner
-  # (the MacBook Docker Desktop VM, same host as perf-gate). That runner is a
-  # single self-hosted box that can be offline, so this job:
-  #   * runs ONLY on schedule / workflow_dispatch (never blocks pushes), and
-  #   * is continue-on-error (a down runner or a bf16 regression is reported,
-  #     never fails the run).
-  # The multiarch PYASC_SIM_IMAGE resolves to its arm64 leg on this runner.
-  # ==========================================================================
-  merge-gate-bf16:
-    runs-on: [self-hosted, arm64]
-    needs: [pr-gate]
-    continue-on-error: true
-    timeout-minutes: 90
-    if: >-
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to ghcr.io
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pull pyasc-sim image
-        run: docker pull ${{ env.PYASC_SIM_IMAGE }}
-
-      - name: Simulator verification of bf16 golden kernels (arm64)
-        run: |
-          set -uo pipefail
-          PLATFORM=Ascend950PR_9599
-          TIMEOUT=1500
-          IMAGE="${{ env.PYASC_SIM_IMAGE }}"
-          shopt -s nullglob
-          kernels=(golden/kernels/*_bf16.py)
-          if [ "${#kernels[@]}" -eq 0 ]; then
-            echo "no bf16 goldens to verify"
-            exit 0
-          fi
-          echo "Verifying ${#kernels[@]} bf16 golden(s) on arm64 (platform=$PLATFORM)"
-          FAILED=0
-          for kernel in "${kernels[@]}"; do
-            base="$(basename "$kernel")"
-            echo "--- Verifying $base (arm64) ---"
-            start=$(date +%s)
-            if docker run --rm \
-              --ulimit nofile=65536:65536 \
-              -v "$PWD":/workspace:ro \
-              -w /workspace \
-              "$IMAGE" \
-              python3.11 tests/tools/run_and_verify.py "$kernel" \
-                --mode simulator --platform "$PLATFORM" --timeout "$TIMEOUT"; then
-              echo "[PASS] $base ($(( $(date +%s) - start ))s)"
-            else
-              echo "[FAIL] $base ($(( $(date +%s) - start ))s)"
-              FAILED=$((FAILED + 1))
-            fi
-          done
-          if [ "$FAILED" -gt 0 ]; then
-            echo "ERROR: $FAILED bf16 golden(s) failed arm64 simulator verification"
-            exit 1
-          fi
-          echo "All bf16 golden(s) passed on arm64."
-
-  # ==========================================================================
   # Perf gate (REPORT-ONLY): measure perf-vs-AscendC for every demo cell in
   # the docker_full perf image and publish the result to the dashboard.
   #
@@ -256,6 +186,10 @@ jobs:
   # evidence/vf-fusion-summary.json for the dashboard's "Compiler SIMD fusion"
   # panel (verifies the "pyasc2 uses no micro-api; the compiler does fusion"
   # positioning). Also report-only.
+  #
+  # bf16 golden verification (arm64): the amd64 pyasc build has no bf16 IR
+  # lowering, so bfloat16 goldens are verified here on the arm64 sim image
+  # before perf measurement. Non-blocking (continue-on-error on this job).
   # ==========================================================================
   perf-gate:
     # Self-hosted arm64 runner on the MacBook (198.18.0.1) via Docker Desktop's
@@ -285,6 +219,30 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Memory hygiene: the camodel sims below are RAM-heavy and share the
+      # 128 GB Mac with the 46 GB Parallels VM. If a generative leg left an
+      # Ollama model (up to gpt-oss:120b ~68 GB) warm, unload it first so the
+      # perf sims are not competing with it for host memory.
+      - name: Free host Ollama memory
+        env:
+          OLLAMA_BASE_URL: "http://host.docker.internal:11434/v1"
+        run: python3.10 tests/tools/free_ollama_memory.py || true
+
+      - name: Verify bf16 golden kernels (arm64)
+        run: |
+          set -uo pipefail
+          docker pull ${{ env.PYASC_SIM_IMAGE }} || { echo "::warning::sim image pull failed; skipping bf16 verify"; exit 0; }
+          shopt -s nullglob
+          kernels=(golden/kernels/*_bf16.py)
+          [ ${#kernels[@]} -eq 0 ] && { echo "no bf16 goldens"; exit 0; }
+          FAILED=0
+          for k in "${kernels[@]}"; do
+            docker run --rm --ulimit nofile=65536:65536 -v "$PWD":/workspace:ro -w /workspace \
+              ${{ env.PYASC_SIM_IMAGE }} python3.11 tests/tools/run_and_verify.py "$k" \
+              --mode simulator --platform Ascend950PR_9599 --timeout 1500 && echo "[PASS] $k" || { echo "[FAIL] $k"; FAILED=$((FAILED+1)); }
+          done
+          [ "$FAILED" -gt 0 ] && echo "::warning::$FAILED bf16 golden(s) failed arm64 verification" || true
 
       # Pull-availability guard: the perf image is rebuilt+pushed manually
       # from the arm64 host, so a base bump can transiently leave the tag
@@ -367,10 +325,14 @@ jobs:
           if-no-files-found: ignore
 
   # ==========================================================================
-  # Nightly gate: OpenCode skills intervention on the cloud profile.
+  # Nightly gate: OpenCode skills intervention on the local Mac model.
+  #
+  # TEMPORARY (CORC: local-polishing): repointed from cloud-default (DashScope
+  # glm-5) to local-qwen3-coder-30b on the Mac's native Ollama. Report-only
+  # (no P6 hard-fail threshold) while skills are polished against local models.
   #
   # Phase 0 promotes the protocol axis to a first-class matrix dimension.
-  # Each capability cell now runs FOUR legs against the cloud-default
+  # Each capability cell now runs FOUR legs against the local-default
   # profile: P2 (skills off + minimal prompt), P3 (skills off + guided
   # prompt), P4 (skills off + baseline AGENTS.md + guided prompt), and
   # P6 (skills on + guided prompt). All four use the same OpenCode
@@ -379,22 +341,17 @@ jobs:
   # See docs/evaluation-methodology.md §"Protocol-axis CI mapping
   # (Phase 0)" for the full contract.
   #
-  # Only P6 enforces the minimum-pass threshold; P2/P3/P4 are explicitly
-  # allowed to underperform (they are the upper-bound-of-no-skills
-  # baselines we are measuring against).
-  #
   # The job no longer commits evidence or syncs capabilities — that runs
   # once in `skills-value-report` after every matrix leg + the local
   # stability matrix have finished. This avoids commit races and lets
   # the aggregator see a consistent evidence directory.
   # ==========================================================================
   nightly-gate:
-    # Self-hosted arm64 Mac runner (label `arm64`): cloud DashScope inference +
+    # Self-hosted arm64 Mac runner (label `arm64`): local Ollama inference +
     # camodel docker sim verify, no GPU. opencode runs in-image via
-    # --agent-backend docker (image pulled below). Since the Mac is now the only
-    # self-hosted runner, the P2/P3/P4/P6 legs SERIALIZE on it rather than
-    # running in parallel as the matrix nominally allows. (Formerly ran on the
-    # RTX 4090 `gpu` box, now retired from CI.)
+    # --agent-backend docker (image pulled in preflight). Since the Mac is now
+    # the only self-hosted runner, the P2/P3/P4/P6 legs SERIALIZE on it rather
+    # than running in parallel as the matrix nominally allows.
     runs-on: [self-hosted, arm64]
     needs: [merge-gate]
     if: >-
@@ -402,14 +359,10 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly')
     strategy:
       fail-fast: false
-      # The matrix nominally fans the protocol legs out, but with a single arm64
-      # runner they queue and run one at a time. The instant exit-0/0-token
-      # no-ops that previously failed every backtick-heavy P3/P4/P6 op were NOT
-      # provider QPS contention — they were shell command-substitution mangling
-      # the prompt in the `script -qc` wrapper, fixed in
-      # tests/tools/collect_generative_evidence.py (shlex.quote).
       matrix:
         protocol_id: ["P2", "P3", "P4", "P6"]
+    env:
+      OLLAMA_BASE_URL: "http://host.docker.internal:11434/v1"
     steps:
       - uses: actions/checkout@v4
 
@@ -427,16 +380,40 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull pyasc-sim image
-        # The single pyasc-sim image now carries node + opencode as well as the
-        # pyasc runtime + simulator, so opencode runs INSIDE it (--agent-backend
-        # docker below) -- no host npm install or global opencode config needed.
-        run: docker pull ${{ env.PYASC_SIM_IMAGE }}
+      - name: Preflight (host Ollama qwen3-coder:30b + sim image)
+        id: preflight
+        env:
+          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
+          PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
+        run: |
+          set +e
+          available=true
+          MODEL="qwen3-coder:30b"
 
-      # Lowercase the protocol id once so subsequent steps (artifact
-      # glob, summary) can reference it without re-shell-quoting.
-      # `if: always()` on later steps must still see it, so we set it
-      # before the heavy "Run" step that might fail mid-way.
+          OLLAMA_ROOT="${OLLAMA_BASE_URL%/v1}"
+          if ! curl -sf "$OLLAMA_ROOT/api/tags" -o /tmp/ollama_tags.json; then
+            echo "::warning::host Ollama unreachable at $OLLAMA_ROOT/api/tags; skipping nightly leg (start native Ollama with OLLAMA_HOST=0.0.0.0:11434)"
+            available=false
+          elif ! grep -q "\"$MODEL\"" /tmp/ollama_tags.json; then
+            echo "::warning::model $MODEL not pulled on host Ollama; skipping nightly leg (run: ollama pull $MODEL)"
+            available=false
+          fi
+
+          if [ "$available" = "true" ]; then
+            pulled=false
+            for attempt in 1 2 3; do
+              if docker pull "$PYASC_SIM_IMAGE"; then pulled=true; break; fi
+              echo "::warning::pyasc-sim pull attempt $attempt/3 failed; retrying..."
+              sleep $((attempt * 15))
+            done
+            if [ "$pulled" != "true" ]; then
+              echo "::warning::pyasc-sim image $PYASC_SIM_IMAGE unavailable after 3 attempts; skipping nightly leg"
+              available=false
+            fi
+          fi
+
+          echo "available=$available" >> "$GITHUB_OUTPUT"
+
       - name: Resolve protocol id (lowercase)
         env:
           PROTOCOL_ID: ${{ matrix.protocol_id }}
@@ -444,24 +421,27 @@ jobs:
           PROTOCOL_ID_LOWER=$(echo "$PROTOCOL_ID" | tr '[:upper:]' '[:lower:]')
           echo "PROTOCOL_ID_LOWER=$PROTOCOL_ID_LOWER" >> "$GITHUB_ENV"
 
+      # Memory hygiene: the arm64 jobs serialize on the single Mac runner and
+      # drive the Mac's native Ollama. Unload any model a prior leg left warm so
+      # this leg's model is the only one resident (see free_ollama_memory.py:
+      # 46 GB Parallels VM + two co-resident models would overrun the 128 GB Mac).
+      - name: Free host Ollama memory
+        if: steps.preflight.outputs.available == 'true'
+        env:
+          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
+        run: python3.10 tests/tools/free_ollama_memory.py
+
       - name: Run OpenCode skills-intervention leg (protocol_id=${{ matrix.protocol_id }})
+        if: steps.preflight.outputs.available == 'true'
         env:
           NODE_TLS_REJECT_UNAUTHORIZED: "0"
           PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
           PROTOCOL_ID: ${{ matrix.protocol_id }}
-          # Substituted into the self-contained cloud-default profile template's
-          # ${DASHSCOPE_API_KEY} (replaces the old ~/.config/opencode global config).
-          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
         run: |
           mkdir -p generative-archive
           mapfile -t OPS < <(python3.10 tests/tools/list_generative_cells.py --platform Ascend950PR_9599)
           CI_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          # Uniform 1500s docker timeout (matches merge-gate post-C310 migration).
-          # Pre-migration nightly used 300s/600s on Ascend910B1, but the C310
-          # camodel is markedly slower (~80s wall per launch in our probes), and
-          # opencode-generated kernels with shapes [32,4096] easily exceeded the
-          # smaller budgets — see docs/perf-methodology/ticks-calculation.md and
-          # the 2026-05-07 nightly post-mortem.
           DOCKER_TO=1500
           PASS=0
           TOTAL=${#OPS[@]}
@@ -471,15 +451,15 @@ jobs:
             echo "=== Generative evidence: $op / $dtype (protocol_id=$PROTOCOL_ID) ==="
             if python3.10 tests/tools/collect_generative_evidence.py \
                 --op "$op" --dtype "$dtype" \
-                --runtime --runtime-backend auto --timeout 420 \
+                --runtime --runtime-backend auto --timeout 1200 \
                 --agent-backend docker \
                 --docker-timeout "$DOCKER_TO" \
                 --archive-dir generative-archive \
                 --ci-run-url "$CI_RUN_URL" \
-                --model-profile cloud-default \
+                --model-profile local-qwen3-coder-30b \
                 --protocol-id "$PROTOCOL_ID" \
                 --max-attempts 3 \
-                --notes "Nightly CI run (protocol=$PROTOCOL_ID)"; then
+                --notes "Nightly CI run (protocol=$PROTOCOL_ID, local-qwen3-coder-30b)"; then
               PASS=$((PASS + 1))
             else
               echo "  All attempts failed for $op/$dtype"
@@ -488,17 +468,6 @@ jobs:
           done
           echo ""
           echo "=== OpenCode skills-intervention leg summary (protocol=$PROTOCOL_ID): $PASS/$TOTAL passed ==="
-          # Only the P6 leg (skills on + guided) enforces the >=50% pass
-          # threshold. P2/P3/P4 are the OpenCode-without-skills upper
-          # bounds that the skills-on result is compared against, and
-          # are explicitly allowed to underperform.
-          if [ "$PROTOCOL_ID" = "P6" ]; then
-            MIN_PASS=$(( (TOTAL + 1) / 2 ))
-            if [ "$PASS" -lt "$MIN_PASS" ]; then
-              echo "::error::Only $PASS/$TOTAL passed in P6 leg (minimum $MIN_PASS required, 50%) — failing nightly gate"
-              exit 1
-            fi
-          fi
 
       - name: Summarize evidence
         if: always()
@@ -509,7 +478,7 @@ jobs:
           import json, glob, os
           pid = os.environ.get("PROTOCOL_ID", "P6").lower()
           files = sorted(glob.glob(
-              f"evidence/*-generative-cloud-default-{pid}.json"))
+              f"evidence/*-generative-local-qwen3-coder-30b-{pid}.json"))
           if not files:
               print(f"No generative evidence files found for protocol_id={pid}.")
               raise SystemExit(0)
@@ -530,53 +499,29 @@ jobs:
           print(f"\n  Runtime pass: {rt_pass}/{total} | Skip: {rt_skip}/{total} | Fail: {rt_fail}/{total}")
           PYEOF
 
-      # Only upload the evidence files this leg actually owns. Uploading
-      # the whole `evidence/` directory used to bundle stale checkout
-      # copies of every other leg's filename into this artifact; the
-      # merge step in `skills-value-report` would then `cp -f` artifacts
-      # in non-deterministic order and the stale copies would silently
-      # overwrite freshly-written per-leg evidence. The glob below
-      # restricts each artifact to exactly the per-protocol filenames
-      # this leg writes
-      # (`*-generative-cloud-default-<protocol_id_lower>.json`).
       - name: Upload evidence artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: evidence-cloud-${{ matrix.protocol_id }}
-          path: evidence/*-generative-cloud-default-${{ env.PROTOCOL_ID_LOWER }}.json
+          name: evidence-local-${{ matrix.protocol_id }}
+          path: evidence/*-generative-local-qwen3-coder-30b-${{ env.PROTOCOL_ID_LOWER }}.json
           if-no-files-found: ignore
 
       - name: Upload generated kernel archive
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: generative-archive-cloud-${{ matrix.protocol_id }}
+          name: generative-archive-local-${{ matrix.protocol_id }}
           path: generative-archive/
           if-no-files-found: ignore
 
   # ==========================================================================
-  # Local-stability gate: the same OpenCode skills intervention as the
-  # nightly cloud leg, but against local models served from the Mac's
-  # native (Metal) Ollama.
+  # Local-stability gate: OpenCode skills intervention on local Mac models.
   #
-  # This measures the "stability" axis of the OpenCode skills
-  # intervention: does mounting the pyasc skills let local models
-  # produce viable kernels they cannot produce under raw OpenCode? Both
-  # legs hold OpenCode harness, prompt, timeout, max attempts, and
-  # evaluator constant — only the skill modules differ. Failing on both
-  # legs is a model/harness capability boundary on this hardware, not
-  # evidence the skills are useless (see
-  # docs/evaluation-methodology.md "Local-model interpretation").
-  #
-  # qwen3-coder:30b is the model confirmed to clear the agentic harness
-  # (docs/local-model-feasibility.md); the 7b/llama legs remain as the
-  # smaller-model baselines. Local inference is slower than the cloud
-  # profile and prerequisites are host-managed, so this job is marked
-  # continue-on-error, is not part of the merge-blocking gate, and skips
-  # cleanly when a model/image is unavailable. The companion
-  # `skills-value-report` job ingests whatever evidence this job
-  # produces.
+  # TEMPORARY (CORC: local-polishing): compares qwen3-coder:30b vs
+  # gpt-oss:120b (skills on/off) for skill-stack polishing on the Mac.
+  # Both models need to be pre-pulled on the host Ollama; missing models
+  # skip cleanly. Report-only (continue-on-error).
   # ==========================================================================
   local-stability-gate:
     # Self-hosted arm64 runner on the MacBook (198.18.0.1), label `arm64`, via
@@ -596,8 +541,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: [local-qwen-coder-7b, local-llama-3.1-8b, local-qwen3-coder-30b]
-        # See comment in nightly-gate for why these are quoted.
+        profile: [local-qwen3-coder-30b, local-gpt-oss-120b]
         skills_mode: ["on", "off"]
     env:
       # Reach the macOS host's native (Metal) Ollama from the Docker Desktop VM.
@@ -641,9 +585,8 @@ jobs:
           available=true
 
           case "$PROFILE" in
-            local-qwen-coder-7b)   MODEL="qwen2.5-coder:7b" ;;
-            local-llama-3.1-8b)    MODEL="llama3.1:8b" ;;
             local-qwen3-coder-30b) MODEL="qwen3-coder:30b" ;;
+            local-gpt-oss-120b)    MODEL="gpt-oss:120b" ;;
             *) echo "::error::unknown profile $PROFILE"; exit 1 ;;
           esac
 
@@ -673,6 +616,16 @@ jobs:
           fi
 
           echo "available=$available" >> "$GITHUB_OUTPUT"
+
+      # Memory hygiene: unload any model a prior leg (or job) left warm so only
+      # this leg's model is resident. With gpt-oss:120b (~68 GB) and
+      # qwen3-coder:30b (~18 GB) in the matrix, two co-resident models on top of
+      # the 46 GB Parallels VM + Docker Desktop VM would overrun the 128 GB Mac.
+      - name: Free host Ollama memory
+        if: steps.preflight.outputs.available == 'true'
+        env:
+          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
+        run: python3.10 tests/tools/free_ollama_memory.py
 
       - name: Run OpenCode skills-intervention leg (profile=${{ matrix.profile }}, skills_mode=${{ matrix.skills_mode }})
         if: steps.preflight.outputs.available == 'true'
@@ -738,16 +691,11 @@ jobs:
           if-no-files-found: ignore
 
   # ==========================================================================
-  # Cloud DashScope gate: the same OpenCode skills intervention as the
-  # nightly cloud-default leg, but against the additional Alibaba DashScope
-  # models (glm-5.1, qwen3.7-max). glm-5 itself is covered by the nightly
-  # cloud-default leg (which pins dashscope/glm-5), so it is not duplicated
-  # here. Each profile embeds the DashScope provider and
-  # reads the key from ${DASHSCOPE_API_KEY} (substituted into the profile
-  # template) — the key is never committed; CI injects it from the
-  # `DASHSCOPE_API_KEY` repo secret. If the secret is absent the whole leg
-  # skips cleanly (report-only, non-merge-blocking), so the gate is inert
-  # until the secret is configured.
+  # Cloud DashScope gate: TEMPORARILY DISABLED (CORC: local-polishing).
+  #
+  # The same OpenCode skills intervention as the nightly cloud-default leg,
+  # but against the additional Alibaba DashScope models (glm-5.1,
+  # qwen3.7-max). Re-enable by removing the `false &&` guard on `if:`.
   # ==========================================================================
   cloud-dashscope-gate:
     # Self-hosted arm64 Mac runner (label `arm64`): cloud DashScope inference +
@@ -756,8 +704,9 @@ jobs:
     runs-on: [self-hosted, arm64]
     needs: [merge-gate]
     if: >-
-      github.event_name == 'schedule' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly')
+      false &&
+      (github.event_name == 'schedule' ||
+       (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly'))
     continue-on-error: true
     strategy:
       fail-fast: false

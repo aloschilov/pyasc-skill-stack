@@ -1402,7 +1402,9 @@ function renderProtocolDecomp() {
   if (!sv || !sv.by_profile) return;
   // The decomposition view is anchored on cloud-default. Local profiles
   // stay on the legacy pair view until Phase 6 doubles their matrix.
-  var profile = "cloud-default";
+  // TEMPORARY (CORC: local-polishing): anchor on local-qwen3-coder-30b while
+  // nightly-gate runs against the Mac Ollama model instead of cloud-default.
+  var profile = "local-qwen3-coder-30b";
   var p = sv.by_profile[profile];
   if (!p) return;
   var byProtocol = p.by_protocol || {};

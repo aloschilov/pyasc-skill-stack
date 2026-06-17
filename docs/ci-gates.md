@@ -44,13 +44,11 @@ image ships a pyasc build with no bf16 IR lowering
 (`asc/language/core/dtype.py` raises `Unsupported DataType name: bfloat16`),
 so `bfloat16` goldens (e.g. `layer_norm_v4_bf16`) cannot compile there.
 
-Those bf16 goldens are verified by a separate **`merge-gate-bf16`** job on the
-**self-hosted arm64 runner** (same host as `perf-gate`), where the multiarch
-image resolves to its arm64 leg and bf16 is supported. That job is
-**non-blocking** (`continue-on-error: true`) and runs **only on the nightly
-schedule / `workflow_dispatch`**, never on push: the single self-hosted runner
-can be offline, so it must not block merges to `main`. A bf16 regression or a
-down runner is reported in the run for follow-up rather than failing CI.
+Those bf16 goldens are verified inside the **`perf-gate`** job on the
+**self-hosted arm64 runner** (same host as perf measurement), where the
+multiarch image resolves to its arm64 leg and bf16 is supported. The step is
+**non-blocking** (`perf-gate` has `continue-on-error: true`) and runs **only on
+the nightly schedule / `workflow_dispatch`**, never on push.
 
 ## Nightly gate (`--tier nightly`)
 
@@ -60,6 +58,37 @@ Runs in 15-30 minutes. Requires opencode CLI and CANN simulator.
 2. `run-tests.sh --all` -- L2 behavior tests (agent trigger correctness, premature action detection) and L3 integration tests (full agent-in-the-loop kernel generation)
 
 Requires: opencode CLI on PATH, CANN simulator environment.
+
+**TEMPORARY (CORC: local-polishing):** the GitHub Actions `nightly-gate` job
+runs the Phase 0 protocol-axis matrix (P2/P3/P4/P6) against the Mac's local
+**`qwen3-coder:30b`** Ollama model (`local-qwen3-coder-30b` profile), not the
+remote DashScope `cloud-default` profile. It is **report-only** (no P6
+hard-fail threshold) while skills are polished locally. The
+**`cloud-dashscope-gate`** job (glm-5.1, qwen3.7-max) is temporarily disabled.
+
+The **`local-stability-gate`** compares **`qwen3-coder:30b`** vs
+**`gpt-oss:120b`** (skills on/off). Both models must be pre-pulled on the Mac's
+native Ollama (`ollama pull qwen3-coder:30b`, `ollama pull gpt-oss:120b`); legs
+skip cleanly when a model is missing.
+
+### Host memory (128 GB Mac)
+
+All arm64 jobs (`nightly-gate`, `local-stability-gate`, `perf-gate`) serialize
+on the single self-hosted Mac runner and share the 128 GB host with the
+~46 GB Parallels VM (the dev Linux box), the Docker Desktop VM (camodel sims),
+and macOS. `gpt-oss:120b` alone is ~68 GB resident and `qwen3-coder:30b` is
+~18 GB, so **two co-resident models would overrun the host and thrash swap.**
+Because Ollama keeps a model warm for `keep_alive` (5 min default), each leg
+runs a **Free host Ollama memory** step
+([tests/tools/free_ollama_memory.py](../tests/tools/free_ollama_memory.py))
+that unloads any model a prior leg left warm, bounding the peak Ollama
+footprint to the single model the upcoming leg loads.
+
+Recommended host-side belt-and-braces (set on the Mac's native Ollama, which
+CI cannot configure): `OLLAMA_MAX_LOADED_MODELS=1` and a short
+`OLLAMA_KEEP_ALIVE` (e.g. `1m`). If the Parallels VM does not need to be up
+during a nightly, shrinking its RAM reservation frees the most headroom for
+`gpt-oss:120b`.
 
 ## Perf gate (`perf-gate`, report-only)
 
@@ -108,7 +137,8 @@ green.
   `fusion_speedup` + an `improved`/`neutral`/`regressed` verdict); both it and
   `evidence/vf-fusion/*.json` ride the same `evidence-perf` artifact and are
   committed by `skills-value-report`. The dashboard renders them in a **Compiler
-  SIMD fusion** panel.
+  SIMD fusion** panel. The same job also verifies **bf16 golden kernels** on
+  arm64 (see Merge gate above).
 
 Committed perf evidence uses **repo-relative paths** only (`golden/kernels/...`,
 `evidence/perf/_build_cache/logs/...`). The PR gate runs
