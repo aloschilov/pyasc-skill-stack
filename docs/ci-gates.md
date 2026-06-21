@@ -37,18 +37,18 @@ Runs in under 5 minutes. Requires CANN simulator environment.
 
 Requires: `source $HOME/Ascend/cann/set_env.sh` and `LD_LIBRARY_PATH` set. See [cann-setup.md](cann-setup.md).
 
-The GitHub Actions `merge-gate` job runs on GitHub-hosted **amd64**
-(`ubuntu-latest`), sharded across 4 runners for speed, and verifies every
-golden **except** `bfloat16` ones. The amd64 leg of the multiarch `pyasc-sim`
-image ships a pyasc build with no bf16 IR lowering
-(`asc/language/core/dtype.py` raises `Unsupported DataType name: bfloat16`),
-so `bfloat16` goldens (e.g. `layer_norm_v4_bf16`) cannot compile there.
+The GitHub Actions `merge-gate` job runs **natively on the self-hosted arm64
+Mac runner** (no x86 emulation), pulling the arm64 leg of the multiarch
+`pyasc-sim` image. It is still sharded via the 4-shard matrix, though on the
+single Mac runner the shards currently serialize; the matrix is retained while
+we gather wall-clock metrics before deciding on the shard count.
 
-Those bf16 goldens are verified inside the **`perf-gate`** job on the
-**self-hosted arm64 runner** (same host as perf measurement), where the
-multiarch image resolves to its arm64 leg and bf16 is supported. The step is
-**non-blocking** (`perf-gate` has `continue-on-error: true`) and runs **only on
-the nightly schedule / `workflow_dispatch`**, never on push.
+`bfloat16` goldens are **first-class** here: the native arm64 pyasc build has
+full bf16 IR lowering, so `*_bf16.py` goldens (e.g. `layer_norm_v4_bf16`) are
+sharded and verified in the same loop as every other capability cell -- they
+are part of the blocking merge-gate, not a separate step. (The old GitHub-hosted
+amd64 build lacked bf16 IR lowering, which is why bf16 used to be carved out into
+a non-blocking `perf-gate` step; that carve-out is gone.)
 
 ## Nightly gate (`--tier nightly`)
 
@@ -73,10 +73,11 @@ skip cleanly when a model is missing.
 
 ### Host memory (128 GB Mac)
 
-All arm64 jobs (`nightly-gate`, `local-stability-gate`, `perf-gate`) serialize
-on the single self-hosted Mac runner and share the 128 GB host with the
-~46 GB Parallels VM (the dev Linux box), the Docker Desktop VM (camodel sims),
-and macOS. `gpt-oss:120b` alone is ~68 GB resident and `qwen3-coder:30b` is
+Every CI job now runs natively on the single self-hosted arm64 Mac runner
+(`pr-gate`, `merge-gate`, `perf-gate`, `nightly-gate`, `local-stability-gate`,
+`skills-value-report`), so they all serialize on that one runner and share the
+128 GB host with the ~46 GB Parallels VM (the dev Linux box), the Docker Desktop
+VM (camodel sims), and macOS. `gpt-oss:120b` alone is ~68 GB resident and `qwen3-coder:30b` is
 ~18 GB, so **two co-resident models would overrun the host and thrash swap.**
 Because Ollama keeps a model warm for `keep_alive` (5 min default), each leg
 runs a **Free host Ollama memory** step
@@ -137,8 +138,8 @@ green.
   `fusion_speedup` + an `improved`/`neutral`/`regressed` verdict); both it and
   `evidence/vf-fusion/*.json` ride the same `evidence-perf` artifact and are
   committed by `skills-value-report`. The dashboard renders them in a **Compiler
-  SIMD fusion** panel. The same job also verifies **bf16 golden kernels** on
-  arm64 (see Merge gate above).
+  SIMD fusion** panel. (bf16 golden verification no longer lives here -- it is a
+  first-class part of the blocking `merge-gate`; see Merge gate above.)
 
 Committed perf evidence uses **repo-relative paths** only (`golden/kernels/...`,
 `evidence/perf/_build_cache/logs/...`). The PR gate runs

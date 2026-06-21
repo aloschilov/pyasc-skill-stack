@@ -46,10 +46,11 @@ jobs:
   # PR gate: L1 unit tests + static checks (no Docker, no CANN)
   # ==========================================================================
   pr-gate:
-    # GitHub-hosted ubuntu-latest: this gate is pure static checks + L1 unit
-    # tests (no Docker, no CANN), so it needs no self-hosted runner. (Formerly
-    # ran on the RTX 4090 `gpu` box, now retired from CI.)
-    runs-on: ubuntu-latest
+    # Native arm64 on the self-hosted Mac runner (label `arm64`). This gate is
+    # pure static checks + L1 unit tests (no Docker, no CANN); CI now runs
+    # entirely on the Mac runner with no x86 emulation. (Formerly GitHub-hosted
+    # ubuntu-latest; before that the RTX 4090 `gpu` box, now retired.)
+    runs-on: [self-hosted, arm64]
     steps:
       - uses: actions/checkout@v4
 
@@ -70,24 +71,24 @@ jobs:
   # and pushed to ghcr.io.  CI only pulls it.
   # ==========================================================================
   merge-gate:
-    # GitHub-hosted ubuntu-latest (amd64): pulls the amd64 leg of the multiarch
-    # pyasc-sim image and runs the camodel golden-kernel sim natively. No GPU is
-    # used. (Formerly ran on the RTX 4090 `gpu` box, now retired from CI.)
+    # Native arm64 on the self-hosted Mac runner (label `arm64`): pulls the
+    # arm64 leg of the multiarch pyasc-sim image and runs the camodel
+    # golden-kernel sim natively (no x86 emulation). No GPU is used. (Formerly
+    # GitHub-hosted ubuntu-latest; before that the RTX 4090 `gpu` box, retired.)
     #
-    # SHARDED across independent runners. The camodel sims are memory-bandwidth
-    # bound: running several at once in ONE VM does not scale (a 4-way in-VM
-    # parallel run was ~43 min, vs ~46 min serial -- per-kernel time inflated
-    # ~3.7x because the sims saturate the shared memory bus, which is also why
-    # CPU% looks low). So we fan the goldens out over `shard` independent
-    # hosted runners (each with its own full memory bandwidth); every shard
-    # verifies its subset SERIALLY. Wall-clock drops from ~46 min to the busiest
-    # shard (~13-16 min incl. image pull). All shards must pass for the gate.
+    # SHARDED via the matrix below. The camodel sims are memory-bandwidth bound:
+    # running several at once in ONE VM does not scale (a 4-way in-VM parallel
+    # run was ~43 min, vs ~46 min serial -- per-kernel time inflated ~3.7x
+    # because the sims saturate the shared memory bus). The 4-shard matrix is
+    # retained for now; on the single Mac runner the shards SERIALIZE rather
+    # than fan out, so this first pass is about gathering wall-clock metrics
+    # before deciding on the shard count. All shards must pass for the gate.
     #
-    # bfloat16 goldens are EXCLUDED here: the amd64 pyasc build has no bf16 IR
-    # type (asc/language/core/dtype.py raises "Unsupported DataType name:
-    # bfloat16"), so they cannot compile on amd64. They are verified on the
-    # arm64 `perf-gate` job instead (nightly, non-blocking).
-    runs-on: ubuntu-latest
+    # bfloat16 goldens are first-class here: the native arm64 pyasc build has
+    # full bf16 IR lowering, so *_bf16.py goldens are sharded and verified in
+    # exactly the same loop as every other capability cell (no carve-out; the
+    # old amd64 "bf16 unsupported" exclusion is gone).
+    runs-on: [self-hosted, arm64]
     needs: [pr-gate]
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
@@ -125,19 +126,14 @@ jobs:
           IMAGE="${{ env.PYASC_SIM_IMAGE }}"
           SHARD=${{ matrix.shard }}
           SHARDS=${SHARD_COUNT}
-          total=$(ls golden/kernels/*.py | grep -vc '_bf16\.py$' || true)
-          echo "Shard $SHARD/$SHARDS verifying its slice of $total amd64 goldens (platform=$PLATFORM)"
+          total=$(ls golden/kernels/*.py | wc -l)
+          echo "Shard $SHARD/$SHARDS verifying its slice of $total goldens (platform=$PLATFORM)"
           FAILED=0; idx=0; ran=0
           for kernel in golden/kernels/*.py; do
             [ -f "$kernel" ] || continue
             base="$(basename "$kernel")"
-            case "$base" in
-              *_bf16.py)
-                # bf16 unsupported on amd64 pyasc build; verified on arm64
-                # perf-gate (nightly). Skip globally (not counted in any shard).
-                echo "SKIP $base (bf16 verified on arm64, not amd64)"
-                continue ;;
-            esac
+            # bf16 goldens are first-class on arm64: no skip, they take part in
+            # the round-robin shard assignment like every other capability cell.
             if [ "$(( idx % SHARDS ))" -eq "$SHARD" ]; then
               echo "--- [shard $SHARD] Verifying $base ---"
               start=$(date +%s)
@@ -187,9 +183,9 @@ jobs:
   # panel (verifies the "pyasc2 uses no micro-api; the compiler does fusion"
   # positioning). Also report-only.
   #
-  # bf16 golden verification (arm64): the amd64 pyasc build has no bf16 IR
-  # lowering, so bfloat16 goldens are verified here on the arm64 sim image
-  # before perf measurement. Non-blocking (continue-on-error on this job).
+  # bf16 goldens are NOT verified here anymore: now that merge-gate runs on the
+  # native arm64 runner (full bf16 IR lowering), bfloat16 goldens are verified
+  # there in the blocking gate like every other capability cell.
   # ==========================================================================
   perf-gate:
     # Self-hosted arm64 runner on the MacBook (198.18.0.1) via Docker Desktop's
@@ -228,21 +224,6 @@ jobs:
         env:
           OLLAMA_BASE_URL: "http://host.docker.internal:11434/v1"
         run: python3.10 tests/tools/free_ollama_memory.py || true
-
-      - name: Verify bf16 golden kernels (arm64)
-        run: |
-          set -uo pipefail
-          docker pull ${{ env.PYASC_SIM_IMAGE }} || { echo "::warning::sim image pull failed; skipping bf16 verify"; exit 0; }
-          shopt -s nullglob
-          kernels=(golden/kernels/*_bf16.py)
-          [ ${#kernels[@]} -eq 0 ] && { echo "no bf16 goldens"; exit 0; }
-          FAILED=0
-          for k in "${kernels[@]}"; do
-            docker run --rm --ulimit nofile=65536:65536 -v "$PWD":/workspace:ro -w /workspace \
-              ${{ env.PYASC_SIM_IMAGE }} python3.11 tests/tools/run_and_verify.py "$k" \
-              --mode simulator --platform Ascend950PR_9599 --timeout 1500 && echo "[PASS] $k" || { echo "[FAIL] $k"; FAILED=$((FAILED+1)); }
-          done
-          [ "$FAILED" -gt 0 ] && echo "::warning::$FAILED bf16 golden(s) failed arm64 verification" || true
 
       # Pull-availability guard: the perf image is rebuilt+pushed manually
       # from the arm64 host, so a base bump can transiently leave the tag
@@ -820,7 +801,10 @@ jobs:
   # the report.
   # ==========================================================================
   skills-value-report:
-    runs-on: ubuntu-latest
+    # Native arm64 on the self-hosted Mac runner (label `arm64`): pure-Python
+    # aggregation + commit/push to main via GITHUB_TOKEN. (Formerly GitHub-hosted
+    # ubuntu-latest.) CI now runs entirely on the Mac runner with no emulation.
+    runs-on: [self-hosted, arm64]
     needs: [nightly-gate, local-stability-gate, cloud-dashscope-gate, perf-gate]
     if: >-
       always() &&
