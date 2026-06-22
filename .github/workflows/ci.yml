@@ -4,8 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
-  schedule:
-    - cron: "0 3 * * *"
+  # No cron schedule: nightly-tier runs are explicit only (workflow_dispatch
+  # with tier=nightly). Removed so re-enabling the workflow never reinstates
+  # unattended 03:00 runs that contend for the single self-hosted Mac runner.
   workflow_dispatch:
     inputs:
       tier:
@@ -672,11 +673,13 @@ jobs:
           if-no-files-found: ignore
 
   # ==========================================================================
-  # Cloud DashScope gate: TEMPORARILY DISABLED (CORC: local-polishing).
+  # Cloud DashScope gate: ENABLED. Runs on explicit nightly dispatch.
   #
   # The same OpenCode skills intervention as the nightly cloud-default leg,
   # but against the additional Alibaba DashScope models (glm-5.1,
-  # qwen3.7-max). Re-enable by removing the `false &&` guard on `if:`.
+  # qwen3.7-max) on the China endpoint
+  # (https://dashscope.aliyuncs.com/compatible-mode/v1). Requires the
+  # DASHSCOPE_API_KEY repo secret; the leg self-skips if it is unset.
   # ==========================================================================
   cloud-dashscope-gate:
     # Self-hosted arm64 Mac runner (label `arm64`): cloud DashScope inference +
@@ -685,9 +688,8 @@ jobs:
     runs-on: [self-hosted, arm64]
     needs: [merge-gate]
     if: >-
-      false &&
-      (github.event_name == 'schedule' ||
-       (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly'))
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly')
     continue-on-error: true
     strategy:
       fail-fast: false
