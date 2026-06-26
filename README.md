@@ -232,6 +232,21 @@ pyasc-skill-stack/
 | `pyasc-env-check` | Python, pyasc, CANN, numpy environment checks |
 | `pyasc-task-focus` | Task focus and attention management |
 
+### Install the skills globally
+
+```bash
+./install.sh            # symlink all skills into Cursor + opencode
+./install.sh --claude   # also link ~/.claude/skills
+./install.sh --agents   # also link ~/.agents/skills
+```
+
+Each skill stays in this repo; `install.sh` creates symlinks under
+`~/.cursor/skills` and `~/.config/opencode/skills`. Re-run after adding,
+removing, or moving skills (stale links are pruned automatically).
+
+The `teams/pyasc-kernel-dev-team` agent is repo-scoped (it relies on the
+in-repo `golden/` set) and is intentionally not installed globally.
+
 ## Testing
 
 ```bash
