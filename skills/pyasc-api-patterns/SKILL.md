@@ -884,6 +884,104 @@ inside the kernel (`.to(asc.float32)` on loads).
 
 See `golden/kernels/layer_norm_v4_f32.py` and `layer_norm_v4_bf16.py`.
 
+#### Multi-input / multi-axis copy (concat) — ONE packed input + scalar offsets
+
+Pure data-movement ops with **multiple inputs** (concat) must take **one packed
+input tensor**, not N `asc2.GlobalAddress` pointers, and address each logical
+sub-input by offset arithmetic. This is the CANN reviewer-mandated shape (MR !331)
+and supports runtime arity (see metadata pattern below).
+
+**Ranked 2-D sub-view of a packed buffer at a runtime offset (now supported).**
+`asc2.tensor(in_ptr + B_i, [rows, w_i])` builds a ranked 2-D view of input `i`'s
+sub-region of the single packed buffer (`B_i` = element base). `GlobalAddress +
+offset` emits `emitasc.ptr_offset`; this **used to fail** because the op was
+ranked-only and kernel-arg pointers are unranked memrefs (`'emitasc.ptr_offset'
+op operand #0 must be memref ... but got 'memref<*xi64>'`). It now lowers after
+relaxing `EmitAsc_PtrOffsetOp` `$base`/`$result` to `AnyRankedOrUnrankedMemRef`
+(issue #1 / discussion #2; branch `corc-concat-d-ptr-offset`). All three proposed
+options emit identical AscendC (`SetGlobalBuffer(base + offset)` + `DataCopy`), so
+the one-line constraint relaxation was chosen as minimal and fully general
+(`asctile.tensor` already accepts unranked bases; `ConvertTensor` forwards the
+base to `SetGlobalBuffer`; the emitter prints `base + offset`).
+
+This unlocks **CANN-style multi-row bulk copy** for the aligned paths: per input,
+copy `[ubFactorDim0, w_i]` tiles (many rows per DMA) over the 2-D sub-view instead
+of one DMA per row — `ubFactorDim0 = min(maxAvaliableUb / catDim1, catDim0)`,
+mirroring CANN `TilingUbForNosplitDim1`. Collapses `rows` DMAs/region into
+`ceil(rows / ubFactorDim0)` larger transfers (e.g. `2048×16` f32 → 988 rows/tile
+→ 3 DMAs vs 2048, ~680× fewer). The runtime-arity / unaligned / wide-row paths
+still use the 1-D packed model with flat scalar `offsets=` (below).
+
+A concat on axis `k` reduces to a 2-D row-concat
+`[rows = prod(shape[:k]), out_cols = Σ_i prod(input_i.shape[k:])]`; input `i` of
+inner width `w_i` lives at flat input base `B_i = Σ_{j<i} rows*w_j` and output
+column base `C_i = Σ_{j<i} w_j`. Element (row `r`, col `c`) of input `i` copies
+`packed[B_i + r*w_i + c] -> out[r*out_cols + C_i + c]`. Host packs the inputs
+input-major: `packed = torch.cat([t.reshape(-1) for t in inputs])`. Ground truth
+is `torch.cat(inputs, dim=k)` reshaped.
+
+**Variable arity via RUNTIME metadata (one kernel for arity 2..N).** Don't write
+`concat3`/`concat4`/`concat16` (one kernel per arity) and don't unroll a Python
+tuple of pointers with `static_range`. Instead pass three small int metadata GM
+tensors (`widths[i]=w_i`, `in_bases[i]=B_i`, `out_bases[i]=C_i`) and a runtime
+`num_inputs`. **GM-loaded scalars are usable as `asc2.ceildiv` loop bounds and
+inside `offsets=`**, so per-input geometry is resolved at runtime with no
+per-arity recompile:
+
+```python
+@asc2.jit(static_alloc=True, reuse_ub=True)
+def concat_generic(in_ptr, w_ptr, ib_ptr, ob_ptr, out_ptr, num_inputs, rows, out_cols, total_in,
+                   chunk: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
+    inp = asc2.tensor(in_ptr, [total_in])          # 1-D packed input
+    widths = asc2.tensor(w_ptr, [num_inputs])
+    in_bases = asc2.tensor(ib_ptr, [num_inputs])
+    out_bases = asc2.tensor(ob_ptr, [num_inputs])
+    out = asc2.tensor(out_ptr, [rows * out_cols])  # 1-D output
+    for s in asc2.range(num_inputs):                       # sequential -> ONE reused [chunk] buffer
+        w = asc2.load(widths, offsets=[s])                # GM scalar
+        ib = asc2.load(in_bases, offsets=[s])
+        ob = asc2.load(out_bases, offsets=[s])
+        for i in range(asc2.block_idx(), rows, asc2.block_num(), unroll_factor=unroll_factor, parallel=True):
+            for c in asc2.range(asc2.ceildiv(w, chunk)):  # runtime bound -> any width fits
+                off = c * chunk
+                size = chunk if off + chunk <= w else w - off   # ternary -> select, NOT a guard
+                t = asc2.load(inp, [chunk], real_shape=[size], offsets=[ib + i * w + off])
+                asc2.store(t, out, real_shape=[size], offsets=[i * out_cols + ob + off])
+```
+
+For a **first-axis** concat the rows collapse (`rows = 1`, each input a full-length
+blob); the same `concat_generic` handles it, or a 1-D flat chunked copy
+(`concat_flat`) distributes the column chunks across cores.
+
+**Don't ship a kernel that is a special case of another.** A single-core
+whole-row copy (`concat_simt`) is just the row-distributed `concat_all_align`
+launched with `block_num=1` — delete the special case and route to the general
+kernel via launch params. Likewise, **size the launch so every core has work**
+instead of guarding inside the kernel: for a contiguous dim0 split, launch
+`usedCoreNum = ceildiv(dim0, block_factor)` cores (CANN `blockFactor`/
+`usedCoreNum`/`tailBlockFactor`) so `r_start = block_idx*block_factor < dim0`
+always holds and no `if r_start < dim0:` guard is needed.
+
+**UB budgeting rule (CRITICAL — sizing `chunk`), grounded in CANN.** Mirror the
+CANN concat tiling (`conversion/concat/op_host/arch35/concat_tiling_arch35.cpp`,
+`TilingUb`): `maxAvaliableUb = (UB_CAPACITY − INDEX_USE_UB) / dtypeSize` with
+`INDEX_USE_UB = 1024`, and the non-aligned in-UB-concat path divides by
+`BUFFER_NUM = 2` (double buffer). The reused-buffer loop is double-buffered by
+`unroll_factor=2`, and any **sibling** region copy loops are NOT liveness-merged
+under `static_alloc`, so live UB = `sibling_regions × BUFFER_NUM × chunk_bytes`:
+
+```
+chunk_elems = ((UB_CAPACITY - 1024) // dtype.itemsize) // BUFFER_NUM // sibling_regions
+# Ascend950PR_9599 UB_CAPACITY = 253952 B; concat_generic uses ONE reused buffer
+# (sibling_regions=1); a fixed 2-region kernel (concat_no_align / concat_flat) uses 2.
+```
+
+Diagnosed empirically: a fp32 column-chunk kernel sized at the full
+`maxAvaliableUb/BUFFER_NUM` overflowed (`UB overflow: 253952 available, 505856
+used` = 4 × chunk) because its two region loops each double-buffer; dividing by
+`sibling_regions` fixed it. Always validate the **static** path with
+`pytest --compile-only` — it is the worst case for UB.
+
 ## Common Mistakes
 
 > These mistakes cause runtime failures even when static verification passes.
@@ -913,6 +1011,10 @@ See `golden/kernels/layer_norm_v4_f32.py` and `layer_norm_v4_bf16.py`.
 | `asc2.range(...)` without `unroll_factor=2` | Defaults to `unroll_factor=1`; leaves PR 190 perf on the table | Always pass `unroll_factor=2` (and `parallel=True` when the loop body has no carried dependency — see "Recommended asc2.range parameters" above) |
 | `parallel=True` on a loop with a carried scalar accumulator (`sum_sq = sum_sq + ...`, running max, prefix scan) | Iteration order is no longer guaranteed; accumulator updates collide and the reduction is silently wrong | Omit `parallel` (default `False`) on accumulator loops. Only the *outer* row distribution and *disjoint-tile* inner loops can be `parallel=True` |
 | `scalar * tile` ordering inside `@asc2.jit` (e.g. `0.044715 * x_cubed`, `GELU_K * inner`) | The asc2 `Tile` class does not implement `__rmul__`; Python's fallback raises `AttributeError: 'Tile' object has no attribute '__rmul__'` at codegen time | **Always put the Tile on the LEFT** of `*`: write `x_cubed * 0.044715`, `inner * GELU_K`, `x * 0.5`. The same rule applies to `+`/`-`/`/` if you ever hit the symmetric case. See `golden/kernels/gelu_f32.py` (lines 54–55) for the canonical layout |
+| Sizing a copy/concat tile to the **full per-input row** (`asc2.load(in_i, [1, buf_i], real_shape=[1, d1_i])` with one buffer per input) | UB then scales with input count *and* row width; wide rows / higher arity overflow. Under `static_alloc=True` the per-input buffers are **not** reused (sum, not max), and `unroll_factor` multiplies it → `UB overflow: ... bytes are used` at JIT/launch | Copy each input in **column chunks** through one reused `[chunk]` buffer (see "Multi-input / multi-axis copy" pattern). Size `chunk = (UB−1024)/itemsize / BUFFER_NUM / sibling_regions` so any width fits |
+| Taking **N input pointers** (`def concat3(in0_ptr, in1_ptr, in2_ptr, ...)`) or unrolling a Python tuple of `GlobalAddress` with `static_range` for variable arity | One kernel per arity (recompile per N); and the reviewer-rejected shape. (Note: `GlobalAddress + offset` → `emitasc.ptr_offset` to build a ranked 2-D sub-view of a packed input **now lowers** after the `AnyRankedOrUnrankedMemRef` relaxation, issue #1 — but N pointers is still the wrong shape for variable arity) | Pass **one packed input tensor** + int metadata GM tensors (`widths`/`in_bases`/`out_bases`) and a runtime `num_inputs`; address sub-inputs with flat scalar `offsets=`. GM-loaded scalars work as `asc2.ceildiv` bounds and in `offsets=`, so one `concat_generic` covers all arities. For static-arity **aligned** copies, prefer `asc2.tensor(in_ptr + B_i, [rows, w_i])` 2-D sub-views + `[ubFactorDim0, w_i]` multi-row tiles (CANN bulk copy) |
+| Shipping a kernel that is a **special case** of another (e.g. `concat_simt` = single-core whole-row copy) or guarding empty cores with `if r_start < dim0:` | Dead duplication / a guard the codegen dislikes; the special case is just a launch-param of the general kernel | Route the special case to the general kernel via launch params (single core = `block_num=1`); for a dim0 split launch exactly `usedCoreNum = ceildiv(dim0, block_factor)` cores so every core has work and no guard is needed |
+| "Resolving" a UB overflow by **dropping the offending shape** from the test/case selection | Hides a real kernel limitation; the next large input fails the same way. The objective is that *all valid shapes are covered* | Fix the kernel (column-chunk to bound UB) so the shape passes, then keep it in the suite. Only report-and-skip when it is genuinely a *compiler/pass* limit you cannot work around — never silently downsize to hit a target |
 
 ### Editing `capabilities.yaml`
 

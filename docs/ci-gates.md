@@ -59,12 +59,12 @@ Runs in 15-30 minutes. Requires opencode CLI and CANN simulator.
 
 Requires: opencode CLI on PATH, CANN simulator environment.
 
-**TEMPORARY (CORC: local-polishing):** the GitHub Actions `nightly-gate` job
-runs the Phase 0 protocol-axis matrix (P2/P3/P4/P6) against the Mac's local
-**`qwen3-coder:30b`** Ollama model (`local-qwen3-coder-30b` profile), not the
-remote DashScope `cloud-default` profile. It is **report-only** (no P6
-hard-fail threshold) while skills are polished locally. The
-**`cloud-dashscope-gate`** job (glm-5.1, qwen3.7-max) is temporarily disabled.
+The GitHub Actions `nightly-gate` job runs the Phase 0 protocol-axis matrix
+(P2/P3/P4/P6) against the remote DashScope **`cloud-default`** profile (glm-5),
+gated on the `DASHSCOPE_API_KEY` secret. It is **report-only** (no P6 hard-fail
+threshold). Cloud inference needs no host Ollama, so the legs only serialize on
+the Mac runner for the camodel docker sim verify. The
+**`cloud-dashscope-gate`** job (glm-5.1, qwen3.7-max) is also enabled.
 
 The **`local-stability-gate`** compares **`qwen3-coder:30b`** vs
 **`gpt-oss:120b`** (skills on/off). Both models must be pre-pulled on the Mac's
@@ -79,11 +79,12 @@ Every CI job now runs natively on the single self-hosted arm64 Mac runner
 128 GB host with the ~46 GB Parallels VM (the dev Linux box), the Docker Desktop
 VM (camodel sims), and macOS. `gpt-oss:120b` alone is ~68 GB resident and `qwen3-coder:30b` is
 ~18 GB, so **two co-resident models would overrun the host and thrash swap.**
-Because Ollama keeps a model warm for `keep_alive` (5 min default), each leg
-runs a **Free host Ollama memory** step
+Because Ollama keeps a model warm for `keep_alive` (5 min default), the
+local-model legs (`local-stability-gate`) run a **Free host Ollama memory** step
 ([tests/tools/free_ollama_memory.py](../tests/tools/free_ollama_memory.py))
 that unloads any model a prior leg left warm, bounding the peak Ollama
-footprint to the single model the upcoming leg loads.
+footprint to the single model the upcoming leg loads. (`nightly-gate` runs on
+cloud DashScope and loads no local model.)
 
 Recommended host-side belt-and-braces (set on the Mac's native Ollama, which
 CI cannot configure): `OLLAMA_MAX_LOADED_MODELS=1` and a short

@@ -307,11 +307,12 @@ jobs:
           if-no-files-found: ignore
 
   # ==========================================================================
-  # Nightly gate: OpenCode skills intervention on the local Mac model.
+  # Nightly gate: OpenCode skills intervention on the cloud-default model.
   #
-  # TEMPORARY (CORC: local-polishing): repointed from cloud-default (DashScope
-  # glm-5) to local-qwen3-coder-30b on the Mac's native Ollama. Report-only
-  # (no P6 hard-fail threshold) while skills are polished against local models.
+  # Repointed back to cloud-default (DashScope glm-5) from the temporary
+  # local-qwen3-coder-30b "local-polishing" pin, now that the DASHSCOPE_API_KEY
+  # secret is set and the v2-eval baseline was bumped to pyasc#v2 HEAD. Cloud
+  # inference needs no host Ollama. Report-only (no P6 hard-fail threshold).
   #
   # Phase 0 promotes the protocol axis to a first-class matrix dimension.
   # Each capability cell now runs FOUR legs against the local-default
@@ -329,7 +330,7 @@ jobs:
   # the aggregator see a consistent evidence directory.
   # ==========================================================================
   nightly-gate:
-    # Self-hosted arm64 Mac runner (label `arm64`): local Ollama inference +
+    # Self-hosted arm64 Mac runner (label `arm64`): cloud DashScope inference +
     # camodel docker sim verify, no GPU. opencode runs in-image via
     # --agent-backend docker (image pulled in preflight). Since the Mac is now
     # the only self-hosted runner, the P2/P3/P4/P6 legs SERIALIZE on it rather
@@ -343,8 +344,6 @@ jobs:
       fail-fast: false
       matrix:
         protocol_id: ["P2", "P3", "P4", "P6"]
-    env:
-      OLLAMA_BASE_URL: "http://host.docker.internal:11434/v1"
     steps:
       - uses: actions/checkout@v4
 
@@ -362,22 +361,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Preflight (host Ollama qwen3-coder:30b + sim image)
+      - name: Preflight (DashScope secret + sim image)
         id: preflight
         env:
-          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
         run: |
           set +e
           available=true
-          MODEL="qwen3-coder:30b"
 
-          OLLAMA_ROOT="${OLLAMA_BASE_URL%/v1}"
-          if ! curl -sf "$OLLAMA_ROOT/api/tags" -o /tmp/ollama_tags.json; then
-            echo "::warning::host Ollama unreachable at $OLLAMA_ROOT/api/tags; skipping nightly leg (start native Ollama with OLLAMA_HOST=0.0.0.0:11434)"
-            available=false
-          elif ! grep -q "\"$MODEL\"" /tmp/ollama_tags.json; then
-            echo "::warning::model $MODEL not pulled on host Ollama; skipping nightly leg (run: ollama pull $MODEL)"
+          if [ -z "$DASHSCOPE_API_KEY" ]; then
+            echo "::warning::DASHSCOPE_API_KEY secret is not set; skipping nightly cloud-default leg"
             available=false
           fi
 
@@ -403,23 +397,14 @@ jobs:
           PROTOCOL_ID_LOWER=$(echo "$PROTOCOL_ID" | tr '[:upper:]' '[:lower:]')
           echo "PROTOCOL_ID_LOWER=$PROTOCOL_ID_LOWER" >> "$GITHUB_ENV"
 
-      # Memory hygiene: the arm64 jobs serialize on the single Mac runner and
-      # drive the Mac's native Ollama. Unload any model a prior leg left warm so
-      # this leg's model is the only one resident (see free_ollama_memory.py:
-      # 46 GB Parallels VM + two co-resident models would overrun the 128 GB Mac).
-      - name: Free host Ollama memory
-        if: steps.preflight.outputs.available == 'true'
-        env:
-          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
-        run: python3.10 tests/tools/free_ollama_memory.py
-
       - name: Run OpenCode skills-intervention leg (protocol_id=${{ matrix.protocol_id }})
         if: steps.preflight.outputs.available == 'true'
         env:
           NODE_TLS_REJECT_UNAUTHORIZED: "0"
           PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
           PROTOCOL_ID: ${{ matrix.protocol_id }}
-          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
+          # Substituted into the cloud-default profile template's ${DASHSCOPE_API_KEY}.
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
         run: |
           mkdir -p generative-archive
           mapfile -t OPS < <(python3.10 tests/tools/list_generative_cells.py --platform Ascend950PR_9599)
@@ -438,10 +423,10 @@ jobs:
                 --docker-timeout "$DOCKER_TO" \
                 --archive-dir generative-archive \
                 --ci-run-url "$CI_RUN_URL" \
-                --model-profile local-qwen3-coder-30b \
+                --model-profile cloud-default \
                 --protocol-id "$PROTOCOL_ID" \
                 --max-attempts 3 \
-                --notes "Nightly CI run (protocol=$PROTOCOL_ID, local-qwen3-coder-30b)"; then
+                --notes "Nightly CI run (protocol=$PROTOCOL_ID, cloud-default)"; then
               PASS=$((PASS + 1))
             else
               echo "  All attempts failed for $op/$dtype"
@@ -460,7 +445,7 @@ jobs:
           import json, glob, os
           pid = os.environ.get("PROTOCOL_ID", "P6").lower()
           files = sorted(glob.glob(
-              f"evidence/*-generative-local-qwen3-coder-30b-{pid}.json"))
+              f"evidence/*-generative-cloud-default-{pid}.json"))
           if not files:
               print(f"No generative evidence files found for protocol_id={pid}.")
               raise SystemExit(0)
@@ -485,8 +470,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: evidence-local-${{ matrix.protocol_id }}
-          path: evidence/*-generative-local-qwen3-coder-30b-${{ env.PROTOCOL_ID_LOWER }}.json
+          name: evidence-cloud-${{ matrix.protocol_id }}
+          path: evidence/*-generative-cloud-default-${{ env.PROTOCOL_ID_LOWER }}.json
           if-no-files-found: ignore
 
       - name: Upload generated kernel archive

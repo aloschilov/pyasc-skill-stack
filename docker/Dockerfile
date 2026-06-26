@@ -33,7 +33,8 @@
 # Build args:
 #   PYASC_GIT_URL         pyasc source repository
 #                         (default: https://gitcode.com/compiler-team/pyasc.git)
-#   PYASC_GIT_REV         SHA on origin/v2 to pin (default: 7b85554a, the Q1 baseline).
+#   PYASC_GIT_REV         SHA on origin/v2 to pin (default: 7095b6f, the v2-HEAD
+#                         baseline bumped 2026-06-26 from the Q1 7b85554a pin).
 #                         Bump in lock-step with the host-side pyasc-v2-eval
 #                         checkout used by the harness so docker and host runs stay
 #                         apples-to-apples.
@@ -55,7 +56,7 @@ ARG PYASC_GIT_URL=https://gitcode.com/compiler-team/pyasc.git
 # Bump this together with the host-side pyasc-v2-eval checkout when the
 # evaluation owner is ready to refresh the baseline. Leaving PYASC_GIT_REF
 # as a legacy override hook for callers that still need a non-SHA ref.
-ARG PYASC_GIT_REV=7b85554a2bcc67805f90c30b4e262a6209767839
+ARG PYASC_GIT_REV=7095b6fdbdbb2b3fef60dd746f54e194feda819f
 ARG PYASC_GIT_REF=
 ARG LLVM_ARCHIVE_X86_64=https://oaitriton.blob.core.windows.net/public/llvm-builds/llvm-86b69c31-ubuntu-x64.tar.gz
 ARG LLVM_ARCHIVE_AARCH64=https://oaitriton.blob.core.windows.net/public/llvm-builds/llvm-86b69c31-ubuntu-arm64.tar.gz

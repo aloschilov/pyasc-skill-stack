@@ -38,8 +38,18 @@ Kernel implementation complete
 > **IMPORTANT**: Use `python3.10` (not `python` or `python3`). The pyasc packages are installed under python3.10.
 
 ```bash
-# Set up simulator environment (required for Model backend)
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH
+# Set up simulator environment (required for Model backend). The toolkit often lives at
+# /usr/local/Ascend/cann-9.0.0 (NOT the ~/Ascend path in .env.pyasc.example).
+export ASCEND_HOME_PATH=/usr/local/Ascend/cann-9.0.0
+export PYASC_COMPILER=$ASCEND_HOME_PATH/tools/bisheng_compiler/bin/bisheng
+# bisheng ships its OWN ld.lld that knows `-m aicorelinux`; put its bin FIRST on PATH or the
+# system /usr/bin/ld.lld is picked and link fails with `unknown emulation: aicorelinux`.
+export PATH=$ASCEND_HOME_PATH/tools/bisheng_compiler/bin:$PATH
+# Put the simulator `camodel` dir BEFORE `lib`: both ship libstars.so but with different symbol
+# case (`STARS_TOP` in camodel vs `stars_top` in lib); wrong order => `undefined symbol:
+# _ZN9STARS_TOP27ext_write_ffts_plus_contextEjjPv` or a GetC2cCtrlAddrWrapper hang at run.
+SIM=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599
+export LD_LIBRARY_PATH=$SIM/camodel:$SIM/lib:$SIM/lib64:$ASCEND_HOME_PATH/lib64:$LD_LIBRARY_PATH
 
 # Run with Model backend (simulator) — specify platform explicitly
 python3.10 kernel.py -r Model -v Ascend950PR_9599
@@ -49,6 +59,17 @@ python3.10 kernel.py -r NPU -v Ascend950PR_9599
 ```
 
 > The `-v Ascend950PR_9599` flag matches the only platform the stack targets. Do NOT use `-v Ascend950PR` (missing version suffix).
+
+> **Run pytest target files through `pytest`, not raw `python`.** Test files under
+> `python/test/asc2/target/` rely on the `conftest.py` `set_platform` fixture to initialise the
+> backend/platform; invoking them with raw `python3` skips that setup and the simulator fails with
+> `GetC2cCtrlAddrWrapper returned ...`. Only standalone golden kernels (with their own `__main__`)
+> run via `python3.10 kernel.py`.
+
+> **Tile-size budgets: align with CANN.** The source of truth for UB tile sizing is the CANN op
+> tiling (`ops-math/.../op_host/arch35/*_tiling_arch35.cpp`). For concat that is
+> `maxAvaliableUb = (UB_CAPACITY − INDEX_USE_UB[=1024]) / dtypeSize`, divided by `BUFFER_NUM[=2]`
+> on the non-aligned double-buffered path — prefer these over ad-hoc byte constants.
 
 ### Running via pytest
 
@@ -93,6 +114,8 @@ Note: `insert_sync=True` and `run_asc2_passes=True` are defaults for `@asc2.jit`
 | `ImportError: asc` or `asc2` | pyasc not installed | Run `pip install pyasc` or build from source |
 | `RuntimeError` on launch | Wrong core count | Verify `CORE_NUM` value |
 | Used `range()` instead of `asc2.range()` | Wrong loop construct inside kernel | Replace with `asc2.range()` |
+| `RuntimeError: UB overflow: N bytes are available, M bytes are used` (also `L1`/`L0A`/`L0B`/`L0C`) | `Launcher.check_memory_overflow` rejects the kernel **before** any numerics: the sum of live on-chip buffers exceeds capacity. Common cause: a tile sized to a full row, one buffer per input, and/or `unroll_factor` × `parallel` double-buffering multiplying the live set. Note `M` is often a clean multiple of the per-buffer size (e.g. `786432 = 8 × 98304`) — the multiplier tells you how many buffers are live | Shrink the live set: tile/column-chunk wide data through **one reused buffer**; lower `unroll_factor`; pipeline only the loop whose buffer you can halve. Size the chunk for the worst case `arity × unroll_factor × chunk_bytes ≤ capacity`. See `pyasc-api-patterns` → "Multi-input / multi-axis copy". The **static-dims** variant is the worst case (sibling loops not reused) — always compile-check it |
+| `RuntimeError: Compiler executable is not found, check PYASC_COMPILER environment variable` | `bisheng` is not on `PATH` — the CANN env was not sourced (toolkit may live at `/usr/local/Ascend/cann-9.0.0`, not the `.env` example path) | `source /usr/local/Ascend/cann-9.0.0/set_env.sh` (or set `PYASC_COMPILER`) so `bisheng` resolves; `--compile-only` still needs it |
 
 ## Verification Patterns
 
@@ -147,6 +170,34 @@ python scripts/verify_output.py {kernel_path} [--backend Model] [--atol 1e-5]
 | `NPU` | Final verification, performance testing | Requires Atlas A2/A3 hardware |
 
 **If runtime execution is unavailable**: Perform static verification (syntax check, ASC-IR dump inspection) and state the limitation explicitly in the delivery.
+
+### Simulator throughput — pick runnable shapes; compile-only the rest
+
+The Model simulator is cycle-accurate and **~1000× slower than NPU**, and cost
+scales with the number of *kernel iterations*, not just element count. A kernel
+whose 2-D reduction yields a huge **row/iteration count** (e.g. a concat that
+reduces to ~160K rows) can take many minutes *per launch* even when total bytes
+are modest — a small handful of such launches will blow past any reasonable
+wait. This is a **simulator-throughput** limit, not a kernel bug.
+
+Practical policy when validating a large case matrix:
+
+- **Compile-only** every case to prove it lowers and fits UB (no simulator):
+
+  ```bash
+  pytest --compile-only python/test/asc2/target/test_<op>.py -q   # needs bisheng on PATH
+  ```
+
+- **Run on the simulator** only a representative subset with **low iteration
+  counts** (few rows / few blocks), including any case that previously failed
+  (e.g. a wide-row case you just fixed), and verify numerically vs torch/numpy.
+- For high-iteration shapes, state in the delivery that they are **compile-only
+  validated** (consistent with how large shapes are handled elsewhere). Do **not**
+  drop a shape from coverage just because the simulator is slow.
+
+> A piped `pytest ... | tail -N` shows **no output until the pipe closes**, so a
+> long sim run looks "hung". Confirm progress by watching the terminal/output
+> file directly, and size your wait to the expected per-launch cost.
 
 ## References
 

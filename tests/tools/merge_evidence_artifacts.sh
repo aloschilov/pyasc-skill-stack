@@ -9,10 +9,11 @@
 # overwriting freshly-written rows.
 #
 # Each artifact directory is named `evidence-<leg>` where `<leg>` is
-# either `local-P{2,3,4,6}` (Phase 0 `nightly-gate` matrix on local-qwen3-coder-30b),
-# legacy `cloud-P{2,3,4,6}` / `cloud-on` / `cloud-off` (pre-local-polishing cloud
-# nightly — still accepted so a partial rollback works), or `<profile>-<mode>`
-# (for the `local-stability-gate` matrix). We `cp -f` only the
+# either `cloud-P{2,3,4,6}` (Phase 0 `nightly-gate` matrix on cloud-default),
+# `local-P{2,3,4,6}` (the temporary local-polishing nightly on
+# local-qwen3-coder-30b — still accepted so that rollback works),
+# legacy `cloud-on` / `cloud-off` (pre-Phase 0 cloud nightly), or
+# `<profile>-<mode>` (for the `local-stability-gate` matrix). We `cp -f` only the
 # filenames that leg legitimately writes, so even if an upload step
 # regresses to "the whole `evidence/` directory", the merge still
 # cannot cross-clobber another leg's fresh evidence with a stale
