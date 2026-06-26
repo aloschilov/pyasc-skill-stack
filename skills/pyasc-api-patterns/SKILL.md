@@ -931,27 +931,42 @@ per-arity recompile:
 ```python
 @asc2.jit(static_alloc=True, reuse_ub=True)
 def concat_generic(in_ptr, w_ptr, ib_ptr, ob_ptr, out_ptr, num_inputs, rows, out_cols, total_in,
-                   chunk: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
-    inp = asc2.tensor(in_ptr, [total_in])          # 1-D packed input
+                   chunk: asc2.ConstExpr, ubf: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
     widths = asc2.tensor(w_ptr, [num_inputs])
     in_bases = asc2.tensor(ib_ptr, [num_inputs])
     out_bases = asc2.tensor(ob_ptr, [num_inputs])
-    out = asc2.tensor(out_ptr, [rows * out_cols])  # 1-D output
-    for s in asc2.range(num_inputs):                       # sequential -> ONE reused [chunk] buffer
-        w = asc2.load(widths, offsets=[s])                # GM scalar
+    out2d = asc2.tensor(out_ptr, [rows, out_cols])     # 2-D output view
+    for s in asc2.range(num_inputs):
+        w = asc2.load(widths, offsets=[s])             # GM scalar (dynamic width)
         ib = asc2.load(in_bases, offsets=[s])
         ob = asc2.load(out_bases, offsets=[s])
-        for i in range(asc2.block_idx(), rows, asc2.block_num(), unroll_factor=unroll_factor, parallel=True):
-            for c in asc2.range(asc2.ceildiv(w, chunk)):  # runtime bound -> any width fits
-                off = c * chunk
-                size = chunk if off + chunk <= w else w - off   # ternary -> select, NOT a guard
-                t = asc2.load(inp, [chunk], real_shape=[size], offsets=[ib + i * w + off])
-                asc2.store(t, out, real_shape=[size], offsets=[i * out_cols + ob + off])
+        in_s = asc2.tensor(in_ptr + ib, [rows, w])     # ranked 2-D sub-view at runtime base ib
+        # multi-row bulk copy: ubf rows per DMA (ptr_offset AnyRankedOrUnrankedMemRef relaxation, issue #1)
+        for t in range(asc2.block_idx(), asc2.ceildiv(rows, ubf), asc2.block_num(),
+                       unroll_factor=unroll_factor, parallel=True):
+            r0 = t * ubf
+            nr = ubf if r0 + ubf <= rows else rows - r0          # ternary -> select, NOT a guard
+            for c in asc2.range(asc2.ceildiv(w, chunk)):         # runtime bound -> any width fits
+                c0 = c * chunk
+                csize = chunk if c0 + chunk <= w else w - c0
+                tile = asc2.load(in_s, [ubf, chunk], real_shape=[nr, csize], offsets=[r0, c0])
+                asc2.store(tile, out2d, real_shape=[nr, csize], offsets=[r0, ob + c0])
 ```
 
-For a **first-axis** concat the rows collapse (`rows = 1`, each input a full-length
-blob); the same `concat_generic` handles it, or a 1-D flat chunked copy
-(`concat_flat`) distributes the column chunks across cores.
+This is **CANN-style multi-row bulk copy**: per input, the ranked 2-D sub-view
+`asc2.tensor(in_ptr + ib, [rows, w])` lets one DMA move `ubf` rows (sized so
+`ubf*chunk` fits the per-region UB budget), collapsing the prior one-DMA-per-row
+storm into `ceil(rows/ubf)` transfers per (input, column-chunk). It recovered a
+4-6x regression on narrow-width multi-input cases (arity 3/4 middle/last). The
+earlier per-row path (`asc2.load(inp, [chunk], offsets=[ib + i*w + off])` over a
+1-D packed view) is what regressed; do not reintroduce it.
+
+For a **first-axis** concat the input-major packed buffer is **byte-identical to
+the output**, so it is one contiguous `total`-element copy: route to a flat
+chunked copy (`concat_flat_copy`) that fans `ub_chunk`-sized chunks of the whole
+buffer across cores. Do NOT route first-axis multi-input through `concat_generic`
+with `rows=1`: parallelism there is over rows, so only one core works while the
+rest idle (this single-core path was a measured regression for arity-16 first-axis).
 
 **Don't ship a kernel that is a special case of another.** A single-core
 whole-row copy (`concat_simt`) is just the row-distributed `concat_all_align`
@@ -972,8 +987,10 @@ under `static_alloc`, so live UB = `sibling_regions × BUFFER_NUM × chunk_bytes
 
 ```
 chunk_elems = ((UB_CAPACITY - 1024) // dtype.itemsize) // BUFFER_NUM // sibling_regions
-# Ascend950PR_9599 UB_CAPACITY = 253952 B; concat_generic uses ONE reused buffer
-# (sibling_regions=1); a fixed 2-region kernel (concat_no_align / concat_flat) uses 2.
+# Ascend950PR_9599 UB_CAPACITY = 253952 B; a 2-region kernel (concat_no_align /
+# concat_flat / concat_flat_copy) uses sibling_regions=2. concat_generic now copies
+# [ubf, chunk] multi-row tiles: size chunk to the widest input (capped at the per-region
+# budget) and ubf = per_region // chunk, so ubf*chunk stays within the same budget.
 ```
 
 Diagnosed empirically: a fp32 column-chunk kernel sized at the full
