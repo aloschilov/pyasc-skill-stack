@@ -174,7 +174,41 @@ python3 -m pytest python/test/asc2/target/test_<op>.py \
   `pyasc-build-run-verify`.
 - Iterate until all selected shapes pass, then commit (section 1).
 
-## 6. Definition of done
+## 6. Variants (N-ary elementwise, reductions)
+
+**N-ary elementwise (2+ inputs, e.g. `add`, `addcdiv = a + value*(b/c)`).** Same
+scaffold as section 3, just add one `GlobalAddress` input pointer + one
+`asc2.tensor` + one `asc2.load` per input, all sharing the same flat tiling, and
+fold a host-side scalar (e.g. `addcdiv`'s `value`) in as a plain Python float in
+the compute line (`zt = at + value * (bt / ct)`). Allocate/randn every input
+buffer; pad them all to the same `padded_length`. Golden uses the matching torch
+op (`torch.addcdiv(a, b, c, value=value)`).
+
+**Reductions (e.g. `reduce_max`, `reduce_min`, `reduce_mean`).** Model on
+`test_reduce_sum.py`, which reduces a 2-D `[rows, cols]`:
+- Flatten the input to 2-D: for a **last-axis** reduction, `rows =
+  prod(shape[:-1])`, `cols = shape[-1]`, output `[rows]` (drop the last axis).
+- One core-block owns a slab of rows; loop column-tiles with a running
+  accumulator initialized to the reduction identity (`asc2.zeros(...)` for sum;
+  for max seed with the first tile or a very negative `asc2.full(...)`), folding
+  each `asc2.reduce_max(tile, 1)` (axis 1) into the accumulator with
+  `asc2.maximum(acc, part)`. `asc2.store` the per-row result.
+- **Choose your own `tile_shape`** from the UB budget (a `[tile_rows, tile_cols]`
+  tile must fit UB; 32-byte align the column dim). The long `tiling_values`
+  vector baked into `test_reduce_sum.py` is CANN tiling provenance — you do **not**
+  need to reproduce it; pass only the tile sizes you pick. Pad rows up to
+  `core_num` and cols up to `tile_cols`; compare only `out[:rows]` to
+  `torch.amax(in, dim=-1)` (or `torch.sum/mean/...`).
+- **CRITICAL — pad the INPUT with the reduction identity, not 0.** When you pad
+  the column dimension, the kernel still reduces the padding elements, so they
+  must be neutral for the specific reduction: `0` for `sum`/`mean`, **`-inf`
+  (e.g. `torch.full(..., float("-inf"))`) for `max`**, **`+inf` for `min`**,
+  `1` for `prod`. `test_reduce_sum.py` pads with `0` only because 0 is the sum
+  identity — copying that for a max/min reduction is a silent bug that passes for
+  all-positive inputs but corrupts any row whose real values are all-negative.
+  (Fill padding with the identity, then write the real block with `randn`.)
+
+## 7. Definition of done
 
 - Branch `<op>-target` created off `v2`.
 - `python/test/asc2/target/test_<op>.py` present, modeled on the closest sibling, all
