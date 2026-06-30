@@ -144,9 +144,11 @@ Evidence (camodel `Ascend950PR_9599`, add/float16, `[32,4096]`, vs hand-written
 same op, only the core count moved. Single-input ops like `abs` already clear the
 gate at 16 cores, so this is specifically the multi-load lever.
 
-Reference tile policy (hand-written AscendC, arch35):
-[`ops-math/math/abs/op_host/arch35/abs_tiling_arch35.cpp`](/home/aloschilov/workspace/ops-math/math/abs/op_host/arch35/abs_tiling_arch35.cpp)
-and [`add_tiling_arch35.cpp`](/home/aloschilov/workspace/ops-math/math/add/op_host/arch35/add_tiling_arch35.cpp).
+Reference tile policy (hand-written AscendC, arch35), in the remote `ops-math`
+repo (`https://gitcode.com/cann/ops-math`, branch `master`):
+[`math/abs/op_host/arch35/abs_tiling_arch35.cpp`](https://gitcode.com/cann/ops-math/blob/master/math/abs/op_host/arch35/abs_tiling_arch35.cpp)
+and [`math/add/op_host/arch35/add_tiling_arch35.cpp`](https://gitcode.com/cann/ops-math/blob/master/math/add/op_host/arch35/add_tiling_arch35.cpp)
+(local mirror when cloned: `$CANN_OPS_ROOT/ops-math/math/{abs,add}/op_host/arch35/`).
 
 > Keep the **rank-1 flatten** invariant when widening the tile: declare the GM
 > tensor as `asc2.tensor(x_ptr, [size])` and load `[tile_size]` with a 1D

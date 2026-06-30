@@ -40,6 +40,9 @@ rerun-phase10-*.log
 # Generated dashboard output
 _site/
 
+# Temporary CSV elementwise selection scratch (throwaway experiment tooling).
+scratch/
+
 # CI-only generative kernel archive (uploaded as artifact, not committed)
 generative-archive/
 

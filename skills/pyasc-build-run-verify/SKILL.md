@@ -199,6 +199,58 @@ Practical policy when validating a large case matrix:
 > long sim run looks "hung". Confirm progress by watching the terminal/output
 > file directly, and size your wait to the expected per-launch cost.
 
+### Simulator feasibility: verify only *feasible* shapes, not all of them
+
+When a kernel must cover **many shapes** (e.g. a production case list pulled from
+a CANN regression CSV), do **not** push every shape through the Model simulator.
+Apply an explicit **feasibility predicate** first and only sim-verify the shapes
+that pass; the rest are **compile-only** (they still must lower and fit UB). This
+generalises the older per-op notes ("Softmax/RMSNorm: test ONLY the shape in the
+prompt — the simulator is extremely slow for large shapes") into one reusable
+rule.
+
+A shape `S` for dtype `D` (flatten-1D elementwise / row-tiled reductions) is
+**simulator-feasible** when **all** hold:
+
+- **dtype supported by the sim build** — `float32`/`float16` always; `bfloat16`
+  lowers on both the x86_64 and aarch64 simulator images (do **not** add false
+  arch guards), but confirm the active image supports it.
+- **element-count ceiling (sim time budget)** — `numel(S) ≤ ELEM_CEILING`. Sim
+  cost scales with *kernel iterations*, so this is a wall-clock guard, not a
+  correctness one. A practical default is `ELEM_CEILING ≈ 4,194,304` elements
+  for a single flatten-1D pass; lower it for high-iteration 2-D reductions
+  (row/iteration count, not bytes, is what hurts — see the concat example above).
+- **minimum size** — `numel(S) ≥ 32 / sizeof(D)` (a tile must fill a 32-byte
+  cache line).
+- **UB tile fits** — a flatten-1D kernel tiles the buffer so a single UB tile
+  always fits; for fixed-tile kernels check
+  `chunk_elems = ((UB_CAPACITY[=253952] − 1024) / sizeof(D)) / BUFFER_NUM[=2] / sibling_regions`.
+- **alignment is NOT a feasibility blocker** — a size that is not a multiple of
+  `TILE_SIZE × CORE_NUM` is still feasible *provided the kernel declares a
+  cache-line-aligned tail path*; otherwise treat it as `aligned_only` and skip.
+
+```python
+UB_CAPACITY, INDEX_RESERVE, CORE_NUM = 253952, 1024, 16
+DTYPE_BYTES = {"float32": 4, "float16": 2, "bfloat16": 2}
+ELEM_CEILING = 4_194_304  # tune down for high-iteration 2-D reductions
+
+def sim_feasible(shape, dtype):
+    if dtype not in DTYPE_BYTES:
+        return False, "dtype unsupported by simulator build"
+    n = 1
+    for d in shape:
+        n *= d
+    if n < 32 // DTYPE_BYTES[dtype]:
+        return False, "below 32-byte minimum"
+    if n > ELEM_CEILING:
+        return False, "exceeds sim-time element ceiling"
+    return True, "ok"   # UB tile fits (kernel tiles); tail handles non-alignment
+```
+
+Policy: **sim-verify** the feasible subset numerically vs the numpy reference;
+**compile-only** the infeasible ones and say so in the delivery. Never drop a
+shape from coverage just because it is sim-infeasible.
+
 ## References
 
 - [JIT Diagnostics Guide](references/jit-diagnostics.md)

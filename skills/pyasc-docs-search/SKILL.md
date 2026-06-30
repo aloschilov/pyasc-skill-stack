@@ -77,20 +77,39 @@ This skill provides local-first documentation search for pyasc kernel developmen
 | 04_matmul_cube_only | `golden/tutorials/04_matmul_cube_only.py` | `~/workspace/pyasc/python/tutorials/04_matmul_cube_only/` | Pure cube mode matmul |
 | 05_matmul_leakyrelu | `golden/tutorials/05_matmul_leakyrelu.py` | `~/workspace/pyasc/python/tutorials/05_matmul_leakyrelu/` | Matmul + LeakyReLU fusion |
 
+### Reference operator repositories (remote)
+
+CANN operator source is the ground truth for tiling rules, shapes, and semantics.
+Reference it by **remote coordinates**, not machine-local paths. Clone under
+`$CANN_OPS_ROOT` (default `~/workspace`) only if you need local source to read or
+build; the skills cite the remote so they are portable across machines.
+
+| Repo | Remote (branch `master`) | Use |
+|------|--------------------------|-----|
+| ops-math | https://gitcode.com/cann/ops-math | elementwise / conversion tiling (abs, add, concat, select, one_hot, ...) |
+| ops-nn | https://gitcode.com/cann/ops-nn | matmul / norm ops (batch_mat_mul_v3, layer_norm_v4, rms_norm, ...) |
+| ops-cv | https://gitcode.com/cann/ops-cv | vision ops |
+| ops-transformer | https://gitcode.com/cann/ops-transformer | attention / transformer ops |
+| AscendC samples | https://gitee.com/ascend/samples | kernel-direct + framework AscendC samples |
+
+In-repo paths cited below are relative to the corresponding repo root — e.g.
+`math/abs/op_host/arch35/abs_tiling_arch35.cpp` resolves to
+`https://gitcode.com/cann/ops-math/blob/master/math/abs/op_host/arch35/abs_tiling_arch35.cpp`.
+
 ### Canonical operator references & AscendC matmul samples
 
 Perf baselines compare the generated/golden pyasc kernel against the **canonical**
 hand-written operator on the same camodel (`ascendc_ref_runner.py`). For cube /
-matmul work:
+matmul work (remote source; clone under `$CANN_OPS_ROOT` only if a local build is needed):
 
-| Resource | Path | Use |
-|----------|------|-----|
-| BatchMatMulV3 canonical op | `~/workspace/ops-nn/matmul/batch_mat_mul_v3/` | `aclnnBatchMatMul` reference for the `batch_mat_mul_v3/float16` perf cell (op_host tiling, op_kernel/arch35, examples/test_aclnn_batchmatmul.cpp) |
-| LayerNormV4 canonical op | `~/workspace/ops-nn/norm/layer_norm_v4/` | `aclnnLayerNorm` reference for the `layer_norm_v4/{bfloat16,float32}` perf cells (`aclnnop/aclnn_layer_norm.h`, examples/test_aclnn_layer_norm_v4.cpp). On C310, public `aclnnLayerNorm` routes to the V4 arch35 kernels. |
-| MatMulV3 / FusedMatMul deps | `~/workspace/ops-nn/matmul/mat_mul_v3/`, `.../fused_mat_mul/` | Pulled in by the batch_mat_mul_v3 build; share the `op_cache_tiling` legacy path |
-| AscendC matmul sample (kernel-direct) | `~/workspace/samples/operator/ascendc/tutorials/MatmulCustomSample/KernelLaunch/MatmulInvocationNeo/` | Self-contained single-GEMM cube kernel + host `MultiCoreMatmulTiling`; grounds cube skill guidance |
-| AscendC matmul sample (framework) | `.../MatmulCustomSample/FrameworkLaunch/` | aclnn-invocation single/multi-core matmul custom op |
-| AscendC matmul+act sample | `.../MatmulLeakyReluCustomSample/` | Matmul + LeakyReLU fixpipe fusion reference |
+| Resource | Remote source | Use |
+|----------|---------------|-----|
+| BatchMatMulV3 canonical op | [ops-nn/matmul/batch_mat_mul_v3](https://gitcode.com/cann/ops-nn/tree/master/matmul/batch_mat_mul_v3) | `aclnnBatchMatMul` reference for the `batch_mat_mul_v3/float16` perf cell (op_host tiling, op_kernel/arch35, examples/test_aclnn_batchmatmul.cpp) |
+| LayerNormV4 canonical op | [ops-nn/norm/layer_norm_v4](https://gitcode.com/cann/ops-nn/tree/master/norm/layer_norm_v4) | `aclnnLayerNorm` reference for the `layer_norm_v4/{bfloat16,float32}` perf cells (`aclnnop/aclnn_layer_norm.h`, examples/test_aclnn_layer_norm_v4.cpp). On C310, public `aclnnLayerNorm` routes to the V4 arch35 kernels. |
+| MatMulV3 / FusedMatMul deps | [ops-nn/matmul/mat_mul_v3](https://gitcode.com/cann/ops-nn/tree/master/matmul/mat_mul_v3), [.../fused_mat_mul](https://gitcode.com/cann/ops-nn/tree/master/matmul/fused_mat_mul) | Pulled in by the batch_mat_mul_v3 build; share the `op_cache_tiling` legacy path |
+| AscendC matmul sample (kernel-direct) | [samples .../MatmulInvocationNeo](https://gitee.com/ascend/samples/tree/master/operator/ascendc/tutorials/MatmulCustomSample/KernelLaunch/MatmulInvocationNeo) | Self-contained single-GEMM cube kernel + host `MultiCoreMatmulTiling`; grounds cube skill guidance |
+| AscendC matmul sample (framework) | [samples .../MatmulCustomSample/FrameworkLaunch](https://gitee.com/ascend/samples/tree/master/operator/ascendc/tutorials/MatmulCustomSample/FrameworkLaunch) | aclnn-invocation single/multi-core matmul custom op |
+| AscendC matmul+act sample | [samples .../MatmulLeakyReluCustomSample](https://gitee.com/ascend/samples/tree/master/operator/ascendc/tutorials/MatmulLeakyReluCustomSample) | Matmul + LeakyReLU fixpipe fusion reference |
 
 > **Matmul-family camodel prerequisite:** the aclnn tiling step dlopens
 > `libophost_comm_legacy.so` (the matmul cache-tiling impl), shipped by the
