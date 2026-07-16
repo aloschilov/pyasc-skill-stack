@@ -199,6 +199,16 @@ op (`torch.addcdiv(a, b, c, value=value)`).
   need to reproduce it; pass only the tile sizes you pick. Pad rows up to
   `core_num` and cols up to `tile_cols`; compare only `out[:rows]` to
   `torch.amax(in, dim=-1)` (or `torch.sum/mean/...`).
+- **Tiling selection is a performance lever, not a formality.** A fixed tiny tile
+  (e.g. an aligned `[8, 8]`) fills far under 1% of UB and is ~100x slower than the
+  CANN operator. Size the tile to the shape and the UB budget: the quality metric
+  is **UB utilization**, maximized subject to keeping **double buffering** (the
+  loop must run at least `2 * unroll_factor` iterations). For a narrow reduce
+  width `C`, pack many rows per tile (`tile_cols = align(C)`, grow `tile_rows` to
+  fill the per-buffer budget); for `C == 1` reshape instead of reducing; for very
+  small `C` consider a transpose; for a `C` wider than UB, tile the column axis
+  with a per-row accumulator. Full recipe (with a host-side selector):
+  [`pyasc-api-patterns` → Reduction tiling selection](../pyasc-api-patterns/references/reduction-tiling.md).
 - **CRITICAL — pad the INPUT with the reduction identity, not 0.** When you pad
   the column dimension, the kernel still reduces the padding elements, so they
   must be neutral for the specific reduction: `0` for `sum`/`mean`, **`-inf`
