@@ -155,9 +155,10 @@ and [`math/add/op_host/arch35/add_tiling_arch35.cpp`](https://gitcode.com/cann/o
 > `offsets=[tile_offset]`. Widening `TILE_SIZE` does not change the rank rules.
 
 > **Reductions have their own tile-selection rules.** A last-axis reduction is
-> tiled as a 2-D `[tile_rows, tile_cols]` block, not a 1-D width, and the winning
-> lever is UB utilization (pack many narrow rows per tile / column-tile wide
-> rows), not just tile width. See
+> tiled as a 2-D `[tile_rows, tile_cols]` block, not a 1-D width. Three levers
+> decide the ratio: use every AI core (spread rows across the full core grid),
+> keep the reduce axis contiguous (`tile_cols = C`, do not pad/align it), and size
+> `tile_rows` to the per-core row block then the ~192 KB physical UB. See
 > [Reduction tiling selection](references/reduction-tiling.md).
 
 > **CRITICAL**: Any value used in the **shape** argument of `asc2.load` or `asc2.tensor`
@@ -1131,5 +1132,6 @@ scorer will skip the ban.
 
 - [JIT Options](references/api-jit-options.md)
 - [Reduction tiling selection](references/reduction-tiling.md) — choosing a
-  performant last-axis reduce tile (UB-utilization quality metric, double-buffer
-  constraint, small-C row-packing vs tiny-C transpose vs large-C column tiling)
+  performant last-axis reduce tile (three levers: all AI cores, contiguous
+  unpadded `tile_cols = C`, `tile_rows` from the per-core block + physical UB;
+  plus small-C row-packing vs large-C column tiling)

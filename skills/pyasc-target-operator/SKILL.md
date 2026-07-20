@@ -193,21 +193,27 @@ op (`torch.addcdiv(a, b, c, value=value)`).
   for max seed with the first tile or a very negative `asc2.full(...)`), folding
   each `asc2.reduce_max(tile, 1)` (axis 1) into the accumulator with
   `asc2.maximum(acc, part)`. `asc2.store` the per-row result.
-- **Choose your own `tile_shape`** from the UB budget (a `[tile_rows, tile_cols]`
-  tile must fit UB; 32-byte align the column dim). The long `tiling_values`
-  vector baked into `test_reduce_sum.py` is CANN tiling provenance — you do **not**
-  need to reproduce it; pass only the tile sizes you pick. Pad rows up to
-  `core_num` and cols up to `tile_cols`; compare only `out[:rows]` to
-  `torch.amax(in, dim=-1)` (or `torch.sum/mean/...`).
-- **Tiling selection is a performance lever, not a formality.** A fixed tiny tile
-  (e.g. an aligned `[8, 8]`) fills far under 1% of UB and is ~100x slower than the
-  CANN operator. Size the tile to the shape and the UB budget: the quality metric
-  is **UB utilization**, maximized subject to keeping **double buffering** (the
-  loop must run at least `2 * unroll_factor` iterations). For a narrow reduce
-  width `C`, pack many rows per tile (`tile_cols = align(C)`, grow `tile_rows` to
-  fill the per-buffer budget); for `C == 1` reshape instead of reducing; for very
-  small `C` consider a transpose; for a `C` wider than UB, tile the column axis
-  with a per-row accumulator. Full recipe (with a host-side selector):
+- **Choose your own `tile_shape`** from the shape + UB budget + core count. The
+  long `tiling_values` vector baked into `test_reduce_sum.py` is CANN tiling
+  provenance — you do **not** need to reproduce it; pass only the tile sizes you
+  pick. Compare only `out[:rows]` to `torch.amax(in, dim=-1)` (or
+  `torch.sum/mean/...`).
+- **Tiling selection is the dominant performance lever, not a formality.** A fixed
+  tiny tile (e.g. an aligned `[8, 8]`) on a few cores is ~100x slower than CANN.
+  Three levers decide the ratio, in order of impact:
+  1. **Use every AI core** — spread `rows` across the full core grid
+     (`core_num = platform core count`, e.g. 72 on `Ascend950PR_9599`);
+     `rows_per_block = ceildiv(rows, core_num)` drives tile sizing. Pinning
+     `core_num` to 4-8 is a 9-18x deficit.
+  2. **Keep the reduce axis contiguous — `tile_cols = C` (do NOT align/pad it).**
+     Load each `[tile_rows, C]` block as one contiguous run and pad only the flat
+     total to 32 B, never per-row; aligning `tile_cols` up wastes DMA on a
+     memory-bound op (`C=4 -> 8` doubles traffic).
+  3. **Size `tile_rows` to the per-core block, then the ~192 KB physical UB** — a
+     few large tiles per block; double buffering is secondary (do not shrink tiles
+     just to add iterations).
+  For `C == 1` reshape instead of reducing; for a `C` wider than UB, tile the
+  column axis with a per-row accumulator. Full recipe (with a host-side selector):
   [`pyasc-api-patterns` → Reduction tiling selection](../pyasc-api-patterns/references/reduction-tiling.md).
 - **CRITICAL — pad the INPUT with the reduction identity, not 0.** When you pad
   the column dimension, the kernel still reduces the padding elements, so they

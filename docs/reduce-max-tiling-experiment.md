@@ -136,9 +136,76 @@ holding process was visible inside the container and there is no `npu-smi` /
 the "a `timeout`-killed NPU process wedges the device; subsequent runs all err"
 hazard — avoid killing an in-flight NPU test mid-`SetDevice`.
 
+## Update: three-lever parity tiling (v2)
+
+The UB-selector above (branch `reducemax-target-tiling`, MR #391) reached a
+**geomean of 0.426 of CANN** across the eight #353-referenced shapes — a huge win
+over the degenerate `[8, 8]` (0.011), but still ~2.3x off CANN. A later TTK
+near-parity export on MR #391 exposed three tiling levers the UB-selector still
+missed. Encoding them in the [reduction-tiling
+hint](../skills/pyasc-api-patterns/references/reduction-tiling.md) and
+regenerating the kernel via opencode lifts the geomean to **~1.04 of CANN
+(parity)**.
+
+### The three levers (the actual experiment signal)
+
+1. **Use every AI core.** The UB-selector pinned `core_num=4/8`; parity spreads
+   `R` across all **72** cores (`rows_per_block = ceildiv(R, core_num)`). This is
+   the dominant lever — a 9-18x deficit on the big-`R` shapes.
+2. **Keep the reduce axis contiguous and unpadded (`tile_cols = C`).** The
+   UB-selector aligned `tile_cols` up to 32 B (`C=4 -> 8` doubles DMA on a
+   memory-bound op). v2 uses `tile_cols = C` where asc2's 2-D `copy_in` 32-byte
+   last-dim rule allows (`C` a multiple of 8); the 4/10/12/18/61 widths still pad
+   the axis up to 32 B (a fully unpadded `C` needs a flat 1-D load + in-UB view —
+   future work).
+3. **Size `tile_rows` to the per-core block against physical UB.** v2 budgets
+   against ~192 KB and, critically, for **4 live buffers** (2 copy_in ping-pong x
+   `unroll_factor=2`) — a naive `/2` budget overflowed UB on `[3072,113,24]`
+   (375584 B used vs 253952 B available).
+
+Opencode reproduced this signal directly: with the *first* hint version it copied
+the `reduce_sum` teaching pattern (one row per iteration, `core_num=16`) and only
+adopted lever 2; after the hint was strengthened with an explicit "one row per
+iteration is wrong for large R" anti-pattern and a core-count clarification, the
+regenerated kernel independently arrived at all three levers.
+
+### Result (`--backend NPU --profile --runs 10`, median µs, `Ascend950PR_9599`)
+
+`ratio = CANN CST µs / pyasc µs` (fraction of CANN; `1.0` = parity):
+
+| input_shape     | CANN CST µs | UB-sel µs (ratio) | v2 tile tr×tc | v2 µs (ratio) |
+|-----------------|-------------|-------------------|---------------|---------------|
+| [200, 10]       | 2.010       | 2.18 (0.922)      | 3×16          | 3.084 (0.652) |
+| [1500, 1, 61]   | 2.357       | 2.94 (0.802)      | 21×64         | 2.127 (1.108) |
+| [45, 2048, 4]   | 3.971       | 11.18 (0.355)     | 1280×8        | 3.529 (1.125) |
+| [13, 2048, 32]  | 4.430       | 12.51 (0.354)     | 370×32        | 3.990 (1.110) |
+| [64, 2048, 8]   | 4.614       | 14.75 (0.313)     | 911×8         | 4.386 (1.052) |
+| [10, 2048, 64]  | 5.853       | 17.82 (0.328)     | 143×64        | 5.037 (1.162) |
+| [70, 2048, 16]  | 8.133       | 37.18 (0.219)     | 664×16        | 8.561 (0.950) |
+| [2048, 83, 18]  | 15.656      | 30.15 (0.519)     | 473×24        | 11.912 (1.314)|
+| **geomean (8)** |             | **0.426**         |               | **1.041**     |
+
+Large-bucket shapes (no CANN CST; static CST compile fails on the `axes`
+const-input): `[3072,113,24]` 58.90→22.30 µs, `[4608,115,12]` 69.50→23.87 µs,
+`[1500,61,61]` 38.75→16.16 µs (all ~2.4-2.9x over the UB-selector). All 11 shapes
+pass `torch.amax` (`atol=rtol=1e-3`).
+
+The only non-improvement is the tiny `[200, 10]` (3.08 vs 2.18 µs): 200 rows over
+72 cores is launch-overhead bound, where fewer cores were better — a candidate for
+a small-`R` core-count backoff.
+
+This run used the recreated `gcpty` box (`c50f972f7149`, `/dev/davinci0`); the
+tiling change is Python-only, so no C++ rebuild was needed (the remote
+`libpyasc*.so` was reused). Posted to MR #391; branch
+`reducemax-target-tiling-v2`.
+
 ## Follow-ups
 
-- The real-NPU µs A/B above supersedes the earlier ratio-vs-CANN gap for #353.
-- The tiling change is opened as gitcode MR
-  [#391](https://gitcode.com/compiler-team/pyasc/merge_requests/391)
-  (`reducemax-target-tiling`, stacked on `reducemax-target`/#353).
+- v2 (three-lever) tiling reaches CANN parity (geomean ~1.04) and supersedes the
+  UB-selector (0.426) and the degenerate `[8, 8]` (0.011).
+- Remaining: a flat 1-D contiguous load + in-UB view to make `tile_cols = C` legal
+  for unaligned `C` (4/10/12/18/61), and a small-`R` core-count backoff for tiny
+  shapes like `[200, 10]`.
+- Branches: `reducemax-target-tiling-v2` (v2, parity) stacked on
+  `reducemax-target-tiling` (UB-selector, MR
+  [#391](https://gitcode.com/compiler-team/pyasc/merge_requests/391)) / `#353`.

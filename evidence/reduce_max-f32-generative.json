@@ -1,0 +1,150 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "reduce_max",
+  "dtype": "float32",
+  "prompt": "Develop a high-performance last-axis reduce_max kernel for Ascend950PR_9599 (C310), float32. It must cover these production input shapes (flatten each to [rows, C] and reduce the last axis to [rows]): [200,10], [13,2048,32], [10,2048,64], [45,2048,4], [64,2048,8], [70,2048,16], [2048,83,18], [1500,1,61], [3072,113,24], [4608,115,12], [1500,61,61]. Choose the host-side tiling so the kernel is competitive with the hand-written CANN reduce_max operator (not merely correct). Verify all shapes on the Model backend against torch.amax(x, dim=1) with atol=rtol=1e-3.",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_max_f32/kernel.py",
+  "date": "2026-07-20T14:43:36Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "corc-4815-layer-norm-v4",
+    "sha": "51bb8d458889300dc8ad587115cf11f18c867d9e",
+    "dirty": true,
+    "root": "$PYASC_EVAL_ROOT"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": false,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 108337,
+    "output": 8578,
+    "cache_read": 1556224,
+    "total": 116915
+  },
+  "elapsed_total_s": 1200.04,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 1200.04,
+      "exit": 124,
+      "outcome": "pass",
+      "tokens": {
+        "input": 108337,
+        "output": 8578,
+        "cache_read": 1556224,
+        "total": 116915,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "pass",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.reduce_max']",
+    "markers_found": [
+      "asc2.reduce_max"
+    ]
+  },
+  "score": {
+    "value": 16.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.reduce_max']"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "pass",
+  "notes": "reduce_max 3-lever tiling regen (skills-on)",
+  "history": []
+}
