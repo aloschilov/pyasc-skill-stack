@@ -64,7 +64,19 @@ The GitHub Actions `nightly-gate` job runs the Phase 0 protocol-axis matrix
 gated on the `DASHSCOPE_API_KEY` secret. It is **report-only** (no P6 hard-fail
 threshold). Cloud inference needs no host Ollama, so the legs only serialize on
 the Mac runner for the camodel docker sim verify. The
-**`cloud-dashscope-gate`** job (glm-5.1, qwen3.7-max) is also enabled.
+**`cloud-dashscope-gate`** job is also enabled. It runs a cross-vendor
+comparison matrix of three DashScope models — the two incumbents
+(`glm-5.1`, `qwen3.7-max`) plus `glm-5.2` — each with the full skills on+off
+A/B. Four further flagships (`deepseek-v4-pro`, `kimi-k2.7-code`,
+`MiniMax-M2.5`, `qwen3-coder-next`) were evaluated for the comparison set but
+the current DashScope key returns `Model.AccessDenied` for them (verified
+2026-07-24); their profile templates exist and are ready to add to the matrix
+once model access is granted. Every listed profile is measured over the
+**same** unified generative cell list (see "Unified kernel list" below), so all
+dashboard cards compare an identical set of kernels. This grows the leg from
+2×2=4 to 3×2=6 serialized cloud runs on the single Mac nightly runner
+(`continue-on-error: true`); it is gated on the `DASHSCOPE_API_KEY` secret and
+self-skips if unset.
 
 The **`local-stability-gate`** compares **`qwen3-coder:30b`** vs
 **`gpt-oss:120b`** (skills on/off). Both models must be pre-pulled on the Mac's
@@ -106,6 +118,18 @@ generated pyasc kernel on the same `Ascend950PR_9599` camodel, then computes
 from every `perf_ratio_demo` block in `capabilities.yaml` (via
 [tests/tools/load_capability_cells.py](../tests/tools/load_capability_cells.py)),
 so adding a new kernel only requires updating capabilities + harness op wiring,
+As of the unified-coverage pass, **every** generative cell carries a
+`perf_ratio_demo` block, so the perf gate measures all 19 cells (up from 11) —
+there is a perf ratio for every operation row, no "—" placeholders. Four new
+canonical `ops-nn` references were wired for this (`aclnnGelu`,
+`aclnnLeakyRelu`, `aclnnMatmul` via `mat_mul_v3`, `aclnnSoftmax` via
+`softmax_v2`) in [tests/tools/perf/ascendc_ref_runner.py](../tests/tools/perf/ascendc_ref_runner.py);
+their sources are already baked into the perf image's `/opt/ops-nn`, so no image
+rebuild is needed. Because the perf image strips `.git` from the vendored
+sources, `ascendc_ref_runner._ensure_thirdparty_siblings` creates the `ops-base`
+/ `ops-tensor` sibling dirs that `ops-nn`'s third-party cmake modules look for,
+so their pinned-SHA `git checkout` step is bypassed and ops-nn references build
+offline.
 not a hand-maintained `CELLS` table. The 0.70 gate is **reported, never enforced**,
 so documented honest misses (`apply_adam` ~0.46, `batch_norm_v3` ~0.10) stay
 green.
@@ -151,6 +175,21 @@ The GitHub Actions `nightly-gate` (and local-stability matrix legs) discover
 generative cells from `capabilities.yaml` via
 [tests/tools/list_generative_cells.py](../tests/tools/list_generative_cells.py)
 (every cell with a non-empty `prompt` on `Ascend950PR_9599`).
+
+### Unified kernel list
+
+All model legs — `nightly-gate`, `local-stability-gate`, and
+`cloud-dashscope-gate` — enumerate their kernels from the **same**
+`list_generative_cells.py` call, so the generative cell list is a single source
+of truth (currently **19 cells**). Divergent dashboard denominators (e.g. some
+cards showing 12 cells, others 15) are therefore never a config drift; they are
+**stale evidence** from earlier eras when the matrix had fewer cells, because
+the aggregator counts each profile's own evidence files rather than the
+canonical list. To keep every profile comparable, a full-refresh nightly
+re-measures all profiles (cloud + local) over the current list in one run so
+every card reads N/N with the same N. The perf surface is unified the same way:
+every generative cell now carries a `perf_ratio_demo` block, so the perf gate
+reports a ratio for all 19 cells.
 
 ## Environment variables
 

@@ -661,9 +661,15 @@ jobs:
   # Cloud DashScope gate: ENABLED. Runs on explicit nightly dispatch.
   #
   # The same OpenCode skills intervention as the nightly cloud-default leg,
-  # but against the additional Alibaba DashScope models (glm-5.1,
-  # qwen3.7-max) on the China endpoint
-  # (https://dashscope.aliyuncs.com/compatible-mode/v1). Requires the
+  # but against the additional Alibaba DashScope models on the China endpoint
+  # (https://dashscope.aliyuncs.com/compatible-mode/v1). The comparison set is
+  # the two incumbents (glm-5.1, qwen3.7-max) plus glm-5.2. Four further
+  # cross-vendor flagships were evaluated (deepseek-v4-pro, kimi-k2.7-code,
+  # MiniMax-M2.5, qwen3-coder-next) but the current key returns
+  # Model.AccessDenied for them, so they are held out of the matrix (profiles
+  # exist, ready to enable once access is granted). Every listed profile runs
+  # the full skills on+off A/B over the unified list_generative_cells set (19
+  # cells), so each dashboard card compares the same kernels. Requires the
   # DASHSCOPE_API_KEY repo secret; the leg self-skips if it is unset.
   # ==========================================================================
   cloud-dashscope-gate:
@@ -679,7 +685,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: [cloud-glm-5.1, cloud-qwen3.7-max]
+        # glm-5.2 added to the comparison set (callable with the current key).
+        # deepseek-v4-pro / kimi-k2.7-code / MiniMax-M2.5 / qwen3-coder-next are
+        # intentionally NOT listed: the DashScope key returns Model.AccessDenied
+        # for them (verified 2026-07-24), so their profile templates exist but
+        # are held out of the matrix until model access is granted. Re-add them
+        # here once the key can call them.
+        profile: [cloud-glm-5.1, cloud-qwen3.7-max, cloud-glm-5.2]
         # See comment in nightly-gate for why these are quoted.
         skills_mode: ["on", "off"]
     steps:

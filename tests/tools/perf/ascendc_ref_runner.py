@@ -447,6 +447,103 @@ def _batch_mat_mul_v3_body(dt: dict, shape: list[int]) -> str:
 """
 
 
+def _gelu_body(dt: dict, shape: list[int]) -> str:
+    # aclnnGelu(self, out): elementwise GELU activation, single in/out.
+    n = _prod(shape)
+    return f"""
+  std::vector<int64_t> shape = {{ {_shape_literal(shape)} }};
+  int64_t n = {n};
+  void *xAddr=nullptr,*yAddr=nullptr; aclTensor *x=nullptr,*y=nullptr;
+  std::vector<{dt['ctype']}> xh(n, {dt['init']}), yh(n, 0);
+  if (CreateAclTensor(xh, shape, &xAddr, aclDataType::{dt['acl']}, &x)) return 1;
+  if (CreateAclTensor(yh, shape, &yAddr, aclDataType::{dt['acl']}, &y)) return 1;
+  uint64_t ws=0; aclOpExecutor* exe;
+  ACL_CALL(aclnnGeluGetWorkspaceSize(x, y, &ws, &exe));
+  void* wsAddr=nullptr; if (ws>0) ACL_CALL(aclrtMalloc(&wsAddr, ws, ACL_MEM_MALLOC_HUGE_FIRST));
+  ACL_CALL(aclnnGelu(wsAddr, ws, exe, stream));
+  ACL_CALL(aclrtSynchronizeStream(stream));
+  if (ws>0) aclrtFree(wsAddr); aclrtFree(xAddr); aclrtFree(yAddr);
+  aclDestroyTensor(x); aclDestroyTensor(y);
+"""
+
+
+def _leaky_relu_body(dt: dict, shape: list[int]) -> str:
+    # aclnnLeakyRelu(self, negativeSlope, out): out = x if x>=0 else slope*x.
+    # negativeSlope=0.01 matches the capability cell's alpha.
+    n = _prod(shape)
+    return f"""
+  std::vector<int64_t> shape = {{ {_shape_literal(shape)} }};
+  int64_t n = {n};
+  void *xAddr=nullptr,*yAddr=nullptr; aclTensor *x=nullptr,*y=nullptr;
+  std::vector<{dt['ctype']}> xh(n, {dt['init']}), yh(n, 0);
+  if (CreateAclTensor(xh, shape, &xAddr, aclDataType::{dt['acl']}, &x)) return 1;
+  if (CreateAclTensor(yh, shape, &yAddr, aclDataType::{dt['acl']}, &y)) return 1;
+  float slopeVal = 0.01f;
+  aclScalar* negSlope = aclCreateScalar(&slopeVal, aclDataType::ACL_FLOAT);
+  uint64_t ws=0; aclOpExecutor* exe;
+  ACL_CALL(aclnnLeakyReluGetWorkspaceSize(x, negSlope, y, &ws, &exe));
+  void* wsAddr=nullptr; if (ws>0) ACL_CALL(aclrtMalloc(&wsAddr, ws, ACL_MEM_MALLOC_HUGE_FIRST));
+  ACL_CALL(aclnnLeakyRelu(wsAddr, ws, exe, stream));
+  ACL_CALL(aclrtSynchronizeStream(stream));
+  if (ws>0) aclrtFree(wsAddr); aclrtFree(xAddr); aclrtFree(yAddr);
+  aclDestroyScalar(negSlope); aclDestroyTensor(x); aclDestroyTensor(y);
+"""
+
+
+def _softmax_body(dt: dict, shape: list[int]) -> str:
+    # aclnnSoftmax(self, dim, out): last-axis softmax (dim=-1), single in/out.
+    n = _prod(shape)
+    return f"""
+  std::vector<int64_t> shape = {{ {_shape_literal(shape)} }};
+  int64_t n = {n};
+  void *xAddr=nullptr,*yAddr=nullptr; aclTensor *x=nullptr,*y=nullptr;
+  std::vector<{dt['ctype']}> xh(n, {dt['init']}), yh(n, 0);
+  if (CreateAclTensor(xh, shape, &xAddr, aclDataType::{dt['acl']}, &x)) return 1;
+  if (CreateAclTensor(yh, shape, &yAddr, aclDataType::{dt['acl']}, &y)) return 1;
+  int64_t dim = -1;
+  uint64_t ws=0; aclOpExecutor* exe;
+  ACL_CALL(aclnnSoftmaxGetWorkspaceSize(x, dim, y, &ws, &exe));
+  void* wsAddr=nullptr; if (ws>0) ACL_CALL(aclrtMalloc(&wsAddr, ws, ACL_MEM_MALLOC_HUGE_FIRST));
+  ACL_CALL(aclnnSoftmax(wsAddr, ws, exe, stream));
+  ACL_CALL(aclrtSynchronizeStream(stream));
+  if (ws>0) aclrtFree(wsAddr); aclrtFree(xAddr); aclrtFree(yAddr);
+  aclDestroyTensor(x); aclDestroyTensor(y);
+"""
+
+
+def _matmul_body(dt: dict, shape: list[int]) -> str:
+    # aclnnMatmul(self, mat2, out, cubeMathType): single GEMM on the cube unit.
+    # self [M,K], mat2 [K,N], out [M,N].  The comparability contract is the
+    # square case (M=K=N), so the 2D cell shape [M, K] sets N=K.  cubeMathType=1
+    # keeps the fp16 cube path (mirrors batch_mat_mul_v3).
+    if len(shape) != 2:
+        raise RefError("matmul driver expects a 2D shape [M, K] (square N=K)")
+    M, K = shape
+    N = K
+    n_self = M * K
+    n_mat2 = K * N
+    n_out = M * N
+    return f"""
+  std::vector<int64_t> selfShape = {{ {M}, {K} }};
+  std::vector<int64_t> mat2Shape = {{ {K}, {N} }};
+  std::vector<int64_t> outShape = {{ {M}, {N} }};
+  void *selfAddr=nullptr,*mat2Addr=nullptr,*outAddr=nullptr;
+  aclTensor *self=nullptr,*mat2=nullptr,*out=nullptr;
+  std::vector<{dt['ctype']}> selfh({n_self}, {dt['init']}), mat2h({n_mat2}, {dt['init']}), outh({n_out}, 0);
+  if (CreateAclTensor(selfh, selfShape, &selfAddr, aclDataType::{dt['acl']}, &self)) return 1;
+  if (CreateAclTensor(mat2h, mat2Shape, &mat2Addr, aclDataType::{dt['acl']}, &mat2)) return 1;
+  if (CreateAclTensor(outh, outShape, &outAddr, aclDataType::{dt['acl']}, &out)) return 1;
+  int8_t cubeMathType = 1;
+  uint64_t ws=0; aclOpExecutor* exe;
+  ACL_CALL(aclnnMatmulGetWorkspaceSize(self, mat2, out, cubeMathType, &ws, &exe));
+  void* wsAddr=nullptr; if (ws>0) ACL_CALL(aclrtMalloc(&wsAddr, ws, ACL_MEM_MALLOC_HUGE_FIRST));
+  ACL_CALL(aclnnMatmul(wsAddr, ws, exe, stream));
+  ACL_CALL(aclrtSynchronizeStream(stream));
+  if (ws>0) aclrtFree(wsAddr); aclrtFree(selfAddr); aclrtFree(mat2Addr); aclrtFree(outAddr);
+  aclDestroyTensor(self); aclDestroyTensor(mat2); aclDestroyTensor(out);
+"""
+
+
 # op -> {repo, build_op (--ops= name + <op>.json sentinel), header, body}.
 # build_op is the snake op-type the kernel config is keyed by; it can differ
 # from the registry key when a cell maps onto a sibling reference op (e.g. the
@@ -473,6 +570,14 @@ OP_SPECS = {
                          "header": "aclnnop/aclnn_batch_matmul.h", "body": _batch_mat_mul_v3_body},
     "layer_norm_v4": {"repo": "ops-nn", "build_op": "layer_norm_v4",
                       "header": "aclnnop/aclnn_layer_norm.h", "body": _layer_norm_v4_body},
+    "gelu": {"repo": "ops-nn", "build_op": "gelu",
+             "header": "aclnnop/aclnn_gelu.h", "body": _gelu_body},
+    "leaky_relu": {"repo": "ops-nn", "build_op": "leaky_relu",
+                   "header": "aclnnop/aclnn_leaky_relu.h", "body": _leaky_relu_body},
+    "softmax": {"repo": "ops-nn", "build_op": "softmax_v2",
+                "header": "aclnnop/aclnn_softmax.h", "body": _softmax_body},
+    "matmul": {"repo": "ops-nn", "build_op": "mat_mul_v3",
+               "header": "aclnnop/aclnn_matmul.h", "body": _matmul_body},
 }
 
 # Demo cell -> (op spec key, dtype), derived from capabilities perf_ratio_demo.
@@ -560,6 +665,36 @@ def _ensure_third_party_patches(repo: Repo) -> None:
             shutil.copy2(s, dst / n)
 
 
+def _ensure_thirdparty_siblings(repo: Repo) -> None:
+    """ops-nn's third-party cmake modules (opbase, ops-tensor) pin a git SHA and
+    run ``git checkout <sha>`` inside the vendored ``third_party/<dep>`` dir. The
+    perf image strips ``.git`` from the vendored sources (docker/build-perf-image.sh),
+    so that checkout hard-fails with "not a git repository" and blocks every
+    ops-nn reference build. Each module has a no-git escape hatch: if a sibling
+    source dir exists at ``${PROJECT_SOURCE_DIR}/../../ops-base`` (opbase) or
+    ``${PROJECT_SOURCE_DIR}/../ops-tensor`` (ops-tensor), cmake uses it directly
+    without any git checkout. PROJECT_SOURCE_DIR is the repo root, so we point
+    those sibling paths at the already-vendored ``third_party`` copies via
+    symlink. Best-effort (needs write access to the repo's parent dirs, which the
+    perf-image container has as root); ops-math has no such deps so this is a
+    no-op there."""
+    root = repo.root
+    # (sibling path cmake checks, vendored source it should resolve to)
+    links = [
+        (root.parent.parent / "ops-base", root / "third_party" / "opbase"),
+        (root.parent / "ops-tensor", root / "third_party" / "ops-tensor"),
+    ]
+    for link, target in links:
+        if not target.is_dir():
+            continue
+        try:
+            if link.is_symlink() or link.exists():
+                continue
+            link.symlink_to(target, target_is_directory=True)
+        except OSError:
+            pass
+
+
 def _op_config_path(repo: Repo, op: str) -> Path | None:
     base = repo.install_root / "vendors"
     if not base.is_dir():
@@ -589,6 +724,7 @@ def build_and_install(repo: Repo, ascend: Path, op: str, *, verbose: bool) -> Pa
 
     shim = _ensure_cmake_shim()
     _ensure_third_party_patches(repo)
+    _ensure_thirdparty_siblings(repo)
     setenv = ascend / "set_env.sh"
     if not setenv.exists():
         raise RefError(f"CANN set_env.sh not found: {setenv}")

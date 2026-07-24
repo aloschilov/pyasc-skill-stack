@@ -67,6 +67,22 @@ CELL_TO_KERNEL = {
         REPO_ROOT / "golden" / "kernels" / "layer_norm_v4_bf16.py", "bfloat16"),
     "layer_norm_v4/float32": (
         REPO_ROOT / "golden" / "kernels" / "layer_norm_v4_f32.py", "float32"),
+    # Unified-perf additions: measured kernel is the committed golden (no regen
+    # path yet); demo_vector_ops resolves the same golden via resolve_perf_kernel.
+    "abs/float32": (
+        REPO_ROOT / "golden" / "kernels" / "abs_f32.py", "float32"),
+    "reduce_sum/float16": (
+        REPO_ROOT / "golden" / "kernels" / "reduce_sum_f16.py", "float16"),
+    "gelu/float16": (
+        REPO_ROOT / "golden" / "kernels" / "gelu_f16.py", "float16"),
+    "gelu/float32": (
+        REPO_ROOT / "golden" / "kernels" / "gelu_f32.py", "float32"),
+    "leaky_relu/float16": (
+        REPO_ROOT / "golden" / "kernels" / "leaky_relu_f16.py", "float16"),
+    "softmax/float16": (
+        REPO_ROOT / "golden" / "kernels" / "softmax_f16.py", "float16"),
+    "matmul/float16": (
+        REPO_ROOT / "golden" / "kernels" / "matmul_f16.py", "float16"),
 }
 
 
@@ -117,6 +133,18 @@ def _layer_norm_v4_inputs(shape: list[int], dtype: str) -> list:
     ]
 
 
+def _matmul_inputs(shape: list[int], dtype: str) -> list:
+    # matmul_launch(a[M,K], b[K,N]). The comparability contract is square
+    # (M=K=N), so the 2D cell shape [M, K] yields b[K, K]. Inputs MUST be torch
+    # (the C310 cube path silently zeros numpy, same as batch_mat_mul_v3).
+    m, k = shape
+    n = k
+    return [
+        {"kind": "tensor", "shape": [m, k], "dtype": dtype, "fw": "torch"},
+        {"kind": "tensor", "shape": [k, n], "dtype": dtype, "fw": "torch"},
+    ]
+
+
 def arg_specs_for(cell: str, shape: list[int], dtype: str) -> list | None:
     op = cell.split("/")[0]
     builder = _CELL_INPUT_BUILDERS.get(op)
@@ -128,6 +156,7 @@ _CELL_INPUT_BUILDERS = {
     "batch_norm_v3": _batch_norm_v3_inputs,
     "batch_mat_mul_v3": _batch_mat_mul_v3_inputs,
     "layer_norm_v4": _layer_norm_v4_inputs,
+    "matmul": _matmul_inputs,
 }
 
 

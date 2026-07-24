@@ -70,6 +70,8 @@ def main() -> int:
         "tanh": [32, 4096], "drop_out_do_mask": [32, 4096],
         "rms_norm": [8, 256], "batch_norm_v3": [32, 64, 64], "apply_adam": [32, 4096],
         "batch_mat_mul_v3": [16, 256, 256], "layer_norm_v4": [1024, 768],
+        "gelu": [32, 4096], "leaky_relu": [32, 4096], "softmax": [32, 4096],
+        "matmul": [32, 32],
     }
     aclnn_entry = {
         "abs": "aclnnAbs", "add": "aclnnAdd", "reduce_sum": "aclnnReduceSum",
@@ -78,6 +80,8 @@ def main() -> int:
         "apply_adam": "aclnnApplyAdam",
         "batch_mat_mul_v3": "aclnnBatchMatMul",
         "layer_norm_v4": "aclnnLayerNorm",
+        "gelu": "aclnnGelu", "leaky_relu": "aclnnLeakyRelu",
+        "softmax": "aclnnSoftmax", "matmul": "aclnnMatmul",
     }
     for op in ref.OP_SPECS:
         if op not in op_shapes:

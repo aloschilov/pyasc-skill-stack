@@ -117,6 +117,15 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/abs_f32.py
     golden_evidence: evidence/abs-f32-golden.json
+    perf_ratio_demo:
+      ref_source: ops-math/math/abs (aclnnAbs, canonical_only)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      status: pending
+      kernel_source: vetted golden (golden/kernels/abs_f32.py)
+      perf_note: 'Unified-perf coverage: perf ratio pending first measurement on the perf-gate. Elementwise f32 abs; the gen probe measures the committed golden.'
+      evidence: evidence/perf-vs-ascendc/
     generative_status: confirmed
     generative_evidence: evidence/abs-f32-generative.json
 - name: tanh
@@ -397,6 +406,15 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/reduce_sum_f16.py
     golden_evidence: evidence/reduce_sum-f16-golden.json
+    perf_ratio_demo:
+      ref_source: ops-math/math/reduce_sum (aclnnReduceSum, canonical_only)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      status: pending
+      kernel_source: vetted golden (golden/kernels/reduce_sum_f16.py)
+      perf_note: 'Unified-perf coverage: perf ratio pending first measurement. Last-axis f16 reduction (fp32 accumulate); the gen probe measures the committed golden.'
+      evidence: evidence/perf-vs-ascendc/
     generative_status: confirmed
     generative_evidence: evidence/reduce_sum-f16-generative.json
 - name: gelu
@@ -445,6 +463,15 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f16.py
     golden_evidence: evidence/gelu-f16-golden.json
+    perf_ratio_demo:
+      ref_source: ops-nn/activation/gelu (aclnnGelu, canonical_only)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      status: pending
+      kernel_source: vetted golden (golden/kernels/gelu_f16.py)
+      perf_note: 'Unified-perf coverage: perf ratio pending first measurement. Composed GELU (exp/sigmoid restatement); the gen probe measures the committed golden. Ref is the canonical aclnnGelu - a like-for-like activation tick comparison.'
+      evidence: evidence/perf-vs-ascendc/
     generative_status: confirmed
     generative_evidence: evidence/gelu-f16-generative.json
   - dtype: float32
@@ -515,6 +542,15 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     golden_status: confirmed
     golden: golden/kernels/gelu_f32.py
     golden_evidence: evidence/gelu-f32-golden.json
+    perf_ratio_demo:
+      ref_source: ops-nn/activation/gelu (aclnnGelu, canonical_only)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      status: pending
+      kernel_source: vetted golden (golden/kernels/gelu_f32.py)
+      perf_note: 'Unified-perf coverage: perf ratio pending first measurement. Composed GELU (exp/sigmoid restatement); the gen probe measures the committed golden. Ref is the canonical aclnnGelu - a like-for-like activation tick comparison.'
+      evidence: evidence/perf-vs-ascendc/
     generative_status: confirmed
     generative_evidence: evidence/gelu-f32-generative.json
 - name: leaky_relu
@@ -554,6 +590,15 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     golden_status: confirmed
     golden: golden/kernels/leaky_relu_f16.py
     golden_evidence: evidence/leaky_relu-f16-golden.json
+    perf_ratio_demo:
+      ref_source: ops-nn/activation/leaky_relu (aclnnLeakyRelu, canonical_only)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      status: pending
+      kernel_source: vetted golden (golden/kernels/leaky_relu_f16.py)
+      perf_note: 'Unified-perf coverage: perf ratio pending first measurement. Elementwise leaky_relu (alpha=0.01); the gen probe measures the committed golden.'
+      evidence: evidence/perf-vs-ascendc/
     generative_status: pending
     generative_evidence: evidence/leaky_relu-f16-generative.json
 - name: softmax
@@ -592,6 +637,15 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     golden_status: confirmed
     golden: golden/kernels/softmax_f16.py
     golden_evidence: evidence/softmax-f16-golden.json
+    perf_ratio_demo:
+      ref_source: ops-nn/experimental/activation/softmax_v2 (aclnnSoftmax, canonical_only)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      status: pending
+      kernel_source: vetted golden (golden/kernels/softmax_f16.py)
+      perf_note: 'Unified-perf coverage: perf ratio pending first measurement. Full-row last-axis softmax; the gen probe measures the committed golden.'
+      evidence: evidence/perf-vs-ascendc/
     generative_status: confirmed
     generative_evidence: evidence/softmax-f16-generative.json
 - name: matmul
@@ -645,6 +699,15 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     golden_status: confirmed
     golden: golden/kernels/matmul_f16.py
     golden_evidence: evidence/matmul-f16-golden.json
+    perf_ratio_demo:
+      ref_source: ops-nn/matmul/mat_mul_v3 (aclnnMatmul, canonical_only)
+      shape: [32, 32]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      status: pending
+      kernel_source: vetted golden (golden/kernels/matmul_f16.py)
+      perf_note: 'Unified-perf coverage: perf ratio pending first measurement. Single CUBE GEMM (square M=K=N=32, f16 in); the gen probe measures the committed golden with torch inputs (numpy is silently zeroed on the C310 cube path). Ref (aclnnMatmul) requires the Ascend-cann-A3-ops matmul tiling lib, same as batch_mat_mul_v3.'
+      evidence: evidence/perf-vs-ascendc/
     generative_status: confirmed
     generative_evidence: evidence/matmul-f16-generative.json
     semantic_check:
@@ -756,6 +819,15 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     golden_status: confirmed
     golden: golden/kernels/layer_norm_v4_bf16.py
     golden_evidence: evidence/layer_norm_v4-bf16-golden.json
+    perf_ratio_demo:
+      ref_source: ops-nn/norm/layer_norm_v4 (aclnnLayerNorm, canonical_only)
+      shape: [2000, 1024]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      status: pending
+      kernel_source: vetted golden (golden/kernels/layer_norm_v4_bf16.py, full_row+split_d dispatcher)
+      perf_note: 'Unified-perf coverage: perf ratio pending first measurement. bf16 LayerNorm at [2000,1024] (full_row path); the gen probe measures the committed golden. Mirrors the f32 layer_norm_v4 perf cell.'
+      evidence: evidence/perf-vs-ascendc/
     generative_status: not_attempted
     semantic_check:
     - asc2.reduce_sum

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "dashscope": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "dashscope",
+      "options": {
+        "baseURL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "apiKey": "${DASHSCOPE_API_KEY}"
+      },
+      "models": {
+        "qwen3-coder-next": {
+          "name": "Qwen3 Coder Next"
+        }
+      }
+    }
+  },
+  "model": "dashscope/qwen3-coder-next",
+  "permission": {
+    "read": "allow",
+    "edit": "allow",
+    "bash": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "skill": "allow",
+    "task": "allow",
+    "external_directory": {
+      "*": "deny",
+      "~/workspace/pyasc/*": "allow",
+      "~/workspace/pyasc-skill-stack/*": "allow"
+    }
+  }
+}
