@@ -76,7 +76,10 @@ once model access is granted. Every listed profile is measured over the
 dashboard cards compare an identical set of kernels. This grows the leg from
 2×2=4 to 3×2=6 serialized cloud runs on the single Mac nightly runner
 (`continue-on-error: true`); it is gated on the `DASHSCOPE_API_KEY` secret and
-self-skips if unset.
+self-skips if unset. It uses the same **1200 s** per-attempt agent budget as
+`nightly-gate` and `local-stability-gate` (previously a tighter 420 s that lost
+even trivial cells like `abs/float32` to `exit 124` timeouts), so the on/off A/B
+is apples-to-apples across every gate.
 
 The **`local-stability-gate`** compares **`qwen3-coder:30b`** vs
 **`gpt-oss:120b`** (skills on/off). Both models must be pre-pulled on the Mac's
