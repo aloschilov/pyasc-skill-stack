@@ -60,31 +60,42 @@ Runs in 15-30 minutes. Requires opencode CLI and CANN simulator.
 Requires: opencode CLI on PATH, CANN simulator environment.
 
 The GitHub Actions `nightly-gate` job runs the Phase 0 protocol-axis matrix
-(P2/P3/P4/P6) against the remote DashScope **`cloud-default`** profile (glm-5),
-gated on the `DASHSCOPE_API_KEY` secret. It is **report-only** (no P6 hard-fail
-threshold). Cloud inference needs no host Ollama, so the legs only serialize on
+(P2/P3 — trimmed from P2/P3/P4/P6 to fit the single-runner 24h budget below)
+against the remote DashScope **`cloud-default`** profile (glm-5), gated on the
+`DASHSCOPE_API_KEY` secret. It is **report-only** (no P6 hard-fail threshold). Cloud inference needs no host Ollama, so the legs only serialize on
 the Mac runner for the camodel docker sim verify. The
 **`cloud-dashscope-gate`** job is also enabled. It runs a cross-vendor
 comparison matrix of three DashScope models — the two incumbents
-(`glm-5.1`, `qwen3.7-max`) plus `glm-5.2` — each with the full skills on+off
-A/B. Four further flagships (`deepseek-v4-pro`, `kimi-k2.7-code`,
+(`glm-5.1`, `qwen3.7-max`) plus `glm-5.2` — **skills-on only** (the skills-off
+cloud legs were dropped to fit the single-runner 24h budget below; the on/off
+A/B is still measured on `local-stability-gate`). Four further flagships
+(`deepseek-v4-pro`, `kimi-k2.7-code`,
 `MiniMax-M2.5`, `qwen3-coder-next`) were evaluated for the comparison set but
 the current DashScope key returns `Model.AccessDenied` for them (verified
 2026-07-24); their profile templates exist and are ready to add to the matrix
 once model access is granted. Every listed profile is measured over the
 **same** unified generative cell list (see "Unified kernel list" below), so all
-dashboard cards compare an identical set of kernels. This grows the leg from
-2×2=4 to 3×2=6 serialized cloud runs on the single Mac nightly runner
-(`continue-on-error: true`); it is gated on the `DASHSCOPE_API_KEY` secret and
-self-skips if unset. It uses the same **1200 s** per-attempt agent budget as
-`nightly-gate` and `local-stability-gate` (previously a tighter 420 s that lost
-even trivial cells like `abs/float32` to `exit 124` timeouts), so the on/off A/B
-is apples-to-apples across every gate.
+dashboard cards compare an identical set of kernels. It runs 3 skills-on cloud
+legs (one per model) on the single Mac nightly runner (`continue-on-error:
+true`); it is gated on the `DASHSCOPE_API_KEY` secret and self-skips if unset.
+It uses the same **1200 s** per-attempt agent budget as `nightly-gate` and
+`local-stability-gate` (previously a tighter 420 s that lost even trivial cells
+like `abs/float32` to `exit 124` timeouts), so cell measurement is
+apples-to-apples across every gate.
 
-The **`local-stability-gate`** compares **`qwen3-coder:30b`** vs
-**`gpt-oss:120b`** (skills on/off). Both models must be pre-pulled on the Mac's
-native Ollama (`ollama pull qwen3-coder:30b`, `ollama pull gpt-oss:120b`); legs
-skip cleanly when a model is missing.
+The **`local-stability-gate`** runs **`qwen3-coder:30b`** skills on/off. The
+model must be pre-pulled on the Mac's native Ollama (`ollama pull
+qwen3-coder:30b`); legs skip cleanly when it is missing. (`gpt-oss:120b` was
+dropped from the matrix to fit the single-runner 24h budget below — it was dead
+weight at 0-1/19 and its ~68 GB footprint is the heaviest local model.)
+
+**Single-runner 24h budget:** every CI job serializes on the one self-hosted
+arm64 Mac runner, and GitHub auto-cancels any job left queued for 24h. A full
+nightly (6 cloud + 4 local + 4 protocol legs + perf) exceeds that and
+partial-cancels (perf-gate never runs). The trims above (cloud skills-on only,
+local qwen3-coder-30b only, protocol P2/P3) keep a complete nightly — including
+`perf-gate` — under the limit. Restore the dropped legs once a second arm64
+runner lets the matrix fan out in parallel.
 
 ### Host memory (128 GB Mac)
 

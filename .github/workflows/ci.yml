@@ -343,7 +343,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        protocol_id: ["P2", "P3", "P4", "P6"]
+        # SINGLE-RUNNER 24h BUDGET: trimmed from P2/P3/P4/P6 to the P2+P3
+        # representative pair so a complete nightly (incl. perf-gate) fits under
+        # GitHub's 24h queued-job limit on the one self-hosted runner. P4/P6 were
+        # the legs most often starved+auto-cancelled at the 24h mark. Restore the
+        # full protocol axis once a 2nd arm64 runner lets the matrix fan out.
+        protocol_id: ["P2", "P3"]
     steps:
       - uses: actions/checkout@v4
 
@@ -508,7 +513,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: [local-qwen3-coder-30b, local-gpt-oss-120b]
+        # SINGLE-RUNNER 24h BUDGET: gpt-oss-120b dropped so a complete nightly
+        # (incl. perf-gate) fits under GitHub's 24h queued-job limit on the one
+        # self-hosted runner. gpt-oss-120b was dead weight (1/19 skills-on,
+        # 0/19 skills-off - it rarely emits a kernel at all) and its ~68 GB
+        # resident footprint is the heaviest local model. Restore it once a
+        # 2nd arm64 runner lets the matrix fan out in parallel.
+        profile: [local-qwen3-coder-30b]
         skills_mode: ["on", "off"]
     env:
       # Reach the macOS host's native (Metal) Ollama from the Docker Desktop VM.
@@ -693,7 +704,13 @@ jobs:
         # here once the key can call them.
         profile: [cloud-glm-5.1, cloud-qwen3.7-max, cloud-glm-5.2]
         # See comment in nightly-gate for why these are quoted.
-        skills_mode: ["on", "off"]
+        # SINGLE-RUNNER 24h BUDGET: skills-OFF cloud legs are dropped so a
+        # complete nightly (incl. perf-gate) fits under GitHub's 24h queued-job
+        # limit on the one self-hosted runner. The OFF baseline was near-useless
+        # (glm-5.1 off scored 3/19), and the skills on/off A/B is still measured
+        # on local-stability-gate. Restore ["on", "off"] once a 2nd arm64 runner
+        # lets the matrix fan out in parallel.
+        skills_mode: ["on"]
     steps:
       - uses: actions/checkout@v4
 
