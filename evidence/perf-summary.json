@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-06-22T09:48:19Z",
+  "generated_at": "2026-07-26T04:34:17Z",
   "gate": 0.7,
   "counts": {
     "pass": 7,
     "fail": 4,
     "gen_blocked": 0,
-    "unknown": 0,
-    "total": 11
+    "unknown": 8,
+    "total": 19
   },
   "cells": [
     {
@@ -30,6 +30,27 @@
       "evidence_file": "evidence/perf-vs-ascendc/abs-float16-20260622T031935.json",
       "source": "measured",
       "measured_at": "2026-06-22T03:19:35Z"
+    },
+    {
+      "cell": "abs/float32",
+      "op": "abs",
+      "dtype": "float32",
+      "shape": [
+        32,
+        4096
+      ],
+      "arch": "Ascend950PR_9599",
+      "gate": 0.7,
+      "ref_ticks": null,
+      "gen_ticks": null,
+      "ratio": null,
+      "status": "unknown",
+      "reference_source": "ops-math/math/abs (aclnnAbs, canonical_only)",
+      "kernel_source": "vetted golden (golden/kernels/abs_f32.py)",
+      "perf_miss_note": "",
+      "comparability_note": "",
+      "evidence_file": "evidence/perf-vs-ascendc/",
+      "source": "curated"
     },
     {
       "cell": "add/float16",
@@ -142,6 +163,69 @@
       "measured_at": "2026-06-22T03:19:35Z"
     },
     {
+      "cell": "gelu/float16",
+      "op": "gelu",
+      "dtype": "float16",
+      "shape": [
+        32,
+        4096
+      ],
+      "arch": "Ascend950PR_9599",
+      "gate": 0.7,
+      "ref_ticks": null,
+      "gen_ticks": null,
+      "ratio": null,
+      "status": "unknown",
+      "reference_source": "ops-nn/activation/gelu (aclnnGelu, canonical_only)",
+      "kernel_source": "vetted golden (golden/kernels/gelu_f16.py)",
+      "perf_miss_note": "",
+      "comparability_note": "",
+      "evidence_file": "evidence/perf-vs-ascendc/",
+      "source": "curated"
+    },
+    {
+      "cell": "gelu/float32",
+      "op": "gelu",
+      "dtype": "float32",
+      "shape": [
+        32,
+        4096
+      ],
+      "arch": "Ascend950PR_9599",
+      "gate": 0.7,
+      "ref_ticks": null,
+      "gen_ticks": null,
+      "ratio": null,
+      "status": "unknown",
+      "reference_source": "ops-nn/activation/gelu (aclnnGelu, canonical_only)",
+      "kernel_source": "vetted golden (golden/kernels/gelu_f32.py)",
+      "perf_miss_note": "",
+      "comparability_note": "",
+      "evidence_file": "evidence/perf-vs-ascendc/",
+      "source": "curated"
+    },
+    {
+      "cell": "layer_norm_v4/bfloat16",
+      "op": "layer_norm_v4",
+      "dtype": "bfloat16",
+      "shape": [
+        2000,
+        1024
+      ],
+      "arch": "Ascend950PR_9599",
+      "gate": 0.7,
+      "ref_ticks": null,
+      "gen_ticks": null,
+      "ratio": null,
+      "status": "unknown",
+      "reference_source": "ops-nn/norm/layer_norm_v4 (aclnnLayerNorm, canonical_only)",
+      "kernel_source": "vetted golden (golden/kernels/layer_norm_v4_bf16.py, full_row+split_d dispatcher)",
+      "perf_miss_note": "",
+      "comparability_note": "",
+      "evidence_file": "evidence/perf-vs-ascendc/",
+      "source": "curated"
+    },
+    {
       "cell": "layer_norm_v4/float32",
       "op": "layer_norm_v4",
       "dtype": "float32",
@@ -162,6 +246,69 @@
       "evidence_file": "evidence/perf-vs-ascendc/layer_norm_v4-float32-20260615T173338.json",
       "source": "measured",
       "measured_at": "2026-06-15T17:33:38Z"
+    },
+    {
+      "cell": "leaky_relu/float16",
+      "op": "leaky_relu",
+      "dtype": "float16",
+      "shape": [
+        32,
+        4096
+      ],
+      "arch": "Ascend950PR_9599",
+      "gate": 0.7,
+      "ref_ticks": null,
+      "gen_ticks": null,
+      "ratio": null,
+      "status": "unknown",
+      "reference_source": "ops-nn/activation/leaky_relu (aclnnLeakyRelu, canonical_only)",
+      "kernel_source": "vetted golden (golden/kernels/leaky_relu_f16.py)",
+      "perf_miss_note": "",
+      "comparability_note": "",
+      "evidence_file": "evidence/perf-vs-ascendc/",
+      "source": "curated"
+    },
+    {
+      "cell": "matmul/float16",
+      "op": "matmul",
+      "dtype": "float16",
+      "shape": [
+        32,
+        32
+      ],
+      "arch": "Ascend950PR_9599",
+      "gate": 0.7,
+      "ref_ticks": null,
+      "gen_ticks": null,
+      "ratio": null,
+      "status": "unknown",
+      "reference_source": "ops-nn/matmul/mat_mul_v3 (aclnnMatmul, canonical_only)",
+      "kernel_source": "vetted golden (golden/kernels/matmul_f16.py)",
+      "perf_miss_note": "",
+      "comparability_note": "",
+      "evidence_file": "evidence/perf-vs-ascendc/",
+      "source": "curated"
+    },
+    {
+      "cell": "reduce_sum/float16",
+      "op": "reduce_sum",
+      "dtype": "float16",
+      "shape": [
+        32,
+        4096
+      ],
+      "arch": "Ascend950PR_9599",
+      "gate": 0.7,
+      "ref_ticks": null,
+      "gen_ticks": null,
+      "ratio": null,
+      "status": "unknown",
+      "reference_source": "ops-math/math/reduce_sum (aclnnReduceSum, canonical_only)",
+      "kernel_source": "vetted golden (golden/kernels/reduce_sum_f16.py)",
+      "perf_miss_note": "",
+      "comparability_note": "",
+      "evidence_file": "evidence/perf-vs-ascendc/",
+      "source": "curated"
     },
     {
       "cell": "reduce_sum/float32",
@@ -225,6 +372,27 @@
       "perf_miss_note": "",
       "comparability_note": "",
       "evidence_file": "evidence/perf/ascendc-ref/rms_norm-f32-ascend950-8x256.json",
+      "source": "curated"
+    },
+    {
+      "cell": "softmax/float16",
+      "op": "softmax",
+      "dtype": "float16",
+      "shape": [
+        32,
+        4096
+      ],
+      "arch": "Ascend950PR_9599",
+      "gate": 0.7,
+      "ref_ticks": null,
+      "gen_ticks": null,
+      "ratio": null,
+      "status": "unknown",
+      "reference_source": "ops-nn/experimental/activation/softmax_v2 (aclnnSoftmax, canonical_only)",
+      "kernel_source": "vetted golden (golden/kernels/softmax_f16.py)",
+      "perf_miss_note": "",
+      "comparability_note": "",
+      "evidence_file": "evidence/perf-vs-ascendc/",
       "source": "curated"
     },
     {
