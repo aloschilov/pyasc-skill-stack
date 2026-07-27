@@ -1,0 +1,67 @@
+{
+  "cell": "add/float16",
+  "shape": [
+    32,
+    4096
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 4408,
+  "gen_ticks": 6302,
+  "ratio": 0.6995,
+  "gate": 0.7,
+  "passed": false,
+  "status": "ok",
+  "kernel_mode": "cached",
+  "regen": null,
+  "ref_detail": {
+    "cell": "add/float16",
+    "op": "add",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 4408,
+    "ref_ticks_runs": [
+      4416,
+      4408,
+      4408
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.0018,
+    "wall_ms_last": 11271.6,
+    "reference_kind": "canonical_only",
+    "reference_repo": "ops-math",
+    "reference_source": "ops-math canonical operator (add, aclnnop/aclnn_add.h), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=add",
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_add_f16_32x4096.run3.log"
+  },
+  "gen_detail": {
+    "cell": "add_f16",
+    "kernel": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 6302,
+    "gen_ticks_runs": [
+      6302,
+      6306,
+      6301
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0008,
+    "vf_fusion": null,
+    "wall_ms_last": 11398.5,
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_add_f16_32x4096_default.run3.log"
+  }
+}

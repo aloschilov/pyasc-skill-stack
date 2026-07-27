@@ -1,0 +1,23 @@
+{
+  "cell": "matmul/float16",
+  "op": "matmul",
+  "dtype": "float16",
+  "shape": [
+    32,
+    32
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": null,
+  "ticks_off": null,
+  "ticks_on": null,
+  "fusion_speedup": null,
+  "ratio_off": null,
+  "ratio_on": null,
+  "gate": 0.7,
+  "status": "gen_blocked",
+  "gen_blocker": "pyasc probe run 1 did not complete cleanly:\n[INFO] AicWrapper attach AIC 24, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 25, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 26, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 27, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 28, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 29, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 30, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 31, num_vec_core=2, num_subcore=3\n[INFO] Chip 0 AIC / Scheduler / Soc periods: 200.0000 / 200.0000 / 105.0000\n[INFO] chip 0 die 0 device created\n================================================================================\n>>>>                                                                        \n>>>>                             \" PEM MODEL \"                                \n>>>>             Total no. of 1 chip(s) Model Init Success!                \n>>>>                                                                        \n================================================================================\n[INFO] Model Start Time: 2026-07-26 20:19:19\n[DRVSTUB_LOG] driver_api.c:556 sendSwapBuf:swapbuf_base_addr:10000000\n[DRVSTUB_LOG] driver_api.c:557 sendSwapBuf:sq:0 swapbuf_addr:10000000\n[DRVSTUB_LOG] driver_api.c:556 sendSwapBuf:swapbuf_base_addr:10000000\n[DRVSTUB_LOG] driver_api.c:557 sendSwapBuf:sq:1 swapbuf_addr:10000040\n[INFO] Model Stop Time: 2026-07-26 20:19:19\nModel RUN TIME: 26.7282 ms\n[INFO] Total tick: 17\n[INFO] Model stopped successfully.",
+  "flag": "--cce-simd-vf-fusion",
+  "ref_detail": null,
+  "gen_detail_off": null,
+  "gen_detail_on": null
+}
