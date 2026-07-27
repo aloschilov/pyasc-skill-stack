@@ -676,8 +676,19 @@ def _ensure_thirdparty_siblings(repo: Repo) -> None:
     without any git checkout. PROJECT_SOURCE_DIR is the repo root, so we point
     those sibling paths at the already-vendored ``third_party`` copies via
     symlink. Best-effort (needs write access to the repo's parent dirs, which the
-    perf-image container has as root); ops-math has no such deps so this is a
-    no-op there."""
+    perf-image container has as root).
+
+    CROSS-REPO HAZARD: the sibling paths resolve to the SAME absolute locations
+    for ops-nn and ops-math (both roots live under ``/opt``, so both compute
+    ``/ops-base`` and ``/opt/ops-tensor``), but the two repos ship DIFFERENT
+    opbase trees -- ops-nn vendors an opbase *source* tree (no ``pkg_inc``),
+    while ops-math vendors a *packaged* opbase whose ``pkg_inc`` is what its
+    ``FindOPBASE.cmake`` looks for (``${TOP_DIR}/ops-base/pkg_inc``). A single
+    ``/ops-base`` pointing at ops-nn's source tree therefore makes the ops-math
+    opapi-shim build fail with ``Could NOT find OPBASE (missing: OPBASE_INC_DIR)``
+    whenever an ops-nn ref is built before ops-math. So we must (re)point the
+    shared symlink at the CURRENT repo's vendored copy on every build rather than
+    leaving whatever the previous repo created."""
     root = repo.root
     # (sibling path cmake checks, vendored source it should resolve to)
     links = [
@@ -688,7 +699,15 @@ def _ensure_thirdparty_siblings(repo: Repo) -> None:
         if not target.is_dir():
             continue
         try:
-            if link.is_symlink() or link.exists():
+            if link.is_symlink():
+                # Keep it only if it already points at THIS repo's copy;
+                # otherwise it is a stale symlink from building the other repo
+                # (ops-nn <-> ops-math share these paths) and must be replaced.
+                if link.resolve() == target.resolve():
+                    continue
+                link.unlink()
+            elif link.exists():
+                # A real dir/file we did not create -- do not touch it.
                 continue
             link.symlink_to(target, target_is_directory=True)
         except OSError:

@@ -134,14 +134,42 @@ def _layer_norm_v4_inputs(shape: list[int], dtype: str) -> list:
 
 
 def _matmul_inputs(shape: list[int], dtype: str) -> list:
-    # matmul_launch(a[M,K], b[K,N]). The comparability contract is square
-    # (M=K=N), so the 2D cell shape [M, K] yields b[K, K]. Inputs MUST be torch
-    # (the C310 cube path silently zeros numpy, same as batch_mat_mul_v3).
+    # matmul_launch(a[M,K], b[K,N], core_num, m_tile, n_tile,
+    #               m_tiles_per_block, n_tiles_per_block). The comparability
+    # contract is square (M=K=N), so the 2D cell shape [M, K] yields b[K, K].
+    # Inputs MUST be torch (the C310 cube path silently zeros numpy, same as
+    # batch_mat_mul_v3). The golden CUBE kernel also needs explicit tiling
+    # scalars: without them the launch raises "missing positional arguments" and
+    # the probe records a degenerate no-op run (Total tick ~= 11, never
+    # PROBE_DONE). Tile the MxN output into 16x16 blocks and hand the whole tile
+    # grid to a single core (m/n_tiles_per_block span every tile), which is the
+    # coverage the golden's own test-suite exercises for the 32x32 case.
     m, k = shape
     n = k
+    m_tile = 16 if (m % 16 == 0 and m >= 16) else m
+    n_tile = 16 if (n % 16 == 0 and n >= 16) else n
+    m_tiles = max(1, m // m_tile)
+    n_tiles = max(1, n // n_tile)
     return [
         {"kind": "tensor", "shape": [m, k], "dtype": dtype, "fw": "torch"},
         {"kind": "tensor", "shape": [k, n], "dtype": dtype, "fw": "torch"},
+        {"kind": "scalar", "value": 1},         # core_num (one block covers all tiles)
+        {"kind": "scalar", "value": m_tile},    # m_tile
+        {"kind": "scalar", "value": n_tile},    # n_tile
+        {"kind": "scalar", "value": m_tiles},   # m_tiles_per_block
+        {"kind": "scalar", "value": n_tiles},   # n_tiles_per_block
+    ]
+
+
+def _leaky_relu_inputs(shape: list[int], dtype: str) -> list:
+    # leaky_relu_launch(x, alpha). `alpha` is a REQUIRED positional float with no
+    # default, so auto-mode would wrongly fill it with a tensor (the same no-op
+    # trap as matmul's tiling scalars). Pin it to 0.01 to match BOTH the golden
+    # kernel's own test (alpha=0.01) and the aclnnLeakyRelu reference
+    # (negativeSlope=0.01), keeping the gen/ref comparison apples-to-apples.
+    return [
+        {"kind": "tensor", "shape": list(shape), "dtype": dtype, "fw": "numpy"},
+        {"kind": "scalar", "value": 0.01},
     ]
 
 
@@ -157,6 +185,7 @@ _CELL_INPUT_BUILDERS = {
     "batch_mat_mul_v3": _batch_mat_mul_v3_inputs,
     "layer_norm_v4": _layer_norm_v4_inputs,
     "matmul": _matmul_inputs,
+    "leaky_relu": _leaky_relu_inputs,
 }
 
 

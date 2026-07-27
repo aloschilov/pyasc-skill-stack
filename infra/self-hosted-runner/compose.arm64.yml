@@ -1,16 +1,22 @@
-# arm64 runner for the MacBook (198.18.0.1) via Docker Desktop's Linux/arm64 VM.
-# Serves the arm64-only perf-gate (pulls + runs ghcr pyasc-sim-perf:py3.11-arm64).
+# arm64 runner(s) for the MacBook via Docker Desktop's Linux/arm64 VM.
+# Serves the arm64-only perf-gate (pulls + runs ghcr pyasc-sim-perf:py3.11-arm64)
+# and every other CI job (label `arm64`).
 #
 # The image is prebuilt and `docker load`-ed onto the Mac (Docker Desktop's
 # keychain credstore blocks host-side pulls/builds over SSH), so compose only
 # runs the container. Bring up (from this dir, .env present):
 #   docker compose -f compose.arm64.yml up -d
 #
-# Single runner, so no work-dir collision risk; still uses an isolated,
-# path-aligned work dir under a macOS-shared path (${AR_BASE}/work) bind-mounted
-# at the SAME path, so the Docker Desktop VM sees it and the perf harness's
-# sibling `docker run -v "$(pwd)":/workspace` mounts resolve. A Docker named
-# volume would NOT align. /var/run/docker.sock symlinks to the Desktop socket.
+# TWO runners so the nightly matrix legs fan out in parallel (roughly halves
+# wall-clock so a complete nightly fits under GitHub's 24h queued-job limit;
+# freed up now that the 68 GB gpt-oss-120b local model is out of the matrix).
+# Each runner gets its OWN isolated, path-aligned work dir under a macOS-shared
+# path (${AR_BASE}/work and ${AR_BASE2}/work), bind-mounted at the SAME path so
+# the Docker Desktop VM sees it and the perf/gen harness sibling
+# `docker run -v "$(pwd)":/workspace` mounts resolve. Distinct work dirs avoid
+# collision between concurrent jobs (sim container names are uuid-suffixed, so
+# they never clash). Both share the Desktop docker socket. A Docker named
+# volume would NOT align.
 services:
   runner:
     image: pyasc-ci-runner:latest
@@ -27,4 +33,19 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${AR_BASE}/work:${AR_BASE}/work
+    restart: always
+  runner2:
+    image: pyasc-ci-runner:latest
+    env_file: .env
+    environment:
+      RUNNER_SCOPE: repo
+      LABELS: arm64
+      DISABLE_AUTO_UPDATE: "true"
+      START_DOCKER_SERVICE: "false"
+      CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /actions-runner-persist
+      DISABLE_AUTOMATIC_DEREGISTRATION: "true"
+      RUNNER_WORKDIR: ${AR_BASE2}/work
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${AR_BASE2}/work:${AR_BASE2}/work
     restart: always

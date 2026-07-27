@@ -430,7 +430,7 @@ jobs:
                 --ci-run-url "$CI_RUN_URL" \
                 --model-profile cloud-default \
                 --protocol-id "$PROTOCOL_ID" \
-                --max-attempts 3 \
+                --max-attempts 2 \
                 --notes "Nightly CI run (protocol=$PROTOCOL_ID, cloud-default)"; then
               PASS=$((PASS + 1))
             else
@@ -778,7 +778,7 @@ jobs:
                 --ci-run-url "$CI_RUN_URL" \
                 --model-profile "$PROFILE" \
                 --skills-mode "$SKILLS_MODE" \
-                --max-attempts 3 \
+                --max-attempts 2 \
                 --notes "Cloud DashScope run ($PROFILE, skills=$SKILLS_MODE)"; then
               PASS=$((PASS + 1))
             else

@@ -89,13 +89,24 @@ qwen3-coder:30b`); legs skip cleanly when it is missing. (`gpt-oss:120b` was
 dropped from the matrix to fit the single-runner 24h budget below — it was dead
 weight at 0-1/19 and its ~68 GB footprint is the heaviest local model.)
 
-**Single-runner 24h budget:** every CI job serializes on the one self-hosted
-arm64 Mac runner, and GitHub auto-cancels any job left queued for 24h. A full
-nightly (6 cloud + 4 local + 4 protocol legs + perf) exceeds that and
-partial-cancels (perf-gate never runs). The trims above (cloud skills-on only,
-local qwen3-coder-30b only, protocol P2/P3) keep a complete nightly — including
-`perf-gate` — under the limit. Restore the dropped legs once a second arm64
-runner lets the matrix fan out in parallel.
+**24h queued-job budget (two parallel runners):** GitHub auto-cancels any job
+left queued for 24h. The full nightly serialized on a single runner overran that
+and partial-cancelled (`perf-gate` never ran). Two mitigations keep a complete
+nightly — including `perf-gate` — under the limit:
+
+1. **Two arm64 runners** on the Mac (`infra/self-hosted-runner/compose.arm64.yml`
+   now defines `runner` + `runner2`, each with its own path-aligned work dir
+   `${AR_BASE}/work` / `${AR_BASE2}/work`), so matrix legs fan out in parallel
+   instead of serializing. Freed up by dropping the 68 GB `gpt-oss:120b` local
+   model. Docker container names are uuid-suffixed, so concurrent sim containers
+   never clash.
+2. **`--max-attempts 2`** (was 3) across the generative gates — the 3rd attempt
+   almost never converted a failure, so dropping it trims ~1/3 of the
+   retry-heavy leg time at negligible pass-rate cost.
+
+The earlier trims (cloud skills-on only, local qwen3-coder-30b only, protocol
+P2/P3) still apply. Restore dropped legs incrementally as the two-runner
+headroom allows.
 
 ### Host memory (128 GB Mac)
 
@@ -143,7 +154,20 @@ rebuild is needed. Because the perf image strips `.git` from the vendored
 sources, `ascendc_ref_runner._ensure_thirdparty_siblings` creates the `ops-base`
 / `ops-tensor` sibling dirs that `ops-nn`'s third-party cmake modules look for,
 so their pinned-SHA `git checkout` step is bypassed and ops-nn references build
-offline.
+offline. **Cross-repo hazard (fixed):** ops-nn and ops-math resolve those
+sibling paths to the *same* absolute `/ops-base`, but ship different opbase
+trees (ops-nn a source tree, ops-math a packaged `pkg_inc` layout that its
+`FindOPBASE.cmake` needs). An ops-nn build left `/ops-base` pointing at its own
+source tree, so the subsequent ops-math opapi-shim build (which produces
+`libcust_opapi.so` for ops-nn's `l0op` symbols) failed with `Could NOT find
+OPBASE (missing: OPBASE_INC_DIR)` — silently zeroing out every ops-nn ratio.
+`_ensure_thirdparty_siblings` now **re-points** the shared symlink at the current
+repo's vendored copy on every build instead of skipping when it already exists.
+Two golden-kernel launches also needed explicit non-tensor args the auto-prober
+cannot infer (else the launch no-ops at `Total tick ~= 11`): `matmul` needs CUBE
+tiling scalars and `leaky_relu` needs `alpha=0.01` (matched to the reference's
+`negativeSlope`), both supplied by input builders in
+[tests/tools/perf/pyasc_gen_runner.py](../tests/tools/perf/pyasc_gen_runner.py).
 not a hand-maintained `CELLS` table. The 0.70 gate is **reported, never enforced**,
 so documented honest misses (`apply_adam` ~0.46, `batch_norm_v3` ~0.10) stay
 green.
