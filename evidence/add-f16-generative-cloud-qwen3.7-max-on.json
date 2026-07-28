@@ -4,8 +4,8 @@
   "operation": "add",
   "dtype": "float16",
   "prompt": "Help me develop an element-wise add operator (out = x + y) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
-  "date": "2026-06-12T14:57:40Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/vadd_f16/kernel.py",
+  "date": "2026-07-27T17:20:48Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,11 +13,11 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
+    "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
       "kernel.py",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 82077,
-    "output": 7440,
-    "cache_read": 701312,
-    "total": 89517
+    "input": 176378,
+    "output": 14635,
+    "cache_read": 2220288,
+    "total": 191013
   },
-  "elapsed_total_s": 348.51,
+  "elapsed_total_s": 1004.87,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 348.51,
+      "elapsed_s": 1004.87,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 82077,
-        "output": 7440,
-        "cache_read": 701312,
-        "total": 89517,
+        "input": 176378,
+        "output": 14635,
+        "cache_read": 2220288,
+        "total": 191013,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -74,7 +74,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -131,8 +131,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -152,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:12:26Z",
@@ -164,6 +164,17 @@
       "skipped": false,
       "tokens_total": 77259,
       "elapsed_s": 226.64
+    },
+    {
+      "date": "2026-06-12T14:57:40Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 89517,
+      "elapsed_s": 348.51
     }
   ]
 }

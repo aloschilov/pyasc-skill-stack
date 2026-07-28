@@ -4,8 +4,8 @@
   "operation": "reduce_sum",
   "dtype": "float16",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float16, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
-  "kernel_path": "kernel.py",
-  "date": "2026-06-12T13:35:35Z",
+  "kernel_path": "",
+  "date": "2026-07-27T22:16:55Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,40 +13,36 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "verification.md"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 265370,
-    "output": 5451,
+    "input": 510499,
+    "output": 5194,
     "cache_read": 0,
-    "total": 270821
+    "total": 515693
   },
-  "elapsed_total_s": 86.94,
+  "elapsed_total_s": 391.43,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 5.68,
+      "elapsed_s": 85.32,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7281,
-        "output": 82,
+        "input": 240815,
+        "output": 2140,
         "cache_read": 0,
-        "total": 7363,
+        "total": 242955,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -57,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 13.65,
+      "elapsed_s": 30.1,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 69874,
-        "output": 586,
+        "input": 106671,
+        "output": 735,
         "cache_read": 0,
-        "total": 70460,
+        "total": 107406,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -75,135 +71,43 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 67.61,
+      "elapsed_s": 276.01,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 188215,
-        "output": 4783,
+        "input": 163013,
+        "output": 2319,
         "cache_read": 0,
-        "total": 192998,
+        "total": 165332,
         "cost_usd": 0.0
       },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": true,
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
+    "mode": "static_only",
     "status": "fail",
-    "detail": "Kernel executed but verification unclear: Running reduce_sum operator for Ascend950PR_9599\nMode: Model\nInput shape: (32, 4096)\nInput dtype: float16\nReference output shape: (32,)\nReduce sum operation completed successfully\n\u2713 Output shape matches expected [32]\nSample results for first 2 rows: [2035.5408 2023.8236]\n",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "kernel.py",
-      "is_symlink": false,
-      "resolved": "/Users/aloschilov/ar/work/_temp/gen-reduce_sum-float16-a3.qg8ftyzj/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        ".git",
-        "agent-output.txt",
-        "ascend_reduce_sum.py",
-        "design.md",
-        "golden@ -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden",
-        "kernel.py",
-        "opencode.json",
-        "verification.md"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 80\ndrwx------ 10 root root   320 Jun 12 13:35 .\ndrwxr-xr-x  1 root root  4096 Jun 12 13:35 ..\ndrwxr-xr-x 10 root root   320 Jun 12 13:34 .git\n-rw-r--r--  1 root root 54689 Jun 12 13:35 agent-output.txt\n-rwxr-xr-x  1 root root  3791 Jun 12 13:35 ascend_reduce_sum.py\n-rw-r--r--  1 root root  1339 Jun 12 13:34 design.md\nlrwxr-xr-x  1 root root    68 Jun 12 13:34 golden -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden\n-rwxr-xr-x  1 root root  2159 Jun 12 13:35 kernel.py\n-rw-r--r--  1 root root   611 Jun 12 13:34 opencode.json\n-rw-r--r--  1 root root  1255 Jun 12 13:34 verification.md\n--- ls kernel dir ---\ntotal 80\ndrwx------ 10 root root   320 Jun 12 13:35 .\ndrwxr-xr-x  1 root root  4096 Jun 12 13:35 ..\ndrwxr-xr-x 10 root root   320 Jun 12 13:34 .git\n-rw-r--r--  1 root root 54689 Jun 12 13:35 agent-output.txt\n-rwxr-xr-x  1 root root  3791 Jun 12 13:35 ascend_reduce_sum.py\n-rw-r--r--  1 root root  1339 Jun 12 13:34 design.md\nlrwxr-xr-x  1 root root    68 Jun 12 13:34 golden -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden\n-rwxr-xr-x  1 root root  2159 Jun 12 13:35 kernel.py\n-rw-r--r--  1 root root   611 Jun 12 13:34 opencode.json\n-rw-r--r--  1 root root  1255 Jun 12 13:34 verification.md\n--- readlink kernel ---"
-    }
+    "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['.sum(']",
-    "markers_found": [
-      ".sum("
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 7.0,
+    "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {
-      "jit_decorator": {
-        "passed": false,
-        "detail": "missing"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
-      },
-      "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
-      },
-      "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
-      },
-      "verification": {
-        "passed": false,
-        "detail": "no allclose/assert_close call"
-      },
-      "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
-      },
-      "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": false,
-        "detail": "no tiling math found"
-      },
-      "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['.sum(']"
-      }
-    },
+    "checks": {},
     "failure_category": null,
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": false,
-      "allow_legacy_apis": false
-    }
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T01:41:21Z",
@@ -215,6 +119,17 @@
       "skipped": false,
       "tokens_total": 24773,
       "elapsed_s": 2405.78
+    },
+    {
+      "date": "2026-06-12T13:35:35Z",
+      "overall_pass": false,
+      "score": 7.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 270821,
+      "elapsed_s": 86.94
     }
   ]
 }

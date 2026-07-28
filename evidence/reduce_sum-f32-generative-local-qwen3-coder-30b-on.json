@@ -4,8 +4,8 @@
   "operation": "reduce_sum",
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float32, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/kernel.py",
-  "date": "2026-06-12T15:38:39Z",
+  "kernel_path": "kernels/reduce_sum/kernel.py",
+  "date": "2026-07-27T16:16:34Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
@@ -22,6 +22,7 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
+      "self_review.md",
       "verification.md"
     ]
   },
@@ -29,24 +30,24 @@
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 407743,
-    "output": 1983,
+    "input": 578764,
+    "output": 4586,
     "cache_read": 0,
-    "total": 409726
+    "total": 583350
   },
-  "elapsed_total_s": 264.8,
+  "elapsed_total_s": 347.89,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 8.59,
+      "elapsed_s": 25.04,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 8309,
-        "output": 67,
+        "input": 59644,
+        "output": 296,
         "cache_read": 0,
-        "total": 8376,
+        "total": 59940,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -57,14 +58,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 256.21,
+      "elapsed_s": 322.85,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 399434,
-        "output": 1916,
+        "input": 519120,
+        "output": 4290,
         "cache_read": 0,
-        "total": 401350,
+        "total": 523410,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
@@ -168,7 +169,7 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:46:42Z",
@@ -180,6 +181,17 @@
       "skipped": false,
       "tokens_total": 521286,
       "elapsed_s": 150.62
+    },
+    {
+      "date": "2026-06-12T15:38:39Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 409726,
+      "elapsed_s": 264.8
     }
   ]
 }

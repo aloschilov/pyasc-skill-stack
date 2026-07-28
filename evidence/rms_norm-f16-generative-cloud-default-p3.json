@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: RMSNorm: y = x * gamma * rsqrt(mean(x\u00b2, axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float16 (gamma is float16 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; cast loaded tiles to float32 via `.to(asc.float32)` before accumulating sum_sq via asc2.reduce_sum, then cast back via `.to(x.dtype)` before asc2.store; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (sum_sq is fp32 even when the input is fp16). Tolerance: atol=2e-2, rtol=2e-2 for the full_row regime (8, 256) and atol=5e-2, rtol=5e-2 for the split_d regime (8, 1055), both against a torch reference; host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path and surface as `0., 0., 0.` tail bands in any downstream comparison. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-06-12T15:10:30Z",
+  "date": "2026-07-28T03:24:55Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,12 +13,12 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
-    "completed": false,
+    "timeout_s": 1200,
+    "completed": true,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -27,24 +27,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 91199,
-    "output": 6857,
-    "cache_read": 529505,
-    "total": 98056
+    "input": 16845,
+    "output": 2964,
+    "cache_read": 245248,
+    "total": 19809
   },
-  "elapsed_total_s": 420.0,
+  "elapsed_total_s": 139.91,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 420.0,
-      "exit": 124,
+      "elapsed_s": 139.91,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 91199,
-        "output": 6857,
-        "cache_read": 529505,
-        "total": 98056,
+        "input": 16845,
+        "output": 2964,
+        "cache_read": 245248,
+        "total": 19809,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -148,8 +148,8 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (protocol=P3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "notes": "Nightly CI run (protocol=P3, cloud-default)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -217,6 +217,17 @@
       "skipped": false,
       "tokens_total": 186937,
       "elapsed_s": 781.55
+    },
+    {
+      "date": "2026-06-12T15:10:30Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 98056,
+      "elapsed_s": 420.0
     }
   ]
 }

@@ -4,8 +4,8 @@
   "operation": "matmul",
   "dtype": "float16",
   "prompt": "Help me develop a tiled matmul operator on Ascend950PR_9599 (C310) for float16 inputs producing float32 output. Use small shapes such as M=K=N=16 or (M=32, K=16, N=32). Inputs must be torch.Tensor (numpy buffers are silently zeroed by the C310 simulator path for matmul). Load A to asc2.TileLocation.L0A and B to L0B, then compute `a @ b` (or asc2.matmul) and asc2.store the float32 result.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16/kernel.py",
-  "date": "2026-06-12T13:57:54Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16_tiled/kernel.py",
+  "date": "2026-07-28T06:43:24Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,40 +13,42 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
-    "completed": false,
+    "timeout_s": 1200,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md"
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 146809,
-    "output": 5187,
-    "cache_read": 631296,
-    "total": 151996
+    "input": 76753,
+    "output": 5429,
+    "cache_read": 728576,
+    "total": 82182
   },
-  "elapsed_total_s": 420.02,
+  "elapsed_total_s": 277.13,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.02,
-      "exit": 124,
+      "elapsed_s": 277.13,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 146809,
-        "output": 5187,
-        "cache_read": 631296,
-        "total": 151996,
+        "input": 76753,
+        "output": 5429,
+        "cache_read": 728576,
+        "total": 82182,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -149,7 +151,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T04:43:41Z",
@@ -161,6 +163,17 @@
       "skipped": false,
       "tokens_total": 71841,
       "elapsed_s": 420.03
+    },
+    {
+      "date": "2026-06-12T13:57:54Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 151996,
+      "elapsed_s": 420.02
     }
   ]
 }

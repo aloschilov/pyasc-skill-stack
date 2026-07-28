@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float32, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
-  "date": "2026-06-12T12:36:09Z",
+  "date": "2026-07-28T03:44:24Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,12 +13,12 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
-    "completed": false,
+    "timeout_s": 1200,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 69488,
-    "output": 8256,
-    "cache_read": 725376,
-    "total": 77744
+    "input": 219391,
+    "output": 7193,
+    "cache_read": 713728,
+    "total": 226584
   },
-  "elapsed_total_s": 420.0,
+  "elapsed_total_s": 293.51,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.0,
-      "exit": 124,
+      "elapsed_s": 293.51,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 69488,
-        "output": 8256,
-        "cache_read": 725376,
-        "total": 77744,
+        "input": 219391,
+        "output": 7193,
+        "cache_read": 713728,
+        "total": 226584,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -152,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:39:11Z",
@@ -163,6 +163,17 @@
       "semantic": true,
       "skipped": false,
       "tokens_total": 123255,
+      "elapsed_s": 420.0
+    },
+    {
+      "date": "2026-06-12T12:36:09Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 77744,
       "elapsed_s": 420.0
     }
   ]

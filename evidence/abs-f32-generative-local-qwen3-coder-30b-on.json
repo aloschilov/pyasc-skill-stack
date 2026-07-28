@@ -4,8 +4,8 @@
   "operation": "abs",
   "dtype": "float32",
   "prompt": "Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f32/kernel.py",
-  "date": "2026-06-12T15:09:09Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs/kernel.py",
+  "date": "2026-07-27T15:51:14Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,41 +13,38 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "self_review.md",
-      "verification.md"
+      "kernel.py"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
   "model": "qwen3-coder:30b",
   "tokens": {
-    "input": 517552,
-    "output": 3915,
+    "input": 705324,
+    "output": 2487,
     "cache_read": 0,
-    "total": 521467
+    "total": 707811
   },
-  "elapsed_total_s": 452.53,
+  "elapsed_total_s": 368.11,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 452.53,
+      "elapsed_s": 368.11,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 517552,
-        "output": 3915,
+        "input": 705324,
+        "output": 2487,
         "cache_read": 0,
-        "total": 521467,
+        "total": 707811,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
@@ -150,7 +147,7 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:38:48Z",
@@ -162,6 +159,17 @@
       "skipped": false,
       "tokens_total": 317626,
       "elapsed_s": 87.44
+    },
+    {
+      "date": "2026-06-12T15:09:09Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 521467,
+      "elapsed_s": 452.53
     }
   ]
 }

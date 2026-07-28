@@ -4,8 +4,8 @@
   "operation": "softmax",
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
-  "kernel_path": "kernels/row_softmax_f16/kernel.py",
-  "date": "2026-06-12T17:01:21Z",
+  "kernel_path": "",
+  "date": "2026-07-27T20:17:17Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,39 +13,36 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
-    "completed": false,
-    "artifacts_found": [
-      "kernel.py",
-      "verification.md"
-    ]
+    "completed": true,
+    "artifacts_found": []
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
   "model": "qwen3-coder:30b",
   "tokens": {
-    "input": 437209,
-    "output": 1624,
+    "input": 504284,
+    "output": 3948,
     "cache_read": 0,
-    "total": 438833
+    "total": 508232
   },
-  "elapsed_total_s": 1306.32,
+  "elapsed_total_s": 376.96,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 106.31,
+      "elapsed_s": 347.76,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 234794,
-        "output": 741,
+        "input": 441006,
+        "output": 3161,
         "cache_read": 0,
-        "total": 235535,
+        "total": 444167,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
@@ -56,118 +53,61 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 1200.01,
-      "exit": 124,
-      "outcome": "pass",
+      "elapsed_s": 5.09,
+      "exit": 0,
+      "outcome": "fail",
       "tokens": {
-        "input": 202415,
-        "output": 883,
+        "input": 8072,
+        "output": 76,
         "cache_read": 0,
-        "total": 203298,
+        "total": 8148,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "pass"
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 24.11,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 55206,
+        "output": 711,
+        "cache_read": 0,
+        "total": 55917,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "mode": "static_only",
+    "status": "fail",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['asc2.softmax', 'softmax']",
-    "markers_found": [
-      "asc2.softmax",
-      "softmax"
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 14.0,
+    "value": 0.0,
     "threshold": 12,
-    "accepted": true,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
-      },
-      "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "verification call present"
-      },
-      "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
-      },
-      "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "expected>=1 params, found 2"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['asc2.softmax', 'softmax']"
-      }
-    },
+    "accepted": false,
+    "checks": {},
     "failure_category": null,
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": false,
-      "allow_legacy_apis": false
-    }
+    "gating_detail": {}
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T04:23:33Z",
@@ -179,6 +119,17 @@
       "skipped": false,
       "tokens_total": 299714,
       "elapsed_s": 106.68
+    },
+    {
+      "date": "2026-06-12T17:01:21Z",
+      "overall_pass": true,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 438833,
+      "elapsed_s": 1306.32
     }
   ]
 }

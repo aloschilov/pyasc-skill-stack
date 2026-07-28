@@ -1,0 +1,204 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "layer_norm_v4",
+  "dtype": "float32",
+  "prompt": "Create a LayerNormV4 capability for float32 on Ascend950PR_9599: mean/var/rstd + (x-mean)*rstd*gamma+beta, last-axis normalize with N-D flatten. Gate shape [1024,768].",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/layer_norm_v4/kernel.py",
+  "date": "2026-07-27T19:02:09Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": false,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "local-qwen3-coder-30b",
+  "model": "qwen3-coder:30b",
+  "tokens": {
+    "input": 2385855,
+    "output": 32009,
+    "cache_read": 0,
+    "total": 2417864
+  },
+  "elapsed_total_s": 2235.08,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 638.84,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 511213,
+        "output": 8617,
+        "cache_read": 0,
+        "total": 519830,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 396.23,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 831930,
+        "output": 5931,
+        "cache_read": 0,
+        "total": 837861,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 1200.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 1042712,
+        "output": 17461,
+        "cache_read": 0,
+        "total": 1060173,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Exit code 1: AttributeError: 'Tile' object has no attribute '__getitem__'\n-packages/asc/codegen/function_visitor.py\", line 360, in visit\n    raise CodegenError(node, self.src, f\"{e.__class__.__name__}: {e}\") from e\nasc.codegen.errors.CodegenError: at <source>:27:20:\n        # Compute mean and variance for this row\n        sum_x = 0.0\n        sum_x2 = 0.0\n        for i in asc2.range(num_cols):\n                    ^\n            x_val = x_row[0][i]\n            sum_x += x_val\n            sum_x2 += x_val * x_val\nAttributeError: 'Tile' object has no attribute '__getitem__'\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/layer_norm_v4/kernel.py",
+      "is_symlink": false,
+      "resolved": "/Users/aloschilov/ar2/work/_temp/gen-layer_norm_v4-float32-a3.17idi_oo/teams/pyasc-kernel-dev-team/kernels/layer_norm_v4/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        "README.md",
+        "__pycache__",
+        "conftest.py",
+        "docs",
+        "kernel.py",
+        "test"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 316\ndrwx------ 10 root root    320 Jul 27 19:02 .\ndrwxr-xr-x  1 root root   4096 Jul 27 19:02 ..\n-rw-r--r--  1 root root   1646 Jul 27 18:42 .agent-prompt.txt\ndrwxr-xr-x 10 root root    320 Jul 27 18:42 .git\n-rw-r--r--  1 root root 307196 Jul 27 19:02 agent-output.txt\ndrwxr-xr-x  6 root root    192 Jul 27 15:17 golden\n-rw-r--r--  1 root root   2563 Jul 27 18:44 layer_norm_v4_design.md\n-rw-r--r--  1 root root    668 Jul 27 18:42 opencode.json\ndrwxr-xr-x 11 root root    352 Jul 27 15:17 skills\ndrwxr-xr-x  3 root root     96 Jul 27 15:17 teams\n--- ls kernel dir ---\ntotal 20\ndrwxr-xr-x 8 root root  256 Jul 27 19:01 .\ndrwxr-xr-x 3 root root   96 Jul 27 18:42 ..\n-rw-r--r-- 1 root root  601 Jul 27 18:42 README.md\ndrwxr-xr-x 3 root root   96 Jul 27 19:01 __pycache__\n-rw-r--r-- 1 root root  441 Jul 27 18:42 conftest.py\ndrwxr-xr-x 5 root root  160 Jul 27 19:00 docs\n-rw-r--r-- 1 root root 8883 Jul 27 19:00 kernel.py\ndrwxr-xr-x 2 root root   64 Jul 27 18:42 test\n--- readlink kernel ---"
+    }
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "no semantic markers defined for 'layer_norm_v4'",
+    "markers_found": []
+  },
+  "score": {
+    "value": 14.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "2 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": false,
+        "detail": "no allclose/assert_close call"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in semantic table)"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "history": []
+}

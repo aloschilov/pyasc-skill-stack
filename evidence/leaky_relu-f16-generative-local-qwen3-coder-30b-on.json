@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator on Ascend950PR_9599 (C310) for float16 with alpha=0.01 and shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu/kernel.py",
-  "date": "2026-06-12T16:39:08Z",
+  "date": "2026-07-27T17:06:53Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
@@ -21,50 +21,49 @@
     "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md",
-      "verification.md"
+      "design.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "ollama/qwen3-coder:30b",
+  "model": "qwen3-coder:30b",
   "tokens": {
-    "input": 519148,
-    "output": 3324,
+    "input": 1522490,
+    "output": 10653,
     "cache_read": 0,
-    "total": 522472
+    "total": 1533143
   },
-  "elapsed_total_s": 275.12,
+  "elapsed_total_s": 749.52,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 9.56,
+      "elapsed_s": 374.48,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 8304,
-        "output": 85,
+        "input": 963003,
+        "output": 6129,
         "cache_read": 0,
-        "total": 8389,
+        "total": 969132,
         "cost_usd": 0.0
       },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
+      "model": "qwen3-coder:30b",
+      "kernel_found": true,
+      "static_verify": "pass",
       "runtime_status": "fail"
     },
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 265.56,
+      "elapsed_s": 375.04,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 510844,
-        "output": 3239,
+        "input": 559487,
+        "output": 4524,
         "cache_read": 0,
-        "total": 514083,
+        "total": 564011,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
@@ -89,7 +88,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -146,8 +145,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x2, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -167,7 +166,7 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T04:21:28Z",
@@ -179,6 +178,17 @@
       "skipped": false,
       "tokens_total": 343844,
       "elapsed_s": 1200.01
+    },
+    {
+      "date": "2026-06-12T16:39:08Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 522472,
+      "elapsed_s": 275.12
     }
   ]
 }

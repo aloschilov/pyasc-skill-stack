@@ -1,0 +1,186 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "layer_norm_v4",
+  "dtype": "bfloat16",
+  "prompt": "Create a LayerNormV4 capability for bfloat16 on Ascend950PR_9599: mean/var/rstd + (x-mean)*rstd*gamma+beta, last-axis normalize with N-D flatten. Gate shape [2000,4096].",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/layer_norm_v4_bf16/kernel.py",
+  "date": "2026-07-28T08:58:27Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": false,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "cloud-glm-5.2",
+  "model": "dashscope/glm-5.2",
+  "tokens": {
+    "input": 174032,
+    "output": 25004,
+    "cache_read": 2838528,
+    "total": 199036
+  },
+  "elapsed_total_s": 2400.03,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 1200.02,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 85009,
+        "output": 12300,
+        "cache_read": 1506176,
+        "total": 97309,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5.2",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 1200.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 89023,
+        "output": 12704,
+        "cache_read": 1332352,
+        "total": 101727,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5.2",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Timeout after 1470s",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/layer_norm_v4_bf16/kernel.py",
+      "is_symlink": false,
+      "resolved": "/Users/aloschilov/ar/work/_temp/gen-layer_norm_v4-bfloat16-a2.woyo4mm8/teams/pyasc-kernel-dev-team/kernels/layer_norm_v4_bf16/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        "README.md",
+        "conftest.py",
+        "docs",
+        "kernel.py",
+        "test"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 292\ndrwx------  9 root root    288 Jul 28 08:33 .\ndrwxr-xr-x  1 root root   4096 Jul 28 08:58 ..\n-rw-r--r--  1 root root    169 Jul 28 08:13 .agent-prompt.txt\ndrwxr-xr-x 10 root root    320 Jul 28 08:14 .git\n-rw-r--r--  1 root root 283923 Jul 28 08:33 agent-output.txt\ndrwxr-xr-x  6 root root    192 Jun 12 18:18 golden\n-rw-r--r--  1 root root    909 Jul 28 08:13 opencode.json\ndrwxr-xr-x 11 root root    352 Jun 30 08:22 skills\ndrwxr-xr-x  3 root root     96 Jun 10 11:49 teams\n--- ls kernel dir ---\ntotal 20\ndrwxr-xr-x 7 root root  224 Jul 28 08:21 .\ndrwxr-xr-x 3 root root   96 Jul 28 08:16 ..\n-rw-r--r-- 1 root root  611 Jul 28 08:16 README.md\n-rw-r--r-- 1 root root  441 Jul 28 08:16 conftest.py\ndrwxr-xr-x 6 root root  192 Jul 28 08:27 docs\n-rw-r--r-- 1 root root 9704 Jul 28 08:21 kernel.py\ndrwxr-xr-x 2 root root   64 Jul 28 08:16 test\n--- readlink kernel ---"
+    }
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "no semantic markers defined for 'layer_norm_v4'",
+    "markers_found": []
+  },
+  "score": {
+    "value": 14.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "2 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": false,
+        "detail": "numeric shape tuples found inside JIT function"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in semantic table)"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Cloud DashScope run (cloud-glm-5.2, skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "history": []
+}

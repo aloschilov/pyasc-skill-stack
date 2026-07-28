@@ -4,8 +4,8 @@
   "operation": "rms_norm",
   "dtype": "float16",
   "prompt": "Create an RMSNorm capability for float16 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
-  "kernel_path": "kernel.py",
-  "date": "2026-06-12T14:26:23Z",
+  "kernel_path": "",
+  "date": "2026-07-28T00:26:47Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,40 +13,38 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "verification.md"
+      "design.md"
     ]
   },
   "skills_mode": "off",
   "model_profile": "local-qwen3-coder-30b",
   "model": "qwen3-coder:30b",
   "tokens": {
-    "input": 357056,
-    "output": 7347,
+    "input": 272132,
+    "output": 5701,
     "cache_read": 0,
-    "total": 364403
+    "total": 277833
   },
-  "elapsed_total_s": 155.67,
+  "elapsed_total_s": 1025.3,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 32.9,
+      "elapsed_s": 152.13,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 80102,
-        "output": 658,
+        "input": 129934,
+        "output": 3849,
         "cache_read": 0,
-        "total": 80760,
+        "total": 133783,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
@@ -57,17 +55,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 63.41,
+      "elapsed_s": 150.32,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 153049,
-        "output": 3446,
+        "input": 42546,
+        "output": 469,
         "cache_read": 0,
-        "total": 156495,
+        "total": 43015,
         "cost_usd": 0.0
       },
-      "model": "ollama/qwen3-coder:30b",
+      "model": "qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -75,136 +73,43 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 59.36,
+      "elapsed_s": 722.85,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 123905,
-        "output": 3243,
+        "input": 99652,
+        "output": 1383,
         "cache_read": 0,
-        "total": 127148,
+        "total": 101035,
         "cost_usd": 0.0
       },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": true,
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
+    "mode": "static_only",
     "status": "fail",
-    "detail": "Exit code 1: NameError: name 'asc2' is not defined. Did you mean: 'ascii'?\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 43, in <module>\n    @asc2.jit\n     ^^^^\nNameError: name 'asc2' is not defined. Did you mean: 'ascii'?\n",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "kernel.py",
-      "is_symlink": false,
-      "resolved": "/Users/aloschilov/ar/work/_temp/gen-rms_norm-float16-a3.w8qsqwab/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        ".git",
-        "agent-output.txt",
-        "design.md",
-        "golden@ -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden",
-        "kernel.py",
-        "opencode.json",
-        "verification.md"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 68\ndrwx------  9 root root   288 Jun 12 14:26 .\ndrwxr-xr-x  1 root root  4096 Jun 12 14:26 ..\ndrwxr-xr-x 10 root root   320 Jun 12 14:25 .git\n-rw-r--r--  1 root root 43785 Jun 12 14:26 agent-output.txt\n-rw-r--r--  1 root root  2660 Jun 12 14:26 design.md\nlrwxr-xr-x  1 root root    68 Jun 12 14:25 golden -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r--  1 root root  4407 Jun 12 14:25 kernel.py\n-rw-r--r--  1 root root   611 Jun 12 14:25 opencode.json\n-rw-r--r--  1 root root  2008 Jun 12 14:26 verification.md\n--- ls kernel dir ---\ntotal 68\ndrwx------  9 root root   288 Jun 12 14:26 .\ndrwxr-xr-x  1 root root  4096 Jun 12 14:26 ..\ndrwxr-xr-x 10 root root   320 Jun 12 14:25 .git\n-rw-r--r--  1 root root 43785 Jun 12 14:26 agent-output.txt\n-rw-r--r--  1 root root  2660 Jun 12 14:26 design.md\nlrwxr-xr-x  1 root root    68 Jun 12 14:25 golden -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r--  1 root root  4407 Jun 12 14:25 kernel.py\n-rw-r--r--  1 root root   611 Jun 12 14:25 opencode.json\n-rw-r--r--  1 root root  2008 Jun 12 14:26 verification.md\n--- readlink kernel ---"
-    }
+    "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['asc2.reduce_sum', 'split_d', 'full_row']",
-    "markers_found": [
-      "asc2.reduce_sum",
-      "split_d",
-      "full_row"
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 9.0,
+    "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "2 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": false,
-        "detail": "kernel returns a value"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
-      },
-      "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": false,
-        "detail": "no allclose/assert_close call"
-      },
-      "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
-      },
-      "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['asc2.reduce_sum', 'split_d', 'full_row']"
-      }
-    },
-    "failure_category": "F_missing_asc2_import",
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": true,
-      "allow_legacy_apis": false
-    }
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:01:51Z",
@@ -216,6 +121,17 @@
       "skipped": false,
       "tokens_total": 433490,
       "elapsed_s": 1379.67
+    },
+    {
+      "date": "2026-06-12T14:26:23Z",
+      "overall_pass": false,
+      "score": 9.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 364403,
+      "elapsed_s": 155.67
     }
   ]
 }

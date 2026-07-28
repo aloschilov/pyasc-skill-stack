@@ -4,8 +4,8 @@
   "operation": "add",
   "dtype": "float16",
   "prompt": "Help me develop an element-wise add operator (out = x + y) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "",
-  "date": "2026-06-12T15:33:57Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/elementwise_add/kernel.py",
+  "date": "2026-07-27T15:59:48Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,103 +13,146 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
       "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "ollama/qwen3-coder:30b",
+  "model": "qwen3-coder:30b",
   "tokens": {
-    "input": 488441,
-    "output": 7785,
+    "input": 538379,
+    "output": 4987,
     "cache_read": 0,
-    "total": 496226
+    "total": 543366
   },
-  "elapsed_total_s": 1487.61,
+  "elapsed_total_s": 351.62,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 9.0,
+      "elapsed_s": 351.62,
       "exit": 0,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 8304,
-        "output": 74,
+        "input": 538379,
+        "output": 4987,
         "cache_read": 0,
-        "total": 8378,
-        "cost_usd": 0.0
-      },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 1200.01,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 63197,
-        "output": 495,
-        "cache_read": 0,
-        "total": 63692,
-        "cost_usd": 0.0
-      },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 278.6,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 416940,
-        "output": 7216,
-        "cache_read": 0,
-        "total": 424156,
+        "total": 543366,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
     }
   ],
   "verification": {
-    "mode": "static_only",
-    "status": "fail",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "no kernel found",
-    "markers_found": []
+    "passed": true,
+    "detail": "found ['x + y', '+ y']",
+    "markers_found": [
+      "x + y",
+      "+ y"
+    ]
   },
   "score": {
-    "value": 0.0,
+    "value": 15.0,
     "threshold": 12,
-    "accepted": false,
-    "checks": {},
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=2 params, found 3"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['x + y', '+ y']"
+      }
+    },
     "failure_category": null,
-    "gating_detail": {}
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:43:54Z",
@@ -121,6 +164,17 @@
       "skipped": false,
       "tokens_total": 967043,
       "elapsed_s": 276.79
+    },
+    {
+      "date": "2026-06-12T15:33:57Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 496226,
+      "elapsed_s": 1487.61
     }
   ]
 }

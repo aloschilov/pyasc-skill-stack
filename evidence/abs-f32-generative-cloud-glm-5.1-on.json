@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f32/kernel.py",
-  "date": "2026-06-12T12:11:37Z",
+  "date": "2026-07-28T02:39:46Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,11 +13,11 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
+    "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
       "kernel.py",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 177004,
-    "output": 8772,
-    "cache_read": 771456,
-    "total": 185776
+    "input": 163107,
+    "output": 7658,
+    "cache_read": 792320,
+    "total": 170765
   },
-  "elapsed_total_s": 363.72,
+  "elapsed_total_s": 431.88,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 363.72,
+      "elapsed_s": 431.88,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 177004,
-        "output": 8772,
-        "cache_read": 771456,
-        "total": 185776,
+        "input": 163107,
+        "output": 7658,
+        "cache_read": 792320,
+        "total": 170765,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -151,7 +151,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:24:24Z",
@@ -163,6 +163,17 @@
       "skipped": false,
       "tokens_total": 114267,
       "elapsed_s": 420.01
+    },
+    {
+      "date": "2026-06-12T12:11:37Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 185776,
+      "elapsed_s": 363.72
     }
   ]
 }

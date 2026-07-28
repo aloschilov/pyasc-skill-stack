@@ -1,0 +1,106 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "layer_norm_v4",
+  "dtype": "float32",
+  "prompt": "Operator: LayerNormV4: y = (x - mean(x, axis=-1, keepdims=True)) * rsqrt(var(x, axis=-1, keepdims=True) + eps) * gamma + beta, normalizing over the last axis, with a host-side dispatcher that flattens any N-D input to [rows, last_dim] and selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (1024, 768) and (4096, 50, 32). Output shape: same_as_input. Dtype: float32 (gamma and beta are float32; eps is a float32 scalar; mean/var/rstd accumulate in float32). Layout: contiguous. Axis: -1. Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the padded row fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; compute the two reductions (sum_x and sum_x2 in a merged pass), derive variance as E[x\u00b2] - mean\u00b2 so host zero padding does not bias the statistics, then asc2.store. The host dispatcher `layer_norm_v4_launch(x, gamma, beta, eps)` picks full_row when `num_cols % 8 == 0` AND `num_cols * 4 * 6 <= 64 * 1024` (f32 intermediate UB budget), otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32. Host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599.",
+  "kernel_path": "",
+  "date": "2026-07-28T03:17:20Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 32455,
+    "output": 2091,
+    "cache_read": 377472,
+    "total": 34546
+  },
+  "elapsed_total_s": 319.29,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "guided",
+      "elapsed_s": 74.14,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 13057,
+        "output": 788,
+        "cache_read": 100096,
+        "total": 13845,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 245.15,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 19398,
+        "output": 1303,
+        "cache_read": 277376,
+        "total": 20701,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
+  },
+  "static_verify": "fail",
+  "notes": "Nightly CI run (protocol=P3, cloud-default)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "protocol": {
+    "id": "P3",
+    "name": "opencode-skills-off-guided",
+    "prompt_variant": "guided",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

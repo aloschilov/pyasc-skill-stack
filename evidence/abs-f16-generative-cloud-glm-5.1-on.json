@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
-  "date": "2026-06-12T11:55:23Z",
+  "date": "2026-07-28T02:31:18Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,11 +13,11 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
+    "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
       "kernel.py",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 119770,
-    "output": 6605,
-    "cache_read": 592512,
-    "total": 126375
+    "input": 139997,
+    "output": 6597,
+    "cache_read": 1554560,
+    "total": 146594
   },
-  "elapsed_total_s": 368.4,
+  "elapsed_total_s": 704.85,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 368.4,
+      "elapsed_s": 704.85,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 119770,
-        "output": 6605,
-        "cache_read": 592512,
-        "total": 126375,
+        "input": 139997,
+        "output": 6597,
+        "cache_read": 1554560,
+        "total": 146594,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -73,7 +73,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -130,8 +130,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -151,7 +151,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:10:18Z",
@@ -163,6 +163,17 @@
       "skipped": false,
       "tokens_total": 117527,
       "elapsed_s": 358.99
+    },
+    {
+      "date": "2026-06-12T11:55:23Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 126375,
+      "elapsed_s": 368.4
     }
   ]
 }

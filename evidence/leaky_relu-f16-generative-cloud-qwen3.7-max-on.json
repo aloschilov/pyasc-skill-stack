@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator on Ascend950PR_9599 (C310) for float16 with alpha=0.01 and shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu/kernel.py",
-  "date": "2026-06-12T16:06:50Z",
+  "date": "2026-07-27T19:01:09Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,11 +13,11 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
+    "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
       "kernel.py",
@@ -31,42 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 147471,
-    "output": 16163,
-    "cache_read": 1280512,
-    "total": 163634
+    "input": 165787,
+    "output": 7288,
+    "cache_read": 696320,
+    "total": 173075
   },
-  "elapsed_total_s": 796.27,
+  "elapsed_total_s": 473.62,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.01,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 70922,
-        "output": 7773,
-        "cache_read": 576768,
-        "total": 78695,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/qwen3.7-max",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 376.26,
+      "elapsed_s": 473.62,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 76549,
-        "output": 8390,
-        "cache_read": 703744,
-        "total": 84939,
+        "input": 165787,
+        "output": 7288,
+        "cache_read": 696320,
+        "total": 173075,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -91,7 +73,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -148,8 +130,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -169,7 +151,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T04:10:49Z",
@@ -181,6 +163,17 @@
       "skipped": false,
       "tokens_total": 386264,
       "elapsed_s": 913.8
+    },
+    {
+      "date": "2026-06-12T16:06:50Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 163634,
+      "elapsed_s": 796.27
     }
   ]
 }

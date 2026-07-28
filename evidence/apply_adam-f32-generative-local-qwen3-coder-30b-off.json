@@ -1,0 +1,112 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "apply_adam",
+  "dtype": "float32",
+  "prompt": "Help me develop the in-place Adam optimizer update (aclnnApplyAdam, non-Nesterov) on Ascend950PR_9599 (C310) for float32, updating var/m/v from grad with shapes [16,2048] and [32,4096].",
+  "kernel_path": "",
+  "date": "2026-07-27T22:22:48Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "local-qwen3-coder-30b",
+  "model": "ollama/qwen3-coder:30b",
+  "tokens": {
+    "input": 308550,
+    "output": 6295,
+    "cache_read": 0,
+    "total": 314845
+  },
+  "elapsed_total_s": 210.97,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 45.21,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 122562,
+        "output": 867,
+        "cache_read": 0,
+        "total": 123429,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 88.8,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 102174,
+        "output": 3743,
+        "cache_read": 0,
+        "total": 105917,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 76.96,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 83814,
+        "output": 1685,
+        "cache_read": 0,
+        "total": 85499,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "history": []
+}

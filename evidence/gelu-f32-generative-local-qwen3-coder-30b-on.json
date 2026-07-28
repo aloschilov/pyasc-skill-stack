@@ -4,8 +4,8 @@
   "operation": "gelu",
   "dtype": "float32",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096]. Use the lean exp/sigmoid restatement of the tanh/Pad\u00e9 form (mathematically identical to PyTorch's gelu(approximate='tanh'), but cheaper per tile and within the sim budget) - GELU(x) = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))). Use asc2.exp; do NOT use asc2.tanh (it pushed the cell over the 150s sim budget) and do NOT use asc2.erf (simulator erf is too noisy on float32 \u2014 this is documented in the cell's regime_note).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu/kernel.py",
-  "date": "2026-06-12T16:32:46Z",
+  "kernel_path": "kernels/gelu_c310/kernel.py",
+  "date": "2026-07-27T16:52:49Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
@@ -21,67 +21,31 @@
     "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "verification.md"
+      "design.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "qwen3-coder:30b",
+  "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 570535,
-    "output": 6188,
+    "input": 702164,
+    "output": 6442,
     "cache_read": 0,
-    "total": 576723
+    "total": 708606
   },
-  "elapsed_total_s": 347.59,
+  "elapsed_total_s": 243.49,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 167.46,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 280086,
-        "output": 1855,
-        "cache_read": 0,
-        "total": 281941,
-        "cost_usd": 0.0
-      },
-      "model": "qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 8.71,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 8393,
-        "output": 73,
-        "cache_read": 0,
-        "total": 8466,
-        "cost_usd": 0.0
-      },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 171.42,
+      "elapsed_s": 243.49,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 282056,
-        "output": 4260,
+        "input": 702164,
+        "output": 6442,
         "cache_read": 0,
-        "total": 286316,
+        "total": 708606,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -100,13 +64,14 @@
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['0.044715']",
+    "detail": "found ['0.044715', 'gelu']",
     "markers_found": [
-      "0.044715"
+      "0.044715",
+      "gelu"
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -163,8 +128,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -172,7 +137,7 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['0.044715']"
+        "detail": "found ['0.044715', 'gelu']"
       }
     },
     "failure_category": null,
@@ -184,7 +149,7 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T04:00:58Z",
@@ -196,6 +161,17 @@
       "skipped": false,
       "tokens_total": 964252,
       "elapsed_s": 282.18
+    },
+    {
+      "date": "2026-06-12T16:32:46Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 576723,
+      "elapsed_s": 347.59
     }
   ]
 }

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator on Ascend950PR_9599 (C310) for float16 with alpha=0.01 and shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu/kernel.py",
-  "date": "2026-06-12T13:43:06Z",
+  "date": "2026-07-28T04:27:26Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,12 +13,12 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
-    "completed": false,
+    "timeout_s": 1200,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
@@ -31,90 +31,39 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 343164,
-    "output": 19320,
-    "cache_read": 1745664,
-    "total": 362484
+    "input": 169009,
+    "output": 8077,
+    "cache_read": 746752,
+    "total": 177086
   },
-  "elapsed_total_s": 1231.05,
+  "elapsed_total_s": 331.68,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 391.03,
+      "elapsed_s": 331.68,
       "exit": 0,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 130314,
-        "output": 7606,
-        "cache_read": 629760,
-        "total": 137920,
+        "input": 169009,
+        "output": 8077,
+        "cache_read": 746752,
+        "total": 177086,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 420.01,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 120225,
-        "output": 4858,
-        "cache_read": 503040,
-        "total": 125083,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5.1",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "primary",
-      "elapsed_s": 420.01,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 92625,
-        "output": 6856,
-        "cache_read": 612864,
-        "total": 99481,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5.1",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: 1.434570e+00, -1.451111e-02,  3.310547e+00,  2.904297e+00,...\n(46.9%)\nMax absolute difference: 4.8571777\nMax relative difference: 0.9900023\n x: array([[ 3.518677e-02, -3.210449e-02, -4.736328e-02,  1.399994e-02,\n        -1.345825e-02, -3.274918e-03, -4.205322e-02, -1.295471e-02,\n         1.435089e-02, -1.451111e-02,  3.311157e-02,  2.905273e-02,...\n y: array([[ 3.517578e+00, -3.210449e-02, -4.736328e-02,  1.399414e+00,\n        -1.345825e-02, -3.274918e-03, -4.205322e-02, -1.295471e-02,\n         1.434570e+00, -1.451111e-02,  3.310547e+00,  2.904297e+00,...\n",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/leaky_relu/kernel.py",
-      "is_symlink": false,
-      "resolved": "/home/loschilov_aa/ar/work-1/_temp/gen-leaky_relu-float16-a3.4vayfs89/teams/pyasc-kernel-dev-team/kernels/leaky_relu/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        "README.md",
-        "conftest.py",
-        "docs",
-        "kernel.py",
-        "test"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 208\ndrwx------ 4 root root   4096 Jun 12 13:35 .\ndrwxr-xr-x 1 root root   4096 Jun 12 13:43 ..\ndrwxr-xr-x 7 root root   4096 Jun 12 13:28 .git\n-rw-r--r-- 1 root root 183817 Jun 12 13:35 agent-output.txt\nlrwxrwxrwx 1 root root     71 Jun 12 13:28 golden -> /home/loschilov_aa/ar/work-1/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root    828 Jun 12 13:28 opencode.json\nlrwxrwxrwx 1 root root     71 Jun 12 13:28 skills -> /home/loschilov_aa/ar/work-1/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x 3 root root   4096 Jun  9 15:09 teams\n--- ls kernel dir ---\ntotal 28\ndrwxr-xr-x 4 root root 4096 Jun 12 13:31 .\ndrwxr-xr-x 3 root root 4096 Jun 12 13:28 ..\n-rw-r--r-- 1 root root  595 Jun 12 13:28 README.md\n-rw-r--r-- 1 root root  441 Jun 12 13:28 conftest.py\ndrwxr-xr-x 2 root root 4096 Jun 12 13:34 docs\n-rw-r--r-- 1 root root 3315 Jun 12 13:31 kernel.py\ndrwxr-xr-x 2 root root 4096 Jun 12 13:28 test\n--- readlink kernel ---"
-    }
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
@@ -124,7 +73,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -181,8 +130,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -202,7 +151,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T04:29:03Z",
@@ -214,6 +163,17 @@
       "skipped": false,
       "tokens_total": 219932,
       "elapsed_s": 1181.6
+    },
+    {
+      "date": "2026-06-12T13:43:06Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 362484,
+      "elapsed_s": 1231.05
     }
   ]
 }

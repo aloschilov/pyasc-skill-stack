@@ -4,8 +4,8 @@
   "operation": "add",
   "dtype": "float16",
   "prompt": "Help me develop an element-wise add operator (out = x + y) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
-  "date": "2026-06-12T12:28:50Z",
+  "kernel_path": "",
+  "date": "2026-07-28T03:11:17Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,145 +13,83 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
+    "timeout_s": 1200,
     "completed": false,
-    "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "self_review.md",
-      "acceptance_review.md"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "on",
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 134103,
-    "output": 5716,
-    "cache_read": 551936,
-    "total": 139819
+    "input": 328448,
+    "output": 18450,
+    "cache_read": 7093376,
+    "total": 346898
   },
-  "elapsed_total_s": 420.01,
+  "elapsed_total_s": 1885.76,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.01,
-      "exit": 124,
-      "outcome": "pass",
+      "elapsed_s": 685.75,
+      "exit": 0,
+      "outcome": "fail",
       "tokens": {
-        "input": 134103,
-        "output": 5716,
-        "cache_read": 551936,
-        "total": 139819,
+        "input": 104999,
+        "output": 6400,
+        "cache_read": 2478208,
+        "total": 111399,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "pass"
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 1200.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 223449,
+        "output": 12050,
+        "cache_read": 4615168,
+        "total": 235499,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5.1",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "mode": "static_only",
+    "status": "fail",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['x + y', '+ y']",
-    "markers_found": [
-      "x + y",
-      "+ y"
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 16.0,
+    "value": 0.0,
     "threshold": 12,
-    "accepted": true,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "verification call present"
-      },
-      "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
-      },
-      "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "expected>=2 params, found 3"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['x + y', '+ y']"
-      }
-    },
+    "accepted": false,
+    "checks": {},
     "failure_category": null,
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": false,
-      "allow_legacy_apis": false
-    }
+    "gating_detail": {}
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:31:49Z",
@@ -162,6 +100,17 @@
       "semantic": true,
       "skipped": false,
       "tokens_total": 101013,
+      "elapsed_s": 420.01
+    },
+    {
+      "date": "2026-06-12T12:28:50Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 139819,
       "elapsed_s": 420.01
     }
   ]

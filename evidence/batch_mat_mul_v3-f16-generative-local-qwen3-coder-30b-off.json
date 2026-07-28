@@ -1,0 +1,112 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "batch_mat_mul_v3",
+  "dtype": "float16",
+  "prompt": "Help me develop a CUBE-only batched matmul (BatchMatMulV3) on Ascend950PR_9599 (C310) for float16 inputs with a float32 cube accumulator and float16 output, for C[b]=A[b]@B[b] at [B,M,K]x[B,K,N]=[16,256,256]x[16,256,256]. Distribute the batch axis one matrix per cube core (asc2.block_idx), flatten [B,M,K] to 2D [B*M,K] on the host, stage each batch's A/B into asc2.TileLocation.L1, copy M/N tiles to L0A/L0B, compute `a @ b`, cast the result to float16 and asc2.store. Inputs MUST be torch.Tensor.",
+  "kernel_path": "",
+  "date": "2026-07-27T23:25:59Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "local-qwen3-coder-30b",
+  "model": "ollama/qwen3-coder:30b",
+  "tokens": {
+    "input": 519339,
+    "output": 24129,
+    "cache_read": 0,
+    "total": 543468
+  },
+  "elapsed_total_s": 795.88,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 354.56,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 188810,
+        "output": 13702,
+        "cache_read": 0,
+        "total": 202512,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 159.25,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 173660,
+        "output": 6273,
+        "cache_read": 0,
+        "total": 179933,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 282.07,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 156869,
+        "output": 4154,
+        "cache_read": 0,
+        "total": 161023,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "history": []
+}

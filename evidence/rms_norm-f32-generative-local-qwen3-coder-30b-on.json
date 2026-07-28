@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Create an RMSNorm capability for float32 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm/kernel.py",
-  "date": "2026-06-12T18:18:07Z",
+  "date": "2026-07-27T20:10:54Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,45 +13,78 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md",
-      "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
+      "design.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
   "model": "qwen3-coder:30b",
   "tokens": {
-    "input": 404570,
-    "output": 3786,
+    "input": 1777486,
+    "output": 21609,
     "cache_read": 0,
-    "total": 408356
+    "total": 1799095
   },
-  "elapsed_total_s": 1200.01,
+  "elapsed_total_s": 2025.75,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1200.01,
-      "exit": 124,
-      "outcome": "pass",
+      "elapsed_s": 990.66,
+      "exit": 0,
+      "outcome": "fail",
       "tokens": {
-        "input": 404570,
-        "output": 3786,
+        "input": 779640,
+        "output": 6741,
         "cache_read": 0,
-        "total": 408356,
+        "total": 786381,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 616.12,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 253083,
+        "output": 8067,
+        "cache_read": 0,
+        "total": 261150,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 418.97,
+      "exit": 0,
+      "outcome": "pass",
+      "tokens": {
+        "input": 744763,
+        "output": 6801,
+        "cache_read": 0,
+        "total": 751564,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "pass"
@@ -153,7 +186,7 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T05:21:41Z",
@@ -165,6 +198,17 @@
       "skipped": false,
       "tokens_total": 660899,
       "elapsed_s": 444.41
+    },
+    {
+      "date": "2026-06-12T18:18:07Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 408356,
+      "elapsed_s": 1200.01
     }
   ]
 }

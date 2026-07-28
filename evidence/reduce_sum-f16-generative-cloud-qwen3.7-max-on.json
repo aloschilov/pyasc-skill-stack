@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float16, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
-  "date": "2026-06-12T15:24:02Z",
+  "date": "2026-07-27T17:44:32Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,12 +13,12 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
-    "completed": false,
+    "timeout_s": 1200,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
@@ -29,92 +29,41 @@
   },
   "skills_mode": "on",
   "model_profile": "cloud-qwen3.7-max",
-  "model": "dashscope/qwen3.7-max",
+  "model": "qwen3.7-max",
   "tokens": {
-    "input": 308961,
-    "output": 24279,
-    "cache_read": 2303744,
-    "total": 333240
+    "input": 132726,
+    "output": 7988,
+    "cache_read": 818560,
+    "total": 140714
   },
-  "elapsed_total_s": 1221.23,
+  "elapsed_total_s": 471.92,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.01,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 93706,
-        "output": 8922,
-        "cache_read": 720384,
-        "total": 102628,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/qwen3.7-max",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 381.22,
+      "elapsed_s": 471.92,
       "exit": 0,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 123950,
-        "output": 7827,
-        "cache_read": 681088,
-        "total": 131777,
+        "input": 132726,
+        "output": 7988,
+        "cache_read": 818560,
+        "total": 140714,
         "cost_usd": 0.0
       },
-      "model": "dashscope/qwen3.7-max",
+      "model": "qwen3.7-max",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "primary",
-      "elapsed_s": 420.0,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 91305,
-        "output": 7530,
-        "cache_read": 902272,
-        "total": 98835,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/qwen3.7-max",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: -79.0625  , -463.      ,   -5.96875 ,  -80.375   ,   14.109375,...\n%)\nMax absolute difference: 0.25\nMax relative difference: 0.01570681\n x: array([  78.5    , -186.125  ,  494.25   , -406.25   ,  308.     ,\n        253.25   ,  -71.8125 , -127.75   , -169.     ,   -8.625  ,\n        -79.25   , -463.     ,   -5.875  ,  -80.5    ,   14.0625 ,...\n y: array([  78.375   , -186.125   ,  494.25    , -406.25    ,  307.75    ,\n        253.25    ,  -71.75    , -127.875   , -169.25    ,   -8.648438,\n        -79.0625  , -463.      ,   -5.96875 ,  -80.375   ,   14.109375,...\n",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
-      "is_symlink": false,
-      "resolved": "/home/loschilov_aa/ar/work-2/_temp/gen-reduce_sum-float16-a3.mu923vax/teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        "README.md",
-        "conftest.py",
-        "docs",
-        "kernel.py",
-        "test"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 220\ndrwx------ 4 root root   4096 Jun 12 15:23 .\ndrwxr-xr-x 1 root root   4096 Jun 12 15:24 ..\ndrwxr-xr-x 7 root root   4096 Jun 12 15:16 .git\n-rw-r--r-- 1 root root 196156 Jun 12 15:23 agent-output.txt\nlrwxrwxrwx 1 root root     71 Jun 12 15:16 golden -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/golden\n-rw-r--r-- 1 root root    841 Jun 12 15:16 opencode.json\nlrwxrwxrwx 1 root root     71 Jun 12 15:16 skills -> /home/loschilov_aa/ar/work-2/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x 3 root root   4096 Jun 10 04:35 teams\n--- ls kernel dir ---\ntotal 28\ndrwxr-xr-x 4 root root 4096 Jun 12 15:18 .\ndrwxr-xr-x 3 root root 4096 Jun 12 15:17 ..\n-rw-r--r-- 1 root root  603 Jun 12 15:17 README.md\n-rw-r--r-- 1 root root  441 Jun 12 15:17 conftest.py\ndrwxr-xr-x 2 root root 4096 Jun 12 15:23 docs\n-rw-r--r-- 1 root root 2992 Jun 12 15:18 kernel.py\ndrwxr-xr-x 2 root root 4096 Jun 12 15:17 test\n--- readlink kernel ---"
-    }
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
@@ -203,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:33:37Z",
@@ -215,6 +164,17 @@
       "skipped": false,
       "tokens_total": 256071,
       "elapsed_s": 926.35
+    },
+    {
+      "date": "2026-06-12T15:24:02Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 333240,
+      "elapsed_s": 1221.23
     }
   ]
 }

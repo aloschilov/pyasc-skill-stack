@@ -1,0 +1,106 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "layer_norm_v4",
+  "dtype": "float32",
+  "prompt": "Operator: LayerNormV4 (y = (x - mean) * rsqrt(var + eps) * gamma + beta, normalize over the last axis); host-side dispatcher between full_row and split_d kernels with N-D flatten. Input shapes: (1024, 768) and (4096, 50, 32). Output shape: same_as_input. Dtype: float32.",
+  "kernel_path": "",
+  "date": "2026-07-27T16:31:13Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 16380,
+    "output": 3731,
+    "cache_read": 128768,
+    "total": 20111
+  },
+  "elapsed_total_s": 182.55,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "minimal",
+      "elapsed_s": 130.51,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 9338,
+        "output": 3012,
+        "cache_read": 84480,
+        "total": 12350,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "minimal",
+      "elapsed_s": 52.04,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 7042,
+        "output": 719,
+        "cache_read": 44288,
+        "total": 7761,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
+  },
+  "static_verify": "fail",
+  "notes": "Nightly CI run (protocol=P2, cloud-default)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "protocol": {
+    "id": "P2",
+    "name": "opencode-skills-off-minimal",
+    "prompt_variant": "minimal",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

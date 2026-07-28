@@ -4,8 +4,8 @@
   "operation": "rms_norm",
   "dtype": "float16",
   "prompt": "Create an RMSNorm capability for float16 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
-  "kernel_path": "kernels/rms_norm/kernel.py",
-  "date": "2026-06-12T17:57:09Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm/kernel.py",
+  "date": "2026-07-27T19:11:35Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
@@ -21,97 +21,46 @@
     "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md",
-      "acceptance_review.md",
-      "verification.md"
+      "design.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 1165482,
-    "output": 11872,
+    "input": 782645,
+    "output": 5935,
     "cache_read": 0,
-    "total": 1177354
+    "total": 788580
   },
-  "elapsed_total_s": 1562.36,
+  "elapsed_total_s": 240.17,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 146.12,
+      "elapsed_s": 240.17,
       "exit": 0,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 473342,
-        "output": 6433,
+        "input": 782645,
+        "output": 5935,
         "cache_read": 0,
-        "total": 479775,
+        "total": 788580,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 1200.01,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 72819,
-        "output": 262,
-        "cache_read": 0,
-        "total": 73081,
-        "cost_usd": 0.0
-      },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 216.23,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 619321,
-        "output": 5177,
-        "cache_read": 0,
-        "total": 624498,
-        "cost_usd": 0.0
-      },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Timeout after 1470s",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "kernels/rms_norm/kernel.py",
-      "is_symlink": false,
-      "resolved": "/Users/aloschilov/ar/work/_temp/gen-rms_norm-float16-a3.q9rf_45i/kernels/rms_norm/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        "__pycache__",
-        "docs",
-        "kernel.py"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 164\ndrwx------  9 root root    288 Jun 12 17:32 .\ndrwxr-xr-x  1 root root   4096 Jun 12 17:57 ..\ndrwxr-xr-x 10 root root    320 Jun 12 17:29 .git\n-rw-r--r--  1 root root 157658 Jun 12 17:32 agent-output.txt\nlrwxr-xr-x  1 root root     68 Jun 12 17:29 golden -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/golden\ndrwxr-xr-x  3 root root     96 Jun 12 17:29 kernels\n-rw-r--r--  1 root root    668 Jun 12 17:29 opencode.json\nlrwxr-xr-x  1 root root     68 Jun 12 17:29 skills -> /Users/aloschilov/ar/work/pyasc-skill-stack/pyasc-skill-stack/skills\ndrwxr-xr-x  3 root root     96 Jun 10 11:49 teams\n--- ls kernel dir ---\ntotal 8\ndrwxr-xr-x 5 root root  160 Jun 12 17:31 .\ndrwxr-xr-x 3 root root   96 Jun 12 17:29 ..\ndrwxr-xr-x 3 root root   96 Jun 12 17:31 __pycache__\ndrwxr-xr-x 4 root root  128 Jun 12 17:32 docs\n-rw-r--r-- 1 root root 6181 Jun 12 17:31 kernel.py\n--- readlink kernel ---"
-    }
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
@@ -123,7 +72,7 @@
     ]
   },
   "score": {
-    "value": 14.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -160,8 +109,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -201,7 +150,7 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T05:13:26Z",
@@ -213,6 +162,17 @@
       "skipped": false,
       "tokens_total": 771514,
       "elapsed_s": 1773.19
+    },
+    {
+      "date": "2026-06-12T17:57:09Z",
+      "overall_pass": false,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 1177354,
+      "elapsed_s": 1562.36
     }
   ]
 }

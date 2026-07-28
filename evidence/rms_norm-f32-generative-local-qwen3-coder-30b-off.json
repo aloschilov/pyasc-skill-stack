@@ -4,8 +4,8 @@
   "operation": "rms_norm",
   "dtype": "float32",
   "prompt": "Create an RMSNorm capability for float32 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
-  "kernel_path": "kernel.py",
-  "date": "2026-06-12T14:48:55Z",
+  "kernel_path": "",
+  "date": "2026-07-28T00:35:37Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,40 +13,36 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:c9b0a681b4871ad2354c2129d7e046b31e57b816d1a0ce7ce5abfdf6c74e0831"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "verification.md"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 309439,
-    "output": 9841,
+    "input": 421765,
+    "output": 15425,
     "cache_read": 0,
-    "total": 319280
+    "total": 437190
   },
-  "elapsed_total_s": 1349.3,
+  "elapsed_total_s": 523.24,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1200.1,
-      "exit": 124,
+      "elapsed_s": 292.29,
+      "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 0,
-        "output": 0,
+        "input": 207971,
+        "output": 7710,
         "cache_read": 0,
-        "total": 0,
+        "total": 215681,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -57,17 +53,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 24.64,
+      "elapsed_s": 87.97,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 80635,
-        "output": 1105,
+        "input": 123847,
+        "output": 3945,
         "cache_read": 0,
-        "total": 81740,
+        "total": 127792,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -75,118 +71,43 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 124.56,
+      "elapsed_s": 142.98,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 228804,
-        "output": 8736,
+        "input": 89947,
+        "output": 3770,
         "cache_read": 0,
-        "total": 237540,
+        "total": 93717,
         "cost_usd": 0.0
       },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": true,
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
       "static_verify": "fail",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "mode": "static_only",
+    "status": "fail",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['split_d', 'full_row']",
-    "markers_found": [
-      "split_d",
-      "full_row"
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 8.0,
+    "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {
-      "jit_decorator": {
-        "passed": false,
-        "detail": "missing"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
-      },
-      "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
-      },
-      "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
-      },
-      "verification": {
-        "passed": false,
-        "detail": "no allclose/assert_close call"
-      },
-      "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
-      },
-      "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": false,
-        "detail": "no tiling math found"
-      },
-      "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x0, shape loop=yes"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['split_d', 'full_row']"
-      }
-    },
-    "failure_category": "F_missing_asc2_import",
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": true,
-      "allow_legacy_apis": false
-    }
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:22:23Z",
@@ -198,6 +119,17 @@
       "skipped": false,
       "tokens_total": 136033,
       "elapsed_s": 1231.29
+    },
+    {
+      "date": "2026-06-12T14:48:55Z",
+      "overall_pass": false,
+      "score": 8.0,
+      "static": "fail",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 319280,
+      "elapsed_s": 1349.3
     }
   ]
 }

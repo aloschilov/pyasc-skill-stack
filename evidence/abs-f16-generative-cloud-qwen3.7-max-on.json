@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
-  "date": "2026-06-12T14:31:21Z",
+  "date": "2026-07-27T16:50:54Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,44 +13,45 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
-    "completed": false,
+    "timeout_s": 1200,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md"
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-qwen3.7-max",
-  "model": "qwen3.7-max",
+  "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 74280,
-    "output": 6323,
-    "cache_read": 450176,
-    "total": 80603
+    "input": 70087,
+    "output": 9192,
+    "cache_read": 506368,
+    "total": 79279
   },
-  "elapsed_total_s": 420.01,
+  "elapsed_total_s": 525.39,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.01,
-      "exit": 124,
+      "elapsed_s": 525.39,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 74280,
-        "output": 6323,
-        "cache_read": 450176,
-        "total": 80603,
+        "input": 70087,
+        "output": 9192,
+        "cache_read": 506368,
+        "total": 79279,
         "cost_usd": 0.0
       },
-      "model": "qwen3.7-max",
+      "model": "dashscope/qwen3.7-max",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "pass"
@@ -150,7 +151,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:01:28Z",
@@ -162,6 +163,17 @@
       "skipped": false,
       "tokens_total": 88329,
       "elapsed_s": 295.96
+    },
+    {
+      "date": "2026-06-12T14:31:21Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 80603,
+      "elapsed_s": 420.01
     }
   ]
 }

@@ -1,0 +1,106 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "batch_mat_mul_v3",
+  "dtype": "float16",
+  "prompt": "Operator: batched matmul C[b]=A[b]@B[b] (float16 inputs, float32 cube accumulator, float16 output via cast on store). Input shapes: A [B,M,K]=[16,256,256], B [B,K,N]=[16,256,256]. Output: [B,M,N]=[16,256,256]. Axis: -1 (K, contracted, per batch). Layout: flatten [B,M,K]->[B*M,K], [B,K,N]->[B*K,N], [B,M,N]->[B*M,N] on the host so each batch is a contiguous row-block. Tiling: batch_per_core -- launch CORE_NUM=B cube cores, bi=asc2.block_idx() handles batch bi (rows bi*M of A/C, bi*K of B). Stage the whole per-batch A[M,K] and B[K,N] into asc2.TileLocation.L1 once, then for each M tile copy [M_TILE,K]->L0A and for each N tile copy [K,N_TILE]->L0B, compute `a_i @ b_j`, `.to(asc2.float16)`, asc2.store. All of M,K,N,M_TILE,N_TILE must be multiples of 16; keep each L0 tile <= 64 KiB (M_TILE=128, full K=256 -> A tile 64 KiB). Accumulator: float32 (cube). Tolerance: atol=1e-2, rtol=1e-2 vs torch.bmm(a.float(), b.float()).to(torch.float16). Host inputs MUST be torch.Tensor (numpy is silently zeroed on the C310 cube path). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599.",
+  "kernel_path": "",
+  "date": "2026-07-28T02:29:06Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 242074,
+    "output": 17550,
+    "cache_read": 4570112,
+    "total": 259624
+  },
+  "elapsed_total_s": 1646.31,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "guided",
+      "elapsed_s": 514.61,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 80034,
+        "output": 6621,
+        "cache_read": 1170304,
+        "total": 86655,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 1131.7,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 162040,
+        "output": 10929,
+        "cache_read": 3399808,
+        "total": 172969,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
+  },
+  "static_verify": "fail",
+  "notes": "Nightly CI run (protocol=P3, cloud-default)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "protocol": {
+    "id": "P3",
+    "name": "opencode-skills-off-guided",
+    "prompt_variant": "guided",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

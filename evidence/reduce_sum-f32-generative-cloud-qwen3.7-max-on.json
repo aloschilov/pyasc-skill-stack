@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float32, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/kernel.py",
-  "date": "2026-06-12T15:02:43Z",
+  "date": "2026-07-27T17:57:56Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,11 +13,11 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 420,
+    "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
       "kernel.py",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 80797,
-    "output": 7846,
-    "cache_read": 530688,
-    "total": 88643
+    "input": 260773,
+    "output": 14689,
+    "cache_read": 2845696,
+    "total": 275462
   },
-  "elapsed_total_s": 282.36,
+  "elapsed_total_s": 778.85,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 282.36,
+      "elapsed_s": 778.85,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 80797,
-        "output": 7846,
-        "cache_read": 530688,
-        "total": 88643,
+        "input": 260773,
+        "output": 14689,
+        "cache_read": 2845696,
+        "total": 275462,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -152,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27412104983",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
   "history": [
     {
       "date": "2026-06-12T03:17:19Z",
@@ -164,6 +164,17 @@
       "skipped": false,
       "tokens_total": 87311,
       "elapsed_s": 273.06
+    },
+    {
+      "date": "2026-06-12T15:02:43Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 88643,
+      "elapsed_s": 282.36
     }
   ]
 }
