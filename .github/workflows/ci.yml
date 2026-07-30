@@ -52,6 +52,9 @@ jobs:
     # entirely on the Mac runner with no x86 emulation. (Formerly GitHub-hosted
     # ubuntu-latest; before that the RTX 4090 `gpu` box, now retired.)
     runs-on: [self-hosted, arm64]
+    # Explicit cap; overrides GitHub's implicit 6h (timeout-minutes: 360) default.
+    # Static checks + L1 units are fast; this is pure hygiene.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -90,6 +93,8 @@ jobs:
     # exactly the same loop as every other capability cell (no carve-out; the
     # old amd64 "bf16 unsupported" exclusion is gone).
     runs-on: [self-hosted, arm64]
+    # Sharded verify legs each finish in <15 min; cap well above that.
+    timeout-minutes: 60
     needs: [pr-gate]
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
@@ -195,6 +200,10 @@ jobs:
     # pulls/runs it through the Docker Desktop daemon. See
     # infra/self-hosted-runner/compose.arm64.yml.
     runs-on: [self-hosted, arm64]
+    # ops-nn ref builds (matmul ~20min) + gen probes (~3.1h) + vf-fusion A/B
+    # (~2.9h) run ~6.7h total, so the implicit 6h default (timeout-minutes: 360)
+    # guillotined vf-fusion mid-run. 8h cap clears it with ~1h margin.
+    timeout-minutes: 480
     needs: [merge-gate]
     continue-on-error: true
     if: >-
@@ -336,6 +345,9 @@ jobs:
     # the only self-hosted runner, the P2/P3/P4/P6 legs SERIALIZE on it rather
     # than running in parallel as the matrix nominally allows.
     runs-on: [self-hosted, arm64]
+    # P3 leg is the longest at ~3.3h; 5h cap overrides the implicit 6h default
+    # (timeout-minutes: 360) with headroom while still bounding a hung leg.
+    timeout-minutes: 300
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
@@ -505,6 +517,10 @@ jobs:
     # (pre-pulled on the host, like the pre-loaded perf image), and a missing
     # daemon/model/image is a clean skip rather than a hard failure.
     runs-on: [self-hosted, arm64]
+    # 19 cells x max-attempts 2 on the local 30B model runs ~6.5h, just over the
+    # implicit 6h default (timeout-minutes: 360) that cancelled both on/off legs.
+    # 8h cap clears it with margin.
+    timeout-minutes: 480
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
@@ -688,6 +704,9 @@ jobs:
     # camodel docker sim verify, no GPU. (Formerly ran on the RTX 4090 `gpu`
     # box, now retired from CI.)
     runs-on: [self-hosted, arm64]
+    # Slowest cloud model (qwen3.7-max) reached only 16/19 cells at the implicit
+    # 6h default (timeout-minutes: 360) -> ~7.1h needed. 8h cap clears it.
+    timeout-minutes: 480
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
@@ -821,6 +840,8 @@ jobs:
     # aggregation + commit/push to main via GITHUB_TOKEN. (Formerly GitHub-hosted
     # ubuntu-latest.) CI now runs entirely on the Mac runner with no emulation.
     runs-on: [self-hosted, arm64]
+    # Pure-Python aggregation + commit/push; seconds of work.
+    timeout-minutes: 30
     needs: [nightly-gate, local-stability-gate, cloud-dashscope-gate, perf-gate]
     if: >-
       always() &&

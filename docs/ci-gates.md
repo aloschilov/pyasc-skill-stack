@@ -108,6 +108,23 @@ The earlier trims (cloud skills-on only, local qwen3-coder-30b only, protocol
 P2/P3) still apply. Restore dropped legs incrementally as the two-runner
 headroom allows.
 
+**Per-job 6h execution cap (distinct from the 24h queue wall):** GitHub applies
+*two* independent limits. The **24h** wall above is how long a job may sit
+*queued* waiting for a runner (solved by the two runners). Separately, every job
+has an implicit **6h execution cap** (`timeout-minutes: 360` default) once it
+*starts*. With the two-runner fan-out the total nightly wall is ~21.7h (under
+24h), but five legs legitimately need 6.5-7.5h of run time and were being
+cancelled at exactly `6h0m0s` ("The job has exceeded the maximum execution time
+of 6h0m0s"): both `local-stability-gate` legs (~6.5h), the two slowest
+`cloud-dashscope-gate` legs (qwen3.7-max/glm-5.2, ~7.1h — only 16/19 cells
+reached at 6h), and `perf-gate` (~6.7h; `demo_vector_ops` ~3.1h then
+`demo_vf_fusion` cut off ~2.9h in). Every job now sets an explicit
+`timeout-minutes` above its measured runtime: `perf-gate`,
+`cloud-dashscope-gate`, `local-stability-gate` = **480** (8h, ~1h margin),
+`nightly-gate` = **300** (5h; P3 is ~3.3h), `merge-gate` = **60**, `pr-gate` /
+`skills-value-report` = **30**. The 8h caps still bound a genuinely hung leg
+rather than letting it run indefinitely.
+
 ### Host memory (128 GB Mac)
 
 Every CI job now runs natively on the single self-hosted arm64 Mac runner
