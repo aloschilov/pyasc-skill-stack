@@ -1,0 +1,94 @@
+{
+  "cell": "drop_out_do_mask/float16",
+  "op": "drop_out_do_mask",
+  "dtype": "float16",
+  "shape": [
+    32,
+    4096
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 5038,
+  "ticks_off": 6371,
+  "ticks_on": 6389,
+  "fusion_speedup": 0.9972,
+  "ratio_off": 0.7908,
+  "ratio_on": 0.7885,
+  "gate": 0.7,
+  "status": "neutral",
+  "flag": "--cce-simd-vf-fusion",
+  "ref_detail": {
+    "cell": "drop_out_do_mask/float16",
+    "op": "drop_out_do_mask",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 5038,
+    "ref_ticks_runs": [
+      5038,
+      5025,
+      5040
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.003,
+    "wall_ms_last": 15083.7,
+    "reference_kind": "canonical_only",
+    "reference_repo": "ops-math",
+    "reference_source": "ops-math canonical operator (drop_out_do_mask, aclnnop/aclnn_dropout_do_mask.h), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=drop_out_do_mask",
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_drop_out_do_mask_f16_32x4096.run3.log"
+  },
+  "gen_detail_off": {
+    "cell": "kernels",
+    "kernel": "golden/kernels/drop_out_do_mask_f16.py",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 6371,
+    "gen_ticks_runs": [
+      6366,
+      6371,
+      6373
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0011,
+    "vf_fusion": "false",
+    "wall_ms_last": 13386.1,
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_32x4096_vf-false.run3.log"
+  },
+  "gen_detail_on": {
+    "cell": "kernels",
+    "kernel": "golden/kernels/drop_out_do_mask_f16.py",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 6389,
+    "gen_ticks_runs": [
+      6388,
+      6390,
+      6389
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0003,
+    "vf_fusion": "true",
+    "wall_ms_last": 12935.5,
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_32x4096_vf-true.run3.log"
+  }
+}

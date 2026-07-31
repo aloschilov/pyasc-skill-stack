@@ -1,0 +1,67 @@
+{
+  "cell": "matmul/float16",
+  "shape": [
+    32,
+    32
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 4079,
+  "gen_ticks": 4876,
+  "ratio": 0.8365,
+  "gate": 0.7,
+  "passed": true,
+  "status": "ok",
+  "kernel_mode": "cached",
+  "regen": null,
+  "ref_detail": {
+    "cell": "matmul/float16",
+    "op": "matmul",
+    "dtype": "float16",
+    "shape": [
+      32,
+      32
+    ],
+    "n_elements": 1024,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 4079,
+    "ref_ticks_runs": [
+      4079,
+      4083,
+      4069
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.0034,
+    "wall_ms_last": 6545.05,
+    "reference_kind": "canonical_only",
+    "reference_repo": "ops-nn",
+    "reference_source": "ops-nn canonical operator (mat_mul_v3, aclnnop/aclnn_matmul.h), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=mat_mul_v3",
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_matmul_f16_32x32.run3.log"
+  },
+  "gen_detail": {
+    "cell": "kernels",
+    "kernel": "golden/kernels/matmul_f16.py",
+    "dtype": "float16",
+    "shape": [
+      32,
+      32
+    ],
+    "n_elements": 1024,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 4876,
+    "gen_ticks_runs": [
+      4882,
+      4876,
+      4872
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0021,
+    "vf_fusion": null,
+    "wall_ms_last": 8070.14,
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_32x32_default.run3.log"
+  }
+}

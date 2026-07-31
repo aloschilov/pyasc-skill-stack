@@ -1,0 +1,94 @@
+{
+  "cell": "gelu/float32",
+  "op": "gelu",
+  "dtype": "float32",
+  "shape": [
+    32,
+    4096
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 4390,
+  "ticks_off": 56757,
+  "ticks_on": 44757,
+  "fusion_speedup": 1.2681,
+  "ratio_off": 0.0773,
+  "ratio_on": 0.0981,
+  "gate": 0.7,
+  "status": "improved",
+  "flag": "--cce-simd-vf-fusion",
+  "ref_detail": {
+    "cell": "gelu/float32",
+    "op": "gelu",
+    "dtype": "float32",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 4390,
+    "ref_ticks_runs": [
+      4390,
+      4392,
+      4388
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.0009,
+    "wall_ms_last": 12986.0,
+    "reference_kind": "canonical_only",
+    "reference_repo": "ops-nn",
+    "reference_source": "ops-nn canonical operator (gelu, aclnnop/aclnn_gelu.h), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=gelu",
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_gelu_f32_32x4096.run3.log"
+  },
+  "gen_detail_off": {
+    "cell": "kernels",
+    "kernel": "golden/kernels/gelu_f32.py",
+    "dtype": "float32",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 56757,
+    "gen_ticks_runs": [
+      56757,
+      56752,
+      56758
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0001,
+    "vf_fusion": "false",
+    "wall_ms_last": 156574.0,
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_32x4096_vf-false.run3.log"
+  },
+  "gen_detail_on": {
+    "cell": "kernels",
+    "kernel": "golden/kernels/gelu_f32.py",
+    "dtype": "float32",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 44757,
+    "gen_ticks_runs": [
+      44756,
+      44757,
+      44762
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0001,
+    "vf_fusion": "true",
+    "wall_ms_last": 107005.0,
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_32x4096_vf-true.run3.log"
+  }
+}
