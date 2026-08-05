@@ -1,0 +1,39 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "yellowzone": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Turing Yellow Zone",
+      "options": {
+        "baseURL": "http://7.150.6.255:3300/v1",
+        "apiKey": "${YELLOWZONE_API_KEY}"
+      },
+      "models": {
+        "GLM-5.2": {
+          "name": "GLM-5.2"
+        },
+        "DeepSeek-V4-Pro": {
+          "name": "DeepSeek-V4-Pro"
+        },
+        "DeepSeek-V4-Flash": {
+          "name": "DeepSeek-V4-Flash"
+        }
+      }
+    }
+  },
+  "model": "yellowzone/GLM-5.2",
+  "permission": {
+    "read": "allow",
+    "edit": "allow",
+    "bash": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "skill": "allow",
+    "task": "allow",
+    "external_directory": {
+      "*": "deny",
+      "/home/l00958488/pyasc-fork1/*": "allow"
+    }
+  }
+}

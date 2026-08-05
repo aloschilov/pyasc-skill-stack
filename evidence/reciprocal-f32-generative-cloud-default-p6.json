@@ -1,0 +1,165 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "reciprocal",
+  "dtype": "float32",
+  "prompt": "Operator: reciprocal (out = 1 / x). one input tensor x. Input shapes (test all): [1024], [2400], [16, 5, 1, 64], [16, 256], [16, 320], [16, 24, 768], [128, 1, 2304], [2500], [1200], [2048], [1500], [1024, 1, 20], [1024, 1, 50], [1024, 1, 1000], [256, 1], [100, 14, 10], [2048, 1]. Output shape: same_as_input. Dtype: float32. Layout: contiguous.\nTiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(ptr, [size])`, `asc2.load(gm, [tile_size], offsets=[off])`, `asc2.store(out, out_gm, offsets=[off])` -- all ranks 1. Do NOT use 2D `asc2.tensor(..., [rows, cols])` with a 1D `[tile_size]` load (v2 raises a rank-mismatch RuntimeError).\nCompute: apply `1.0/x` elementwise (use `asc2.reciprocal(x)` if it exists, else `1.0 / x`). Use a wide tile (e.g. TILE_SIZE=2048) over CORE_NUM=16 cores via `asc2.range(..., unroll_factor=2, parallel=True)`; handle the non-aligned tail with a cache-line-aligned remainder copy so every listed shape (sizes are NOT all multiples of TILE_SIZE*CORE_NUM) verifies.\nTolerance: atol=1e-3, rtol=1e-3 against np.reciprocal(x) (avoid inputs at/near 0). Platform: Ascend950PR_9599 (C310). Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reciprocal/kernel.py",
+  "date": "2026-06-29T16:34:33Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": true,
+    "root": "$PYASC_EVAL_ROOT",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:2e4197b4a6189ed71825bca0f695ca6f0bed833ebd4404d6fc721a2ae7b91e65"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": false,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 211010,
+    "output": 8551,
+    "cache_read": 467650,
+    "total": 219561
+  },
+  "elapsed_total_s": 1200.1,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "guided",
+      "elapsed_s": 1200.1,
+      "exit": 124,
+      "outcome": "pass",
+      "tokens": {
+        "input": 211010,
+        "output": 8551,
+        "cache_read": 467650,
+        "total": 219561,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "no semantic markers defined for 'reciprocal'",
+    "markers_found": []
+  },
+  "score": {
+    "value": 16.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in semantic table)"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "pass",
+  "notes": "CSV AI_VECTOR_CORE Reciprocal/float32 (P6 skills-on, cloud-default, local aarch64)",
+  "protocol": {
+    "id": "P6",
+    "name": "opencode-skills-on-guided",
+    "prompt_variant": "guided",
+    "skills_enabled": true,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": true,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

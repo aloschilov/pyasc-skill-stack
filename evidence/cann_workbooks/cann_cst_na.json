@@ -1,0 +1,23 @@
+{
+  "_note": "CANN CST (us) generated on-HW via TTK (tbetoolkits, -c=true --core-type=VectorCore --run=10) for the shapes that had no CANN reference in the merged-MR workbooks. Keyed by (op, shape, dtype[, axis]).",
+  "reciprocal": {
+    "[1024, 6144]|float32": 27.726,
+    "[8192, 1024]|float32": 35.814,
+    "[2048, 8192]|float32": 65.548,
+    "[128, 2, 512]|float16": 2.463,
+    "[1024, 6144]|float16": 26.112
+  },
+  "reduce_max": {
+    "[3072, 113, 24]|float32|-1": 22.535,
+    "[4608, 115, 12]|float32|-1": 39.086,
+    "[1500, 61, 61]|float32|-1": 16.926,
+    "[1, 128, 144]|float32|1": 2.374,
+    "[1024, 100, 2, 1]|float32|2": 3.807,
+    "[64, 32, 48]|float32|1": 2.36,
+    "[8, 4, 2, 64]|float32|1": 1.751
+  },
+  "addcdiv": {
+    "[1024, 1024]|float16": 9.688,
+    "[98166, 128]|float16": 64.606
+  }
+}

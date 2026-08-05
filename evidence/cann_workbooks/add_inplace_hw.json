@@ -1,0 +1,25 @@
+{
+  "operator": "add_inplace",
+  "semantics": "a <- a + b (output aliases input a; single GM buffer)",
+  "cann_reference_op": "aclnnInplaceAdd",
+  "device": "Ascend950PR_9599 (/dev/davinci0, David)",
+  "cann_toolkit": "cann-9.1.0",
+  "pyasc_measurement": "pytest --backend NPU --platform Ascend950PR_9599 --profile --runs 10 (median of launches, us; STATIC variant)",
+  "cann_measurement": "aclnnInplaceAdd two-phase API, per-launch device time via aclrtEvent, median of 50 launches after 10 warmup (us)",
+  "ratio_definition": "ratio = cann_us / pyasc_us  (>1 means pyasc faster than CANN)",
+  "gate": 0.70,
+  "geomean_ratio": 1.762,
+  "shapes_passing_gate": "9/10",
+  "cases": [
+    {"name": "t1",  "shape": [8192],        "dtype": "f32", "pyasc_static_us": 1.938,  "pyasc_dynamic_us": 1.921,  "cann_us": 6.893,  "ratio": 3.557},
+    {"name": "t2",  "shape": [9216],        "dtype": "f32", "pyasc_static_us": 1.993,  "pyasc_dynamic_us": 1.947,  "cann_us": 6.840,  "ratio": 3.432},
+    {"name": "t3",  "shape": [16, 2048],    "dtype": "f32", "pyasc_static_us": 2.681,  "pyasc_dynamic_us": 2.688,  "cann_us": 6.857,  "ratio": 2.558},
+    {"name": "t4",  "shape": [32, 4096],    "dtype": "f32", "pyasc_static_us": 2.819,  "pyasc_dynamic_us": 2.825,  "cann_us": 6.812,  "ratio": 2.416},
+    {"name": "t5",  "shape": [87768],       "dtype": "f32", "pyasc_static_us": 2.765,  "pyasc_dynamic_us": 2.809,  "cann_us": 6.922,  "ratio": 2.503},
+    {"name": "t6",  "shape": [395520],      "dtype": "f32", "pyasc_static_us": 4.188,  "pyasc_dynamic_us": 4.134,  "cann_us": 7.248,  "ratio": 1.731},
+    {"name": "t7",  "shape": [979139],      "dtype": "f32", "pyasc_static_us": 7.204,  "pyasc_dynamic_us": 7.143,  "cann_us": 8.619,  "ratio": 1.196},
+    {"name": "t8",  "shape": [1024, 1024],  "dtype": "f32", "pyasc_static_us": 7.589,  "pyasc_dynamic_us": 7.604,  "cann_us": 8.635,  "ratio": 1.138},
+    {"name": "t9",  "shape": [1024, 1024],  "dtype": "f16", "pyasc_static_us": 4.683,  "pyasc_dynamic_us": 4.702,  "cann_us": 7.163,  "ratio": 1.530},
+    {"name": "t10", "shape": [98166, 128],  "dtype": "f16", "pyasc_static_us": 35.180, "pyasc_dynamic_us": 34.386, "cann_us": 14.928, "ratio": 0.424}
+  ]
+}
