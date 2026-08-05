@@ -387,6 +387,21 @@ def _check_cell_metadata(
             f"(got tail_behavior={tail_behavior!r}, partitioning={partitioning!r})"
         )
 
+    # Additive on schema_version "3" (see docs/glossary.md §6): the optional
+    # ``in_place`` tag marks an op whose output aliases an input buffer. When
+    # present it must be a bool, and an in-place op writes into an existing
+    # buffer so its output must be shaped like that buffer (same_as_input).
+    if "in_place" in cell:
+        in_place = cell.get("in_place")
+        if not isinstance(in_place, bool):
+            record(f"in_place={in_place!r} must be a bool")
+        elif in_place is True and output_shape != "same_as_input":
+            record(
+                f"in_place is True but output_shape={output_shape!r}; an "
+                "in-place op writes back into an existing input buffer, so "
+                "output_shape must be 'same_as_input'"
+            )
+
 
 # =============================================================================
 # Phase 2 Stage 2.3: examples_policy enforcement.

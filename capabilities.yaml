@@ -1111,6 +1111,7 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     golden_status: confirmed
     golden: golden/kernels/apply_adam_f32.py
     golden_evidence: evidence/apply_adam-f32-golden.json
+    in_place: true
     generative_status: confirmed
     generative_evidence: evidence/apply_adam-f32-generative.json
     semantic_check:
@@ -1130,3 +1131,89 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
       comparability_note: 'Not a like-for-like high-level comparison: the reference (ops-nn/optim/apply_adam/op_kernel/arch35/apply_adam_dag.h) hand-writes CalcMt/CalcVt/CalcVarT in register-fused SIMT micro-API (__VEC_SCOPE__, MicroAPI::RegTensor, MicroAPI::DataCopy, MaskReg), keeping the entire m_t/v_t/var_t chain in vector registers (4 copy-ins / 3 copy-outs, no UB round-trips for intermediates). pyasc2 emits only the high-level API and must materialize each intermediate tile in UB, which is exactly why it stays memory-bound. The miss is therefore SIMT-attributable, reinforcing the DMA-floor finding, not a pyasc codegen bug. See docs/perf-vs-ascendc-demo.md "Reference programming model".'
       dma_floor_ticks: 16966
       evidence: evidence/perf/ascendc-ref/apply_adam-f32-ascend950-32x4096.json
+- name: add_inplace
+  tier: elementwise
+  asc2_api: 'in-place add (load a,b -> a+b -> store to a)'
+  representative_of:
+  - mul_
+  - sub_
+  - div_
+  - relu_
+  - clamp_
+  note: 'In-place elementwise op — the output aliases an input buffer (a <- a + b). The kernel wraps a single GM tensor for input a, loads a and b, computes a+b, and asc2.store()s the sum straight back into a''s GM tensor (no separate output GM). The host passes ONE ndarray for input+output. Dedicated single-tensor aliasing demonstrator for the In-place capability; representative of the PyTorch-style in-place family (mul_, sub_, div_, relu_, clamp_). Contrast apply_adam, which aliases each of several inputs (var/m/v) in place.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop a dedicated in-place element-wise add operator (a <- a + b, the output aliases input a) on Ascend950PR_9599 (C310) for float32 with shapes [16,2048] and [32,4096]. The kernel must load a and b, compute a+b, and asc2.store the result back into a's own GM tensor — do NOT allocate a separate output buffer, and the host must pass the same ndarray for input and output.
+    prompt_variants:
+      minimal: 'Operator: in-place add (a <- a + b; the output aliases input a — write the sum back into a''s buffer, no separate output). Input shapes: [16, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32.'
+      guided: 'Operator: in-place add (a <- a + b). ALIASING CONTRACT: the output buffer IS input ``a`` — the kernel takes two GM pointers (a_ptr as BOTH input and destination, b_ptr as a read-only addend), wraps a single ``a_gm = asc2.tensor(a_ptr, [size])``, loads a and b tiles, computes ``out = a + b``, and ``asc2.store(out, a_gm, offsets=[tile_offset])`` back into the SAME a_gm. Do NOT allocate a separate output GM (no third pointer, no ``np.empty_like``); the host launcher passes ONE ndarray for input+output and returns the mutated ``a``. Input shapes: [16, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes ``size: int`` and tiles 1D with ``asc2.tensor(a_ptr, [size])`` / ``asc2.tensor(b_ptr, [size])``, ``asc2.load(.., [tile_size], offsets=[tile_offset])``, ``asc2.store(out, a_gm, offsets=[tile_offset])`` — all ranks 1. TILE_SIZE=2048, CORE_NUM=16; size must be a multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only); partition tile_per_core via ``asc2.range(tile_per_block, unroll_factor=2, parallel=True)``. Tail: aligned_only. Accumulator: null. Verification: compute expected = a + b on COPIES before the in-place launch mutates a, then assert_allclose(a_after, expected) at atol=1e-5, rtol=1e-5. Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+    shapes:
+    - - 16
+      - 2048
+    - - 32
+      - 4096
+    in_place: true
+    golden_status: golden_only
+    golden: golden/kernels/add_inplace_f32.py
+    semantic_check:
+    - asc2.store
+    generative_status: pending
+- name: atomic_add
+  tier: advanced
+  asc2_api: 'asc2.atomic_add(src_tile, dst_gm, offsets=[...])  # RMW into shared GM'
+  representative_of:
+  - atomic_max
+  - atomic_min
+  - scatter_add
+  - histogram
+  - segment_sum
+  note: 'Multi-core atomic read-modify-write into a SHARED global-memory buffer. Each block copy_in''s its tile, then atomic_add''s it into overlapping GM offsets so cross-core writes accumulate deterministically (out[j] = sum_i in[i, j]). Dedicated demonstrator for the M3 "Atomic" family and the enabling primitive for scatter-add / histogram / segment reduction. Uses the fork target-test API (asc2.global_tensor / asc2.copy_in / asc2.atomic_add). Evidence: pyasc-fork atomic_ops.py::atomic_add + python/test/asc2/operations/test_atomic_ops.py (passes on C310).'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape:
+    - 4096
+    accumulator_dtype: null
+    identity: '0'
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me develop a multi-core atomic-add reduction on Ascend950PR_9599 (C310) for float32: given a [CORE_NUM, N] input, accumulate every core''s row into a single shared [N] GM buffer using asc2.atomic_add so the overlapping cross-core writes sum deterministically (out[j] = sum_i in[i, j]). Do NOT reduce inside a tile — each core copy_in''s its slice and atomic_add''s it into the SAME dst offsets.'
+    prompt_variants:
+      minimal: 'Operator: multi-core atomic-add into a shared GM buffer (out[j] = sum_i in[i, j]) via asc2.atomic_add. Input shape: [16, 4096]. Output shape: [4096]. Dtype: float32.'
+      guided: 'Operator: multi-core atomic-add reduction (out[j] = sum_i in[i, j]). CONTRACT: one shared output GM of shape [N]; each of CORE_NUM blocks owns input row block_idx(), copy_in''s its [1, N] tile, and calls asc2.atomic_add(tile, out_gm, offsets=[0]) so all blocks RMW the SAME [N] region and the hardware serialises the adds. Use the fork target-test API: out_gm = asc2.global_tensor(out_ptr, [N]); src = asc2.copy_in(asc2.global_tensor(in_ptr, [CORE_NUM, N]), [asc2.block_idx(), 0], [1, N]); asc2.atomic_add(src, out_gm, offsets=[0]). Host MUST zero-init the output before launch (atomic_add accumulates). Input shape [16, 4096]; N=4096 is 32-byte aligned (aligned_only). Dtype float32 (int16/int32/float16/bfloat16 also supported by the op). Tail: aligned_only. reduce_axis: null. accumulator_dtype: null. Verify against torch: expected = in.sum(dim=0); assert_close(out, expected, atol=1e-3, rtol=1e-3). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599.'
+    shapes:
+    - - 16
+      - 4096
+    golden_status: golden_only
+    golden: golden/kernels/atomic_add_f32.py
+    semantic_check:
+    - asc2.atomic_add
+    generative_status: pending

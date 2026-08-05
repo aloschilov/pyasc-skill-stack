@@ -201,15 +201,25 @@ def verify(path: str) -> list[CheckResult]:
             "; ".join(loop_issues) if loop_issues else "OK",
         ))
 
-    has_load = _source_has_call(source, "load")
-    has_store = _source_has_call(source, "store")
+    # Memory-access heuristics accept BOTH the local-API surface
+    # (tensor / load / store) and the fork target-test / atomic-RMW surface
+    # (global_tensor / copy_in / copy_out / atomic_add|max|min). This is
+    # purely additive: local-API goldens keep gating exactly as before.
+    has_load = _source_has_call(source, "load") or _source_has_call(source, "copy_in")
+    has_store = (
+        _source_has_call(source, "store")
+        or _source_has_call(source, "copy_out")
+        or _source_has_call(source, "atomic_add")
+        or _source_has_call(source, "atomic_max")
+        or _source_has_call(source, "atomic_min")
+    )
     has_load_store = has_load and has_store
     results.append(CheckResult("asc2_load_store", has_load_store,
-                               "asc2.load + asc2.store present" if has_load_store else "Missing asc2.load/asc2.store"))
+                               "asc2 load + store present" if has_load_store else "Missing asc2.load/asc2.store (or copy_in/copy_out/atomic_*)"))
 
-    has_tensor = _source_has_call(source, "tensor")
+    has_tensor = _source_has_call(source, "tensor") or _source_has_call(source, "global_tensor")
     results.append(CheckResult("asc2_tensor", has_tensor,
-                               "asc2.tensor present" if has_tensor else "Missing asc2.tensor"))
+                               "asc2.tensor present" if has_tensor else "Missing asc2.tensor (or asc2.global_tensor)"))
 
     has_verify = (
         _source_has_call(source, "allclose")

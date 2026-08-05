@@ -267,6 +267,51 @@ every reducing op in this repo (reduce_sum, softmax, rms_norm) and
 for matmul's `K` axis. `null` for non-reducing ops (abs, add, gelu,
 leaky_relu).
 
+### `in_place`
+
+Optional boolean tag. `true` marks a cell whose output **aliases an
+input buffer**: the kernel reads a GM tensor, computes, and
+`asc2.store`s the result straight back into that SAME GM tensor
+(no separate output GM), and the host passes one ndarray/tensor for
+input+output rather than allocating a fresh output. Absent or
+`false` means the op writes to a distinct output buffer. Because an
+in-place op writes into an existing buffer,
+[check_capabilities.py](../tests/tools/check_capabilities.py)
+requires `output_shape: same_as_input` whenever `in_place: true`.
+Today's in-place cells are `add_inplace/float32` (the dedicated
+single-tensor `a <- a + b` demonstrator) and `apply_adam/float32`
+(which aliases each of `var`/`m`/`v` in place).
+
+### atomic RMW (`atomic_add` family)
+
+An **atomic read-modify-write** cell lives on the `advanced` tier and
+demonstrates several cores atomically writing a **shared** GM buffer so
+their overlapping writes combine deterministically. The demonstrator is
+`atomic_add/float32` (`out[j] = sum_i in[i, j]`): each of `CORE_NUM`
+blocks `asc2.copy_in`s its `[N]` slice and `asc2.atomic_add`s it into the
+SAME `[N]` output at `offsets=[0]`; the hardware serialises the colliding
+adds. It uses the fork target-test API (`asc2.global_tensor` /
+`asc2.copy_in` / `asc2.atomic_add`) and is `representative_of`
+`atomic_max` / `atomic_min` / `scatter_add` / `histogram` / `segment_sum`.
+See [`references/atomic-rmw.md`](../skills/pyasc-api-patterns/references/atomic-rmw.md).
+
+Metadata conventions for an atomic-RMW cell:
+
+- **`identity: "0"`** — the additive identity of the RMW (the value the
+  host seeds the shared destination with before launch, since the atomic
+  *accumulates*). `atomic_max`/`atomic_min` would use `"-inf"`/`"+inf"`.
+- **`reduce_axis: null` and `accumulator_dtype: null`** — the cross-core
+  GM accumulation is *not* a tile-axis reduce (nothing is reduced inside a
+  tile and no float32 accumulator is materialised), so both stay null and
+  the (reduce_axis, accumulator_dtype) coupling holds. The op sits on the
+  `advanced` tier, which has no reduce constraint.
+- **verifier store-equivalence** — the static verifier
+  ([tests/tools/verify_kernel.py](../tests/tools/verify_kernel.py)) treats
+  `atomic_add` / `atomic_max` / `atomic_min` as **store**-equivalent writes
+  (and `asc2.global_tensor` / `asc2.copy_in` as `tensor` / `load`
+  equivalents), so an atomic golden gates as `golden_only` (AST-verified)
+  rather than ungated `pending`.
+
 ## §7 Operator coverage notes
 
 ### ReLU scope (Phase 1.1 decision)

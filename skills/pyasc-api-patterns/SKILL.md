@@ -1131,7 +1131,30 @@ scorer will skip the ban.
 ## References
 
 - [JIT Options](references/api-jit-options.md)
+- [Elementwise tiling selection](references/elementwise-tiling.md) — the
+  **fork target-test API** (`asc2.global_tensor` / `asc2.copy_in` /
+  `asc2.copy_out`, torch, `profiler`/`runs`) and the UB-budget tile selector
+  (`_select_elementwise_tile`) that mirrors `test_vadd.py` /
+  `test_reciprocal.py` / `test_addcdiv.py`; three levers (all AI cores, tile
+  sized to the UB budget with `live_tensors * unroll_factor`, ~2 tiles/core)
 - [Reduction tiling selection](references/reduction-tiling.md) — choosing a
   performant last-axis reduce tile (three levers: all AI cores, contiguous
   unpadded `tile_cols = C`, `tile_rows` from the per-core block + physical UB;
   plus small-C row-packing vs large-C column tiling)
+- [In-place / aliasing pattern](references/in-place-aliasing.md) — output
+  aliases an input buffer (`a <- op(a, ...)`) in the **fork target-test API**:
+  wrap the aliased pointer once with `asc2.global_tensor` and `asc2.copy_out`
+  the result back into that SAME handle (no separate `output_ptr`); the host
+  passes the same torch tensor for input `a` and reads the result back from it.
+  Contrasts single-tensor `add_inplace` (`a <- a + b`) with multi-buffer
+  `apply_adam`
+- [Atomic RMW into shared GM](references/atomic-rmw.md) — multi-core
+  atomic read-modify-write into a **shared** global buffer in the **fork
+  target-test API** (`asc2.global_tensor` / `asc2.copy_in` /
+  `asc2.atomic_add`): every core `atomic_add`s its `copy_in`'d tile into the
+  SAME `[N]` destination at overlapping `offsets` so the colliding writes sum
+  deterministically (`out[j] = sum_i in[i, j]`). Covers rank-consistent
+  `offsets`, the **mandatory host zero-init** (seed to the op identity —
+  `0`/`-inf`/`+inf`), supported dtypes (int16/int32/float16/bfloat16/float32),
+  and how it generalises to `atomic_max`/`atomic_min` and
+  scatter-add/histogram/segment-sum
