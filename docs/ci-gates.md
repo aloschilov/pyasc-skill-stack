@@ -127,9 +127,10 @@ rather than letting it run indefinitely.
 
 ### Host memory (128 GB Mac)
 
-Every CI job now runs natively on the single self-hosted arm64 Mac runner
+Every CI job now runs natively on the two self-hosted arm64 Mac runners
 (`pr-gate`, `merge-gate`, `perf-gate`, `nightly-gate`, `local-stability-gate`,
-`skills-value-report`), so they all serialize on that one runner and share the
+`skills-value-report`); nightly-tier legs fan out across both (see the two-runner
+note above) while pr/merge tiers serialize on one. Both runners share the
 128 GB host with the ~46 GB Parallels VM (the dev Linux box), the Docker Desktop
 VM (camodel sims), and macOS. `gpt-oss:120b` alone is ~68 GB resident and `qwen3-coder:30b` is
 ~18 GB, so **two co-resident models would overrun the host and thrash swap.**
@@ -145,6 +146,19 @@ CI cannot configure): `OLLAMA_MAX_LOADED_MODELS=1` and a short
 `OLLAMA_KEEP_ALIVE` (e.g. `1m`). If the Parallels VM does not need to be up
 during a nightly, shrinking its RAM reservation frees the most headroom for
 `gpt-oss:120b`.
+
+### Host sleep prevention (caffeinate)
+
+macOS Energy Saver will sleep the Mac mid-nightly — one run was killed at
+~21.7h by host sleep, *not* by the 24h queue limit (the nightly wall is under
+24h). The runner host must be configured to prevent automatic sleeping while a
+nightly is in flight; this is host-side config that CI itself cannot enforce:
+
+- Preferred: run each runner agent under `caffeinate -is` so the host stays
+  awake only while the agent process is alive.
+- Alternative: System Settings → Energy Saver → "Prevent automatic sleeping
+  when the display is off" (permanent), or `sudo pmset -a sleep 0` (disables
+  sleep entirely; blunt but effective).
 
 ## Perf gate (`perf-gate`, report-only)
 
