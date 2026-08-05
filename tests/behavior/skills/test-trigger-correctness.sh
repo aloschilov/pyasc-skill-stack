@@ -86,6 +86,18 @@ run_behavior_test \
     "review|syntax|constraint|jit|pyasc|kernel|check|violat" \
     60
 
+run_behavior_test \
+    "pyasc-api-patterns in-place/aliasing trigger" \
+    "How do I write an in-place add kernel in pyasc where the output aliases input a?" \
+    "in.place|alias|asc2\.store|asc2\.tensor|copy_out|a_gm|a <-" \
+    60
+
+run_behavior_test \
+    "pyasc-api-patterns atomic-RMW trigger" \
+    "How do I implement a multi-core atomic-add into a shared global buffer in pyasc?" \
+    "atomic|asc2\.atomic_add|global_tensor|copy_in|shared|RMW|scatter" \
+    60
+
 # ============================================
 # Negative / off-topic prompts
 # ============================================

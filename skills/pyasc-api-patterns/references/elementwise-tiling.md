@@ -8,10 +8,16 @@ to (a) use every AI core and (b) keep each core streaming large contiguous tiles
 through the UB with double buffering. There is no reduction identity to pad with,
 so bounds are handled entirely in-kernel — see "No host padding" below.
 
+> **API surface.** The canonical kernel below uses the fork target-test API
+> (`asc2.global_tensor` / `asc2.copy_in` / `asc2.copy_out`). The v2-mainline tile
+> API (`asc2.tensor` / `asc2.load` / `asc2.store`), used by most
+> `capabilities.yaml` goldens, is equivalent for tiling purposes — the selector
+> and the three levers below apply identically to both surfaces.
+
 ## The canonical kernel (mirror `test_vadd.py`)
 
 ```python
-@asc2.jit(reuse_alloc=1)                       # no static_alloc, no parallel
+@asc2.jit(reuse_alloc=1)                       # no static_alloc; fork surface
 def op(in_ptr, out_ptr, input_length, tile_length: asc2.ConstExpr,
        unroll_factor: asc2.ConstExpr):
     x = asc2.global_tensor(in_ptr, [input_length])
@@ -27,11 +33,14 @@ def op(in_ptr, out_ptr, input_length, tile_length: asc2.ConstExpr,
 ```
 
 - `@asc2.jit(reuse_alloc=1)` only. `static_alloc` defaults to `True` on C310 so it
-  is dropped; `parallel` is not an argument of current `asc2.range` (loop overlap
-  comes from `unroll_factor`). Keep `reuse_alloc=1` (its default is `0`).
-- Overlap via `unroll_factor` (typically `2`), **not** the removed `parallel` flag
-  and **not** `gm_barrier` (that arg is not present in every v2 revision; avoid it
-  for portability across the measurement box and the MR target branch).
+  is dropped; keep `reuse_alloc=1` (its default is `0`).
+- Overlap via `unroll_factor` (typically `2`). This fork target-test surface
+  renamed `asc2.range`'s `parallel=` to `gm_barrier` (inverted: `gm_barrier=True`
+  *disables* overlap, default `False`), so on this surface pass only
+  `unroll_factor` (do not pass `parallel=`). On v2 mainline the equivalent is
+  `asc2.range(..., unroll_factor=2, parallel=True)` — `parallel=` is **not**
+  removed there; it is the software-pipelining flag the `capabilities.yaml`
+  goldens use.
 
 ## No host padding, no tail branch
 
