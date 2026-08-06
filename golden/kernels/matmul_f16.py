@@ -25,8 +25,8 @@ Non-obvious constraints (Phase 1.5):
     (``non_16_multiple_shapes`` is an unsupported regime). The
     current goldens use ``m=k=n=16`` and ``m=32,k=16,n=32``.
   - UB/L1/L0 placement: A is loaded directly into L0A via
-    ``asc2.load(..., location=asc2.TileLocation.L0A)``; B is loaded
-    into L0B (``location=asc2.TileLocation.L0B``); the cube reads
+    ``asc2.load(..., location=asc2.TensorLocation.L0A)``; B is loaded
+    into L0B (``location=asc2.TensorLocation.L0B``); the cube reads
     both and writes the result back to GM. L1 is not used (the
     ``al1_full`` / ``bl1_full`` / ``abl1_full`` variants are future
     work — see capabilities.yaml ``unsupported_regimes``).
@@ -59,29 +59,29 @@ import asc2
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(always_compile=True)
-def matmul_kernel(a_ptr: asc.GlobalAddress, b_ptr: asc.GlobalAddress, c_ptr: asc.GlobalAddress,
+@asc2.jit(reuse_alloc=1)
+def matmul_kernel(a_ptr: asc2.GlobalAddress, b_ptr: asc2.GlobalAddress, c_ptr: asc2.GlobalAddress,
                   a_shape: asc.ConstExpr, b_shape: asc.ConstExpr, c_shape: asc.ConstExpr,
-                  m_tile: asc.ConstExpr[int], m_tiles_per_block: asc.ConstExpr[int],
-                  n_tile: asc.ConstExpr[int], n_tiles_per_block: asc.ConstExpr[int]):
-    a_gm = asc2.tensor(a_ptr, a_shape)
-    b_gm = asc2.tensor(b_ptr, b_shape)
-    c_gm = asc2.tensor(c_ptr, c_shape)
+                  m_tile: asc2.ConstExpr, m_tiles_per_block: asc2.ConstExpr,
+                  n_tile: asc2.ConstExpr, n_tiles_per_block: asc2.ConstExpr):
+    a_gm = asc2.global_tensor(a_ptr, a_shape)
+    b_gm = asc2.global_tensor(b_ptr, b_shape)
+    c_gm = asc2.global_tensor(c_ptr, c_shape)
     block_id = asc2.block_idx()
     m_elems_per_block = m_tile * m_tiles_per_block
     m_base_off = (m_elems_per_block * block_id) % a_shape[0]
     n_base_off = ((m_elems_per_block * block_id) // a_shape[0]) * (n_tile * n_tiles_per_block)
-    # Plain Python `range` over `asc.ConstExpr[int]` trip counts: both loops are
+    # Plain Python `range` over `asc2.ConstExpr` trip counts: both loops are
     # fully traced/unrolled at JIT time, so the PR 190 `asc2.range(unroll_factor=2)`
     # default does not apply -- wrapping these would emit a runtime ForOp instead.
     for j in range(n_tiles_per_block):
         b_offset = n_base_off + j * n_tile
-        b_j = asc2.load(b_gm, [b_shape[0], n_tile], offsets=[0, b_offset], location=asc2.TileLocation.L0B)
+        b_j = asc2.copy_in(b_gm, [0, b_offset], [b_shape[0], n_tile], location=asc2.TensorLocation.L0B)
         for i in range(m_tiles_per_block):
             a_offset = m_base_off + i * m_tile
-            a_i = asc2.load(a_gm, [m_tile, a_shape[1]], offsets=[a_offset, 0], location=asc2.TileLocation.L0A)
+            a_i = asc2.copy_in(a_gm, [a_offset, 0], [m_tile, a_shape[1]], location=asc2.TensorLocation.L0A)
             c_ij = a_i @ b_j
-            asc2.store(c_ij, c_gm, offsets=[a_offset, b_offset])
+            asc2.copy_out(c_ij, c_gm, [a_offset, b_offset])
 
 
 def matmul_launch(a: torch.Tensor, b: torch.Tensor, core_num: int, m_tile: int,

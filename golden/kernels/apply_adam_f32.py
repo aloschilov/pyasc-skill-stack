@@ -42,19 +42,19 @@ ALIGNMENT = TILE_SIZE * CORE_NUM  # 32768 elements
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(always_compile=True)
-def apply_adam_kernel(var_ptr: asc.GlobalAddress, m_ptr: asc.GlobalAddress,
-                      v_ptr: asc.GlobalAddress, grad_ptr: asc.GlobalAddress,
-                      size: int, tile_size: asc.ConstExpr[int],
-                      tile_per_block: asc.ConstExpr[int],
+@asc2.jit(reuse_alloc=1)
+def apply_adam_kernel(var_ptr: asc2.GlobalAddress, m_ptr: asc2.GlobalAddress,
+                      v_ptr: asc2.GlobalAddress, grad_ptr: asc2.GlobalAddress,
+                      size: int, tile_size: asc2.ConstExpr,
+                      tile_per_block: asc2.ConstExpr,
                       one_minus_beta1: asc.ConstExpr[float],
                       one_minus_beta2: asc.ConstExpr[float],
                       alpha: asc.ConstExpr[float],
                       epsilon: asc.ConstExpr[float]):
-    var_gm = asc2.tensor(var_ptr, [size])
-    m_gm = asc2.tensor(m_ptr, [size])
-    v_gm = asc2.tensor(v_ptr, [size])
-    grad_gm = asc2.tensor(grad_ptr, [size])
+    var_gm = asc2.global_tensor(var_ptr, [size])
+    m_gm = asc2.global_tensor(m_ptr, [size])
+    v_gm = asc2.global_tensor(v_ptr, [size])
+    grad_gm = asc2.global_tensor(grad_ptr, [size])
     base_offset = asc2.block_idx() * tile_size * tile_per_block
     # 8 live tiles/iteration (4 loads + 4 temps); unroll=1 keeps UB within the
     # ~248KB budget at the 32x4096 measurement shape. NOTE: this op is
@@ -62,19 +62,19 @@ def apply_adam_kernel(var_ptr: asc.GlobalAddress, m_ptr: asc.GlobalAddress,
     # the hand-written aclnnApplyAdam — an honest perf gap, not a correctness one.
     for i in asc2.range(tile_per_block, unroll_factor=1):
         off = base_offset + i * tile_size
-        var_t = asc2.load(var_gm, [tile_size], offsets=[off])
-        m_t = asc2.load(m_gm, [tile_size], offsets=[off])
-        v_t = asc2.load(v_gm, [tile_size], offsets=[off])
-        g_t = asc2.load(grad_gm, [tile_size], offsets=[off])
+        var_t = asc2.copy_in(var_gm, [off], [tile_size])
+        m_t = asc2.copy_in(m_gm, [off], [tile_size])
+        v_t = asc2.copy_in(v_gm, [off], [tile_size])
+        g_t = asc2.copy_in(grad_gm, [off], [tile_size])
 
         m_new = m_t + (g_t - m_t) * one_minus_beta1
         v_new = v_t + (g_t * g_t - v_t) * one_minus_beta2
         denom = asc2.sqrt(v_new) + epsilon
         var_new = var_t - asc2.div(m_new * alpha, denom)
 
-        asc2.store(m_new, m_gm, offsets=[off])
-        asc2.store(v_new, v_gm, offsets=[off])
-        asc2.store(var_new, var_gm, offsets=[off])
+        asc2.copy_out(m_new, m_gm, [off])
+        asc2.copy_out(v_new, v_gm, [off])
+        asc2.copy_out(var_new, var_gm, [off])
 
 
 def apply_adam_launch(var: np.ndarray, m: np.ndarray, v: np.ndarray, grad: np.ndarray,

@@ -19,8 +19,8 @@ in Phase 9 evidence (see ``docs/skill-value-q1-findings.md`` Anomaly
 
 Vendored from pyasc-v2-eval@7b85554a:
   python/test/asc2/target/test_gelu.py
-    -- structural Pattern A skeleton (1D flatten, ``asc2.tensor(ptr,
-       [size])`` + ``asc2.load(..., [tile_size], offsets=[tile_offset])``)
+    -- structural Pattern A skeleton (1D flatten, ``asc2.global_tensor(ptr,
+       [size])`` + ``asc2.copy_in(..., [tile_offset], [tile_size])``)
        and the sigmoid restatement (``x / (1 + exp(...))``).
 **Math correction vs upstream**: upstream's
 ``target/test_gelu.py`` swaps the polynomial coefficients
@@ -85,20 +85,19 @@ NEG_SQRT_EIGHT_OVER_PI = -math.sqrt(8.0 / math.pi)
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(always_compile=True)
-def gelu_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
-                size: int, tile_size: asc.ConstExpr[int],
-                tile_per_block: asc.ConstExpr[int]):
-    x_gm = asc2.tensor(x_ptr, [size])
-    out_gm = asc2.tensor(out_ptr, [size])
+@asc2.jit(reuse_alloc=1)
+def gelu_kernel(x_ptr: asc2.GlobalAddress, out_ptr: asc2.GlobalAddress,
+                size: int, tile_size: asc2.ConstExpr, tile_per_block: asc2.ConstExpr):
+    x_gm = asc2.global_tensor(x_ptr, [size])
+    out_gm = asc2.global_tensor(out_ptr, [size])
     base_offset = asc2.block_idx() * tile_size * tile_per_block
     for i in asc2.range(tile_per_block, unroll_factor=2):
         tile_offset = base_offset + i * tile_size
-        x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
+        x = asc2.copy_in(x_gm, [tile_offset], [tile_size])
         x_cub = x * x * x
         inner = (x_cub * GELU_C + x) * NEG_SQRT_EIGHT_OVER_PI
         out = x / (asc2.exp(inner) + 1)
-        asc2.store(out, out_gm, offsets=[tile_offset])
+        asc2.copy_out(out, out_gm, [tile_offset])
 
 
 def gelu_launch(x: np.ndarray) -> np.ndarray:

@@ -59,18 +59,18 @@ L_SIZE = 64
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(always_compile=True)
-def batch_norm_v3_kernel(x_ptr: asc.GlobalAddress, w_ptr: asc.GlobalAddress,
-                         b_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
-                         mean_ptr: asc.GlobalAddress, invstd_ptr: asc.GlobalAddress,
-                         inv_count: asc.ConstExpr[float],
-                         eps: asc.ConstExpr[float]):
-    x_gm = asc2.tensor(x_ptr, [N_SIZE * C_SIZE, L_SIZE])
-    out_gm = asc2.tensor(out_ptr, [N_SIZE * C_SIZE, L_SIZE])
-    w_gm = asc2.tensor(w_ptr, [C_SIZE])
-    b_gm = asc2.tensor(b_ptr, [C_SIZE])
-    mean_gm = asc2.tensor(mean_ptr, [C_SIZE])
-    invstd_gm = asc2.tensor(invstd_ptr, [C_SIZE])
+@asc2.jit(reuse_alloc=1)
+def batch_norm_v3_kernel(x_ptr: asc2.GlobalAddress, w_ptr: asc2.GlobalAddress,
+                         b_ptr: asc2.GlobalAddress, out_ptr: asc2.GlobalAddress,
+                         mean_ptr: asc2.GlobalAddress, invstd_ptr: asc2.GlobalAddress,
+                         inv_count: asc2.ConstExpr,
+                         eps: asc2.ConstExpr):
+    x_gm = asc2.global_tensor(x_ptr, [N_SIZE * C_SIZE, L_SIZE])
+    out_gm = asc2.global_tensor(out_ptr, [N_SIZE * C_SIZE, L_SIZE])
+    w_gm = asc2.global_tensor(w_ptr, [C_SIZE])
+    b_gm = asc2.global_tensor(b_ptr, [C_SIZE])
+    mean_gm = asc2.global_tensor(mean_ptr, [C_SIZE])
+    invstd_gm = asc2.global_tensor(invstd_ptr, [C_SIZE])
 
     ch = CH_PER_CORE
     c0 = asc2.block_idx() * ch
@@ -79,27 +79,29 @@ def batch_norm_v3_kernel(x_ptr: asc.GlobalAddress, w_ptr: asc.GlobalAddress,
     # strided tile. reduce_sum over the L axis (1) yields per-channel partials.
     sum_c = asc2.full([ch], 0.0, dtype=asc.float32)
     sumsq_c = asc2.full([ch], 0.0, dtype=asc.float32)
-    for n in asc2.range(N_SIZE):
-        blk = asc2.load(x_gm, [ch, L_SIZE], offsets=[n * C_SIZE + c0, 0])
+    # Carried accumulator (sum_c/sumsq_c carry across n): overlap must be OFF
+    # (gm_barrier=True) or the running sums collide and the norm -> NaN.
+    for n in asc2.range(N_SIZE, gm_barrier=True):
+        blk = asc2.copy_in(x_gm, [n * C_SIZE + c0, 0], [ch, L_SIZE])
         sum_c = sum_c + asc2.reduce_sum(blk, 1)
         sumsq_c = sumsq_c + asc2.reduce_sum(blk * blk, 1)
 
     mean_c = sum_c * inv_count
     var_c = sumsq_c * inv_count - mean_c * mean_c
     invstd_c = asc2.rsqrt(var_c + eps)
-    w_c = asc2.load(w_gm, [ch], offsets=[c0])
-    b_c = asc2.load(b_gm, [ch], offsets=[c0])
+    w_c = asc2.copy_in(w_gm, [c0], [ch])
+    b_c = asc2.copy_in(b_gm, [c0], [ch])
     scale_c = w_c * invstd_c
     shift_c = b_c - scale_c * mean_c
-    asc2.store(mean_c, mean_gm, offsets=[c0])
-    asc2.store(invstd_c, invstd_gm, offsets=[c0])
+    asc2.copy_out(mean_c, mean_gm, [c0])
+    asc2.copy_out(invstd_c, invstd_gm, [c0])
 
     scale_b = asc2.broadcast_to(asc2.expand_dims(scale_c, 1), ch, L_SIZE)
     shift_b = asc2.broadcast_to(asc2.expand_dims(shift_c, 1), ch, L_SIZE)
     for n in asc2.range(N_SIZE):
-        blk = asc2.load(x_gm, [ch, L_SIZE], offsets=[n * C_SIZE + c0, 0])
+        blk = asc2.copy_in(x_gm, [n * C_SIZE + c0, 0], [ch, L_SIZE])
         out = blk * scale_b + shift_b
-        asc2.store(out, out_gm, offsets=[n * C_SIZE + c0, 0])
+        asc2.copy_out(out, out_gm, [n * C_SIZE + c0, 0])
 
 
 def batch_norm_v3_launch(x: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor,
