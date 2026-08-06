@@ -24,7 +24,8 @@ the *`copy_out` destination* differ.
 > `capabilities.yaml` `add_inplace` cell use — only the surface calls differ.
 > When writing a fork target test, match the fork's `global_tensor` surface; when
 > writing a v2-mainline kernel (the skill-stack default), use
-> `tensor`/`load`/`store` with `asc2.range(..., unroll_factor=2, parallel=True)`.
+> `tensor`/`load`/`store` with `asc2.range(..., unroll_factor=2)` (the
+> `gm_barrier=False` default enables overlap — see elementwise-tiling.md).
 
 ## The rule
 
@@ -69,11 +70,11 @@ def add_inplace(a_ptr: asc2.GlobalAddress, b_ptr: asc2.GlobalAddress, input_leng
 
 - `@asc2.jit(reuse_alloc=1)` only — the same decorator the fork's
   `reciprocal` / `addcdiv` target kernels use. `static_alloc` defaults to `True`
-  on C310. On this fork surface `asc2.range` takes `gm_barrier` (not `parallel`);
-  pass only `unroll_factor` (typically `2`) for overlap — `gm_barrier` defaults
-  to `False` (overlap enabled). On v2 mainline the equivalent is
-  `asc2.range(..., unroll_factor=2, parallel=True)` (`parallel=` is **not**
-  removed there).
+  on C310. `asc2.range` takes `gm_barrier` (default `False` = overlap enabled;
+  `True` inserts a barrier). This is now the v2-mainline API too (`origin/v2` ≥
+  `4d1db41d`); the older `parallel=` flag was renamed + inverted. For a
+  disjoint-tile in-place loop pass only `unroll_factor` (typically `2`) and rely
+  on the `gm_barrier=False` default.
 - No host padding and no tail branch: `copy_in` past the extent auto-pads and
   `copy_out` clamps to the declared `global_tensor` shape, so
   `block_length * block_num` may exceed `input_length` safely (see

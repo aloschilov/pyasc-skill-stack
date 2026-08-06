@@ -9,10 +9,11 @@ through the UB with double buffering. There is no reduction identity to pad with
 so bounds are handled entirely in-kernel — see "No host padding" below.
 
 > **API surface.** The canonical kernel below uses the fork target-test API
-> (`asc2.global_tensor` / `asc2.copy_in` / `asc2.copy_out`). The v2-mainline tile
-> API (`asc2.tensor` / `asc2.load` / `asc2.store`), used by most
+> (`asc2.global_tensor` / `asc2.copy_in` / `asc2.copy_out`). The v2-mainline
+> tile API (`asc2.tensor` / `asc2.load` / `asc2.store`), used by most
 > `capabilities.yaml` goldens, is equivalent for tiling purposes — the selector
-> and the three levers below apply identically to both surfaces.
+> and the three levers below apply identically to both surfaces. Both surfaces'
+> `asc2.range` now takes `gm_barrier` (see the bullet below).
 
 ## The canonical kernel (mirror `test_vadd.py`)
 
@@ -34,13 +35,16 @@ def op(in_ptr, out_ptr, input_length, tile_length: asc2.ConstExpr,
 
 - `@asc2.jit(reuse_alloc=1)` only. `static_alloc` defaults to `True` on C310 so it
   is dropped; keep `reuse_alloc=1` (its default is `0`).
-- Overlap via `unroll_factor` (typically `2`). This fork target-test surface
-  renamed `asc2.range`'s `parallel=` to `gm_barrier` (inverted: `gm_barrier=True`
-  *disables* overlap, default `False`), so on this surface pass only
-  `unroll_factor` (do not pass `parallel=`). On v2 mainline the equivalent is
-  `asc2.range(..., unroll_factor=2, parallel=True)` — `parallel=` is **not**
-  removed there; it is the software-pipelining flag the `capabilities.yaml`
-  goldens use.
+- Overlap via `unroll_factor` (typically `2`). `asc2.range` now takes
+  `gm_barrier` (default `False` = overlap enabled; `gm_barrier=True` inserts a
+  barrier that *disables* overlap). This is the current v2 API (`origin/v2` ≥
+  `4d1db41d`), which renamed + inverted the older `parallel=` flag —
+  `parallel=True` (overlap on) is equivalent to the new default
+  `gm_barrier=False`, and the old default `parallel=False` (overlap off) is now
+  `gm_barrier=True`. So for a disjoint-tile elementwise loop pass only
+  `unroll_factor` and rely on the `gm_barrier=False` default; set
+  `gm_barrier=True` only on a carried-dependency loop (e.g. a scalar
+  accumulator).
 
 ## No host padding, no tail branch
 

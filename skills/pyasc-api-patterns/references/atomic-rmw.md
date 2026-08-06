@@ -174,7 +174,9 @@ asc2.atomic_add(acc, out_gm, offsets=[0])
 ```
 
 The carried UB accumulator (`acc = acc + tile`) is a genuine loop-carried
-dependency, so the accumulation loop is **not** `parallel=True`, and the UB
+dependency, so the accumulation loop sets `gm_barrier=True` (overlap must be
+disabled — the default `gm_barrier=False` would let iterations overlap and
+corrupt the running accumulator), and the UB
 vector adds double as the copy_in→atomic sync (no `+bias` trick needed). This is
 the first optimisation to reach for when the heavy-`num_rows` shapes dominate;
 it trades `num_rows` serialised GM atomics for `num_rows` UB vector adds + one
