@@ -60,7 +60,7 @@ def apply_adam_kernel(var_ptr: asc.GlobalAddress, m_ptr: asc.GlobalAddress,
     # ~248KB budget at the 32x4096 measurement shape. NOTE: this op is
     # memory-bound (4 loads + 3 stores/element) and currently lands at ~0.46 of
     # the hand-written aclnnApplyAdam — an honest perf gap, not a correctness one.
-    for i in asc2.range(tile_per_block, unroll_factor=1, parallel=True):
+    for i in asc2.range(tile_per_block, unroll_factor=1):
         off = base_offset + i * tile_size
         var_t = asc2.load(var_gm, [tile_size], offsets=[off])
         m_t = asc2.load(m_gm, [tile_size], offsets=[off])

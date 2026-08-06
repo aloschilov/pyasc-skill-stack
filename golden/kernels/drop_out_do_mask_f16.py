@@ -55,7 +55,7 @@ def drop_out_do_mask_kernel(data_ptr: asc.GlobalAddress, mask_ptr: asc.GlobalAdd
     mask_gm = asc2.tensor(mask_ptr, [size])
     out_gm = asc2.tensor(out_ptr, [size])
     base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
+    for i in asc2.range(tile_per_block, unroll_factor=2):
         off = base_offset + i * tile_size
         data_t = asc2.load(data_gm, [tile_size], offsets=[off])
         mask_t = asc2.load(mask_gm, [tile_size], offsets=[off])

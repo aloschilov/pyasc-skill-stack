@@ -59,7 +59,7 @@ def layer_norm_v4_full_row_kernel(
     out_gm = asc2.tensor(out_ptr, [num_rows, padded_cols])
 
     for row in asc2.range(
-        asc2.block_idx(), num_rows, asc2.block_num(), unroll_factor=2, parallel=True
+        asc2.block_idx(), num_rows, asc2.block_num(), unroll_factor=2
     ):
         x_row = asc2.load(x_gm, [1, padded_cols], offsets=[row, 0])
         x_f32 = x_row.to(asc.float32)
@@ -97,7 +97,7 @@ def layer_norm_v4_split_d_kernel(
     out_gm = asc2.tensor(out_ptr, [num_rows, padded_cols])
 
     for row in asc2.range(
-        asc2.block_idx(), num_rows, asc2.block_num(), unroll_factor=2, parallel=True
+        asc2.block_idx(), num_rows, asc2.block_num(), unroll_factor=2
     ):
         zero_seed = asc2.full([1, tile_cols], 0.0, dtype=asc.float32)
         sum_x = asc2.reduce_sum(zero_seed)
@@ -113,7 +113,7 @@ def layer_norm_v4_split_d_kernel(
         var = sum_x2 / num_cols - mean * mean
         rstd = 1.0 / asc2.sqrt(var + epsilon)
 
-        for tile_id in asc2.range(num_tiles, unroll_factor=2, parallel=True):
+        for tile_id in asc2.range(num_tiles, unroll_factor=2):
             col = tile_id * tile_cols
             x = asc2.load(x_gm, [1, tile_cols], offsets=[row, col])
             gamma = asc2.load(gamma_gm, [1, tile_cols], offsets=[0, col])

@@ -91,7 +91,7 @@ def bmm_kernel(a_ptr: asc.GlobalAddress, b_ptr: asc.GlobalAddress, c_ptr: asc.Gl
     for i in range(m_tiles):
         m_off = i * m_tile
         a_i = asc2.load(a_gm, [m_tile, k], offsets=[a_row0 + m_off, 0], location=asc2.TileLocation.L0A)
-        for j in asc2.range(n_tiles, unroll_factor=2, parallel=True):
+        for j in asc2.range(n_tiles, unroll_factor=2):
             n_off = j * n_tile
             b_j = asc2.load(b_gm, [k, n_tile], offsets=[b_row0, n_off], location=asc2.TileLocation.L0B)
             c_ij = a_i @ b_j
