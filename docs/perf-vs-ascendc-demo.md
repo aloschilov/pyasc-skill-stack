@@ -1,5 +1,11 @@
 # Perf-vs-AscendC demo (Phase 11 / 12)
 
+> **API note (2026-08, post v2 `4d1db41d`):** `asc2.range`'s `parallel=` flag
+> was renamed to `gm_barrier` (inverted: `gm_barrier=False` default = overlap
+> ON; `True` = overlap OFF). The perf numbers below were measured under the
+> `parallel=` name; the mechanism is identical — read `gm_barrier=False` for
+> `parallel=True` and `gm_barrier=True` for `parallel=False`.
+
 **Claim under test:** the skill stack auto-generates `pyasc` vector-only kernels
 whose camodel tick count is within ~30% of the hand-written AscendC C++
 reference, now across **two** canonical reference repos —
