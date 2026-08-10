@@ -4,9 +4,14 @@ on:
   push:
     branches: [main]
   pull_request:
-  # No cron schedule: nightly-tier runs are explicit only (workflow_dispatch
-  # with tier=nightly). Removed so re-enabling the workflow never reinstates
-  # unattended 03:00 runs that contend for the single self-hosted Mac runner.
+  # Nightly schedule keeps evidence fresh without a manual dispatch. Each
+  # nightly-tier job is gated by `if: github.event_name == 'schedule'` (or the
+  # workflow_dispatch tier=nightly equivalent), and the trimmed matrices +
+  # explicit per-job timeout-minutes keep the full run under the self-hosted
+  # runner's 24h queued-job budget. workflow_dispatch (tier=nightly) remains
+  # for manual reruns.
+  schedule:
+    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       tier:
@@ -135,6 +140,15 @@ jobs:
           total=$(ls golden/kernels/*.py | wc -l)
           echo "Shard $SHARD/$SHARDS verifying its slice of $total goldens (platform=$PLATFORM)"
           FAILED=0; idx=0; ran=0
+          # Container-leak guard: a cancelled/timed-out step must not leave an
+          # orphaned pyasc-sim container busy-looping on the runner. --rm only
+          # fires on a clean container exit, which a hung simulator never does,
+          # so the trap (which runs on SIGTERM/SIGINT from the job's
+          # timeout-minutes cap) is the actual guarantee. The per-run name lets
+          # `docker rm -f` target the still-running container deterministically;
+          # --rm still handles the happy path and frees the name between iterations.
+          CTR_NAME="pyasc-verify-${SHARD}-${{ github.run_id }}"
+          trap 'docker rm -f "$CTR_NAME" 2>/dev/null || true' EXIT INT TERM
           for kernel in golden/kernels/*.py; do
             [ -f "$kernel" ] || continue
             base="$(basename "$kernel")"
@@ -143,7 +157,7 @@ jobs:
             if [ "$(( idx % SHARDS ))" -eq "$SHARD" ]; then
               echo "--- [shard $SHARD] Verifying $base ---"
               start=$(date +%s)
-              if docker run --rm \
+              if docker run --rm --name "$CTR_NAME" \
                 --ulimit nofile=65536:65536 \
                 -v "$PWD":/workspace:ro \
                 -w /workspace \
@@ -274,7 +288,11 @@ jobs:
           # OPS_MATH_HOME / OPS_NN_HOME / PYASC_EVAL_ROOT are baked into the
           # perf image. Mount the checkout rw so evidence lands back on the
           # runner; the build cache (evidence/perf/_build_cache) is ephemeral.
-          docker run --rm \
+          # Container-leak guard: --rm alone doesn't fire if the perf harness
+          # hangs and the job's timeout-minutes cancels the step (see merge-gate).
+          CTR_NAME="pyasc-perf-${{ github.run_id }}"
+          trap 'docker rm -f "$CTR_NAME" 2>/dev/null || true' EXIT INT TERM
+          docker run --rm --name "$CTR_NAME" \
             --ulimit nofile=65536:65536 \
             -v "$(pwd)":/workspace -w /workspace \
             ${{ env.PYASC_PERF_IMAGE }} \
@@ -289,7 +307,10 @@ jobs:
           # off vs on on the same camodel (the "pyasc2 uses no micro-api; the
           # compiler does fusion" verification). Report-only like the perf gate;
           # ref builds are reused from the demo_vector_ops run's _build_cache.
-          docker run --rm \
+          # Container-leak guard (see merge-gate / perf-gate).
+          CTR_NAME="pyasc-vffusion-${{ github.run_id }}"
+          trap 'docker rm -f "$CTR_NAME" 2>/dev/null || true' EXIT INT TERM
+          docker run --rm --name "$CTR_NAME" \
             --ulimit nofile=65536:65536 \
             -v "$(pwd)":/workspace -w /workspace \
             ${{ env.PYASC_PERF_IMAGE }} \
@@ -355,10 +376,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # SINGLE-RUNNER 24h BUDGET: trimmed from P2/P3/P4/P6 to the P2+P3
-        # representative pair so a complete nightly (incl. perf-gate) fits under
-        # GitHub's 24h queued-job limit on the one self-hosted runner. P4/P6 were
-        # the legs most often starved+auto-cancelled at the 24h mark. Restore the
+        # NIGHTLY BUDGET (two-runner, legs still trimmed pending wall-clock data):
+        # trimmed from P2/P3/P4/P6 to the P2+P3 representative pair so a complete
+        # nightly (incl. perf-gate) fits under GitHub's 24h queued-job limit even
+        # after the two-runner fan-out. P4/P6 were the legs most often
+        # starved+auto-cancelled at the 24h mark. Restore the
         # full protocol axis once a 2nd arm64 runner lets the matrix fan out.
         protocol_id: ["P2", "P3"]
     steps:
@@ -529,9 +551,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # SINGLE-RUNNER 24h BUDGET: gpt-oss-120b dropped so a complete nightly
-        # (incl. perf-gate) fits under GitHub's 24h queued-job limit on the one
-        # self-hosted runner. gpt-oss-120b was dead weight (1/19 skills-on,
+        # NIGHTLY BUDGET (two-runner, legs still trimmed pending wall-clock data):
+        # gpt-oss-120b dropped so a complete nightly (incl. perf-gate) fits under
+        # GitHub's 24h queued-job limit across the two self-hosted runners.
+        # gpt-oss-120b was dead weight (1/19 skills-on,
         # 0/19 skills-off - it rarely emits a kernel at all) and its ~68 GB
         # resident footprint is the heaviest local model. Restore it once a
         # 2nd arm64 runner lets the matrix fan out in parallel.
@@ -723,9 +746,10 @@ jobs:
         # here once the key can call them.
         profile: [cloud-glm-5.1, cloud-qwen3.7-max, cloud-glm-5.2]
         # See comment in nightly-gate for why these are quoted.
-        # SINGLE-RUNNER 24h BUDGET: skills-OFF cloud legs are dropped so a
-        # complete nightly (incl. perf-gate) fits under GitHub's 24h queued-job
-        # limit on the one self-hosted runner. The OFF baseline was near-useless
+        # NIGHTLY BUDGET (two-runner, legs still trimmed pending wall-clock data):
+        # skills-OFF cloud legs are dropped so a complete nightly (incl.
+        # perf-gate) fits under GitHub's 24h queued-job limit across the two
+        # self-hosted runners. The OFF baseline was near-useless
         # (glm-5.1 off scored 3/19), and the skills on/off A/B is still measured
         # on local-stability-gate. Restore ["on", "off"] once a 2nd arm64 runner
         # lets the matrix fan out in parallel.
@@ -984,6 +1008,13 @@ jobs:
             git commit -m "chore: update generative evidence and OpenCode skills-intervention report from nightly run
 
           Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            # The nightly run spans hours; rebase onto the latest origin/main
+            # so the evidence commit lands cleanly even if a developer pushed
+            # during the run. Avoids a non-fast-forward push failure that would
+            # leave the fresh evidence stranded off main. Tree is clean
+            # post-commit, so the rebase cannot collide with uncommitted work.
+            git fetch origin
+            git rebase origin/main
             git push
           fi
 
