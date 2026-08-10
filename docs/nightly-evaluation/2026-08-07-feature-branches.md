@@ -1,10 +1,58 @@
 # Nightly A/B evaluation — feature branches (2026-08-07)
 
 Triggered the `tier=nightly` workflow_dispatch on the feature branches and
-compared against main's last nightly baseline. **Status at write-up time:
-ci-nightly-stabilization nightly still in the generative-evidence phase
-(~18-24h total); this file captures the partial results + the diagnosis and
-will be updated when the run concludes.**
+compared against main's last nightly baseline. **UPDATE (run concluded):
+ci-nightly-stabilization nightly finished in ~8h wall — 10/12 jobs PASS
+vs main's 24h28m cancel. PR #3 merged to main (`abaeba6`). Two residual
+failures diagnosed below (local-stability `on` 8h timeout; skills-value-report
+commit failed after a mid-run branch deletion).**
+
+## Final results — ci-nightly-stabilization run 31195012048 (concluded ~8h)
+
+| Job | Result | Time |
+|---|---|---|
+| `pr-gate` | ✓ | 20s |
+| `merge-gate` (4 shards, golden-verify) | ✓ | 7-12m each |
+| `nightly-gate` (P2) | ✓ | 42m |
+| `nightly-gate` (P3) | ✓ | 3h14m |
+| `local-stability-gate` (off) | ✓ | 2h4m |
+| `cloud-dashscope-gate` (glm-5.1) | ✓ | 4h3m |
+| `cloud-dashscope-gate` (glm-5.2) | ✓ | 5h14m |
+| `cloud-dashscope-gate` (qwen3.7-max) | ✓ | 6h21m |
+| `perf-gate` | ✓ | 7h19m |
+| `local-stability-gate` (on) | ✗ | 8h0m24s — **hit `timeout-minutes: 480`** |
+| `skills-value-report` | ✗ | "Commit evidence" exit 1 (partial-nightly + mid-run branch deletion) |
+
+Run conclusion: `cancelled` (the local-stability `on` per-job 8h cap fired).
+
+### A/B verdict — ci-nightly-stabilization vs main
+- **Decisive improvement.** Main's last nightly (`30527114992`) cancelled at
+  **24h28m** with only nightly-gate P2/P3 succeeding (local-stability
+  cancelled). ci-nightly-stabilization finished in **~8h wall** with **10/12
+  jobs PASS** — including the cloud-dashscope legs + perf-gate that main
+  never reached. The container-leak guard + 2-runner fan-out removed the
+  resource-exhaustion slowdown that previously overran 24h.
+- **PR #3 merged** (`abaeba6`) — it was good to go (pr-gate ✓; merge-gate ✓
+  via the nightly dispatch; mergeable/clean).
+- The run did **not** hit the 24h queued-job limit — the remaining cancel is
+  the **per-job 8h cap on `local-stability-gate (on)`**, a different failure
+  mode than main's. Fix: raise `local-stability-gate` `timeout-minutes` 480→
+  600 (10h) — the run wall would still be ~10h, well under 24h. (The `on` leg
+  is ~4× slower than `off` because skills-ON generation is heavier on the
+  local qwen3-coder-30b model.)
+
+### Residual failures (diagnosed)
+1. `local-stability-gate (on)` — `exceeded the maximum execution time of
+   8h0m0s` (`timeout-minutes: 480` in ci.yml). The skills-ON leg needs >8h.
+   Not a regression; a tuning cap that's too tight for this leg. **Recommended
+   fix:** bump to 600.
+2. `skills-value-report` "Commit evidence, summary, and capabilities" exit 1.
+   The partial-nightly guard correctly fired ("Committing skills-value-summary
+   only; per-cell evidence + capabilities.yaml NOT updated"). The commit/push
+   then failed — because **PR #3 was merged with `--delete-branch` while the
+   nightly was still running**, so the evidence `git push` targeted the
+   just-deleted `ci-nightly-stabilization` ref. Not a code bug; an operational
+   timing artifact. On a main-branch nightly this won't recur.
 
 ## Branches / PRs
 

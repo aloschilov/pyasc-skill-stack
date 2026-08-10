@@ -539,10 +539,11 @@ jobs:
     # (pre-pulled on the host, like the pre-loaded perf image), and a missing
     # daemon/model/image is a clean skip rather than a hard failure.
     runs-on: [self-hosted, arm64]
-    # 19 cells x max-attempts 2 on the local 30B model runs ~6.5h, just over the
-    # implicit 6h default (timeout-minutes: 360) that cancelled both on/off legs.
-    # 8h cap clears it with margin.
-    timeout-minutes: 480
+    # 19 cells x max-attempts 2 on the local 30B model runs ~6.5h (off) to >8h
+    # (on; skills-ON generation is ~4x heavier). The 8h cap cancelled the `on`
+    # leg at 8h0m24s in the 2026-08-07 nightly (run 31195012048); 10h clears it
+    # with margin and the full nightly wall stays ~10h, well under 24h.
+    timeout-minutes: 600
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
