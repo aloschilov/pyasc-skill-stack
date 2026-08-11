@@ -89,14 +89,14 @@ Note: For iteration inside `@asc2.jit`, use `asc2.range()` instead of `range()`.
 - **M/N/K tile loops are compile-time.** When the trip count is an
   `asc.ConstExpr[int]` (matmul m/n/k tiles), a plain Python `for i in range(...)`
   is fully unrolled at JIT time — that is the intended form for the loop that must
-  keep an operand resident in `L0A`/`L0B`. Use `asc2.range(..., parallel=True,
+  keep an operand resident in `L0A`/`L0B`. Use `asc2.range(...,
   unroll_factor=2)` only on the *inner* tile loop you want software-pipelined
   (double-buffered).
-- **`parallel=True` doubles the pipelined L0 buffer.** The 2-deep tile must fit
-  half the L0 capacity (≤ 32 KiB for L0A/L0B, ≤ 64 KiB for the f32 L0C). A
-  full-K `[256,128]` f16 L0B tile is 64 KiB and overflows when doubled
+- **Overlap (`gm_barrier=False`) doubles the pipelined L0 buffer.** The 2-deep
+  tile must fit half the L0 capacity (≤ 32 KiB for L0A/L0B, ≤ 64 KiB for the f32
+  L0C). A full-K `[256,128]` f16 L0B tile is 64 KiB and overflows when doubled
   (`L0B overflow: 65536 bytes available, 131072 used`); shrink the tile (e.g.
-  `N_TILE=64`) before adding `parallel=True`.
+  `N_TILE=64`) before relying on overlap.
 - **Cube tile placement is explicit:** load/`asc2.copy` operands to
   `asc2.TileLocation.L0A` (left) / `L0B` (right); stage from GM via
   `asc2.TileLocation.L1` for reuse; the `@` result lands in L0C as f32 — cast with

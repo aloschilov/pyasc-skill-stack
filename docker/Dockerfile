@@ -56,7 +56,7 @@ ARG PYASC_GIT_URL=https://gitcode.com/compiler-team/pyasc.git
 # Bump this together with the host-side pyasc-v2-eval checkout when the
 # evaluation owner is ready to refresh the baseline. Leaving PYASC_GIT_REF
 # as a legacy override hook for callers that still need a non-SHA ref.
-ARG PYASC_GIT_REV=7095b6fdbdbb2b3fef60dd746f54e194feda819f
+ARG PYASC_GIT_REV=4d1db41d61cabf565bca1cfb0b11ef5ec4f84c7f
 ARG PYASC_GIT_REF=
 ARG LLVM_ARCHIVE_X86_64=https://oaitriton.blob.core.windows.net/public/llvm-builds/llvm-86b69c31-ubuntu-x64.tar.gz
 ARG LLVM_ARCHIVE_AARCH64=https://oaitriton.blob.core.windows.net/public/llvm-builds/llvm-86b69c31-ubuntu-arm64.tar.gz

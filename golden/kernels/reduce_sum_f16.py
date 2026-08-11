@@ -56,18 +56,18 @@ OUT_PAD = 16  # min last-dim for 32-byte alignment with float16 (16 * 2 = 32 byt
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(always_compile=True)
-def reduce_sum_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
-                      num_rows: int, num_cols: asc.ConstExpr[int],
-                      out_pad: asc.ConstExpr[int]):
-    x_gm = asc2.tensor(x_ptr, [num_rows, num_cols])
-    out_gm = asc2.tensor(out_ptr, [num_rows, out_pad])
+@asc2.jit(reuse_alloc=1)
+def reduce_sum_kernel(x_ptr: asc2.GlobalAddress, out_ptr: asc2.GlobalAddress,
+                      num_rows: int, num_cols: asc2.ConstExpr,
+                      out_pad: asc2.ConstExpr):
+    x_gm = asc2.global_tensor(x_ptr, [num_rows, num_cols])
+    out_gm = asc2.global_tensor(out_ptr, [num_rows, out_pad])
     for i in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
-                        unroll_factor=2, parallel=True):
-        row = asc2.load(x_gm, [1, num_cols], offsets=[i, 0])
+                        unroll_factor=2):
+        row = asc2.copy_in(x_gm, [i, 0], [1, num_cols])
         s = asc2.reduce_sum(row)
         result = asc2.full([1, out_pad], s, dtype=row.dtype)
-        asc2.store(result, out_gm, offsets=[i, 0])
+        asc2.copy_out(result, out_gm, [i, 0])
 
 
 def reduce_sum_launch(x: np.ndarray) -> np.ndarray:

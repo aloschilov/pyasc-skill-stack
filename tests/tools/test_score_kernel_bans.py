@@ -39,7 +39,7 @@ def clean_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
     x_gm = asc2.tensor(x_ptr, [size])
     out_gm = asc2.tensor(out_ptr, [size])
     base = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
+    for i in asc2.range(tile_per_block, unroll_factor=2):
         off = base + i * tile_size
         x = asc2.load(x_gm, [tile_size], offsets=[off])
         out = asc2.exp(x)

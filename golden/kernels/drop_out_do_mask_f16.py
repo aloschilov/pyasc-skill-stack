@@ -46,21 +46,21 @@ ALIGNMENT = TILE_SIZE * CORE_NUM  # 32768 elements
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(always_compile=True)
-def drop_out_do_mask_kernel(data_ptr: asc.GlobalAddress, mask_ptr: asc.GlobalAddress,
-                            out_ptr: asc.GlobalAddress, size: int,
-                            tile_size: asc.ConstExpr[int], tile_per_block: asc.ConstExpr[int],
+@asc2.jit(reuse_alloc=1)
+def drop_out_do_mask_kernel(data_ptr: asc2.GlobalAddress, mask_ptr: asc2.GlobalAddress,
+                            out_ptr: asc2.GlobalAddress, size: int,
+                            tile_size: asc2.ConstExpr, tile_per_block: asc2.ConstExpr,
                             scale: asc.ConstExpr[float]):
-    data_gm = asc2.tensor(data_ptr, [size])
-    mask_gm = asc2.tensor(mask_ptr, [size])
-    out_gm = asc2.tensor(out_ptr, [size])
+    data_gm = asc2.global_tensor(data_ptr, [size])
+    mask_gm = asc2.global_tensor(mask_ptr, [size])
+    out_gm = asc2.global_tensor(out_ptr, [size])
     base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
+    for i in asc2.range(tile_per_block, unroll_factor=2):
         off = base_offset + i * tile_size
-        data_t = asc2.load(data_gm, [tile_size], offsets=[off])
-        mask_t = asc2.load(mask_gm, [tile_size], offsets=[off])
+        data_t = asc2.copy_in(data_gm, [off], [tile_size])
+        mask_t = asc2.copy_in(mask_gm, [off], [tile_size])
         out = (data_t * mask_t) * scale
-        asc2.store(out, out_gm, offsets=[off])
+        asc2.copy_out(out, out_gm, [off])
 
 
 def drop_out_do_mask_launch(data: np.ndarray, mask: np.ndarray,

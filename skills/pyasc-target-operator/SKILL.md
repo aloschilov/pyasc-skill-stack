@@ -77,7 +77,7 @@ def <op>_kernel_1D(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress
     if asc2.block_idx() == (asc2.block_num() - 1):
         loop_count = block_loop_num_tail
 
-    for i in asc2.range(loop_count, unroll_factor=UNROLL_FACTOR, parallel=True):
+    for i in asc2.range(loop_count, unroll_factor=UNROLL_FACTOR):
         current_offset = block_offset + i * tile_length
         xt = asc2.load(x, [tile_length], offsets=[current_offset])
         zt = 1.0 / xt                      # <-- operator math (out = 1/x); see section 4

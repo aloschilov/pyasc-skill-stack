@@ -66,19 +66,19 @@ CORE_NUM = BATCH  # one batch matrix per cube core
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(always_compile=True)
-def bmm_kernel(a_ptr: asc.GlobalAddress, b_ptr: asc.GlobalAddress, c_ptr: asc.GlobalAddress,
+@asc2.jit(reuse_alloc=1)
+def bmm_kernel(a_ptr: asc2.GlobalAddress, b_ptr: asc2.GlobalAddress, c_ptr: asc2.GlobalAddress,
                a_shape: asc.ConstExpr, b_shape: asc.ConstExpr, c_shape: asc.ConstExpr,
-               m: asc.ConstExpr[int], k: asc.ConstExpr[int], n: asc.ConstExpr[int],
-               m_tile: asc.ConstExpr[int], n_tile: asc.ConstExpr[int]):
+               m: asc2.ConstExpr, k: asc2.ConstExpr, n: asc2.ConstExpr,
+               m_tile: asc2.ConstExpr, n_tile: asc2.ConstExpr):
     """Batched matmul: one batch matrix per core, MN-block tiled, K loaded whole.
 
     a_gm/b_gm/c_gm are 2D views [B*M, K] / [B*K, N] / [B*M, N]; batch ``bi`` is
     the row-block starting at ``bi*m`` (A/C) and ``bi*k`` (B).
     """
-    a_gm = asc2.tensor(a_ptr, a_shape)
-    b_gm = asc2.tensor(b_ptr, b_shape)
-    c_gm = asc2.tensor(c_ptr, c_shape)
+    a_gm = asc2.global_tensor(a_ptr, a_shape)
+    b_gm = asc2.global_tensor(b_ptr, b_shape)
+    c_gm = asc2.global_tensor(c_ptr, c_shape)
     bi = asc2.block_idx()
     a_row0 = bi * m
     b_row0 = bi * k
@@ -90,12 +90,12 @@ def bmm_kernel(a_ptr: asc.GlobalAddress, b_ptr: asc.GlobalAddress, c_ptr: asc.Gl
     # the current MMAD, mirroring test_matmul_tiled.py's double-buffering.
     for i in range(m_tiles):
         m_off = i * m_tile
-        a_i = asc2.load(a_gm, [m_tile, k], offsets=[a_row0 + m_off, 0], location=asc2.TileLocation.L0A)
-        for j in asc2.range(n_tiles, unroll_factor=2, parallel=True):
+        a_i = asc2.copy_in(a_gm, [a_row0 + m_off, 0], [m_tile, k], location=asc2.TensorLocation.L0A)
+        for j in asc2.range(n_tiles, unroll_factor=2):
             n_off = j * n_tile
-            b_j = asc2.load(b_gm, [k, n_tile], offsets=[b_row0, n_off], location=asc2.TileLocation.L0B)
+            b_j = asc2.copy_in(b_gm, [b_row0, n_off], [k, n_tile], location=asc2.TensorLocation.L0B)
             c_ij = a_i @ b_j
-            asc2.store(c_ij, c_gm, offsets=[a_row0 + m_off, n_off])
+            asc2.copy_out(c_ij, c_gm, [a_row0 + m_off, n_off])
 
 
 def bmm_launch(a: torch.Tensor, b: torch.Tensor,

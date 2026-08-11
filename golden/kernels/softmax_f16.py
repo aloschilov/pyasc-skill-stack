@@ -57,16 +57,16 @@ CORE_NUM = 16
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(always_compile=True)
-def softmax_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
-                   num_rows: int, num_cols: asc.ConstExpr[int],
-                   block_size: asc.ConstExpr[int]):
-    x_gm = asc2.tensor(x_ptr, [num_rows, num_cols])
-    out_gm = asc2.tensor(out_ptr, [num_rows, num_cols])
+@asc2.jit(reuse_alloc=1)
+def softmax_kernel(x_ptr: asc2.GlobalAddress, out_ptr: asc2.GlobalAddress,
+                   num_rows: int, num_cols: asc2.ConstExpr,
+                   block_size: asc2.ConstExpr):
+    x_gm = asc2.global_tensor(x_ptr, [num_rows, num_cols])
+    out_gm = asc2.global_tensor(out_ptr, [num_rows, num_cols])
     start_row = asc2.block_idx() * block_size
-    rows = asc2.load(x_gm, [block_size, num_cols], offsets=[start_row, 0])
+    rows = asc2.copy_in(x_gm, [start_row, 0], [block_size, num_cols])
     out = asc2.softmax(rows)
-    asc2.store(out, out_gm, offsets=[start_row, 0])
+    asc2.copy_out(out, out_gm, [start_row, 0])
 
 
 def softmax_launch(x: np.ndarray) -> np.ndarray:

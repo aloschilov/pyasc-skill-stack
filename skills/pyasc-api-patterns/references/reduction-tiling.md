@@ -49,7 +49,7 @@ for i in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(), ...):
 
 ```python
 # RIGHT: pack many rows into one contiguous [tile_rows, C] tile, reduce axis 1
-for t in asc2.range(row_iters_per_block, parallel=True, unroll_factor=2):
+for t in asc2.range(row_iters_per_block, unroll_factor=2):
     tile = asc2.load(x_gm, [tile_rows, C], offsets=[row0 + t * tile_rows, 0])  # tile_rows rows
     out = asc2.reduce_max(tile, 1)                                             # [tile_rows] in one op
 ```
@@ -77,7 +77,7 @@ as illustrative, not a target.
 
 ## Double buffering (secondary)
 
-`asc2.range(..., parallel=True, unroll_factor=2)` double-buffers the row loop, and
+`asc2.range(..., unroll_factor=2)` double-buffers the row loop, and
 the overlap only materializes with `>= 2 * unroll_factor` iterations. For a
 reduction this is a **secondary** concern: with all cores active each core owns few
 rows, so 1-5 large contiguous tiles per block already beat a many-small-tile

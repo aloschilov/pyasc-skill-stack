@@ -1,5 +1,11 @@
 # Ticks Calculation Methodology (camodel / `Ascend950PR_9599`)
 
+> **API note (2026-08, post v2 `4d1db41d`):** `asc2.range`'s `parallel=` flag
+> was renamed to `gm_barrier` with inverted polarity — `gm_barrier=False`
+> (default) = overlap ON; `gm_barrier=True` = barrier/overlap OFF. The perf
+> mechanism described below is unchanged; read `gm_barrier=False` wherever this
+> historical analysis says `parallel=True`.
+
 This document explains what the `Total tick:` and `Model RUN TIME:` lines
 that the CANN simulator (the **camodel** — short for "cycle-accurate model")
 emit on stdout actually measure, what they do **not** measure, how to read

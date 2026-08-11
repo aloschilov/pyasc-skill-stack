@@ -56,7 +56,7 @@ def my_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
     x_gm = asc2.tensor(x_ptr, [size])
     out_gm = asc2.tensor(out_ptr, [size])
     base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
+    for i in asc2.range(tile_per_block, unroll_factor=2):
         tile_offset = base_offset + i * tile_size
         x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
         out = asc2.abs(x)  # your operation here
@@ -91,7 +91,7 @@ tile_per_block = asc.ceildiv(num_tiles, CORE_NUM)
 Inside the kernel:
 ```python
 base_offset = asc2.block_idx() * tile_size * tile_per_block
-for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
+for i in asc2.range(tile_per_block, unroll_factor=2):
     tile_offset = base_offset + i * tile_size
     x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
     # ... compute ...
@@ -125,10 +125,10 @@ unchanged — only the tile width moves the number. See
 
 **Multi-input elementwise: also widen `CORE_NUM`.** A wide tile alone is not
 enough when the op loads two or more input streams (e.g. `add`, `mul`,
-`x*y+z`). The extra MTE2 load stream is *not* overlapped today — pyasc2 sets the
-`asc2.range(parallel=True)` attribute but the software-pipelining pass that would
-overlap loads with compute is not yet wired up — so the second load runs
-serially per core. Spread the launch across **all 32 AIV cores** (not 16) so
+`x*y+z`). The extra MTE2 load stream is *not* overlapped today — `asc2.range`
+leaves `gm_barrier=False` (overlap enabled) but the software-pipelining pass
+that would overlap loads with compute is not yet wired up — so the second load
+runs serially per core. Spread the launch across **all 32 AIV cores** (not 16) so
 each core does half the tiles and half the serial load work:
 
 ```python
@@ -180,17 +180,18 @@ materially change codegen quality:
 
 The compiler-team [PR 190](https://gitcode.com/compiler-team/pyasc/pull/190)
 upgrades these from "advanced tuning knob" to "expected default": every
-`asc2.range` should set `unroll_factor=2`, and `parallel=True` should be
-applied whenever the loop has no read-after-write through a value defined
-outside the loop.
+`asc2.range` should set `unroll_factor=2`; leave `gm_barrier=False` (the default,
+overlap enabled) whenever the loop has no read-after-write through a value
+defined outside the loop. Set `gm_barrier=True` (insert a barrier, overlap off)
+only when an iteration reads a value a previous iteration wrote.
 
 **Decision rule:**
 
 ```mermaid
 flowchart TD
     Start["asc2.range(...) loop body"] --> Carried{"Reads any tile, scalar, or accumulator that a PREVIOUS iteration WROTE?"}
-    Carried -- "No (independent tiles, disjoint stores)" --> Par["unroll_factor=2, parallel=True"]
-    Carried -- "Yes (sum/max accumulator, prefix scan, in-place mutation)" --> NoPar["unroll_factor=2 (parallel omitted)"]
+    Carried -- "No (independent tiles, disjoint stores)" --> Par["unroll_factor=2"]
+    Carried -- "Yes (sum/max accumulator, prefix scan, in-place mutation)" --> NoPar["unroll_factor=2, gm_barrier=True"]
 ```
 
 **Pattern table** (which form to ship for each loop kind in the proven
@@ -212,14 +213,14 @@ time; wrapping them in `asc2.range(unroll_factor=2)` would emit a runtime
 
 ```python
 # (1) elementwise tile loop -- no carry, fully parallel
-for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
+for i in asc2.range(tile_per_block, unroll_factor=2):
     tile_offset = base_offset + i * tile_size
     x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
     asc2.store(asc2.abs(x), out_gm, offsets=[tile_offset])
 
 # (2) row distribution -- each row independent
 for r in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
-                    unroll_factor=2, parallel=True):
+                    unroll_factor=2):
     row = asc2.load(x_gm, [1, num_cols], offsets=[r, 0])
     s = asc2.reduce_sum(row)            # accumulation is INSIDE one call
     asc2.store(asc2.full([1, OUT_PAD], s, dtype=asc.float32), out_gm,
@@ -387,7 +388,7 @@ def my_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
     x_gm = asc2.tensor(x_ptr, [size])           # 1D tensor
     out_gm = asc2.tensor(out_ptr, [size])
     base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
+    for i in asc2.range(tile_per_block, unroll_factor=2):
         tile_offset = base_offset + i * tile_size
         x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])  # 1D load, 1D offsets
         out = asc2.abs(x)  # replace with your op
@@ -431,7 +432,7 @@ def my_kernel(x_ptr: asc2.GlobalAddress, out_ptr: asc2.GlobalAddress,
     loop_count = block_loop_num
     if asc2.block_idx() == (asc2.block_num() - 1):
         loop_count = block_loop_num_tail
-    for i in asc2.range(loop_count, unroll_factor=UNROLL_FACTOR, parallel=True):
+    for i in asc2.range(loop_count, unroll_factor=UNROLL_FACTOR):
         current_offset = block_offset + i * tile_length
         xt = asc2.load(x_gm, [tile_length], offsets=[current_offset])
         zt = asc2.abs(xt)  # replace with your op
@@ -452,7 +453,7 @@ def my_kernel(x_ptr: asc2.GlobalAddress, out_ptr: asc2.GlobalAddress,
               tile_size: asc2.ConstExpr):
     x_gm = asc2.tensor(x_ptr, [num_rows, num_columns])    # 2D tensor
     out_gm = asc2.tensor(out_ptr, [num_rows, num_columns])
-    for i in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(), parallel=True):
+    for i in asc2.range(asc2.block_idx(), num_rows, asc2.block_num()):
         row = asc2.load(x_gm, [1, tile_size], offsets=[i, 0])  # 2D load, 2D offsets
         # ... per-row computation here, e.g. erf-form GELU:
         k = asc2.sqrt(0.5)
@@ -551,7 +552,7 @@ def reduce_sum_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
     x_gm = asc2.tensor(x_ptr, [num_rows, num_cols])
     out_gm = asc2.tensor(out_ptr, [num_rows, out_pad])
     for i in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
-                        unroll_factor=2, parallel=True):
+                        unroll_factor=2):
         row = asc2.load(x_gm, [1, num_cols], offsets=[i, 0])
         s = asc2.reduce_sum(row)            # accumulation is INSIDE one call
         result = asc2.full([1, out_pad], s, dtype=row.dtype)
@@ -647,7 +648,7 @@ vs the canonical `aclnnBatchMatMul`):
 3. **L1 staging + a pipelined N-tile loop (the perf levers).** Stage the whole
    per-batch `A[m,k]`/`B[k,n]` into `L1` once so every GM element is read a single
    time, then copy `L1`→`L0A`/`L0B` tiles. Pipeline the inner N loop with
-   `asc2.range(n_tiles, unroll_factor=2, parallel=True)` so the next L0B copy
+   `asc2.range(n_tiles, unroll_factor=2)` so the next L0B copy
    overlaps the current MMAD.
 
 ```python
@@ -655,7 +656,7 @@ a_l1 = asc2.load(a_gm, [m, k], offsets=[bi * m, 0], location=asc2.TileLocation.L
 b_l1 = asc2.load(b_gm, [k, n], offsets=[bi * k, 0], location=asc2.TileLocation.L1)
 for i in range(m // m_tile):                      # plain range: A stays in L0A
     a_i = asc2.copy(a_l1, [m_tile, k], offsets=[i * m_tile, 0], location=asc2.TileLocation.L0A)
-    for j in asc2.range(n // n_tile, unroll_factor=2, parallel=True):  # double-buffered L0B
+    for j in asc2.range(n // n_tile, unroll_factor=2):  # double-buffered L0B
         b_j = asc2.copy(b_l1, [k, n_tile], offsets=[0, j * n_tile], location=asc2.TileLocation.L0B)
         c_ij = (a_i @ b_j).to(asc2.float16)
         asc2.store(c_ij, c_gm, offsets=[bi * m + i * m_tile, j * n_tile])
@@ -666,12 +667,13 @@ hand-edited ticks):
 
 - **L1 staging** is the first win (each GM element read once instead of re-fetched
   per tile). For the `[16,256,256]` contract this alone took `gen` 23434→21620.
-- **`parallel=True` double-buffering** is the second win (21620→18758, ratio
-  0.78). **Critical budget rule:** `parallel=True` *doubles* the buffer it
-  pipelines, so the 2-deep tile must fit half the L0 capacity. A full-K
-  `[256,128]` f16 L0B tile is already 64 KiB and overflows when doubled — drop to
-  `N_TILE=64` (`[256,64]` f16 = 32 KiB ⇒ 64 KiB for the pair). Only pipeline the
-  loop whose L0 buffer you can halve; keep the other loop a plain `range`.
+- **`gm_barrier=False` (overlap-enabled) double-buffering** is the second win
+  (21620→18758, ratio 0.78). **Critical budget rule:** overlap *doubles* the
+  buffer it pipelines, so the 2-deep tile must fit half the L0 capacity. A
+  full-K `[256,128]` f16 L0B tile is already 64 KiB and overflows when doubled —
+  drop to `N_TILE=64` (`[256,64]` f16 = 32 KiB ⇒ 64 KiB for the pair). Only
+  pipeline the loop whose L0 buffer you can halve; keep the other loop a plain
+  `range`.
 - **Batch-to-core mapping** is maxed at `CORE_NUM=B` when `B` ≤ the AIC core count
   (16 cube cores here, so 16 batches = one fully parallel wave). Launching more
   blocks than cores adds waves, not parallelism.
@@ -756,7 +758,7 @@ def rms_norm_full_row_kernel(x_ptr, gamma_ptr, out_ptr,
     gamma_gm_2d = asc2.tensor(gamma_ptr, [1, num_cols])
     out_gm = asc2.tensor(out_ptr, [num_rows, num_cols])
     for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
-                          unroll_factor=2, parallel=True):
+                          unroll_factor=2):
         x_row = asc2.load(x_gm, [1, num_cols], offsets=[row, 0])
         x_row_f32 = x_row.to(asc.float32)
         sum_sq = asc2.reduce_sum(x_row_f32 * x_row_f32)
@@ -788,7 +790,7 @@ def rms_norm_split_d_kernel(x_ptr, gamma_ptr, out_ptr,
     gamma_gm_2d = asc2.tensor(gamma_ptr, [1, padded_cols])
     out_gm = asc2.tensor(out_ptr, [num_rows, padded_cols])
     for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
-                          unroll_factor=2, parallel=True):
+                          unroll_factor=2):
         zero_seed = asc2.full([1, tile_cols], 0.0, dtype=asc.float32)
         sum_sq = asc2.reduce_sum(zero_seed)
         # Inner reduction loop carries `sum_sq` -> NOT parallel.
@@ -799,7 +801,7 @@ def rms_norm_split_d_kernel(x_ptr, gamma_ptr, out_ptr,
             sum_sq = sum_sq + asc2.reduce_sum(x_f32 * x_f32)
         inv_rms = 1.0 / asc2.sqrt(sum_sq / num_cols + epsilon)
         # Disjoint write-back -> safe to parallelise.
-        for tile_id in asc2.range(num_tiles, unroll_factor=2, parallel=True):
+        for tile_id in asc2.range(num_tiles, unroll_factor=2):
             col = tile_id * tile_cols
             x = asc2.load(x_gm, [1, tile_cols], offsets=[row, col])
             gamma = asc2.load(gamma_gm_2d, [1, tile_cols], offsets=[0, col])
@@ -952,7 +954,7 @@ def concat_generic(in_ptr, w_ptr, ib_ptr, ob_ptr, out_ptr, num_inputs, rows, out
         in_s = asc2.tensor(in_ptr + ib, [rows, w])     # ranked 2-D sub-view at runtime base ib
         # multi-row bulk copy: ubf rows per DMA (ptr_offset AnyRankedOrUnrankedMemRef relaxation, issue #1)
         for t in range(asc2.block_idx(), asc2.ceildiv(rows, ubf), asc2.block_num(),
-                       unroll_factor=unroll_factor, parallel=True):
+                       unroll_factor=unroll_factor):
             r0 = t * ubf
             nr = ubf if r0 + ubf <= rows else rows - r0          # ternary -> select, NOT a guard
             for c in asc2.range(asc2.ceildiv(w, chunk)):         # runtime bound -> any width fits
@@ -1034,8 +1036,8 @@ used` = 4 × chunk) because its two region loops each double-buffer; dividing by
 | `np.erf(x)` or `scipy.special.erf(x)` for host-side reference | numpy has no `erf`; scipy not in Docker | Use `import math; _verf = np.vectorize(math.erf); result = _verf(x)` |
 | Tolerance too tight for simulator (`atol=1e-5` for unary float32) | Simulator introduces rounding; even unary f32 ops accumulate error. Upstream `operations/test_unary_ops.py` ships f32 at `atol=1e-3` | Use `atol=1e-3, rtol=1e-3` for float16 elementwise; `atol=1e-3, rtol=1e-3` for float32 unary elementwise (matches `capabilities.yaml` + upstream `operations/test_unary_ops.py`). Reserve `1e-5` for matmul output / accumulators only |
 | Testing many/large shapes on simulator | Simulator is ~1000x slower than NPU; large shapes cause timeouts | Test 1-2 shapes per run; keep total elements ≤ 131072 for float16 |
-| `asc2.range(...)` without `unroll_factor=2` | Defaults to `unroll_factor=1`; leaves PR 190 perf on the table | Always pass `unroll_factor=2` (and `parallel=True` when the loop body has no carried dependency — see "Recommended asc2.range parameters" above) |
-| `parallel=True` on a loop with a carried scalar accumulator (`sum_sq = sum_sq + ...`, running max, prefix scan) | Iteration order is no longer guaranteed; accumulator updates collide and the reduction is silently wrong | Omit `parallel` (default `False`) on accumulator loops. Only the *outer* row distribution and *disjoint-tile* inner loops can be `parallel=True` |
+| `asc2.range(...)` without `unroll_factor=2` | Defaults to `unroll_factor=1`; leaves PR 190 perf on the table | Always pass `unroll_factor=2`; the `gm_barrier=False` default (overlap enabled) is correct for any disjoint-tile loop — see "Recommended asc2.range parameters" above |
+| `gm_barrier=False` (overlap on) on a loop with a carried scalar accumulator (`sum_sq = sum_sq + ...`, running max, prefix scan) | Iteration order is no longer guaranteed; accumulator updates collide and the reduction is silently wrong | Set `gm_barrier=True` on accumulator loops (insert a barrier, overlap off). Only the *outer* row distribution and *disjoint-tile* inner loops can leave `gm_barrier=False` |
 | `scalar * tile` ordering inside `@asc2.jit` (e.g. `0.044715 * x_cubed`, `GELU_K * inner`) | The asc2 `Tile` class does not implement `__rmul__`; Python's fallback raises `AttributeError: 'Tile' object has no attribute '__rmul__'` at codegen time | **Always put the Tile on the LEFT** of `*`: write `x_cubed * 0.044715`, `inner * GELU_K`, `x * 0.5`. The same rule applies to `+`/`-`/`/` if you ever hit the symmetric case. See `golden/kernels/gelu_f32.py` (lines 54–55) for the canonical layout |
 | Sizing a copy/concat tile to the **full per-input row** (`asc2.load(in_i, [1, buf_i], real_shape=[1, d1_i])` with one buffer per input) | UB then scales with input count *and* row width; wide rows / higher arity overflow. Under `static_alloc=True` the per-input buffers are **not** reused (sum, not max), and `unroll_factor` multiplies it → `UB overflow: ... bytes are used` at JIT/launch | Copy each input in **column chunks** through one reused `[chunk]` buffer (see "Multi-input / multi-axis copy" pattern). Size `chunk = (UB−1024)/itemsize / BUFFER_NUM / sibling_regions` so any width fits |
 | Taking **N input pointers** (`def concat3(in0_ptr, in1_ptr, in2_ptr, ...)`) or unrolling a Python tuple of `GlobalAddress` with `static_range` for variable arity | One kernel per arity (recompile per N); and the reviewer-rejected shape. (Note: `GlobalAddress + offset` → `emitasc.ptr_offset` to build a ranked 2-D sub-view of a packed input **now lowers** after the `AnyRankedOrUnrankedMemRef` relaxation, issue #1 — but N pointers is still the wrong shape for variable arity) | Pass **one packed input tensor** + int metadata GM tensors (`widths`/`in_bases`/`out_bases`) and a runtime `num_inputs`; address sub-inputs with flat scalar `offsets=`. GM-loaded scalars work as `asc2.ceildiv` bounds and in `offsets=`, so one `concat_generic` covers all arities. For static-arity **aligned** copies, prefer `asc2.tensor(in_ptr + B_i, [rows, w_i])` 2-D sub-views + `[ubFactorDim0, w_i]` multi-row tiles (CANN bulk copy) |
