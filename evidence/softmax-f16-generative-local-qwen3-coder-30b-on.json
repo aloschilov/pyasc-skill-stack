@@ -4,8 +4,8 @@
   "operation": "softmax",
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
-  "kernel_path": "",
-  "date": "2026-07-27T20:17:17Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax/kernel.py",
+  "date": "2026-08-10T23:07:20Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,95 +19,193 @@
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": []
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
+    ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "qwen3-coder:30b",
+  "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 504284,
-    "output": 3948,
+    "input": 3238352,
+    "output": 31793,
     "cache_read": 0,
-    "total": 508232
+    "total": 3270145
   },
-  "elapsed_total_s": 376.96,
+  "elapsed_total_s": 1559.76,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 347.76,
+      "elapsed_s": 436.69,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 441006,
-        "output": 3161,
+        "input": 1274763,
+        "output": 8150,
         "cache_read": 0,
-        "total": 444167,
+        "total": 1282913,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": true,
+      "static_verify": "pass",
       "runtime_status": "fail"
     },
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 5.09,
+      "elapsed_s": 608.84,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 8072,
-        "output": 76,
+        "input": 958984,
+        "output": 9621,
         "cache_read": 0,
-        "total": 8148,
+        "total": 968605,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
-      "kernel_found": false,
+      "kernel_found": true,
       "static_verify": "fail",
       "runtime_status": "fail"
     },
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 24.11,
+      "elapsed_s": 514.23,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 55206,
-        "output": 711,
+        "input": 1004605,
+        "output": 14022,
         "cache_read": 0,
-        "total": 55917,
+        "total": 1018627,
         "cost_usd": 0.0
       },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
+      "model": "qwen3-coder:30b",
+      "kernel_found": true,
+      "static_verify": "pass",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
     "status": "fail",
-    "shapes_verified": []
+    "detail": "Exit code 1: TypeError: softmax() got an unexpected keyword argument 'axis'\negen/function_visitor.py\", line 360, in visit\n    raise CodegenError(node, self.src, f\"{e.__class__.__name__}: {e}\") from e\nasc.codegen.errors.CodegenError: at <source>:14:14:\n    # Load one row\n    x_row = asc2.load(x_gm, [1, NUM_COLS], offsets=[row_idx, 0])\n    \n    # Apply softmax across columns (last axis) with fp32 accumulator  \n              ^\n    out_row = asc2.softmax(x_row, axis=1, dtype=asc.float32)\n    \n    # Store result\nTypeError: softmax() got an unexpected keyword argument 'axis'\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/softmax/kernel.py",
+      "is_symlink": false,
+      "resolved": "/Users/aloschilov/ar/work/_temp/gen-softmax-float16-a3.dznfw01e/teams/pyasc-kernel-dev-team/kernels/softmax/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        ".pytest_cache",
+        "README.md",
+        "__pycache__",
+        "conftest.py",
+        "docs",
+        "kernel.py",
+        "test"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 248\ndrwx------  9 root root    288 Aug 10 23:07 .\ndrwxr-xr-x  1 root root   4096 Aug 10 23:07 ..\n-rw-r--r--  1 root root   1097 Aug 10 22:58 .agent-prompt.txt\ndrwxr-xr-x 10 root root    320 Aug 10 22:58 .git\n-rw-r--r--  1 root root 241459 Aug 10 23:07 agent-output.txt\ndrwxr-xr-x  6 root root    192 Jun 12 18:18 golden\n-rw-r--r--  1 root root    668 Aug 10 22:58 opencode.json\ndrwxr-xr-x 11 root root    352 Jun 30 08:22 skills\ndrwxr-xr-x  3 root root     96 Jun 10 11:49 teams\n--- ls kernel dir ---\ntotal 12\ndrwxr-xr-x 9 root root  288 Aug 10 23:04 .\ndrwxr-xr-x 3 root root   96 Aug 10 22:59 ..\ndrwxr-xr-x 6 root root  192 Aug 10 23:04 .pytest_cache\n-rw-r--r-- 1 root root  589 Aug 10 22:59 README.md\ndrwxr-xr-x 4 root root  128 Aug 10 23:04 __pycache__\n-rw-r--r-- 1 root root  441 Aug 10 22:59 conftest.py\ndrwxr-xr-x 7 root root  224 Aug 10 23:05 docs\n-rw-r--r-- 1 root root 3954 Aug 10 23:06 kernel.py\ndrwxr-xr-x 2 root root   64 Aug 10 22:59 test\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "no kernel found",
-    "markers_found": []
+    "passed": true,
+    "detail": "found ['asc2.softmax', 'softmax']",
+    "markers_found": [
+      "asc2.softmax",
+      "softmax"
+    ]
   },
   "score": {
-    "value": 0.0,
+    "value": 12.0,
     "threshold": 12,
-    "accepted": false,
-    "checks": {},
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": false,
+        "detail": "no range call in kernel"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": false,
+        "detail": "no tiling math found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": false,
+        "detail": "numeric shape tuples found inside JIT function"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.softmax', 'softmax']"
+      }
+    },
     "failure_category": null,
-    "gating_detail": {}
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T04:23:33Z",
@@ -130,6 +228,17 @@
       "skipped": false,
       "tokens_total": 438833,
       "elapsed_s": 1306.32
+    },
+    {
+      "date": "2026-07-27T20:17:17Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 508232,
+      "elapsed_s": 376.96
     }
   ]
 }

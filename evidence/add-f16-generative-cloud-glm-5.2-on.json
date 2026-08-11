@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an element-wise add operator (out = x + y) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
-  "date": "2026-07-28T04:26:42Z",
+  "date": "2026-08-10T08:47:46Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,37 +18,36 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
+      "acceptance_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-glm-5.2",
   "model": "dashscope/glm-5.2",
   "tokens": {
-    "input": 98778,
-    "output": 15029,
-    "cache_read": 2119552,
-    "total": 113807
+    "input": 200802,
+    "output": 14232,
+    "cache_read": 1273600,
+    "total": 215034
   },
-  "elapsed_total_s": 1009.93,
+  "elapsed_total_s": 1200.02,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1009.93,
-      "exit": 0,
+      "elapsed_s": 1200.02,
+      "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 98778,
-        "output": 15029,
-        "cache_read": 2119552,
-        "total": 113807,
+        "input": 200802,
+        "output": 14232,
+        "cache_read": 1273600,
+        "total": 215034,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.2",
@@ -152,6 +151,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.2, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-28T04:26:42Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 113807,
+      "elapsed_s": 1009.93
+    }
+  ]
 }

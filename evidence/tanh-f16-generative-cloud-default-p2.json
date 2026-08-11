@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: tanh (out = tanh(x)). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.",
   "kernel_path": "",
-  "date": "2026-07-27T16:07:45Z",
+  "date": "2026-08-10T14:17:41Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 4387,
-    "output": 463,
-    "cache_read": 44160,
-    "total": 4850
+    "input": 18976,
+    "output": 826,
+    "cache_read": 118784,
+    "total": 19802
   },
-  "elapsed_total_s": 53.58,
+  "elapsed_total_s": 182.82,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 27.29,
+      "elapsed_s": 49.44,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 2118,
-        "output": 281,
-        "cache_read": 21888,
-        "total": 2399,
+        "input": 7847,
+        "output": 344,
+        "cache_read": 47744,
+        "total": 8191,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "minimal",
-      "elapsed_s": 26.29,
+      "elapsed_s": 133.38,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 2269,
-        "output": 182,
-        "cache_read": 22272,
-        "total": 2451,
+        "input": 11129,
+        "output": 482,
+        "cache_read": 71040,
+        "total": 11611,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -89,7 +89,7 @@
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P2, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",
@@ -102,5 +102,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-07-27T16:07:45Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 4850,
+      "elapsed_s": 53.58
+    }
+  ]
 }

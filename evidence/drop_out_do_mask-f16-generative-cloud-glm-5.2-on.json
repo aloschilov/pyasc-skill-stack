@@ -4,8 +4,8 @@
   "operation": "drop_out_do_mask",
   "dtype": "float16",
   "prompt": "Help me develop the DropoutDoMask apply phase (out = data * mask * (1/keep_prob)) on Ascend950PR_9599 (C310) for float16 with a dense keep-mask, shapes [16,2048] and [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/dropout_do_mask_apply/kernel.py",
-  "date": "2026-07-28T05:49:17Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/dropout_domask_apply/kernel.py",
+  "date": "2026-08-10T09:58:54Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.2",
   "model": "dashscope/glm-5.2",
   "tokens": {
-    "input": 123390,
-    "output": 13298,
-    "cache_read": 1133824,
-    "total": 136688
+    "input": 194430,
+    "output": 14653,
+    "cache_read": 959488,
+    "total": 209083
   },
-  "elapsed_total_s": 976.67,
+  "elapsed_total_s": 665.13,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 976.67,
+      "elapsed_s": 665.13,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 123390,
-        "output": 13298,
-        "cache_read": 1133824,
-        "total": 136688,
+        "input": 194430,
+        "output": 14653,
+        "cache_read": 959488,
+        "total": 209083,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.2",
@@ -149,6 +149,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.2, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-28T05:49:17Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 136688,
+      "elapsed_s": 976.67
+    }
+  ]
 }

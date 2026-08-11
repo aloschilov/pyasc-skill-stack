@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.",
   "kernel_path": "",
-  "date": "2026-07-27T16:15:06Z",
+  "date": "2026-08-10T14:29:48Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 9465,
-    "output": 931,
-    "cache_read": 64896,
-    "total": 10396
+    "input": 23027,
+    "output": 4346,
+    "cache_read": 246016,
+    "total": 27373
   },
-  "elapsed_total_s": 90.54,
+  "elapsed_total_s": 327.92,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 35.33,
+      "elapsed_s": 229.77,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 5261,
-        "output": 332,
-        "cache_read": 22528,
-        "total": 5593,
+        "input": 16434,
+        "output": 2681,
+        "cache_read": 200192,
+        "total": 19115,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "minimal",
-      "elapsed_s": 55.21,
+      "elapsed_s": 98.15,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4204,
-        "output": 599,
-        "cache_read": 42368,
-        "total": 4803,
+        "input": 6593,
+        "output": 1665,
+        "cache_read": 45824,
+        "total": 8258,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -89,7 +89,7 @@
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P2, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",
@@ -157,6 +157,17 @@
       "skipped": false,
       "tokens_total": 49305,
       "elapsed_s": 337.03
+    },
+    {
+      "date": "2026-07-27T16:15:06Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 10396,
+      "elapsed_s": 90.54
     }
   ]
 }

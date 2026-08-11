@@ -4,8 +4,8 @@
   "operation": "gelu",
   "dtype": "float32",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096]. Use the lean exp/sigmoid restatement of the tanh/Pad\u00e9 form (mathematically identical to PyTorch's gelu(approximate='tanh'), but cheaper per tile and within the sim budget) - GELU(x) = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))). Use asc2.exp; do NOT use asc2.tanh (it pushed the cell over the 150s sim budget) and do NOT use asc2.erf (simulator erf is too noisy on float32 \u2014 this is documented in the cell's regime_note).",
-  "kernel_path": "kernel.py",
-  "date": "2026-07-27T23:04:51Z",
+  "kernel_path": "",
+  "date": "2026-08-10T13:22:15Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,32 +19,30 @@
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": [
-      "kernel.py"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "local-qwen3-coder-30b",
   "model": "qwen3-coder:30b",
   "tokens": {
-    "input": 387976,
-    "output": 11187,
+    "input": 486889,
+    "output": 12611,
     "cache_read": 0,
-    "total": 399163
+    "total": 499500
   },
-  "elapsed_total_s": 823.22,
+  "elapsed_total_s": 787.06,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 186.44,
+      "elapsed_s": 488.99,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 83374,
-        "output": 2671,
+        "input": 260752,
+        "output": 8219,
         "cache_read": 0,
-        "total": 86045,
+        "total": 268971,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
@@ -55,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 540.75,
+      "elapsed_s": 175.26,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 255730,
-        "output": 4465,
+        "input": 101981,
+        "output": 2145,
         "cache_read": 0,
-        "total": 260195,
+        "total": 104126,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
@@ -73,134 +71,43 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 96.03,
+      "elapsed_s": 122.81,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 48872,
-        "output": 4051,
+        "input": 124156,
+        "output": 2247,
         "cache_read": 0,
-        "total": 52923,
+        "total": 126403,
         "cost_usd": 0.0
       },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": true,
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
+    "mode": "static_only",
     "status": "fail",
-    "detail": "Kernel executed but verification unclear: GELU kernel implementation for Ascend950PR_9599 created successfully\nConstants defined:\nGELU_C = 0.044715\nNEG_SQRT_EIGHT_OVER_PI = -1.5957691216057308\nTiling pattern: Pattern A (1D flatten)\nTile size: 64\nCore number: 16\n",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "kernel.py",
-      "is_symlink": false,
-      "resolved": "/Users/aloschilov/ar/work/_temp/gen-gelu-float32-a3.9c2caxwi/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        ".agent-prompt.txt",
-        ".git",
-        "agent-output.txt",
-        "golden",
-        "kernel.py",
-        "opencode.json"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 44\ndrwx------  8 root root   256 Jul 27 23:04 .\ndrwxr-xr-x  1 root root  4096 Jul 27 23:04 ..\n-rw-r--r--  1 root root  2085 Jul 27 23:03 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Jul 27 23:03 .git\n-rw-r--r--  1 root root 26477 Jul 27 23:04 agent-output.txt\ndrwxr-xr-x  6 root root   192 Jun 12 18:18 golden\n-rw-r--r--  1 root root  2168 Jul 27 23:04 kernel.py\n-rw-r--r--  1 root root   611 Jul 27 23:03 opencode.json\n--- ls kernel dir ---\ntotal 44\ndrwx------  8 root root   256 Jul 27 23:04 .\ndrwxr-xr-x  1 root root  4096 Jul 27 23:04 ..\n-rw-r--r--  1 root root  2085 Jul 27 23:03 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Jul 27 23:03 .git\n-rw-r--r--  1 root root 26477 Jul 27 23:04 agent-output.txt\ndrwxr-xr-x  6 root root   192 Jun 12 18:18 golden\n-rw-r--r--  1 root root  2168 Jul 27 23:04 kernel.py\n-rw-r--r--  1 root root   611 Jul 27 23:03 opencode.json\n--- readlink kernel ---"
-    }
+    "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['0.044715', 'gelu']",
-    "markers_found": [
-      "0.044715",
-      "gelu"
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 8.0,
+    "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {
-      "jit_decorator": {
-        "passed": false,
-        "detail": "missing"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
-      },
-      "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
-      },
-      "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
-      },
-      "verification": {
-        "passed": false,
-        "detail": "no allclose/assert_close call"
-      },
-      "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
-      },
-      "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['0.044715', 'gelu']"
-      }
-    },
-    "failure_category": "F_missing_asc2_import",
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": true,
-      "allow_legacy_apis": false
-    }
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T02:26:18Z",
@@ -223,6 +130,17 @@
       "skipped": false,
       "tokens_total": 280478,
       "elapsed_s": 1274.34
+    },
+    {
+      "date": "2026-07-27T23:04:51Z",
+      "overall_pass": false,
+      "score": 8.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 399163,
+      "elapsed_s": 823.22
     }
   ]
 }

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a tiled matmul operator on Ascend950PR_9599 (C310) for float16 inputs producing float32 output. Use small shapes such as M=K=N=16 or (M=32, K=16, N=32). Inputs must be torch.Tensor (numpy buffers are silently zeroed by the C310 simulator path for matmul). Load A to asc2.TileLocation.L0A and B to L0B, then compute `a @ b` (or asc2.matmul) and asc2.store the float32 result.",
   "kernel_path": "",
-  "date": "2026-07-28T00:09:22Z",
+  "date": "2026-08-10T14:08:14Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 707209,
-    "output": 12918,
+    "input": 648962,
+    "output": 15295,
     "cache_read": 0,
-    "total": 720127
+    "total": 664257
   },
-  "elapsed_total_s": 772.62,
+  "elapsed_total_s": 763.72,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 49.93,
+      "elapsed_s": 52.81,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 169206,
-        "output": 1747,
+        "input": 189544,
+        "output": 1582,
         "cache_read": 0,
-        "total": 170953,
+        "total": 191126,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -53,17 +53,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 712.17,
+      "elapsed_s": 670.46,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 530516,
-        "output": 11095,
+        "input": 406160,
+        "output": 11210,
         "cache_read": 0,
-        "total": 541611,
+        "total": 417370,
         "cost_usd": 0.0
       },
-      "model": "ollama/qwen3-coder:30b",
+      "model": "qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 10.52,
+      "elapsed_s": 40.45,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7487,
-        "output": 76,
+        "input": 53258,
+        "output": 2503,
         "cache_read": 0,
-        "total": 7563,
+        "total": 55761,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -107,7 +107,7 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T02:38:48Z",
@@ -130,6 +130,17 @@
       "skipped": false,
       "tokens_total": 317486,
       "elapsed_s": 104.41
+    },
+    {
+      "date": "2026-07-28T00:09:22Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 720127,
+      "elapsed_s": 772.62
     }
   ]
 }

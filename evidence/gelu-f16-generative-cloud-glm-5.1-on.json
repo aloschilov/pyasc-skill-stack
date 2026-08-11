@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf via np.vectorize (np.erf and scipy.special.erf are not available).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu/kernel.py",
-  "date": "2026-07-28T04:08:47Z",
+  "date": "2026-08-10T22:39:05Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 76323,
-    "output": 8207,
-    "cache_read": 1048704,
-    "total": 84530
+    "input": 70165,
+    "output": 7396,
+    "cache_read": 1041920,
+    "total": 77561
   },
-  "elapsed_total_s": 486.79,
+  "elapsed_total_s": 283.77,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 486.79,
+      "elapsed_s": 283.77,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 76323,
-        "output": 8207,
-        "cache_read": 1048704,
-        "total": 84530,
+        "input": 70165,
+        "output": 7396,
+        "cache_read": 1041920,
+        "total": 77561,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -74,7 +74,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -131,8 +131,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -152,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T03:54:31Z",
@@ -175,6 +175,17 @@
       "skipped": false,
       "tokens_total": 234249,
       "elapsed_s": 420.01
+    },
+    {
+      "date": "2026-07-28T04:08:47Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 84530,
+      "elapsed_s": 486.79
     }
   ]
 }

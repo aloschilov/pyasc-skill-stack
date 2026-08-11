@@ -4,8 +4,8 @@
   "operation": "matmul",
   "dtype": "float16",
   "prompt": "Help me develop a tiled matmul operator on Ascend950PR_9599 (C310) for float16 inputs producing float32 output. Use small shapes such as M=K=N=16 or (M=32, K=16, N=32). Inputs must be torch.Tensor (numpy buffers are silently zeroed by the C310 simulator path for matmul). Load A to asc2.TileLocation.L0A and B to L0B, then compute `a @ b` (or asc2.matmul) and asc2.store the float32 result.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16/kernel.py",
-  "date": "2026-07-27T21:23:46Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16_f32/kernel.py",
+  "date": "2026-08-10T11:31:50Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 183338,
-    "output": 12797,
-    "cache_read": 1775104,
-    "total": 196135
+    "input": 159872,
+    "output": 11429,
+    "cache_read": 2031744,
+    "total": 171301
   },
-  "elapsed_total_s": 466.08,
+  "elapsed_total_s": 701.64,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 466.08,
+      "elapsed_s": 701.64,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 183338,
-        "output": 12797,
-        "cache_read": 1775104,
-        "total": 196135,
+        "input": 159872,
+        "output": 11429,
+        "cache_read": 2031744,
+        "total": 171301,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -151,7 +151,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T04:18:05Z",
@@ -174,6 +174,17 @@
       "skipped": false,
       "tokens_total": 151824,
       "elapsed_s": 420.0
+    },
+    {
+      "date": "2026-07-27T21:23:46Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 196135,
+      "elapsed_s": 466.08
     }
   ]
 }

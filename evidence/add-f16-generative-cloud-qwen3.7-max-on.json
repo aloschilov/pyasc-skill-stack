@@ -4,8 +4,8 @@
   "operation": "add",
   "dtype": "float16",
   "prompt": "Help me develop an element-wise add operator (out = x + y) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/vadd_f16/kernel.py",
-  "date": "2026-07-27T17:20:48Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
+  "date": "2026-08-10T08:22:48Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 176378,
-    "output": 14635,
-    "cache_read": 2220288,
-    "total": 191013
+    "input": 107796,
+    "output": 8306,
+    "cache_read": 772992,
+    "total": 116102
   },
-  "elapsed_total_s": 1004.87,
+  "elapsed_total_s": 535.12,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1004.87,
+      "elapsed_s": 535.12,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 176378,
-        "output": 14635,
-        "cache_read": 2220288,
-        "total": 191013,
+        "input": 107796,
+        "output": 8306,
+        "cache_read": 772992,
+        "total": 116102,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -74,7 +74,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -131,8 +131,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -152,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T03:12:26Z",
@@ -175,6 +175,17 @@
       "skipped": false,
       "tokens_total": 89517,
       "elapsed_s": 348.51
+    },
+    {
+      "date": "2026-07-27T17:20:48Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 191013,
+      "elapsed_s": 1004.87
     }
   ]
 }

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf via np.vectorize (np.erf and scipy.special.erf are not available).",
   "kernel_path": "",
-  "date": "2026-07-27T22:50:56Z",
+  "date": "2026-08-10T13:09:00Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 192005,
-    "output": 3290,
+    "input": 154296,
+    "output": 3801,
     "cache_read": 0,
-    "total": 195295
+    "total": 158097
   },
-  "elapsed_total_s": 108.73,
+  "elapsed_total_s": 160.25,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 21.77,
+      "elapsed_s": 68.9,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 54849,
-        "output": 452,
+        "input": 96731,
+        "output": 2827,
         "cache_read": 0,
-        "total": 55301,
+        "total": 99558,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 80.85,
+      "elapsed_s": 16.92,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 129653,
-        "output": 2831,
+        "input": 33897,
+        "output": 278,
         "cache_read": 0,
-        "total": 132484,
+        "total": 34175,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -71,17 +71,17 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 6.11,
+      "elapsed_s": 74.43,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7503,
-        "output": 7,
+        "input": 23668,
+        "output": 696,
         "cache_read": 0,
-        "total": 7510,
+        "total": 24364,
         "cost_usd": 0.0
       },
-      "model": "ollama/qwen3-coder:30b",
+      "model": "qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -107,7 +107,7 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T01:45:02Z",
@@ -130,6 +130,17 @@
       "skipped": false,
       "tokens_total": 154858,
       "elapsed_s": 1332.19
+    },
+    {
+      "date": "2026-07-27T22:50:56Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 195295,
+      "elapsed_s": 108.73
     }
   ]
 }

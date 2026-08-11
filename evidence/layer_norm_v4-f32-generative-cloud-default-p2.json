@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Operator: LayerNormV4 (y = (x - mean) * rsqrt(var + eps) * gamma + beta, normalize over the last axis); host-side dispatcher between full_row and split_d kernels with N-D flatten. Input shapes: (1024, 768) and (4096, 50, 32). Output shape: same_as_input. Dtype: float32.",
   "kernel_path": "",
-  "date": "2026-07-27T16:31:13Z",
+  "date": "2026-08-10T15:03:02Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 16380,
-    "output": 3731,
-    "cache_read": 128768,
-    "total": 20111
+    "input": 15817,
+    "output": 1164,
+    "cache_read": 80000,
+    "total": 16981
   },
-  "elapsed_total_s": 182.55,
+  "elapsed_total_s": 1240.45,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 130.51,
-      "exit": 0,
+      "elapsed_s": 1200.01,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 9338,
-        "output": 3012,
-        "cache_read": 84480,
-        "total": 12350,
+        "input": 7863,
+        "output": 851,
+        "cache_read": 57472,
+        "total": 8714,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "minimal",
-      "elapsed_s": 52.04,
+      "elapsed_s": 40.44,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7042,
-        "output": 719,
-        "cache_read": 44288,
-        "total": 7761,
+        "input": 7954,
+        "output": 313,
+        "cache_read": 22528,
+        "total": 8267,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -89,7 +89,7 @@
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P2, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",
@@ -102,5 +102,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-07-27T16:31:13Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 20111,
+      "elapsed_s": 182.55
+    }
+  ]
 }

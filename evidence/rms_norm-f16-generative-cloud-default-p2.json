@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: RMSNorm (y = x * gamma * rsqrt(mean(x\u00b2) + eps), per row); host-side dispatcher between full_row and split_d kernels. Input shapes: (8, 256) and (8, 1055). Output shape: same_as_input. Dtype: float16.",
   "kernel_path": "",
-  "date": "2026-07-27T16:35:04Z",
+  "date": "2026-08-10T15:06:18Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 21399,
-    "output": 3577,
-    "cache_read": 102912,
-    "total": 24976
+    "input": 31834,
+    "output": 930,
+    "cache_read": 105088,
+    "total": 32764
   },
-  "elapsed_total_s": 157.6,
+  "elapsed_total_s": 118.53,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 131.27,
+      "elapsed_s": 54.96,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 13525,
-        "output": 3317,
-        "cache_read": 81152,
-        "total": 16842,
+        "input": 20284,
+        "output": 525,
+        "cache_read": 38656,
+        "total": 20809,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "minimal",
-      "elapsed_s": 26.33,
+      "elapsed_s": 63.57,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7874,
-        "output": 260,
-        "cache_read": 21760,
-        "total": 8134,
+        "input": 11550,
+        "output": 405,
+        "cache_read": 66432,
+        "total": 11955,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -89,7 +89,7 @@
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P2, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",
@@ -157,6 +157,17 @@
       "skipped": false,
       "tokens_total": 51158,
       "elapsed_s": 275.42
+    },
+    {
+      "date": "2026-07-27T16:35:04Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 24976,
+      "elapsed_s": 157.6
     }
   ]
 }

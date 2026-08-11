@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a tanh operator (out = tanh(x)) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/tanh/kernel.py",
-  "date": "2026-07-27T17:36:18Z",
+  "date": "2026-08-10T08:30:25Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 212474,
-    "output": 10808,
-    "cache_read": 2226816,
-    "total": 223282
+    "input": 96147,
+    "output": 7337,
+    "cache_read": 608256,
+    "total": 103484
   },
-  "elapsed_total_s": 874.51,
+  "elapsed_total_s": 361.01,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 874.51,
+      "elapsed_s": 361.01,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 212474,
-        "output": 10808,
-        "cache_read": 2226816,
-        "total": 223282,
+        "input": 96147,
+        "output": 7337,
+        "cache_read": 608256,
+        "total": 103484,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -149,6 +149,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-27T17:36:18Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 223282,
+      "elapsed_s": 874.51
+    }
+  ]
 }

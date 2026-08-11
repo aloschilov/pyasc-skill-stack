@@ -4,8 +4,8 @@
   "operation": "reduce_sum",
   "dtype": "float16",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float16, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
-  "date": "2026-07-28T04:53:58Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
+  "date": "2026-08-10T09:20:45Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.2",
   "model": "dashscope/glm-5.2",
   "tokens": {
-    "input": 71041,
-    "output": 12602,
-    "cache_read": 821888,
-    "total": 83643
+    "input": 177422,
+    "output": 16871,
+    "cache_read": 1866496,
+    "total": 194293
   },
-  "elapsed_total_s": 539.99,
+  "elapsed_total_s": 1166.57,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 539.99,
+      "elapsed_s": 1166.57,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 71041,
-        "output": 12602,
-        "cache_read": 821888,
-        "total": 83643,
+        "input": 177422,
+        "output": 16871,
+        "cache_read": 1866496,
+        "total": 194293,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.2",
@@ -152,6 +152,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.2, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-28T04:53:58Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 83643,
+      "elapsed_s": 539.99
+    }
+  ]
 }

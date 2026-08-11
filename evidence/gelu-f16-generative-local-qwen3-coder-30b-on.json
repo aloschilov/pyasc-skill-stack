@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf via np.vectorize (np.erf and scipy.special.erf are not available).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu/kernel.py",
-  "date": "2026-07-27T16:46:17Z",
+  "date": "2026-08-10T19:44:33Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -21,31 +21,34 @@
     "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md"
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 613677,
-    "output": 4212,
+    "input": 1368857,
+    "output": 8669,
     "cache_read": 0,
-    "total": 617889
+    "total": 1377526
   },
-  "elapsed_total_s": 217.92,
+  "elapsed_total_s": 512.06,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 217.92,
+      "elapsed_s": 512.06,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 613677,
-        "output": 4212,
+        "input": 1368857,
+        "output": 8669,
         "cache_read": 0,
-        "total": 617889,
+        "total": 1377526,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -149,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T03:55:32Z",
@@ -172,6 +175,17 @@
       "skipped": false,
       "tokens_total": 595356,
       "elapsed_s": 1388.41
+    },
+    {
+      "date": "2026-07-27T16:46:17Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 617889,
+      "elapsed_s": 217.92
     }
   ]
 }

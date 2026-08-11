@@ -4,8 +4,8 @@
   "operation": "batch_mat_mul_v3",
   "dtype": "float16",
   "prompt": "Help me develop a CUBE-only batched matmul (BatchMatMulV3) on Ascend950PR_9599 (C310) for float16 inputs with a float32 cube accumulator and float16 output, for C[b]=A[b]@B[b] at [B,M,K]x[B,K,N]=[16,256,256]x[16,256,256]. Distribute the batch axis one matrix per cube core (asc2.block_idx), flatten [B,M,K] to 2D [B*M,K] on the host, stage each batch's A/B into asc2.TileLocation.L1, copy M/N tiles to L0A/L0B, compute `a @ b`, cast the result to float16 and asc2.store. Inputs MUST be torch.Tensor.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_mat_mul_v3_f16/kernel.py",
-  "date": "2026-07-27T19:09:35Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_mat_mul_v3/kernel.py",
+  "date": "2026-08-10T10:04:51Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -29,29 +29,29 @@
   },
   "skills_mode": "on",
   "model_profile": "cloud-qwen3.7-max",
-  "model": "dashscope/qwen3.7-max",
+  "model": "qwen3.7-max",
   "tokens": {
-    "input": 95780,
-    "output": 6991,
-    "cache_read": 820736,
-    "total": 102771
+    "input": 99647,
+    "output": 8663,
+    "cache_read": 929280,
+    "total": 108310
   },
-  "elapsed_total_s": 370.53,
+  "elapsed_total_s": 514.14,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 370.53,
+      "elapsed_s": 514.14,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 95780,
-        "output": 6991,
-        "cache_read": 820736,
-        "total": 102771,
+        "input": 99647,
+        "output": 8663,
+        "cache_read": 929280,
+        "total": 108310,
         "cost_usd": 0.0
       },
-      "model": "dashscope/qwen3.7-max",
+      "model": "qwen3.7-max",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "pass"
@@ -149,6 +149,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-27T19:09:35Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 102771,
+      "elapsed_s": 370.53
+    }
+  ]
 }

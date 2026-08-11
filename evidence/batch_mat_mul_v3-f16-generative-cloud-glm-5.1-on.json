@@ -4,8 +4,8 @@
   "operation": "batch_mat_mul_v3",
   "dtype": "float16",
   "prompt": "Help me develop a CUBE-only batched matmul (BatchMatMulV3) on Ascend950PR_9599 (C310) for float16 inputs with a float32 cube accumulator and float16 output, for C[b]=A[b]@B[b] at [B,M,K]x[B,K,N]=[16,256,256]x[16,256,256]. Distribute the batch axis one matrix per cube core (asc2.block_idx), flatten [B,M,K] to 2D [B*M,K] on the host, stage each batch's A/B into asc2.TileLocation.L1, copy M/N tiles to L0A/L0B, compute `a @ b`, cast the result to float16 and asc2.store. Inputs MUST be torch.Tensor.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_matmul_v3_f16/kernel.py",
-  "date": "2026-07-28T04:35:35Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_mat_mul_v3_f16/kernel.py",
+  "date": "2026-08-10T23:05:24Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 159007,
-    "output": 9256,
-    "cache_read": 929920,
-    "total": 168263
+    "input": 80745,
+    "output": 7906,
+    "cache_read": 1133056,
+    "total": 88651
   },
-  "elapsed_total_s": 414.41,
+  "elapsed_total_s": 271.75,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 414.41,
+      "elapsed_s": 271.75,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 159007,
-        "output": 9256,
-        "cache_read": 929920,
-        "total": 168263,
+        "input": 80745,
+        "output": 7906,
+        "cache_read": 1133056,
+        "total": 88651,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -149,6 +149,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-28T04:35:35Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 168263,
+      "elapsed_s": 414.41
+    }
+  ]
 }

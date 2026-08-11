@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop the DropoutDoMask apply phase (out = data * mask * (1/keep_prob)) on Ascend950PR_9599 (C310) for float16 with a dense keep-mask, shapes [16,2048] and [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/dropout_do_mask/kernel.py",
-  "date": "2026-07-27T16:40:36Z",
+  "date": "2026-08-10T19:34:41Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -22,33 +22,49 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
+      "self_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "qwen3-coder:30b",
+  "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 867462,
-    "output": 5317,
+    "input": 890220,
+    "output": 7847,
     "cache_read": 0,
-    "total": 872779
+    "total": 898067
   },
-  "elapsed_total_s": 265.6,
+  "elapsed_total_s": 628.67,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 265.6,
+      "elapsed_s": 132.61,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 420907,
+        "output": 4023,
+        "cache_read": 0,
+        "total": 424930,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 496.06,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 867462,
-        "output": 5317,
+        "input": 469313,
+        "output": 3824,
         "cache_read": 0,
-        "total": 872779,
+        "total": 473137,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
@@ -71,7 +87,7 @@
     "markers_found": []
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -128,8 +144,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -149,6 +165,18 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-27T16:40:36Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 872779,
+      "elapsed_s": 265.6
+    }
+  ]
 }

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an element-wise add operator (out = x + y) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "",
-  "date": "2026-07-27T22:05:58Z",
+  "date": "2026-08-10T12:32:05Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 56149,
-    "output": 750,
+    "input": 418002,
+    "output": 6164,
     "cache_read": 0,
-    "total": 56899
+    "total": 424166
   },
-  "elapsed_total_s": 181.76,
+  "elapsed_total_s": 317.24,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 13.48,
+      "elapsed_s": 265.47,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 33002,
-        "output": 346,
+        "input": 291079,
+        "output": 4441,
         "cache_read": 0,
-        "total": 33348,
+        "total": 295520,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -53,17 +53,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 163.78,
+      "elapsed_s": 4.67,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 15759,
-        "output": 383,
+        "input": 7094,
+        "output": 83,
         "cache_read": 0,
-        "total": 16142,
+        "total": 7177,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 4.5,
+      "elapsed_s": 47.1,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7388,
-        "output": 21,
+        "input": 119829,
+        "output": 1640,
         "cache_read": 0,
-        "total": 7409,
+        "total": 121469,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -107,7 +107,7 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T00:40:34Z",
@@ -130,6 +130,17 @@
       "skipped": false,
       "tokens_total": 100956,
       "elapsed_s": 1263.88
+    },
+    {
+      "date": "2026-07-27T22:05:58Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 56899,
+      "elapsed_s": 181.76
     }
   ]
 }

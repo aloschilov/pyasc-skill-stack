@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: batched matmul C[b] = A[b] @ B[b] (float16 in, float32 cube accumulate, float16 out). Input shapes: A [16,256,256], B [16,256,256]. Output shape: [16,256,256]. Dtype: float16.",
   "kernel_path": "",
-  "date": "2026-07-27T16:23:19Z",
+  "date": "2026-08-10T14:35:48Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 18601,
-    "output": 2888,
-    "cache_read": 152320,
-    "total": 21489
+    "input": 11196,
+    "output": 458,
+    "cache_read": 43520,
+    "total": 11654
   },
-  "elapsed_total_s": 181.3,
+  "elapsed_total_s": 63.55,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 163.03,
+      "elapsed_s": 48.23,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 18570,
-        "output": 2835,
-        "cache_read": 145152,
-        "total": 21405,
+        "input": 11165,
+        "output": 430,
+        "cache_read": 36352,
+        "total": 11595,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "minimal",
-      "elapsed_s": 18.27,
+      "elapsed_s": 15.32,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 31,
-        "output": 53,
+        "output": 28,
         "cache_read": 7168,
-        "total": 84,
+        "total": 59,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -89,7 +89,7 @@
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P2, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",
@@ -102,5 +102,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-07-27T16:23:19Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 21489,
+      "elapsed_s": 181.3
+    }
+  ]
 }

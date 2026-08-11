@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Create an RMSNorm capability for float16 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_f16/kernel.py",
-  "date": "2026-07-27T21:30:31Z",
+  "date": "2026-08-10T11:39:43Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 162652,
-    "output": 10753,
-    "cache_read": 768256,
-    "total": 173405
+    "input": 121973,
+    "output": 9550,
+    "cache_read": 1119360,
+    "total": 131523
   },
-  "elapsed_total_s": 348.38,
+  "elapsed_total_s": 408.62,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 348.38,
+      "elapsed_s": 408.62,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 162652,
-        "output": 10753,
-        "cache_read": 768256,
-        "total": 173405,
+        "input": 121973,
+        "output": 9550,
+        "cache_read": 1119360,
+        "total": 131523,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -153,7 +153,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T04:24:23Z",
@@ -176,6 +176,17 @@
       "skipped": false,
       "tokens_total": 200902,
       "elapsed_s": 420.0
+    },
+    {
+      "date": "2026-07-27T21:30:31Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 173405,
+      "elapsed_s": 348.38
     }
   ]
 }

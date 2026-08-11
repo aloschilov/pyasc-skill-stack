@@ -4,8 +4,8 @@
   "operation": "batch_mat_mul_v3",
   "dtype": "float16",
   "prompt": "Help me develop a CUBE-only batched matmul (BatchMatMulV3) on Ascend950PR_9599 (C310) for float16 inputs with a float32 cube accumulator and float16 output, for C[b]=A[b]@B[b] at [B,M,K]x[B,K,N]=[16,256,256]x[16,256,256]. Distribute the batch axis one matrix per cube core (asc2.block_idx), flatten [B,M,K] to 2D [B*M,K] on the host, stage each batch's A/B into asc2.TileLocation.L1, copy M/N tiles to L0A/L0B, compute `a @ b`, cast the result to float16 and asc2.store. Inputs MUST be torch.Tensor.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_mat_mul_v3_f16out/kernel.py",
-  "date": "2026-07-28T07:12:32Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_mat_mul_v3_f16_out16/kernel.py",
+  "date": "2026-08-10T11:14:19Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,36 +18,37 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md"
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-glm-5.2",
   "model": "dashscope/glm-5.2",
   "tokens": {
-    "input": 182092,
-    "output": 12439,
-    "cache_read": 912640,
-    "total": 194531
+    "input": 181673,
+    "output": 15496,
+    "cache_read": 1330048,
+    "total": 197169
   },
-  "elapsed_total_s": 1200.03,
+  "elapsed_total_s": 883.3,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1200.03,
-      "exit": 124,
+      "elapsed_s": 883.3,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 182092,
-        "output": 12439,
-        "cache_read": 912640,
-        "total": 194531,
+        "input": 181673,
+        "output": 15496,
+        "cache_read": 1330048,
+        "total": 197169,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.2",
@@ -148,6 +149,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.2, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-28T07:12:32Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 194531,
+      "elapsed_s": 1200.03
+    }
+  ]
 }

@@ -4,8 +4,8 @@
   "operation": "apply_adam",
   "dtype": "float32",
   "prompt": "Operator: ApplyAdam in-place (non-Nesterov), float32. Inputs var,m,v,grad (same shape) + 6 host scalars folded into ConstExpr floats one_minus_beta1, one_minus_beta2, alpha=lr*sqrt(1-beta2_power)/(1-beta1_power), epsilon. Per element: m_new=m+(grad-m)*one_minus_beta1; v_new=v+(grad*grad-v)*one_minus_beta2; var_new=var-(m_new*alpha)/(sqrt(v_new)+epsilon). Store m_new,v_new,var_new in place. Input shapes: [16,2048],[32,4096]. Output: same_as_input. Layout contiguous; flatten to 1D in the host launcher; kernel takes `size:int` + ConstExpr scalars and tiles 1D. TILE_SIZE=2048, CORE_NUM=16; size multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only); partition tile_per_core. Tolerance atol=1e-5, rtol=1e-4 vs NumPy. Platform Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599.",
-  "kernel_path": "kernel.py",
-  "date": "2026-07-28T01:25:23Z",
+  "kernel_path": "",
+  "date": "2026-08-10T16:08:47Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,133 +19,77 @@
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": [
-      "kernel.py"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 7500,
-    "output": 2112,
-    "cache_read": 48384,
-    "total": 9612
+    "input": 23446,
+    "output": 10980,
+    "cache_read": 297472,
+    "total": 34426
   },
-  "elapsed_total_s": 264.13,
+  "elapsed_total_s": 620.5,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 264.13,
+      "elapsed_s": 352.1,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 7500,
-        "output": 2112,
-        "cache_read": 48384,
-        "total": 9612,
+        "input": 12450,
+        "output": 10044,
+        "cache_read": 139264,
+        "total": 22494,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "pass"
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 268.4,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 10996,
+        "output": 936,
+        "cache_read": 158208,
+        "total": 11932,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "mode": "static_only",
+    "status": "fail",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "no semantic markers defined for 'apply_adam'",
+    "passed": false,
+    "detail": "no kernel found",
     "markers_found": []
   },
   "score": {
-    "value": 16.0,
+    "value": 0.0,
     "threshold": 12,
-    "accepted": true,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "verification call present"
-      },
-      "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
-      },
-      "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x3, shape loop=yes"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in semantic table)"
-      }
-    },
+    "accepted": false,
+    "checks": {},
     "failure_category": null,
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": false,
-      "allow_legacy_apis": false
-    }
+    "gating_detail": {}
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P3, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -158,5 +102,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-07-28T01:25:23Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 9612,
+      "elapsed_s": 264.13
+    }
+  ]
 }

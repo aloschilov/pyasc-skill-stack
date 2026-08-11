@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Create a LayerNormV4 capability for float32 on Ascend950PR_9599: mean/var/rstd + (x-mean)*rstd*gamma+beta, last-axis normalize with N-D flatten. Gate shape [1024,768].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/layer_norm_v4_f32/kernel.py",
-  "date": "2026-07-28T06:38:29Z",
+  "date": "2026-08-11T00:48:52Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -30,24 +30,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 138520,
-    "output": 10027,
-    "cache_read": 1053440,
-    "total": 148547
+    "input": 81878,
+    "output": 9799,
+    "cache_read": 820736,
+    "total": 91677
   },
-  "elapsed_total_s": 1200.03,
+  "elapsed_total_s": 1200.02,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1200.03,
+      "elapsed_s": 1200.02,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 138520,
-        "output": 10027,
-        "cache_read": 1053440,
-        "total": 148547,
+        "input": 81878,
+        "output": 9799,
+        "cache_read": 820736,
+        "total": 91677,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -128,7 +128,7 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "detail": "verify x3, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": false,
@@ -148,6 +148,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-28T06:38:29Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 148547,
+      "elapsed_s": 1200.03
+    }
+  ]
 }

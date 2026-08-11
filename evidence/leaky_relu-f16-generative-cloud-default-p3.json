@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-07-28T02:01:36Z",
+  "date": "2026-08-10T16:45:19Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -27,24 +27,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 21857,
-    "output": 3460,
-    "cache_read": 477184,
-    "total": 25317
+    "input": 6066,
+    "output": 1107,
+    "cache_read": 46592,
+    "total": 7173
   },
-  "elapsed_total_s": 554.74,
+  "elapsed_total_s": 69.07,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 554.74,
+      "elapsed_s": 69.07,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 21857,
-        "output": 3460,
-        "cache_read": 477184,
-        "total": 25317,
+        "input": 6066,
+        "output": 1107,
+        "cache_read": 46592,
+        "total": 7173,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -147,7 +147,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P3, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -226,6 +226,17 @@
       "skipped": false,
       "tokens_total": 72553,
       "elapsed_s": 519.67
+    },
+    {
+      "date": "2026-07-28T02:01:36Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 25317,
+      "elapsed_s": 554.74
     }
   ]
 }

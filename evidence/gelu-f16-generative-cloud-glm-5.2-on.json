@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf via np.vectorize (np.erf and scipy.special.erf are not available).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f16/kernel.py",
-  "date": "2026-07-28T06:11:07Z",
+  "date": "2026-08-10T10:15:15Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,36 +18,37 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md"
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-glm-5.2",
   "model": "dashscope/glm-5.2",
   "tokens": {
-    "input": 160997,
-    "output": 10944,
-    "cache_read": 1686656,
-    "total": 171941
+    "input": 161478,
+    "output": 14509,
+    "cache_read": 1570176,
+    "total": 175987
   },
-  "elapsed_total_s": 1200.01,
+  "elapsed_total_s": 841.3,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1200.01,
-      "exit": 124,
+      "elapsed_s": 841.3,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 160997,
-        "output": 10944,
-        "cache_read": 1686656,
-        "total": 171941,
+        "input": 161478,
+        "output": 14509,
+        "cache_read": 1570176,
+        "total": 175987,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.2",
@@ -151,6 +152,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.2, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-28T06:11:07Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 171941,
+      "elapsed_s": 1200.01
+    }
+  ]
 }

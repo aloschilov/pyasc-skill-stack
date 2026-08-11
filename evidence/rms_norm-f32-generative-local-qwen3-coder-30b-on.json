@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Create an RMSNorm capability for float32 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm/kernel.py",
-  "date": "2026-07-27T20:10:54Z",
+  "date": "2026-08-10T22:40:11Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -21,67 +21,32 @@
     "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md"
+      "design.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "qwen3-coder:30b",
+  "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 1777486,
-    "output": 21609,
+    "input": 647587,
+    "output": 5450,
     "cache_read": 0,
-    "total": 1799095
+    "total": 653037
   },
-  "elapsed_total_s": 2025.75,
+  "elapsed_total_s": 332.48,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 990.66,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 779640,
-        "output": 6741,
-        "cache_read": 0,
-        "total": 786381,
-        "cost_usd": 0.0
-      },
-      "model": "qwen3-coder:30b",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 616.12,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 253083,
-        "output": 8067,
-        "cache_read": 0,
-        "total": 261150,
-        "cost_usd": 0.0
-      },
-      "model": "qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 418.97,
+      "elapsed_s": 332.48,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 744763,
-        "output": 6801,
+        "input": 647587,
+        "output": 5450,
         "cache_read": 0,
-        "total": 751564,
+        "total": 653037,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -186,7 +151,7 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T05:21:41Z",
@@ -209,6 +174,17 @@
       "skipped": false,
       "tokens_total": 408356,
       "elapsed_s": 1200.01
+    },
+    {
+      "date": "2026-07-27T20:10:54Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 1799095,
+      "elapsed_s": 2025.75
     }
   ]
 }

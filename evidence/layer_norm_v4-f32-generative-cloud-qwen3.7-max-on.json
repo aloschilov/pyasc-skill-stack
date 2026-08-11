@@ -4,8 +4,8 @@
   "operation": "layer_norm_v4",
   "dtype": "float32",
   "prompt": "Create a LayerNormV4 capability for float32 on Ascend950PR_9599: mean/var/rstd + (x-mean)*rstd*gamma+beta, last-axis normalize with N-D flatten. Gate shape [1024,768].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/layer_norm_v4/kernel.py",
-  "date": "2026-07-27T21:15:39Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/layer_norm_v4_f32/kernel.py",
+  "date": "2026-08-10T11:19:46Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,36 +18,37 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md"
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 101837,
-    "output": 8301,
-    "cache_read": 498048,
-    "total": 110138
+    "input": 109327,
+    "output": 10575,
+    "cache_read": 870144,
+    "total": 119902
   },
-  "elapsed_total_s": 1200.04,
+  "elapsed_total_s": 615.88,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1200.04,
-      "exit": 124,
+      "elapsed_s": 615.88,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 101837,
-        "output": 8301,
-        "cache_read": 498048,
-        "total": 110138,
+        "input": 109327,
+        "output": 10575,
+        "cache_read": 870144,
+        "total": 119902,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -148,6 +149,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-27T21:15:39Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 110138,
+      "elapsed_s": 1200.04
+    }
+  ]
 }

@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop the in-place Adam optimizer update (aclnnApplyAdam, non-Nesterov) on Ascend950PR_9599 (C310) for float32, updating var/m/v from grad with shapes [16,2048] and [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/apply_adam/kernel.py",
-  "date": "2026-07-28T03:50:16Z",
+  "date": "2026-08-10T22:25:43Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 147418,
-    "output": 8206,
-    "cache_read": 785920,
-    "total": 155624
+    "input": 72617,
+    "output": 6701,
+    "cache_read": 698880,
+    "total": 79318
   },
-  "elapsed_total_s": 257.84,
+  "elapsed_total_s": 187.18,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 257.84,
+      "elapsed_s": 187.18,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 147418,
-        "output": 8206,
-        "cache_read": 785920,
-        "total": 155624,
+        "input": 72617,
+        "output": 6701,
+        "cache_read": 698880,
+        "total": 79318,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -149,6 +149,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-28T03:50:16Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 155624,
+      "elapsed_s": 257.84
+    }
+  ]
 }

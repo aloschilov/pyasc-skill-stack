@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop the BatchNormV3 training-mode forward on Ascend950PR_9599 (C310) for float32 on a [32,64,64] [N,C,L] tensor (per-channel reduction over N and L, then affine normalize), emitting out + saveMean + saveInvStd.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_norm_v3/kernel.py",
-  "date": "2026-07-27T19:22:08Z",
+  "date": "2026-08-10T10:24:23Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -29,29 +29,29 @@
   },
   "skills_mode": "on",
   "model_profile": "cloud-qwen3.7-max",
-  "model": "dashscope/qwen3.7-max",
+  "model": "qwen3.7-max",
   "tokens": {
-    "input": 199603,
-    "output": 13191,
-    "cache_read": 2378496,
-    "total": 212794
+    "input": 140785,
+    "output": 10206,
+    "cache_read": 1491072,
+    "total": 150991
   },
-  "elapsed_total_s": 538.62,
+  "elapsed_total_s": 1007.74,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 538.62,
+      "elapsed_s": 1007.74,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 199603,
-        "output": 13191,
-        "cache_read": 2378496,
-        "total": 212794,
+        "input": 140785,
+        "output": 10206,
+        "cache_read": 1491072,
+        "total": 150991,
         "cost_usd": 0.0
       },
-      "model": "dashscope/qwen3.7-max",
+      "model": "qwen3.7-max",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "pass"
@@ -71,7 +71,7 @@
     "markers_found": []
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -124,12 +124,12 @@
         "detail": "found dtype ref"
       },
       "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
+        "passed": false,
+        "detail": "no tiling math found"
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "verify x3, shape loop=yes"
+        "detail": "verify x3, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -149,6 +149,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-27T19:22:08Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 212794,
+      "elapsed_s": 538.62
+    }
+  ]
 }

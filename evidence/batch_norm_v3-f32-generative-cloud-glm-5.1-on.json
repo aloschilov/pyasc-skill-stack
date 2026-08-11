@@ -4,8 +4,8 @@
   "operation": "batch_norm_v3",
   "dtype": "float32",
   "prompt": "Help me develop the BatchNormV3 training-mode forward on Ascend950PR_9599 (C310) for float32 on a [32,64,64] [N,C,L] tensor (per-channel reduction over N and L, then affine normalize), emitting out + saveMean + saveInvStd.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_norm_v3_f32/kernel.py",
-  "date": "2026-07-28T04:45:58Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_norm_v3/kernel.py",
+  "date": "2026-08-10T23:12:01Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 120880,
-    "output": 10118,
-    "cache_read": 1019008,
-    "total": 130998
+    "input": 63580,
+    "output": 8747,
+    "cache_read": 1147904,
+    "total": 72327
   },
-  "elapsed_total_s": 487.7,
+  "elapsed_total_s": 271.76,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 487.7,
+      "elapsed_s": 271.76,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 120880,
-        "output": 10118,
-        "cache_read": 1019008,
-        "total": 130998,
+        "input": 63580,
+        "output": 8747,
+        "cache_read": 1147904,
+        "total": 72327,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -149,6 +149,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-28T04:45:58Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 130998,
+      "elapsed_s": 487.7
+    }
+  ]
 }

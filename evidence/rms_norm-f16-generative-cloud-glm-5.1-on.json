@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Create an RMSNorm capability for float16 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_f16/kernel.py",
-  "date": "2026-07-28T06:59:40Z",
+  "date": "2026-08-11T00:56:56Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 175063,
-    "output": 12326,
-    "cache_read": 1483648,
-    "total": 187389
+    "input": 81702,
+    "output": 10324,
+    "cache_read": 1188352,
+    "total": 92026
   },
-  "elapsed_total_s": 916.09,
+  "elapsed_total_s": 235.52,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 916.09,
+      "elapsed_s": 235.52,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 175063,
-        "output": 12326,
-        "cache_read": 1483648,
-        "total": 187389,
+        "input": 81702,
+        "output": 10324,
+        "cache_read": 1188352,
+        "total": 92026,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -153,7 +153,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T04:51:35Z",
@@ -176,6 +176,17 @@
       "skipped": false,
       "tokens_total": 75374,
       "elapsed_s": 420.01
+    },
+    {
+      "date": "2026-07-28T06:59:40Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 187389,
+      "elapsed_s": 916.09
     }
   ]
 }

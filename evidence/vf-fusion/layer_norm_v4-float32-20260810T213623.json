@@ -1,0 +1,94 @@
+{
+  "cell": "layer_norm_v4/float32",
+  "op": "layer_norm_v4",
+  "dtype": "float32",
+  "shape": [
+    1024,
+    768
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 14360,
+  "ticks_off": 144848,
+  "ticks_on": 196596,
+  "fusion_speedup": 0.7368,
+  "ratio_off": 0.0991,
+  "ratio_on": 0.073,
+  "gate": 0.7,
+  "status": "regressed",
+  "flag": "--cce-simd-vf-fusion",
+  "ref_detail": {
+    "cell": "layer_norm_v4/float32",
+    "op": "layer_norm_v4",
+    "dtype": "float32",
+    "shape": [
+      1024,
+      768
+    ],
+    "n_elements": 786432,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 14360,
+    "ref_ticks_runs": [
+      14490,
+      14360,
+      14309
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.0126,
+    "wall_ms_last": 119177.0,
+    "reference_kind": "canonical_only",
+    "reference_repo": "ops-nn",
+    "reference_source": "ops-nn canonical operator (layer_norm_v4, aclnnop/aclnn_layer_norm.h), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=layer_norm_v4",
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_layer_norm_v4_f32_1024x768.run3.log"
+  },
+  "gen_detail_off": {
+    "cell": "kernels",
+    "kernel": "golden/kernels/layer_norm_v4_f32.py",
+    "dtype": "float32",
+    "shape": [
+      1024,
+      768
+    ],
+    "n_elements": 786432,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 144848,
+    "gen_ticks_runs": [
+      144833,
+      144848,
+      144848
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0001,
+    "vf_fusion": "false",
+    "wall_ms_last": 636405.0,
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_1024x768_vf-false.run3.log"
+  },
+  "gen_detail_on": {
+    "cell": "kernels",
+    "kernel": "golden/kernels/layer_norm_v4_f32.py",
+    "dtype": "float32",
+    "shape": [
+      1024,
+      768
+    ],
+    "n_elements": 786432,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 196596,
+    "gen_ticks_runs": [
+      196608,
+      196596,
+      196588
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0001,
+    "vf_fusion": "true",
+    "wall_ms_last": 732157.0,
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_1024x768_vf-true.run3.log"
+  }
+}

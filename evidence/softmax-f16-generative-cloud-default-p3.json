@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: softmax along last axis (out[i, :] = softmax(x[i, :]) so each row sums to 1); use asc2.softmax on a block of full rows. Input shapes: [32, 4096] ONLY (full-row regime; do not test other shapes \u2014 split_row is a separate cell, deferred to Phase 5/8). Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via block-of-rows distribution: block_size = ceildiv(num_rows, CORE_NUM), start_row = block_idx * block_size; each row fits in UB. Tail: aligned_only (split_row and long_rows_exceeding_UB are unsupported). Accumulator: float32 (softmax exp accumulates in fp32 internally). Tolerance: atol=5e-2, rtol=5e-2 against numpy reference computed as shifted = x - x.max(axis=1, keepdims=True); e = np.exp(shifted); expected = e / e.sum(axis=1, keepdims=True); verify in float32: np.testing.assert_allclose(out.astype(np.float32), expected.astype(np.float32), atol=5e-2, rtol=5e-2). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-07-28T03:34:37Z",
+  "date": "2026-08-10T17:44:47Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -20,31 +20,33 @@
     "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
-      "kernel.py"
+      "kernel.py",
+      "design.md",
+      "verification.md"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 31895,
-    "output": 1847,
-    "cache_read": 258560,
-    "total": 33742
+    "input": 16877,
+    "output": 3646,
+    "cache_read": 293632,
+    "total": 20523
   },
-  "elapsed_total_s": 206.93,
+  "elapsed_total_s": 362.45,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 206.93,
+      "elapsed_s": 362.45,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 31895,
-        "output": 1847,
-        "cache_read": 258560,
-        "total": 33742,
+        "input": 16877,
+        "output": 3646,
+        "cache_read": 293632,
+        "total": 20523,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -148,7 +150,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P3, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -216,6 +218,17 @@
       "skipped": false,
       "tokens_total": 29916,
       "elapsed_s": 133.38
+    },
+    {
+      "date": "2026-07-28T03:34:37Z",
+      "overall_pass": true,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 33742,
+      "elapsed_s": 206.93
     }
   ]
 }

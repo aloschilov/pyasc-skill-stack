@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop the BatchNormV3 training-mode forward on Ascend950PR_9599 (C310) for float32 on a [32,64,64] [N,C,L] tensor (per-channel reduction over N and L, then affine normalize), emitting out + saveMean + saveInvStd.",
   "kernel_path": "",
-  "date": "2026-07-27T23:40:20Z",
+  "date": "2026-08-10T13:39:41Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -23,26 +23,44 @@
   },
   "skills_mode": "off",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "ollama/qwen3-coder:30b",
+  "model": "qwen3-coder:30b",
   "tokens": {
-    "input": 587633,
-    "output": 18171,
+    "input": 367636,
+    "output": 15337,
     "cache_read": 0,
-    "total": 605804
+    "total": 382973
   },
-  "elapsed_total_s": 853.88,
+  "elapsed_total_s": 640.0,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 62.1,
+      "elapsed_s": 280.69,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 111915,
-        "output": 2245,
+        "input": 142608,
+        "output": 1449,
         "cache_read": 0,
-        "total": 114160,
+        "total": 144057,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 227.54,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 118887,
+        "output": 5807,
+        "cache_read": 0,
+        "total": 124694,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -51,37 +69,19 @@
       "runtime_status": "fail"
     },
     {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 66.64,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 101153,
-        "output": 2323,
-        "cache_read": 0,
-        "total": 103476,
-        "cost_usd": 0.0
-      },
-      "model": "qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 725.14,
+      "elapsed_s": 131.77,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 374565,
-        "output": 13603,
+        "input": 106141,
+        "output": 8081,
         "cache_read": 0,
-        "total": 388168,
+        "total": 114222,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-27T23:40:20Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 605804,
+      "elapsed_s": 853.88
+    }
+  ]
 }

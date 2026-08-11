@@ -4,8 +4,8 @@
   "operation": "softmax",
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
-  "kernel_path": "",
-  "date": "2026-07-28T00:44:36Z",
+  "kernel_path": "kernel.py",
+  "date": "2026-08-10T14:32:45Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,30 +19,34 @@
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": []
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "verification.md"
+    ]
   },
   "skills_mode": "off",
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 87780,
-    "output": 2326,
+    "input": 237521,
+    "output": 6722,
     "cache_read": 0,
-    "total": 90106
+    "total": 244243
   },
-  "elapsed_total_s": 519.97,
+  "elapsed_total_s": 254.25,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 5.54,
+      "elapsed_s": 47.1,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7115,
-        "output": 131,
+        "input": 54206,
+        "output": 2252,
         "cache_read": 0,
-        "total": 7246,
+        "total": 56458,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -53,17 +57,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 81.69,
+      "elapsed_s": 175.38,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 65357,
-        "output": 1775,
+        "input": 95734,
+        "output": 2392,
         "cache_read": 0,
-        "total": 67132,
+        "total": 98126,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -71,43 +75,135 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 432.74,
+      "elapsed_s": 31.77,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 15308,
-        "output": 420,
+        "input": 87581,
+        "output": 2078,
         "cache_read": 0,
-        "total": 15728,
+        "total": 89659,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
-      "kernel_found": false,
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": true,
       "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
     "status": "fail",
-    "shapes_verified": []
+    "detail": "Kernel executed but verification unclear: Softmax kernel verification passed!\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "kernel.py",
+      "is_symlink": false,
+      "resolved": "/Users/aloschilov/ar2/work/_temp/gen-softmax-float16-a3.__vo8ewl/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        ".agent-prompt.txt",
+        ".git",
+        "agent-output.txt",
+        "design.md",
+        "golden",
+        "kernel.py",
+        "opencode.json",
+        "verification.md"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 52\ndrwx------ 10 root root   320 Aug 10 14:32 .\ndrwxr-xr-x  1 root root  4096 Aug 10 14:32 ..\n-rw-r--r--  1 root root  1097 Aug 10 14:32 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Aug 10 14:32 .git\n-rw-r--r--  1 root root 24640 Aug 10 14:32 agent-output.txt\n-rw-r--r--  1 root root  1588 Aug 10 14:32 design.md\ndrwxr-xr-x  6 root root   192 Jul 27 15:17 golden\n-rw-r--r--  1 root root  2668 Aug 10 14:32 kernel.py\n-rw-r--r--  1 root root   611 Aug 10 14:32 opencode.json\n-rw-r--r--  1 root root  1128 Aug 10 14:32 verification.md\n--- ls kernel dir ---\ntotal 52\ndrwx------ 10 root root   320 Aug 10 14:32 .\ndrwxr-xr-x  1 root root  4096 Aug 10 14:32 ..\n-rw-r--r--  1 root root  1097 Aug 10 14:32 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Aug 10 14:32 .git\n-rw-r--r--  1 root root 24640 Aug 10 14:32 agent-output.txt\n-rw-r--r--  1 root root  1588 Aug 10 14:32 design.md\ndrwxr-xr-x  6 root root   192 Jul 27 15:17 golden\n-rw-r--r--  1 root root  2668 Aug 10 14:32 kernel.py\n-rw-r--r--  1 root root   611 Aug 10 14:32 opencode.json\n-rw-r--r--  1 root root  1128 Aug 10 14:32 verification.md\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "no kernel found",
-    "markers_found": []
+    "passed": true,
+    "detail": "found ['softmax']",
+    "markers_found": [
+      "softmax"
+    ]
   },
   "score": {
-    "value": 0.0,
+    "value": 9.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {},
+    "checks": {
+      "jit_decorator": {
+        "passed": false,
+        "detail": "missing"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": false,
+        "detail": "missing asc2.load/asc2.store"
+      },
+      "asc2_tensor": {
+        "passed": false,
+        "detail": "missing asc2.tensor"
+      },
+      "loop_range": {
+        "passed": false,
+        "detail": "no range call in kernel"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": false,
+        "detail": "no launch pattern"
+      },
+      "global_address": {
+        "passed": false,
+        "detail": "missing GlobalAddress type"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['softmax']"
+      }
+    },
     "failure_category": null,
-    "gating_detail": {}
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T02:34:57Z",
@@ -130,6 +226,17 @@
       "skipped": false,
       "tokens_total": 232399,
       "elapsed_s": 84.52
+    },
+    {
+      "date": "2026-07-28T00:44:36Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 90106,
+      "elapsed_s": 519.97
     }
   ]
 }

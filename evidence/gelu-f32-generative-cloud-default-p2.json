@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Operator: GELU activation, tanh/Pad\u00e9 form (out = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))), equivalent to 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32.",
   "kernel_path": "",
-  "date": "2026-07-27T16:18:31Z",
+  "date": "2026-08-10T14:32:13Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 18561,
-    "output": 2762,
-    "cache_read": 164224,
-    "total": 21323
+    "input": 20545,
+    "output": 928,
+    "cache_read": 101248,
+    "total": 21473
   },
-  "elapsed_total_s": 201.03,
+  "elapsed_total_s": 141.67,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 64.57,
+      "elapsed_s": 100.72,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 5905,
-        "output": 565,
-        "cache_read": 33792,
-        "total": 6470,
+        "input": 15911,
+        "output": 528,
+        "cache_read": 79104,
+        "total": 16439,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "minimal",
-      "elapsed_s": 136.46,
+      "elapsed_s": 40.95,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 12656,
-        "output": 2197,
-        "cache_read": 130432,
-        "total": 14853,
+        "input": 4634,
+        "output": 400,
+        "cache_read": 22144,
+        "total": 5034,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -89,7 +89,7 @@
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P2, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",
@@ -157,6 +157,17 @@
       "skipped": false,
       "tokens_total": 56429,
       "elapsed_s": 283.61
+    },
+    {
+      "date": "2026-07-27T16:18:31Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 21323,
+      "elapsed_s": 201.03
     }
   ]
 }

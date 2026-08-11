@@ -4,8 +4,8 @@
   "operation": "leaky_relu",
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator on Ascend950PR_9599 (C310) for float16 with alpha=0.01 and shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "kernel.py",
-  "date": "2026-07-27T23:12:36Z",
+  "kernel_path": "",
+  "date": "2026-08-10T13:26:08Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -29,24 +29,24 @@
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 546932,
-    "output": 10050,
+    "input": 396806,
+    "output": 6049,
     "cache_read": 0,
-    "total": 556982
+    "total": 402855
   },
-  "elapsed_total_s": 454.58,
+  "elapsed_total_s": 226.32,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 250.77,
+      "elapsed_s": 4.46,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 209489,
-        "output": 4065,
+        "input": 7094,
+        "output": 71,
         "cache_read": 0,
-        "total": 213554,
+        "total": 7165,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -57,17 +57,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 124.1,
+      "elapsed_s": 73.14,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 203271,
-        "output": 1382,
+        "input": 116086,
+        "output": 1876,
         "cache_read": 0,
-        "total": 204653,
+        "total": 117962,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -75,135 +75,43 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 79.71,
+      "elapsed_s": 148.72,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 134172,
-        "output": 4603,
+        "input": 273626,
+        "output": 4102,
         "cache_read": 0,
-        "total": 138775,
+        "total": 277728,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
-      "kernel_found": true,
+      "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
+    "mode": "static_only",
     "status": "fail",
-    "detail": "Kernel executed but verification unclear: Leaky ReLU kernel for Ascend950PR_9599 platform\nImplementation details:\n- Operator: leaky_relu with alpha=0.01\n- Input shapes: [1, 128], [4, 2048], [32, 4096]\n- Output shape: same_as_input\n- Dtype: float16\n- Layout: contiguous\n- Tiling: TILE_SIZE divides every shape evenly\n- Partition: tile_per_core",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "kernel.py",
-      "is_symlink": false,
-      "resolved": "/Users/aloschilov/ar/work/_temp/gen-leaky_relu-float16-a3.8ikafkb9/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        ".agent-prompt.txt",
-        ".git",
-        "agent-output.txt",
-        "design.md",
-        "golden",
-        "kernel.py",
-        "opencode.json",
-        "verification.md"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 72\ndrwx------ 10 root root   320 Jul 27 23:12 .\ndrwxr-xr-x  1 root root  4096 Jul 27 23:12 ..\n-rw-r--r--  1 root root   733 Jul 27 23:11 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Jul 27 23:11 .git\n-rw-r--r--  1 root root 46195 Jul 27 23:12 agent-output.txt\n-rw-r--r--  1 root root  1345 Jul 27 23:11 design.md\ndrwxr-xr-x  6 root root   192 Jun 12 18:18 golden\n-rw-r--r--  1 root root  2498 Jul 27 23:12 kernel.py\n-rw-r--r--  1 root root   611 Jul 27 23:11 opencode.json\n-rw-r--r--  1 root root   945 Jul 27 23:11 verification.md\n--- ls kernel dir ---\ntotal 72\ndrwx------ 10 root root   320 Jul 27 23:12 .\ndrwxr-xr-x  1 root root  4096 Jul 27 23:12 ..\n-rw-r--r--  1 root root   733 Jul 27 23:11 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Jul 27 23:11 .git\n-rw-r--r--  1 root root 46195 Jul 27 23:12 agent-output.txt\n-rw-r--r--  1 root root  1345 Jul 27 23:11 design.md\ndrwxr-xr-x  6 root root   192 Jun 12 18:18 golden\n-rw-r--r--  1 root root  2498 Jul 27 23:12 kernel.py\n-rw-r--r--  1 root root   611 Jul 27 23:11 opencode.json\n-rw-r--r--  1 root root   945 Jul 27 23:11 verification.md\n--- readlink kernel ---"
-    }
+    "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['asc2.where']",
-    "markers_found": [
-      "asc2.where"
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 10.0,
+    "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {
-      "jit_decorator": {
-        "passed": false,
-        "detail": "missing"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
-      },
-      "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
-      },
-      "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "verification call present"
-      },
-      "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
-      },
-      "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['asc2.where']"
-      }
-    },
-    "failure_category": "F_missing_asc2_import",
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": true,
-      "allow_legacy_apis": false
-    }
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T02:28:45Z",
@@ -226,6 +134,17 @@
       "skipped": false,
       "tokens_total": 63483,
       "elapsed_s": 32.72
+    },
+    {
+      "date": "2026-07-27T23:12:36Z",
+      "overall_pass": false,
+      "score": 10.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 556982,
+      "elapsed_s": 454.58
     }
   ]
 }

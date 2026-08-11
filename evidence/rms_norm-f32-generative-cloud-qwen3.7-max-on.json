@@ -4,8 +4,8 @@
   "operation": "rms_norm",
   "dtype": "float32",
   "prompt": "Create an RMSNorm capability for float32 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_f32/kernel.py",
-  "date": "2026-07-27T21:36:31Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_f32_dispatch/kernel.py",
+  "date": "2026-08-10T11:49:04Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 92081,
-    "output": 9580,
-    "cache_read": 588800,
-    "total": 101661
+    "input": 149081,
+    "output": 10333,
+    "cache_read": 1676928,
+    "total": 159414
   },
-  "elapsed_total_s": 303.54,
+  "elapsed_total_s": 495.63,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 303.54,
+      "elapsed_s": 495.63,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 92081,
-        "output": 9580,
-        "cache_read": 588800,
-        "total": 101661,
+        "input": 149081,
+        "output": 10333,
+        "cache_read": 1676928,
+        "total": 159414,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -153,7 +153,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "history": [
     {
       "date": "2026-06-12T04:30:03Z",
@@ -176,6 +176,17 @@
       "skipped": false,
       "tokens_total": 77780,
       "elapsed_s": 420.01
+    },
+    {
+      "date": "2026-07-27T21:36:31Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 101661,
+      "elapsed_s": 303.54
     }
   ]
 }

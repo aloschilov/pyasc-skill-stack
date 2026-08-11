@@ -5,7 +5,7 @@
   "dtype": "bfloat16",
   "prompt": "Create a LayerNormV4 capability for bfloat16 on Ascend950PR_9599: mean/var/rstd + (x-mean)*rstd*gamma+beta, last-axis normalize with N-D flatten. Gate shape [2000,4096].",
   "kernel_path": "",
-  "date": "2026-07-27T23:48:04Z",
+  "date": "2026-08-10T13:44:43Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 278896,
-    "output": 9610,
+    "input": 303182,
+    "output": 12141,
     "cache_read": 0,
-    "total": 288506
+    "total": 315323
   },
-  "elapsed_total_s": 455.78,
+  "elapsed_total_s": 285.56,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 221.05,
+      "elapsed_s": 4.95,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 188031,
-        "output": 8442,
+        "input": 7093,
+        "output": 88,
         "cache_read": 0,
-        "total": 196473,
+        "total": 7181,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -53,17 +53,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 196.22,
+      "elapsed_s": 196.46,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 38287,
-        "output": 666,
+        "input": 157141,
+        "output": 9185,
         "cache_read": 0,
-        "total": 38953,
+        "total": 166326,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -71,17 +71,17 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 38.51,
+      "elapsed_s": 84.15,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 52578,
-        "output": 502,
+        "input": 138948,
+        "output": 2868,
         "cache_read": 0,
-        "total": 53080,
+        "total": 141816,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -107,6 +107,18 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "history": [
+    {
+      "date": "2026-07-27T23:48:04Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 288506,
+      "elapsed_s": 455.78
+    }
+  ]
 }

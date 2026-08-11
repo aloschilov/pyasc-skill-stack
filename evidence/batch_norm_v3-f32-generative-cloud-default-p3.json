@@ -4,8 +4,8 @@
   "operation": "batch_norm_v3",
   "dtype": "float32",
   "prompt": "Operator: BatchNormV3 training-mode forward. x is [N,C,L]=[32,64,64] (float32); weight/bias are [C] (float32); eps=1e-5. For each channel c reduce over N and L: mean[c]=sum/(N*L), var[c]=sumsq/(N*L)-mean^2, invstd[c]=1/sqrt(var+eps); out[n,c,l]=(x-mean[c])*invstd[c]*weight[c]+bias[c]=x*scale[c]+shift[c]. Outputs: out [N,C,L], saveMean [C], saveInvStd [C]. Inputs MUST be torch.Tensor (numpy is silently zeroed on the C310 simulator path). Tiling: view x as [N*C, L]; partition C across CORE_NUM=8 cores, ch=8 channels/core; each core loads a [ch, L] strided tile per sample n (rows n*C+c0..), accumulates per-channel sum/sumsq via `asc2.reduce_sum(blk, 1)` (reduce the L axis -> [ch]); after the N loop compute mean/var/invstd ([ch] tiles, use asc2.rsqrt); load weight/bias [ch] slices; scale=w*invstd, shift=b-scale*mean; broadcast scale/shift via `asc2.broadcast_to(asc2.expand_dims(scale, 1), ch, L)`; second pass reloads each [ch,L] tile and stores x*scale+shift. Shape dims used in tile shapes must be literal ints (module constants), not ConstExpr (the shape validators reject ConstExpr). Accumulator: float32. Tolerance: mean/invstd atol=rtol=1e-3, out atol=rtol=1e-2 vs a torch fp64 reference. Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599.",
-  "kernel_path": "",
-  "date": "2026-07-28T02:42:16Z",
+  "kernel_path": "kernel.py",
+  "date": "2026-08-10T17:12:07Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,77 +19,133 @@
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": []
+    "artifacts_found": [
+      "kernel.py"
+    ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 81812,
-    "output": 4807,
-    "cache_read": 887552,
-    "total": 86619
+    "input": 22071,
+    "output": 3113,
+    "cache_read": 309248,
+    "total": 25184
   },
-  "elapsed_total_s": 785.17,
+  "elapsed_total_s": 522.97,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 543.42,
+      "elapsed_s": 522.97,
       "exit": 0,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 64985,
-        "output": 4109,
-        "cache_read": 731008,
-        "total": 69094,
+        "input": 22071,
+        "output": 3113,
+        "cache_read": 309248,
+        "total": 25184,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "guided",
-      "elapsed_s": 241.75,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 16827,
-        "output": 698,
-        "cache_read": 156544,
-        "total": 17525,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
     }
   ],
   "verification": {
-    "mode": "static_only",
-    "status": "fail",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "no kernel found",
+    "passed": true,
+    "detail": "no semantic markers defined for 'batch_norm_v3'",
     "markers_found": []
   },
   "score": {
-    "value": 0.0,
+    "value": 16.0,
     "threshold": 12,
-    "accepted": false,
-    "checks": {},
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x3, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in semantic table)"
+      }
+    },
     "failure_category": null,
-    "gating_detail": {}
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P3, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -102,5 +158,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-07-28T02:42:16Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 86619,
+      "elapsed_s": 785.17
+    }
+  ]
 }

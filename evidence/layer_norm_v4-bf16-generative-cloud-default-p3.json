@@ -4,8 +4,8 @@
   "operation": "layer_norm_v4",
   "dtype": "bfloat16",
   "prompt": "Operator: LayerNormV4: y = (x - mean(x, axis=-1, keepdims=True)) * rsqrt(var(x, axis=-1, keepdims=True) + eps) * gamma + beta, normalizing over the last axis, with a host-side dispatcher that flattens any N-D input to [rows, last_dim] and selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (2000, 4096) and (2000, 1024). Output shape: same_as_input. Dtype: bfloat16 (gamma and beta are bfloat16; eps is a float32 scalar; mean/var/rstd accumulate in float32). Layout: contiguous. Axis: -1. Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the padded row fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; cast loaded tiles to float32 via `.to(asc.float32)` before computing the two reductions (sum_x and sum_x2 in a merged pass), derive variance as E[x\u00b2] - mean\u00b2 so host zero padding does not bias the statistics, then cast back via `.to(x.dtype)` before asc2.store. The host dispatcher `layer_norm_v4_launch(x, gamma, beta, eps)` picks full_row when `num_cols % 8 == 0` AND `num_cols * 4 * 6 <= 64 * 1024` (f32 intermediate UB budget), otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32. Host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599.",
-  "kernel_path": "kernel.py",
-  "date": "2026-07-28T03:11:57Z",
+  "kernel_path": "",
+  "date": "2026-08-10T17:15:06Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,167 +19,77 @@
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": [
-      "kernel.py"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 26618,
-    "output": 7552,
-    "cache_read": 146304,
-    "total": 34170
+    "input": 29155,
+    "output": 1479,
+    "cache_read": 203904,
+    "total": 30634
   },
-  "elapsed_total_s": 297.92,
+  "elapsed_total_s": 174.79,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 151.38,
+      "elapsed_s": 75.98,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 16780,
-        "output": 3204,
-        "cache_read": 104576,
-        "total": 19984,
+        "input": 13048,
+        "output": 692,
+        "cache_read": 80768,
+        "total": 13740,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
+      "kernel_found": false,
+      "static_verify": "fail",
       "runtime_status": "fail"
     },
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 146.54,
+      "elapsed_s": 98.81,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 9838,
-        "output": 4348,
-        "cache_read": 41728,
-        "total": 14186,
+        "input": 16107,
+        "output": 787,
+        "cache_read": 123136,
+        "total": 16894,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
-      "kernel_found": true,
+      "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
+    "mode": "static_only",
     "status": "fail",
-    "detail": "Exit code 1: ModuleNotFoundError: No module named 'asc2.impl'\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 3, in <module>\n    import asc2.impl as impl\nModuleNotFoundError: No module named 'asc2.impl'\n",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "kernel.py",
-      "is_symlink": false,
-      "resolved": "/Users/aloschilov/ar/work/_temp/gen-layer_norm_v4-bfloat16-a2.1ardpn0f/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        ".agent-prompt.txt",
-        ".git",
-        "agent-output.txt",
-        "golden",
-        "kernel.py",
-        "opencode.json"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 44\ndrwx------  8 root root   256 Jul 28 03:11 .\ndrwxr-xr-x  1 root root  4096 Jul 28 03:11 ..\n-rw-r--r--  1 root root  1744 Jul 28 03:09 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Jul 28 03:09 .git\n-rw-r--r--  1 root root 23212 Jul 28 03:11 agent-output.txt\ndrwxr-xr-x  6 root root   192 Jun 12 18:18 golden\n-rw-r--r--  1 root root  6440 Jul 28 03:11 kernel.py\n-rw-r--r--  1 root root   846 Jul 28 03:09 opencode.json\n--- ls kernel dir ---\ntotal 44\ndrwx------  8 root root   256 Jul 28 03:11 .\ndrwxr-xr-x  1 root root  4096 Jul 28 03:11 ..\n-rw-r--r--  1 root root  1744 Jul 28 03:09 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Jul 28 03:09 .git\n-rw-r--r--  1 root root 23212 Jul 28 03:11 agent-output.txt\ndrwxr-xr-x  6 root root   192 Jun 12 18:18 golden\n-rw-r--r--  1 root root  6440 Jul 28 03:11 kernel.py\n-rw-r--r--  1 root root   846 Jul 28 03:09 opencode.json\n--- readlink kernel ---"
-    }
+    "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "no semantic markers defined for 'layer_norm_v4'",
+    "passed": false,
+    "detail": "no kernel found",
     "markers_found": []
   },
   "score": {
-    "value": 10.0,
+    "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "2 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": false,
-        "detail": "kernel returns a value"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": false,
-        "detail": "no allclose/assert_close call"
-      },
-      "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
-      },
-      "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x0, shape loop=yes"
-      },
-      "no_hardcoded_shapes": {
-        "passed": false,
-        "detail": "numeric shape tuples found inside JIT function"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in semantic table)"
-      }
-    },
+    "checks": {},
     "failure_category": null,
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": false,
-      "allow_legacy_apis": false
-    }
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P3, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/30279302160",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -192,5 +102,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-07-28T03:11:57Z",
+      "overall_pass": false,
+      "score": 10.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 34170,
+      "elapsed_s": 297.92
+    }
+  ]
 }
