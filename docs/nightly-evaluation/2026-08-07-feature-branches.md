@@ -175,3 +175,37 @@ Snapshot at T+51m:
 
 - ci-nightly-stabilization nightly: `gh run view 31195012048`
   (https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31195012048)
+
+---
+
+## Confirmation run — main nightly 2026-08-11 (run `31365678492`)
+
+After merging PR #3 (`abaeba6`) + the `local-stability-gate` timeout bump
+480→600 (`a6a261c`), triggered `tier=nightly` on `main` to confirm the fixes
+hold on the default branch. **Result: SUCCESS — all 13 jobs ✓, ~18h wall,
+full evidence committed (`f3d4ffd`, `partial_run: false`).**
+
+| Job | Result |
+|---|---|
+| `pr-gate` | ✓ |
+| `merge-gate` (4 shards, golden-verify) | ✓ |
+| `nightly-gate` (P2, P3) | ✓ |
+| `local-stability-gate` (off) | ✓ |
+| `local-stability-gate` (on) | ✓ (the leg that hit the 8h cap before; 10h cap cleared it) |
+| `cloud-dashscope-gate` (glm-5.1, glm-5.2, qwen3.7-max) | ✓ all 3 |
+| `perf-gate` | ✓ |
+| `skills-value-report` | ✓ (evidence committed to main; rebase-before-push worked) |
+
+**No issues to fix.** The stabilization fixes are confirmed on `main`:
+- container-leak guard + 2-runner fan-out → no 24h overrun (main's previous
+  nightly cancelled at 24h28m; this one finished in ~18h).
+- `local-stability-gate` 480→600 → the `on` leg completes (was the lone
+  per-job timeout failure on the ci-nightly-stabilization run).
+- rebase-before-push → `skills-value-report` evidence commit succeeded on main
+  (the ci-nightly-stabilization run's commit failed only because PR #3 was
+  merged with `--delete-branch` mid-run).
+
+Net: main now has a green nightly + fresh full evidence. Remaining open work
+is the API/image transition (PRs #4/#5 blocked on the pyasc-sim bump to
+`4d1db41d` + the `batch_norm_v3_f32` NaN debug), not the harness.
+
