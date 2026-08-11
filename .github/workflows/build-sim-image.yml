@@ -1,0 +1,74 @@
+name: Build pyasc-sim image
+
+# Manual-only build of a single-arch pyasc-sim leg (amd64 on a GitHub-hosted
+# runner — the RTX 4090 amd64 box is retired + QEMU emulation of the
+# CANN+pyasc+LLVM toolchain is impractical) + optional multiarch manifest
+# merge. After both the arm64 leg (built on the Mac) + the amd64 leg (this)
+# are pushed, set merge=true to publish ghcr.io/<owner>/pyasc-sim:py3.11.
+#
+# Requires the GITCODE_CREDENTIALS repo secret: a git-credentials line
+# `https://<user>:<token>@gitcode.com` (gitcode.com needs auth on clone).
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: "arch to build (amd64 | arm64)"
+        type: choice
+        options: [amd64, arm64]
+        default: amd64
+      pyasc_rev:
+        description: "pyasc git rev (SHA on origin/v2; defaults to 4d1db41d)"
+        type: string
+        default: 4d1db41d61cabf565bca1cfb0b11ef5ec4f84c7f
+      merge:
+        description: "after push, also merge the multiarch manifest (needs both legs pushed)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build + push pyasc-sim:py3.11-${{ inputs.arch }}
+    runs-on: ${{ inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write gitcode credentials
+        env:
+          GITCODE_CREDENTIALS: ${{ secrets.GITCODE_CREDENTIALS }}
+        run: |
+          if [ -n "$GITCODE_CREDENTIALS" ]; then
+            printf '%s\n' "$GITCODE_CREDENTIALS" > /tmp/git-credentials
+            chmod 600 /tmp/git-credentials
+            echo "gitcode credentials present; passing as a BuildKit secret."
+          else
+            echo "::warning::GITCODE_CREDENTIALS secret not set; the gitcode clone will fail if the repo requires auth."
+          fi
+
+      - name: Build + push ${{ inputs.arch }} leg
+        env:
+          OWNER: ${{ github.repository_owner }}
+          PYASC_GIT_REV: ${{ inputs.pyasc_rev }}
+          GIT_CREDENTIALS_FILE: ${{ secrets.GITCODE_CREDENTIALS && '/tmp/git-credentials' || '' }}
+          PYASC_SETUP_JOBS: "2"
+        run: bash docker/build-sim-image.sh --arch ${{ inputs.arch }} --push
+
+      - name: Merge multiarch manifest
+        if: ${{ inputs.merge }}
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: bash docker/build-sim-image.sh --merge
