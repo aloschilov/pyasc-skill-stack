@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Operator: BatchNormV3 training forward. Input x [N,C,L]=[32,64,64], weight/bias [C], eps. Per-channel (over N,L): mean, var, invstd=1/sqrt(var+eps); out=(x-mean)*invstd*weight+bias. Outputs out [N,C,L], saveMean [C], saveInvStd [C]. Dtype: float32.",
   "kernel_path": "",
-  "date": "2026-08-10T14:36:59Z",
+  "date": "2026-08-11T16:11:37Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 8326,
-    "output": 512,
-    "cache_read": 60416,
-    "total": 8838
+    "input": 10788,
+    "output": 623,
+    "cache_read": 90496,
+    "total": 11411
   },
-  "elapsed_total_s": 67.06,
+  "elapsed_total_s": 114.02,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 35.12,
+      "elapsed_s": 80.55,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4762,
-        "output": 290,
-        "cache_read": 38272,
-        "total": 5052,
+        "input": 5922,
+        "output": 453,
+        "cache_read": 43904,
+        "total": 6375,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "minimal",
-      "elapsed_s": 31.94,
+      "elapsed_s": 33.47,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 3564,
-        "output": 222,
-        "cache_read": 22144,
-        "total": 3786,
+        "input": 4866,
+        "output": 170,
+        "cache_read": 46592,
+        "total": 5036,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -89,7 +89,7 @@
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P2, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",
@@ -113,6 +113,17 @@
       "skipped": false,
       "tokens_total": 18169,
       "elapsed_s": 182.28
+    },
+    {
+      "date": "2026-08-10T14:36:59Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 8838,
+      "elapsed_s": 67.06
     }
   ]
 }

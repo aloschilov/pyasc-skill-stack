@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator on Ascend950PR_9599 (C310) for float16 with alpha=0.01 and shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu/kernel.py",
-  "date": "2026-08-10T10:57:44Z",
+  "date": "2026-08-11T12:21:23Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,36 +18,37 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md"
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-glm-5.2",
   "model": "dashscope/glm-5.2",
   "tokens": {
-    "input": 145036,
-    "output": 13941,
-    "cache_read": 2345728,
-    "total": 158977
+    "input": 129652,
+    "output": 18348,
+    "cache_read": 1320704,
+    "total": 148000
   },
-  "elapsed_total_s": 1200.0,
+  "elapsed_total_s": 1084.03,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1200.0,
-      "exit": 124,
+      "elapsed_s": 1084.03,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 145036,
-        "output": 13941,
-        "cache_read": 2345728,
-        "total": 158977,
+        "input": 129652,
+        "output": 18348,
+        "cache_read": 1320704,
+        "total": 148000,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.2",
@@ -150,7 +151,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.2, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-28T06:51:06Z",
@@ -162,6 +163,17 @@
       "skipped": false,
       "tokens_total": 83985,
       "elapsed_s": 945.65
+    },
+    {
+      "date": "2026-08-10T10:57:44Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 158977,
+      "elapsed_s": 1200.0
     }
   ]
 }

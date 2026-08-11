@@ -5,7 +5,7 @@
   "dtype": "bfloat16",
   "prompt": "Create a LayerNormV4 capability for bfloat16 on Ascend950PR_9599: mean/var/rstd + (x-mean)*rstd*gamma+beta, last-axis normalize with N-D flatten. Gate shape [2000,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/layer_norm_v4_bf16/kernel.py",
-  "date": "2026-08-10T11:54:47Z",
+  "date": "2026-08-11T14:29:47Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -22,47 +22,79 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md",
-      "acceptance_review.md"
+      "self_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-glm-5.2",
   "model": "dashscope/glm-5.2",
   "tokens": {
-    "input": 146923,
-    "output": 15204,
-    "cache_read": 2076544,
-    "total": 162127
+    "input": 352843,
+    "output": 25305,
+    "cache_read": 2581632,
+    "total": 378148
   },
-  "elapsed_total_s": 1200.02,
+  "elapsed_total_s": 2400.01,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1200.02,
+      "elapsed_s": 1200.0,
       "exit": 124,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 146923,
-        "output": 15204,
-        "cache_read": 2076544,
-        "total": 162127,
+        "input": 90192,
+        "output": 13684,
+        "cache_read": 934400,
+        "total": 103876,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.2",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 1200.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 262651,
+        "output": 11621,
+        "cache_read": 1647232,
+        "total": 274272,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5.2",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
-    "shapes_verified": []
+    "status": "fail",
+    "detail": "Timeout after 1470s",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/layer_norm_v4_bf16/kernel.py",
+      "is_symlink": false,
+      "resolved": "/Users/aloschilov/ar2/work/_temp/gen-layer_norm_v4-bfloat16-a2.ptnlsssu/teams/pyasc-kernel-dev-team/kernels/layer_norm_v4_bf16/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        "README.md",
+        "conftest.py",
+        "docs",
+        "kernel.py",
+        "test"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 340\ndrwx------  9 root root    288 Aug 11 14:05 .\ndrwxr-xr-x  1 root root   4096 Aug 11 14:29 ..\n-rw-r--r--  1 root root    169 Aug 11 13:45 .agent-prompt.txt\ndrwxr-xr-x 10 root root    320 Aug 11 13:45 .git\n-rw-r--r--  1 root root 334433 Aug 11 14:05 agent-output.txt\ndrwxr-xr-x  6 root root    192 Jul 27 15:17 golden\n-rw-r--r--  1 root root    909 Aug 11 13:45 opencode.json\ndrwxr-xr-x 11 root root    352 Jul 27 15:17 skills\ndrwxr-xr-x  3 root root     96 Jul 27 15:17 teams\n--- ls kernel dir ---\ntotal 20\ndrwxr-xr-x 7 root root  224 Aug 11 13:55 .\ndrwxr-xr-x 3 root root   96 Aug 11 13:50 ..\n-rw-r--r-- 1 root root  611 Aug 11 13:50 README.md\n-rw-r--r-- 1 root root  441 Aug 11 13:50 conftest.py\ndrwxr-xr-x 5 root root  160 Aug 11 13:57 docs\n-rw-r--r-- 1 root root 9010 Aug 11 13:56 kernel.py\ndrwxr-xr-x 2 root root   64 Aug 11 13:50 test\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
     "passed": true,
@@ -148,7 +180,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.2, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-28T08:58:27Z",
@@ -160,6 +192,17 @@
       "skipped": false,
       "tokens_total": 199036,
       "elapsed_s": 2400.03
+    },
+    {
+      "date": "2026-08-10T11:54:47Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 162127,
+      "elapsed_s": 1200.02
     }
   ]
 }

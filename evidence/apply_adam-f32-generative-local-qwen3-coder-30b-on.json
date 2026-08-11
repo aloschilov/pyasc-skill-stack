@@ -4,8 +4,8 @@
   "operation": "apply_adam",
   "dtype": "float32",
   "prompt": "Help me develop the in-place Adam optimizer update (aclnnApplyAdam, non-Nesterov) on Ascend950PR_9599 (C310) for float32, updating var/m/v from grad with shapes [16,2048] and [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/apply_adam/kernel.py",
-  "date": "2026-08-10T19:23:30Z",
+  "kernel_path": "apply_adam_f32/kernel.py",
+  "date": "2026-08-11T17:54:10Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -20,97 +20,49 @@
     "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
-      "kernel.py"
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 1669547,
-    "output": 22179,
+    "input": 599404,
+    "output": 5977,
     "cache_read": 0,
-    "total": 1691726
+    "total": 605381
   },
-  "elapsed_total_s": 895.46,
+  "elapsed_total_s": 418.12,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 239.72,
+      "elapsed_s": 418.12,
       "exit": 0,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 223047,
-        "output": 5378,
+        "input": 599404,
+        "output": 5977,
         "cache_read": 0,
-        "total": 228425,
+        "total": 605381,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 209.63,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 628568,
-        "output": 6559,
-        "cache_read": 0,
-        "total": 635127,
-        "cost_usd": 0.0
-      },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 446.11,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 817932,
-        "output": 10242,
-        "cache_read": 0,
-        "total": 828174,
-        "cost_usd": 0.0
-      },
-      "model": "qwen3-coder:30b",
       "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
+      "static_verify": "pass",
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Kernel executed but verification unclear: ApplyAdam kernel implementation\nError loading kernel: module 'asc2' has no attribute 'jit_context'\n",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/apply_adam/kernel.py",
-      "is_symlink": false,
-      "resolved": "/Users/aloschilov/ar/work/_temp/gen-apply_adam-float32-a3.rfwb779j/teams/pyasc-kernel-dev-team/kernels/apply_adam/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        "README.md",
-        "conftest.py",
-        "docs",
-        "kernel.py",
-        "test"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 196\ndrwx------  9 root root    288 Aug 10 19:23 .\ndrwxr-xr-x  1 root root   4096 Aug 10 19:23 ..\n-rw-r--r--  1 root root    805 Aug 10 19:15 .agent-prompt.txt\ndrwxr-xr-x 10 root root    320 Aug 10 19:23 .git\n-rw-r--r--  1 root root 186932 Aug 10 19:23 agent-output.txt\ndrwxr-xr-x  6 root root    192 Jun 12 18:18 golden\n-rw-r--r--  1 root root    668 Aug 10 19:15 opencode.json\ndrwxr-xr-x 11 root root    352 Jun 30 08:22 skills\ndrwxr-xr-x  3 root root     96 Jun 10 11:49 teams\n--- ls kernel dir ---\ntotal 12\ndrwxr-xr-x 7 root root  224 Aug 10 19:18 .\ndrwxr-xr-x 3 root root   96 Aug 10 19:17 ..\n-rw-r--r-- 1 root root  595 Aug 10 19:17 README.md\n-rw-r--r-- 1 root root  441 Aug 10 19:17 conftest.py\ndrwxr-xr-x 3 root root   96 Aug 10 19:17 docs\n-rw-r--r-- 1 root root 2400 Aug 10 19:18 kernel.py\ndrwxr-xr-x 2 root root   64 Aug 10 19:17 test\n--- readlink kernel ---"
-    }
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
@@ -118,9 +70,9 @@
     "markers_found": []
   },
   "score": {
-    "value": 11.0,
+    "value": 16.0,
     "threshold": 12,
-    "accepted": false,
+    "accepted": true,
     "checks": {
       "jit_decorator": {
         "passed": true,
@@ -143,16 +95,16 @@
         "detail": "present"
       },
       "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
+        "passed": true,
+        "detail": "range/asc2.range present"
       },
       "verification": {
-        "passed": false,
-        "detail": "no allclose/assert_close call"
+        "passed": true,
+        "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
+        "passed": true,
+        "detail": "kernel launch found"
       },
       "global_address": {
         "passed": true,
@@ -167,16 +119,16 @@
         "detail": "skipped (no --op or op not in arity table)"
       },
       "output_dtype": {
-        "passed": false,
-        "detail": "none of ['float32', 'f32', 'fp32'] found in source"
+        "passed": true,
+        "detail": "found dtype ref"
       },
       "tiling_consistency": {
         "passed": true,
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x3, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -194,9 +146,9 @@
       "allow_legacy_apis": false
     }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-27T16:35:43Z",
@@ -208,6 +160,17 @@
       "skipped": false,
       "tokens_total": 1453816,
       "elapsed_s": 1060.83
+    },
+    {
+      "date": "2026-08-10T19:23:30Z",
+      "overall_pass": false,
+      "score": 11.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 1691726,
+      "elapsed_s": 895.46
     }
   ]
 }

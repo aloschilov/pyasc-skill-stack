@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float16, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/kernel.py",
-  "date": "2026-08-10T22:18:09Z",
+  "date": "2026-08-11T04:48:37Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,42 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 86297,
-    "output": 9474,
-    "cache_read": 1335808,
-    "total": 95771
+    "input": 201004,
+    "output": 8053,
+    "cache_read": 1421312,
+    "total": 209057
   },
-  "elapsed_total_s": 224.02,
+  "elapsed_total_s": 1645.44,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 224.02,
+      "elapsed_s": 1200.1,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 79574,
+        "output": 586,
+        "cache_read": 126464,
+        "total": 80160,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5.1",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 445.34,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 86297,
-        "output": 9474,
-        "cache_read": 1335808,
-        "total": 95771,
+        "input": 121430,
+        "output": 7467,
+        "cache_read": 1294848,
+        "total": 128897,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -152,7 +170,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T03:46:27Z",
@@ -186,6 +204,17 @@
       "skipped": false,
       "tokens_total": 297063,
       "elapsed_s": 712.66
+    },
+    {
+      "date": "2026-08-10T22:18:09Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 95771,
+      "elapsed_s": 224.02
     }
   ]
 }

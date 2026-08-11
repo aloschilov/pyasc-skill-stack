@@ -4,8 +4,8 @@
   "operation": "gelu",
   "dtype": "float32",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096]. Use the lean exp/sigmoid restatement of the tanh/Pad\u00e9 form (mathematically identical to PyTorch's gelu(approximate='tanh'), but cheaper per tile and within the sim budget) - GELU(x) = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))). Use asc2.exp; do NOT use asc2.tanh (it pushed the cell over the 150s sim budget) and do NOT use asc2.erf (simulator erf is too noisy on float32 \u2014 this is documented in the cell's regime_note).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu/kernel.py",
-  "date": "2026-08-10T19:53:37Z",
+  "kernel_path": "",
+  "date": "2026-08-11T18:29:00Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,139 +19,95 @@
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "self_review.md",
-      "acceptance_review.md"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
   "model": "qwen3-coder:30b",
   "tokens": {
-    "input": 635510,
-    "output": 4994,
+    "input": 1303027,
+    "output": 11589,
     "cache_read": 0,
-    "total": 640504
+    "total": 1314616
   },
-  "elapsed_total_s": 477.28,
+  "elapsed_total_s": 711.6,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 477.28,
+      "elapsed_s": 437.0,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 635510,
-        "output": 4994,
+        "input": 736669,
+        "output": 5949,
         "cache_read": 0,
-        "total": 640504,
+        "total": 742618,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 214.77,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 371418,
+        "output": 3903,
+        "cache_read": 0,
+        "total": 375321,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 59.83,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 194940,
+        "output": 1737,
+        "cache_read": 0,
+        "total": 196677,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "mode": "static_only",
+    "status": "fail",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['0.044715', 'gelu']",
-    "markers_found": [
-      "0.044715",
-      "gelu"
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 15.0,
+    "value": 0.0,
     "threshold": 12,
-    "accepted": true,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "verification call present"
-      },
-      "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
-      },
-      "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "expected>=1 params, found 2"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['0.044715', 'gelu']"
-      }
-    },
+    "accepted": false,
+    "checks": {},
     "failure_category": null,
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": false,
-      "allow_legacy_apis": false
-    }
+    "gating_detail": {}
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T04:00:58Z",
@@ -185,6 +141,17 @@
       "skipped": false,
       "tokens_total": 708606,
       "elapsed_s": 243.49
+    },
+    {
+      "date": "2026-08-10T19:53:37Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 640504,
+      "elapsed_s": 477.28
     }
   ]
 }

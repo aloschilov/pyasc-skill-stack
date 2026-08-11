@@ -4,8 +4,8 @@
   "operation": "batch_mat_mul_v3",
   "dtype": "float16",
   "prompt": "Help me develop a CUBE-only batched matmul (BatchMatMulV3) on Ascend950PR_9599 (C310) for float16 inputs with a float32 cube accumulator and float16 output, for C[b]=A[b]@B[b] at [B,M,K]x[B,K,N]=[16,256,256]x[16,256,256]. Distribute the batch axis one matrix per cube core (asc2.block_idx), flatten [B,M,K] to 2D [B*M,K] on the host, stage each batch's A/B into asc2.TileLocation.L1, copy M/N tiles to L0A/L0B, compute `a @ b`, cast the result to float16 and asc2.store. Inputs MUST be torch.Tensor.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batchmatmulv3/kernel.py",
-  "date": "2026-08-10T21:06:23Z",
+  "kernel_path": "",
+  "date": "2026-08-11T19:02:57Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,42 +13,54 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:dc53bd09f44ace67a29192f207fbbcb97b0bce8ec2d7e4655d4043fb4987169f"
   },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "qwen3-coder:30b",
+  "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 2444579,
-    "output": 13965,
+    "input": 2389178,
+    "output": 27150,
     "cache_read": 0,
-    "total": 2458544
+    "total": 2416328
   },
-  "elapsed_total_s": 1115.55,
+  "elapsed_total_s": 1378.46,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 509.77,
+      "elapsed_s": 338.99,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 977251,
-        "output": 7075,
+        "input": 697465,
+        "output": 10890,
         "cache_read": 0,
-        "total": 984326,
+        "total": 708355,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 671.64,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 929428,
+        "output": 6833,
+        "cache_read": 0,
+        "total": 936261,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
@@ -57,117 +69,45 @@
       "runtime_status": "fail"
     },
     {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 605.78,
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 367.83,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 1467328,
-        "output": 6890,
+        "input": 762285,
+        "output": 9427,
         "cache_read": 0,
-        "total": 1474218,
+        "total": 771712,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "pass"
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "mode": "static_only",
+    "status": "fail",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "no semantic markers defined for 'batch_mat_mul_v3'",
+    "passed": false,
+    "detail": "no kernel found",
     "markers_found": []
   },
   "score": {
-    "value": 15.0,
+    "value": 0.0,
     "threshold": 12,
-    "accepted": true,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "verification call present"
-      },
-      "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
-      },
-      "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in semantic table)"
-      }
-    },
+    "accepted": false,
+    "checks": {},
     "failure_category": null,
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": false,
-      "allow_legacy_apis": false
-    }
+    "gating_detail": {}
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-27T17:33:46Z",
@@ -179,6 +119,17 @@
       "skipped": false,
       "tokens_total": 3018813,
       "elapsed_s": 1598.48
+    },
+    {
+      "date": "2026-08-10T21:06:23Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 2458544,
+      "elapsed_s": 1115.55
     }
   ]
 }

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop the DropoutDoMask apply phase (out = data * mask * (1/keep_prob)) on Ascend950PR_9599 (C310) for float16 with a dense keep-mask, shapes [16,2048] and [32,4096].",
   "kernel_path": "",
-  "date": "2026-08-10T13:06:14Z",
+  "date": "2026-08-11T04:35:30Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 192205,
-    "output": 4099,
+    "input": 281070,
+    "output": 5219,
     "cache_read": 0,
-    "total": 196304
+    "total": 286289
   },
-  "elapsed_total_s": 114.07,
+  "elapsed_total_s": 417.35,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 94.1,
+      "elapsed_s": 328.98,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 152817,
-        "output": 3619,
+        "input": 200769,
+        "output": 4055,
         "cache_read": 0,
-        "total": 156436,
+        "total": 204824,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 5.28,
+      "elapsed_s": 4.57,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 7101,
-        "output": 84,
+        "output": 108,
         "cache_read": 0,
-        "total": 7185,
+        "total": 7209,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -71,17 +71,17 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 14.69,
+      "elapsed_s": 83.8,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 32287,
-        "output": 396,
+        "input": 73200,
+        "output": 1056,
         "cache_read": 0,
-        "total": 32683,
+        "total": 74256,
         "cost_usd": 0.0
       },
-      "model": "ollama/qwen3-coder:30b",
+      "model": "qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -107,7 +107,7 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-27T22:48:59Z",
@@ -119,6 +119,17 @@
       "skipped": false,
       "tokens_total": 110028,
       "elapsed_s": 1561.71
+    },
+    {
+      "date": "2026-08-10T13:06:14Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 196304,
+      "elapsed_s": 114.07
     }
   ]
 }

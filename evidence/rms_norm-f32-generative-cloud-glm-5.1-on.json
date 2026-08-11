@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Create an RMSNorm capability for float32 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_f32/kernel.py",
-  "date": "2026-08-11T01:01:21Z",
+  "date": "2026-08-11T09:00:15Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 84093,
-    "output": 9651,
-    "cache_read": 1081856,
-    "total": 93744
+    "input": 172470,
+    "output": 9123,
+    "cache_read": 1178112,
+    "total": 181593
   },
-  "elapsed_total_s": 211.81,
+  "elapsed_total_s": 349.03,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 211.81,
+      "elapsed_s": 349.03,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 84093,
-        "output": 9651,
-        "cache_read": 1081856,
-        "total": 93744,
+        "input": 172470,
+        "output": 9123,
+        "cache_read": 1178112,
+        "total": 181593,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -153,7 +153,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T04:59:25Z",
@@ -187,6 +187,17 @@
       "skipped": false,
       "tokens_total": 123220,
       "elapsed_s": 505.17
+    },
+    {
+      "date": "2026-08-11T01:01:21Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 93744,
+      "elapsed_s": 211.81
     }
   ]
 }

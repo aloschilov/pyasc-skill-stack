@@ -1,0 +1,49 @@
+{
+  "cell": "layer_norm_v4/bfloat16",
+  "op": "layer_norm_v4",
+  "dtype": "bfloat16",
+  "shape": [
+    2000,
+    1024
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 19215,
+  "ticks_off": null,
+  "ticks_on": null,
+  "fusion_speedup": null,
+  "ratio_off": null,
+  "ratio_on": null,
+  "gate": 0.7,
+  "status": "gen_blocked",
+  "gen_blocker": "Command '['bash', '-c', 'source /usr/local/Ascend/cann-9.0.0-beta.2/set_env.sh; export PYTHONPATH=/opt/pyasc-v2-eval/python:$PYTHONPATH; export LD_LIBRARY_PATH=/usr/local/Ascend/cann-9.0.0-beta.2/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH; export PYASC_DUMP_PATH=/tmp/pyasc-eval-dump/vf-false; export PYASC_CACHE_DIR=/tmp/pyasc-eval-cache/vf-false;  python3.11 /workspace/evidence/perf/_build_cache/drivers/probe_kernels_2000x1024_vf-false.py > /workspace/evidence/perf/_build_cache/logs/probe_kernels_2000x1024_vf-false.run2.log 2>&1; echo EXIT=$?']' timed out after 1200 seconds",
+  "flag": "--cce-simd-vf-fusion",
+  "ref_detail": {
+    "cell": "layer_norm_v4/bfloat16",
+    "op": "layer_norm_v4",
+    "dtype": "bfloat16",
+    "shape": [
+      2000,
+      1024
+    ],
+    "n_elements": 2048000,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 19215,
+    "ref_ticks_runs": [
+      19215,
+      19215,
+      19238
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.0012,
+    "wall_ms_last": 172740.0,
+    "reference_kind": "canonical_only",
+    "reference_repo": "ops-nn",
+    "reference_source": "ops-nn canonical operator (layer_norm_v4, aclnnop/aclnn_layer_norm.h), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=layer_norm_v4",
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_layer_norm_v4_bf16_2000x1024.run3.log"
+  },
+  "gen_detail_off": null,
+  "gen_detail_on": null
+}

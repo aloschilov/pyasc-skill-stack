@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a tanh operator (out = tanh(x)) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/tanh/kernel.py",
-  "date": "2026-08-10T08:30:25Z",
+  "date": "2026-08-11T16:06:56Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 96147,
-    "output": 7337,
-    "cache_read": 608256,
-    "total": 103484
+    "input": 149426,
+    "output": 9720,
+    "cache_read": 1622016,
+    "total": 159146
   },
-  "elapsed_total_s": 361.01,
+  "elapsed_total_s": 1100.97,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 361.01,
+      "elapsed_s": 1100.97,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 96147,
-        "output": 7337,
-        "cache_read": 608256,
-        "total": 103484,
+        "input": 149426,
+        "output": 9720,
+        "cache_read": 1622016,
+        "total": 159146,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -71,7 +71,7 @@
     "markers_found": []
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -128,8 +128,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -149,7 +149,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-27T17:36:18Z",
@@ -161,6 +161,17 @@
       "skipped": false,
       "tokens_total": 223282,
       "elapsed_s": 874.51
+    },
+    {
+      "date": "2026-08-10T08:30:25Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 103484,
+      "elapsed_s": 361.01
     }
   ]
 }

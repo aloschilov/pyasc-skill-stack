@@ -1,0 +1,67 @@
+{
+  "cell": "leaky_relu/float16",
+  "shape": [
+    32,
+    4096
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 4528,
+  "gen_ticks": 25302,
+  "ratio": 0.179,
+  "gate": 0.7,
+  "passed": false,
+  "status": "ok",
+  "kernel_mode": "cached",
+  "regen": null,
+  "ref_detail": {
+    "cell": "leaky_relu/float16",
+    "op": "leaky_relu",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 4528,
+    "ref_ticks_runs": [
+      4537,
+      4528,
+      4526
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.0024,
+    "wall_ms_last": 18440.5,
+    "reference_kind": "canonical_only",
+    "reference_repo": "ops-nn",
+    "reference_source": "ops-nn canonical operator (leaky_relu, aclnnop/aclnn_leaky_relu.h), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=leaky_relu",
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_leaky_relu_f16_32x4096.run3.log"
+  },
+  "gen_detail": {
+    "cell": "kernels",
+    "kernel": "golden/kernels/leaky_relu_f16.py",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 25302,
+    "gen_ticks_runs": [
+      25305,
+      25300,
+      25302
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0002,
+    "vf_fusion": null,
+    "wall_ms_last": 59491.9,
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_32x4096_default.run3.log"
+  }
+}

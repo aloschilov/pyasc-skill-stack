@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-08-10T15:20:54Z",
+  "date": "2026-08-11T05:58:28Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -20,31 +20,51 @@
     "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
-      "kernel.py"
+      "kernel.py",
+      "design.md",
+      "verification.md"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 17001,
-    "output": 2141,
-    "cache_read": 330112,
-    "total": 19142
+    "input": 34792,
+    "output": 6856,
+    "cache_read": 369280,
+    "total": 41648
   },
-  "elapsed_total_s": 507.17,
+  "elapsed_total_s": 371.47,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 507.17,
+      "elapsed_s": 179.05,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 21747,
+        "output": 2336,
+        "cache_read": 234496,
+        "total": 24083,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 192.42,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 17001,
-        "output": 2141,
-        "cache_read": 330112,
-        "total": 19142,
+        "input": 13045,
+        "output": 4520,
+        "cache_read": 134784,
+        "total": 17565,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -147,7 +167,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (protocol=P3, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -237,6 +257,17 @@
       "skipped": false,
       "tokens_total": 65661,
       "elapsed_s": 362.61
+    },
+    {
+      "date": "2026-08-10T15:20:54Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 19142,
+      "elapsed_s": 507.17
     }
   ]
 }

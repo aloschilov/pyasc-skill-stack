@@ -4,8 +4,8 @@
   "operation": "matmul",
   "dtype": "float16",
   "prompt": "Help me develop a tiled matmul operator on Ascend950PR_9599 (C310) for float16 inputs producing float32 output. Use small shapes such as M=K=N=16 or (M=32, K=16, N=32). Inputs must be torch.Tensor (numpy buffers are silently zeroed by the C310 simulator path for matmul). Load A to asc2.TileLocation.L0A and B to L0B, then compute `a @ b` (or asc2.matmul) and asc2.store the float32 result.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16_f32/kernel.py",
-  "date": "2026-08-10T11:31:50Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16/kernel.py",
+  "date": "2026-08-11T19:28:23Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -13,7 +13,7 @@
     "dirty": false,
     "root": "",
     "backend": "docker",
-    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:29aaf9477981bbf264aa9090c0c2f5b4c776074ac7c73272f42016318f0cddf8"
+    "image": "ghcr.io/aloschilov/pyasc-sim@sha256:dc53bd09f44ace67a29192f207fbbcb97b0bce8ec2d7e4655d4043fb4987169f"
   },
   "agent": {
     "platform": "opencode",
@@ -29,31 +29,49 @@
   },
   "skills_mode": "on",
   "model_profile": "cloud-qwen3.7-max",
-  "model": "dashscope/qwen3.7-max",
+  "model": "qwen3.7-max",
   "tokens": {
-    "input": 159872,
-    "output": 11429,
-    "cache_read": 2031744,
-    "total": 171301
+    "input": 457069,
+    "output": 26315,
+    "cache_read": 4071936,
+    "total": 483384
   },
-  "elapsed_total_s": 701.64,
+  "elapsed_total_s": 1550.0,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 701.64,
+      "elapsed_s": 936.38,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 159872,
-        "output": 11429,
-        "cache_read": 2031744,
-        "total": 171301,
+        "input": 292516,
+        "output": 18181,
+        "cache_read": 3277824,
+        "total": 310697,
         "cost_usd": 0.0
       },
-      "model": "dashscope/qwen3.7-max",
+      "model": "qwen3.7-max",
       "kernel_found": true,
-      "static_verify": "pass",
+      "static_verify": "fail",
+      "runtime_status": "pass"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 613.62,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 164553,
+        "output": 8134,
+        "cache_read": 794112,
+        "total": 172687,
+        "cost_usd": 0.0
+      },
+      "model": "qwen3.7-max",
+      "kernel_found": true,
+      "static_verify": "fail",
       "runtime_status": "pass"
     }
   ],
@@ -73,7 +91,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 13.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -90,12 +108,12 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
+        "passed": false,
+        "detail": "missing asc2.load/asc2.store"
       },
       "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
+        "passed": false,
+        "detail": "missing asc2.tensor"
       },
       "loop_range": {
         "passed": true,
@@ -149,9 +167,9 @@
       "allow_legacy_apis": false
     }
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T04:18:05Z",
@@ -185,6 +203,17 @@
       "skipped": false,
       "tokens_total": 196135,
       "elapsed_s": 466.08
+    },
+    {
+      "date": "2026-08-10T11:31:50Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 171301,
+      "elapsed_s": 701.64
     }
   ]
 }

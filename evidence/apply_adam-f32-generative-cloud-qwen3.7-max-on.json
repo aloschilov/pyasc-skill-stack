@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop the in-place Adam optimizer update (aclnnApplyAdam, non-Nesterov) on Ascend950PR_9599 (C310) for float32, updating var/m/v from grad with shapes [16,2048] and [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/apply_adam/kernel.py",
-  "date": "2026-08-10T09:06:16Z",
+  "date": "2026-08-11T16:47:08Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,58 +18,39 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
+      "acceptance_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-qwen3.7-max",
   "model": "qwen3.7-max",
   "tokens": {
-    "input": 210084,
-    "output": 20717,
-    "cache_read": 1900800,
-    "total": 230801
+    "input": 151577,
+    "output": 7873,
+    "cache_read": 680064,
+    "total": 159450
   },
-  "elapsed_total_s": 1175.14,
+  "elapsed_total_s": 1200.02,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 639.57,
-      "exit": 0,
-      "outcome": "fail",
+      "elapsed_s": 1200.02,
+      "exit": 124,
+      "outcome": "pass",
       "tokens": {
-        "input": 98323,
-        "output": 9896,
-        "cache_read": 654720,
-        "total": 108219,
+        "input": 151577,
+        "output": 7873,
+        "cache_read": 680064,
+        "total": 159450,
         "cost_usd": 0.0
       },
       "model": "qwen3.7-max",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 535.57,
-      "exit": 0,
-      "outcome": "pass",
-      "tokens": {
-        "input": 111761,
-        "output": 10821,
-        "cache_read": 1246080,
-        "total": 122582,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/qwen3.7-max",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "pass"
@@ -167,7 +148,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-27T18:15:15Z",
@@ -179,6 +160,17 @@
       "skipped": false,
       "tokens_total": 304126,
       "elapsed_s": 1034.64
+    },
+    {
+      "date": "2026-08-10T09:06:16Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 230801,
+      "elapsed_s": 1175.14
     }
   ]
 }

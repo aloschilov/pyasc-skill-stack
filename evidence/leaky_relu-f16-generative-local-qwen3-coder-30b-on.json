@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator on Ascend950PR_9599 (C310) for float16 with alpha=0.01 and shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "",
-  "date": "2026-08-10T20:45:40Z",
+  "date": "2026-08-11T18:39:37Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -23,26 +23,44 @@
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "qwen3-coder:30b",
+  "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 1852875,
-    "output": 20694,
+    "input": 973798,
+    "output": 7854,
     "cache_read": 0,
-    "total": 1873569
+    "total": 981652
   },
-  "elapsed_total_s": 1640.74,
+  "elapsed_total_s": 617.73,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1200.0,
-      "exit": 124,
+      "elapsed_s": 237.85,
+      "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 1392831,
-        "output": 14292,
+        "input": 510365,
+        "output": 3001,
         "cache_read": 0,
-        "total": 1407123,
+        "total": 513366,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 187.66,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 430757,
+        "output": 4368,
+        "cache_read": 0,
+        "total": 435125,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
@@ -51,37 +69,19 @@
       "runtime_status": "fail"
     },
     {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 386.71,
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 192.22,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 319790,
-        "output": 4307,
+        "input": 32676,
+        "output": 485,
         "cache_read": 0,
-        "total": 324097,
+        "total": 33161,
         "cost_usd": 0.0
       },
       "model": "qwen3-coder:30b",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 54.03,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 140254,
-        "output": 2095,
-        "cache_read": 0,
-        "total": 142349,
-        "cost_usd": 0.0
-      },
-      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -107,7 +107,7 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T04:21:28Z",
@@ -141,6 +141,17 @@
       "skipped": false,
       "tokens_total": 1533143,
       "elapsed_s": 749.52
+    },
+    {
+      "date": "2026-08-10T20:45:40Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 1873569,
+      "elapsed_s": 1640.74
     }
   ]
 }

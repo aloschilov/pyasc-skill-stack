@@ -4,8 +4,8 @@
   "operation": "abs",
   "dtype": "float32",
   "prompt": "Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "abs_op/kernels/abs_op/kernel.py",
-  "date": "2026-08-10T18:03:04Z",
+  "kernel_path": "kernels/abs_f32_custom/kernel.py",
+  "date": "2026-08-11T16:34:02Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -23,6 +23,7 @@
       "kernel.py",
       "design.md",
       "self_review.md",
+      "acceptance_review.md",
       "verification.md"
     ]
   },
@@ -30,42 +31,24 @@
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 863388,
-    "output": 7562,
+    "input": 572376,
+    "output": 4552,
     "cache_read": 0,
-    "total": 870950
+    "total": 576928
   },
-  "elapsed_total_s": 488.28,
+  "elapsed_total_s": 253.19,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 256.12,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 294540,
-        "output": 3890,
-        "cache_read": 0,
-        "total": 298430,
-        "cost_usd": 0.0
-      },
-      "model": "ollama/qwen3-coder:30b",
-      "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 232.16,
+      "elapsed_s": 253.19,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 568848,
-        "output": 3672,
+        "input": 572376,
+        "output": 4552,
         "cache_read": 0,
-        "total": 572520,
+        "total": 576928,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -90,7 +73,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -147,8 +130,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -168,7 +151,7 @@
   },
   "static_verify": "pass",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T03:38:48Z",
@@ -202,6 +185,17 @@
       "skipped": false,
       "tokens_total": 707811,
       "elapsed_s": 368.11
+    },
+    {
+      "date": "2026-08-10T18:03:04Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 870950,
+      "elapsed_s": 488.28
     }
   ]
 }

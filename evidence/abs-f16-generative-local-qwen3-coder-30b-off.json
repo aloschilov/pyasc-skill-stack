@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "kernel.py",
-  "date": "2026-08-10T12:03:23Z",
+  "date": "2026-08-11T03:51:48Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -20,31 +20,33 @@
     "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
-      "kernel.py"
+      "kernel.py",
+      "design.md",
+      "verification.md"
     ]
   },
   "skills_mode": "off",
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 128152,
-    "output": 2081,
+    "input": 394254,
+    "output": 13416,
     "cache_read": 0,
-    "total": 130233
+    "total": 407670
   },
-  "elapsed_total_s": 90.66,
+  "elapsed_total_s": 273.91,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 36.1,
+      "elapsed_s": 223.5,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7092,
-        "output": 82,
+        "input": 326386,
+        "output": 10701,
         "cache_read": 0,
-        "total": 7174,
+        "total": 337087,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -55,14 +57,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 4.54,
+      "elapsed_s": 15.14,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7092,
-        "output": 55,
+        "input": 25207,
+        "output": 271,
         "cache_read": 0,
-        "total": 7147,
+        "total": 25478,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -73,29 +75,47 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 50.02,
+      "elapsed_s": 35.27,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 113968,
-        "output": 1944,
+        "input": 42661,
+        "output": 2444,
         "cache_read": 0,
-        "total": 115912,
+        "total": 45105,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
       "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "pass"
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
-    "shapes_verified": []
+    "status": "fail",
+    "detail": "Exit code 1: NameError: name 'alloc_memory' is not defined\nTesting with shape [1, 128], size 128\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 124, in <module>\n    run_test()\n  File \"/workspace/kernel.py\", line 62, in run_test\n    x_ptr = alloc_memory(size_1 * 2)  # float16 = 2 bytes per element\n            ^^^^^^^^^^^^\nNameError: name 'alloc_memory' is not defined\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "kernel.py",
+      "is_symlink": false,
+      "resolved": "/Users/aloschilov/ar2/work/_temp/gen-abs-float16-a3.d1f13yt_/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        ".agent-prompt.txt",
+        ".git",
+        "agent-output.txt",
+        "design.md",
+        "golden",
+        "kernel.py",
+        "opencode.json",
+        "verification.md"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 44\ndrwx------ 10 root root   320 Aug 11 03:51 .\ndrwxr-xr-x  1 root root  4096 Aug 11 03:51 ..\n-rw-r--r--  1 root root  1024 Aug 11 03:51 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Aug 11 03:51 .git\n-rw-r--r--  1 root root 16634 Aug 11 03:51 agent-output.txt\n-rw-r--r--  1 root root  1284 Aug 11 03:51 design.md\ndrwxr-xr-x  6 root root   192 Jul 27 15:17 golden\n-rw-r--r--  1 root root  3631 Aug 11 03:51 kernel.py\n-rw-r--r--  1 root root   611 Aug 11 03:51 opencode.json\n-rw-r--r--  1 root root  1617 Aug 11 03:51 verification.md\n--- ls kernel dir ---\ntotal 44\ndrwx------ 10 root root   320 Aug 11 03:51 .\ndrwxr-xr-x  1 root root  4096 Aug 11 03:51 ..\n-rw-r--r--  1 root root  1024 Aug 11 03:51 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Aug 11 03:51 .git\n-rw-r--r--  1 root root 16634 Aug 11 03:51 agent-output.txt\n-rw-r--r--  1 root root  1284 Aug 11 03:51 design.md\ndrwxr-xr-x  6 root root   192 Jul 27 15:17 golden\n-rw-r--r--  1 root root  3631 Aug 11 03:51 kernel.py\n-rw-r--r--  1 root root   611 Aug 11 03:51 opencode.json\n-rw-r--r--  1 root root  1617 Aug 11 03:51 verification.md\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
     "passed": true,
@@ -105,13 +125,13 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 10.0,
     "threshold": 12,
-    "accepted": true,
+    "accepted": false,
     "checks": {
       "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
+        "passed": false,
+        "detail": "missing"
       },
       "no_return_value": {
         "passed": true,
@@ -122,28 +142,28 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
+        "passed": false,
+        "detail": "missing asc2.load/asc2.store"
       },
       "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
+        "passed": false,
+        "detail": "missing asc2.tensor"
       },
       "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
+        "passed": false,
+        "detail": "no range call in kernel"
       },
       "verification": {
         "passed": true,
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
+        "passed": false,
+        "detail": "no launch pattern"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -151,7 +171,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 2"
+        "detail": "skipped (no --op or op not in arity table)"
       },
       "output_dtype": {
         "passed": true,
@@ -162,8 +182,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x3, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -181,9 +201,9 @@
       "allow_legacy_apis": false
     }
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T00:17:47Z",
@@ -217,6 +237,17 @@
       "skipped": false,
       "tokens_total": 788979,
       "elapsed_s": 842.9
+    },
+    {
+      "date": "2026-08-10T12:03:23Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 130233,
+      "elapsed_s": 90.66
     }
   ]
 }

@@ -4,8 +4,8 @@
   "operation": "tanh",
   "dtype": "float16",
   "prompt": "Help me develop a tanh operator (out = tanh(x)) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "kernel.py",
-  "date": "2026-08-10T12:39:57Z",
+  "kernel_path": "",
+  "date": "2026-08-11T04:18:50Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -20,34 +20,35 @@
     "timeout_s": 1200,
     "completed": true,
     "artifacts_found": [
-      "kernel.py"
+      "design.md",
+      "verification.md"
     ]
   },
   "skills_mode": "off",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "qwen3-coder:30b",
+  "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 129038,
-    "output": 2130,
+    "input": 460016,
+    "output": 13455,
     "cache_read": 0,
-    "total": 131168
+    "total": 473471
   },
-  "elapsed_total_s": 451.01,
+  "elapsed_total_s": 484.83,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 20.05,
+      "elapsed_s": 4.34,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 14401,
-        "output": 129,
+        "input": 7093,
+        "output": 81,
         "cache_read": 0,
-        "total": 14530,
+        "total": 7174,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -55,17 +56,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 414.2,
+      "elapsed_s": 429.44,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 83548,
-        "output": 1085,
+        "input": 318683,
+        "output": 9875,
         "cache_read": 0,
-        "total": 84633,
+        "total": 328558,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -73,131 +74,43 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 16.76,
+      "elapsed_s": 51.05,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 31089,
-        "output": 916,
+        "input": 134240,
+        "output": 3499,
         "cache_read": 0,
-        "total": 32005,
+        "total": 137739,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
-      "kernel_found": true,
+      "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
+    "mode": "static_only",
     "status": "fail",
-    "detail": "Kernel executed but verification unclear: Launching kernel for input shape [1, 128], flattened size 128\nMax difference: 0.00e+00\nInput shape: [1, 128]\nOutput shape: [128]\nLaunching kernel for input shape [4, 2048], flattened size 8192\nMax difference: 0.00e+00\nInput shape: [4, 2048]\nOutput shape: [8192]\nLaunching kernel for input shape [32, ",
-    "shapes_verified": [],
-    "path_diagnostics": {
-      "rel_kernel": "kernel.py",
-      "is_symlink": false,
-      "resolved": "/Users/aloschilov/ar2/work/_temp/gen-tanh-float16-a3.tran4oxz/kernel.py",
-      "resolved_exists": true,
-      "resolved_inside_project": true,
-      "host_parent_listing": [
-        ".agent-prompt.txt",
-        ".git",
-        "agent-output.txt",
-        "golden",
-        "kernel.py",
-        "opencode.json"
-      ],
-      "container_view": "--- ls /workspace ---\ntotal 28\ndrwx------  8 root root  256 Aug 10 12:39 .\ndrwxr-xr-x  1 root root 4096 Aug 10 12:39 ..\n-rw-r--r--  1 root root 1016 Aug 10 12:39 .agent-prompt.txt\ndrwxr-xr-x 10 root root  320 Aug 10 12:39 .git\n-rw-r--r--  1 root root 9136 Aug 10 12:39 agent-output.txt\ndrwxr-xr-x  6 root root  192 Jul 27 15:17 golden\n-rw-r--r--  1 root root 1028 Aug 10 12:39 kernel.py\n-rw-r--r--  1 root root  611 Aug 10 12:39 opencode.json\n--- ls kernel dir ---\ntotal 28\ndrwx------  8 root root  256 Aug 10 12:39 .\ndrwxr-xr-x  1 root root 4096 Aug 10 12:39 ..\n-rw-r--r--  1 root root 1016 Aug 10 12:39 .agent-prompt.txt\ndrwxr-xr-x 10 root root  320 Aug 10 12:39 .git\n-rw-r--r--  1 root root 9136 Aug 10 12:39 agent-output.txt\ndrwxr-xr-x  6 root root  192 Jul 27 15:17 golden\n-rw-r--r--  1 root root 1028 Aug 10 12:39 kernel.py\n-rw-r--r--  1 root root  611 Aug 10 12:39 opencode.json\n--- readlink kernel ---"
-    }
+    "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "no semantic markers defined for 'tanh'",
+    "passed": false,
+    "detail": "no kernel found",
     "markers_found": []
   },
   "score": {
-    "value": 9.0,
+    "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {
-      "jit_decorator": {
-        "passed": false,
-        "detail": "missing"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
-      },
-      "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
-      },
-      "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
-      },
-      "verification": {
-        "passed": false,
-        "detail": "no allclose/assert_close call"
-      },
-      "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
-      },
-      "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x0, shape loop=yes"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in semantic table)"
-      }
-    },
+    "checks": {},
     "failure_category": null,
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": false,
-      "allow_legacy_apis": false
-    }
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-27T22:10:17Z",
@@ -209,6 +122,17 @@
       "skipped": false,
       "tokens_total": 275556,
       "elapsed_s": 228.11
+    },
+    {
+      "date": "2026-08-10T12:39:57Z",
+      "overall_pass": false,
+      "score": 9.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 131168,
+      "elapsed_s": 451.01
     }
   ]
 }

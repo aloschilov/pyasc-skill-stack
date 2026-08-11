@@ -4,8 +4,8 @@
   "operation": "gelu",
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf via np.vectorize (np.erf and scipy.special.erf are not available).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f16/kernel.py",
-  "date": "2026-08-10T09:25:51Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu/kernel.py",
+  "date": "2026-08-11T17:03:34Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 109920,
-    "output": 8585,
-    "cache_read": 1102464,
-    "total": 118505
+    "input": 113601,
+    "output": 5975,
+    "cache_read": 312576,
+    "total": 119576
   },
-  "elapsed_total_s": 566.12,
+  "elapsed_total_s": 439.64,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 566.12,
+      "elapsed_s": 439.64,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 109920,
-        "output": 8585,
-        "cache_read": 1102464,
-        "total": 118505,
+        "input": 113601,
+        "output": 5975,
+        "cache_read": 312576,
+        "total": 119576,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -152,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T03:40:22Z",
@@ -186,6 +186,17 @@
       "skipped": false,
       "tokens_total": 258389,
       "elapsed_s": 517.14
+    },
+    {
+      "date": "2026-08-10T09:25:51Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 118505,
+      "elapsed_s": 566.12
     }
   ]
 }

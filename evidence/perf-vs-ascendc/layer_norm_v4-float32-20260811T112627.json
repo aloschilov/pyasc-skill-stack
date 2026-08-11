@@ -1,0 +1,67 @@
+{
+  "cell": "layer_norm_v4/float32",
+  "shape": [
+    1024,
+    768
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 14336,
+  "gen_ticks": 196585,
+  "ratio": 0.0729,
+  "gate": 0.7,
+  "passed": false,
+  "status": "ok",
+  "kernel_mode": "cached",
+  "regen": null,
+  "ref_detail": {
+    "cell": "layer_norm_v4/float32",
+    "op": "layer_norm_v4",
+    "dtype": "float32",
+    "shape": [
+      1024,
+      768
+    ],
+    "n_elements": 786432,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 14336,
+    "ref_ticks_runs": [
+      14347,
+      14336,
+      14305
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.0029,
+    "wall_ms_last": 88655.8,
+    "reference_kind": "canonical_only",
+    "reference_repo": "ops-nn",
+    "reference_source": "ops-nn canonical operator (layer_norm_v4, aclnnop/aclnn_layer_norm.h), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=layer_norm_v4",
+    "camodel_log": "evidence/perf/_build_cache/logs/perf_layer_norm_v4_f32_1024x768.run3.log"
+  },
+  "gen_detail": {
+    "cell": "kernels",
+    "kernel": "golden/kernels/layer_norm_v4_f32.py",
+    "dtype": "float32",
+    "shape": [
+      1024,
+      768
+    ],
+    "n_elements": 786432,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 196585,
+    "gen_ticks_runs": [
+      196583,
+      196595,
+      196585
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0001,
+    "vf_fusion": null,
+    "wall_ms_last": 575128.0,
+    "camodel_log": "evidence/perf/_build_cache/logs/probe_kernels_1024x768_default.run3.log"
+  }
+}

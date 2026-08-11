@@ -4,8 +4,8 @@
   "operation": "drop_out_do_mask",
   "dtype": "float16",
   "prompt": "Help me develop the DropoutDoMask apply phase (out = data * mask * (1/keep_prob)) on Ascend950PR_9599 (C310) for float16 with a dense keep-mask, shapes [16,2048] and [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/dropout_do_mask/kernel.py",
-  "date": "2026-08-10T09:14:23Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/dropout_do_mask_f16/kernel.py",
+  "date": "2026-08-11T16:53:37Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 124368,
-    "output": 9547,
-    "cache_read": 1448832,
-    "total": 133915
+    "input": 85698,
+    "output": 6874,
+    "cache_read": 350592,
+    "total": 92572
   },
-  "elapsed_total_s": 457.68,
+  "elapsed_total_s": 347.53,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 457.68,
+      "elapsed_s": 347.53,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 124368,
-        "output": 9547,
-        "cache_read": 1448832,
-        "total": 133915,
+        "input": 85698,
+        "output": 6874,
+        "cache_read": 350592,
+        "total": 92572,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -149,7 +149,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-27T18:24:20Z",
@@ -161,6 +161,17 @@
       "skipped": false,
       "tokens_total": 209182,
       "elapsed_s": 516.5
+    },
+    {
+      "date": "2026-08-10T09:14:23Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 133915,
+      "elapsed_s": 457.68
     }
   ]
 }

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
-  "date": "2026-08-11T01:05:21Z",
+  "date": "2026-08-11T09:04:17Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.1",
   "model": "dashscope/glm-5.1",
   "tokens": {
-    "input": 118517,
-    "output": 7631,
-    "cache_read": 1008640,
-    "total": 126148
+    "input": 184616,
+    "output": 5756,
+    "cache_read": 570880,
+    "total": 190372
   },
-  "elapsed_total_s": 218.33,
+  "elapsed_total_s": 221.36,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 218.33,
+      "elapsed_s": 221.36,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 118517,
-        "output": 7631,
-        "cache_read": 1008640,
-        "total": 126148,
+        "input": 184616,
+        "output": 5756,
+        "cache_read": 570880,
+        "total": 190372,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.1",
@@ -152,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.1, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T04:36:24Z",
@@ -186,6 +186,17 @@
       "skipped": false,
       "tokens_total": 153191,
       "elapsed_s": 579.76
+    },
+    {
+      "date": "2026-08-11T01:05:21Z",
+      "overall_pass": true,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 126148,
+      "elapsed_s": 218.33
     }
   ]
 }

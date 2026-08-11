@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: matrix multiplication c = a @ b (float16 inputs, float32 output). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output.",
   "kernel_path": "",
-  "date": "2026-08-10T15:04:15Z",
+  "date": "2026-08-11T16:19:30Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 10222,
-    "output": 526,
-    "cache_read": 44032,
-    "total": 10748
+    "input": 9320,
+    "output": 473,
+    "cache_read": 44544,
+    "total": 9793
   },
-  "elapsed_total_s": 68.71,
+  "elapsed_total_s": 78.21,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 33.25,
+      "elapsed_s": 39.86,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 5297,
-        "output": 191,
-        "cache_read": 22016,
-        "total": 5488,
+        "input": 6226,
+        "output": 244,
+        "cache_read": 22400,
+        "total": 6470,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "minimal",
-      "elapsed_s": 35.46,
+      "elapsed_s": 38.35,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4925,
-        "output": 335,
-        "cache_read": 22016,
-        "total": 5260,
+        "input": 3094,
+        "output": 229,
+        "cache_read": 22144,
+        "total": 3323,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -89,7 +89,7 @@
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P2, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",
@@ -168,6 +168,17 @@
       "skipped": false,
       "tokens_total": 14571,
       "elapsed_s": 64.92
+    },
+    {
+      "date": "2026-08-10T15:04:15Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 10748,
+      "elapsed_s": 68.71
     }
   ]
 }

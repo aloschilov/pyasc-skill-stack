@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096]. Use the lean exp/sigmoid restatement of the tanh/Pad\u00e9 form (mathematically identical to PyTorch's gelu(approximate='tanh'), but cheaper per tile and within the sim budget) - GELU(x) = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))). Use asc2.exp; do NOT use asc2.tanh (it pushed the cell over the 150s sim budget) and do NOT use asc2.erf (simulator erf is too noisy on float32 \u2014 this is documented in the cell's regime_note).",
   "kernel_path": "",
-  "date": "2026-08-10T13:22:15Z",
+  "date": "2026-08-11T04:43:50Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -23,29 +23,29 @@
   },
   "skills_mode": "off",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "qwen3-coder:30b",
+  "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 486889,
-    "output": 12611,
+    "input": 558116,
+    "output": 10797,
     "cache_read": 0,
-    "total": 499500
+    "total": 568913
   },
-  "elapsed_total_s": 787.06,
+  "elapsed_total_s": 364.01,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 488.99,
+      "elapsed_s": 194.36,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 260752,
-        "output": 8219,
+        "input": 280866,
+        "output": 2877,
         "cache_read": 0,
-        "total": 268971,
+        "total": 283743,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -53,17 +53,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 175.26,
+      "elapsed_s": 51.82,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 101981,
-        "output": 2145,
+        "input": 113778,
+        "output": 2068,
         "cache_read": 0,
-        "total": 104126,
+        "total": 115846,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -71,17 +71,17 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 122.81,
+      "elapsed_s": 117.83,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 124156,
-        "output": 2247,
+        "input": 163472,
+        "output": 5852,
         "cache_read": 0,
-        "total": 126403,
+        "total": 169324,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -107,7 +107,7 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T02:26:18Z",
@@ -141,6 +141,17 @@
       "skipped": false,
       "tokens_total": 399163,
       "elapsed_s": 823.22
+    },
+    {
+      "date": "2026-08-10T13:22:15Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 499500,
+      "elapsed_s": 787.06
     }
   ]
 }

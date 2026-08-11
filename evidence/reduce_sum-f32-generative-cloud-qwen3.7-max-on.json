@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float32, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
-  "date": "2026-08-10T08:45:07Z",
+  "date": "2026-08-11T16:24:30Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 95534,
-    "output": 8022,
-    "cache_read": 815232,
-    "total": 103556
+    "input": 104372,
+    "output": 8498,
+    "cache_read": 713856,
+    "total": 112870
   },
-  "elapsed_total_s": 465.42,
+  "elapsed_total_s": 446.38,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 465.42,
+      "elapsed_s": 446.38,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 95534,
-        "output": 8022,
-        "cache_read": 815232,
-        "total": 103556,
+        "input": 104372,
+        "output": 8498,
+        "cache_read": 713856,
+        "total": 112870,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -152,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T03:17:19Z",
@@ -186,6 +186,17 @@
       "skipped": false,
       "tokens_total": 275462,
       "elapsed_s": 778.85
+    },
+    {
+      "date": "2026-08-10T08:45:07Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 103556,
+      "elapsed_s": 465.42
     }
   ]
 }

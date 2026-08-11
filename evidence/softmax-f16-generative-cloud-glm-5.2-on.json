@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
-  "date": "2026-08-10T13:51:41Z",
+  "date": "2026-08-11T16:18:38Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -18,7 +18,7 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-glm-5.2",
   "model": "dashscope/glm-5.2",
   "tokens": {
-    "input": 157670,
-    "output": 13107,
-    "cache_read": 1246976,
-    "total": 170777
+    "input": 127861,
+    "output": 12614,
+    "cache_read": 1201408,
+    "total": 140475
   },
-  "elapsed_total_s": 1200.01,
+  "elapsed_total_s": 729.37,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 1200.01,
-      "exit": 124,
+      "elapsed_s": 729.37,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 157670,
-        "output": 13107,
-        "cache_read": 1246976,
-        "total": 170777,
+        "input": 127861,
+        "output": 12614,
+        "cache_read": 1201408,
+        "total": 140475,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5.2",
@@ -152,6 +152,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.2, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
+  "history": [
+    {
+      "date": "2026-08-10T13:51:41Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 170777,
+      "elapsed_s": 1200.01
+    }
+  ]
 }

@@ -4,8 +4,8 @@
   "operation": "batch_mat_mul_v3",
   "dtype": "float16",
   "prompt": "Help me develop a CUBE-only batched matmul (BatchMatMulV3) on Ascend950PR_9599 (C310) for float16 inputs with a float32 cube accumulator and float16 output, for C[b]=A[b]@B[b] at [B,M,K]x[B,K,N]=[16,256,256]x[16,256,256]. Distribute the batch axis one matrix per cube core (asc2.block_idx), flatten [B,M,K] to 2D [B*M,K] on the host, stage each batch's A/B into asc2.TileLocation.L1, copy M/N tiles to L0A/L0B, compute `a @ b`, cast the result to float16 and asc2.store. Inputs MUST be torch.Tensor.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_mat_mul_v3/kernel.py",
-  "date": "2026-08-10T10:04:51Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_matmul_v3_f16/kernel.py",
+  "date": "2026-08-11T17:34:35Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "qwen3.7-max",
   "tokens": {
-    "input": 99647,
-    "output": 8663,
-    "cache_read": 929280,
-    "total": 108310
+    "input": 128115,
+    "output": 11488,
+    "cache_read": 882816,
+    "total": 139603
   },
-  "elapsed_total_s": 514.14,
+  "elapsed_total_s": 536.48,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 514.14,
+      "elapsed_s": 536.48,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 99647,
-        "output": 8663,
-        "cache_read": 929280,
-        "total": 108310,
+        "input": 128115,
+        "output": 11488,
+        "cache_read": 882816,
+        "total": 139603,
         "cost_usd": 0.0
       },
       "model": "qwen3.7-max",
@@ -71,7 +71,7 @@
     "markers_found": []
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -128,8 +128,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -149,7 +149,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-27T19:09:35Z",
@@ -161,6 +161,17 @@
       "skipped": false,
       "tokens_total": 102771,
       "elapsed_s": 370.53
+    },
+    {
+      "date": "2026-08-10T10:04:51Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 108310,
+      "elapsed_s": 514.14
     }
   ]
 }

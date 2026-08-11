@@ -5,7 +5,7 @@
   "dtype": "bfloat16",
   "prompt": "Operator: LayerNormV4: y = (x - mean(x, axis=-1, keepdims=True)) * rsqrt(var(x, axis=-1, keepdims=True) + eps) * gamma + beta, normalizing over the last axis, with a host-side dispatcher that flattens any N-D input to [rows, last_dim] and selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (2000, 4096) and (2000, 1024). Output shape: same_as_input. Dtype: bfloat16 (gamma and beta are bfloat16; eps is a float32 scalar; mean/var/rstd accumulate in float32). Layout: contiguous. Axis: -1. Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the padded row fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; cast loaded tiles to float32 via `.to(asc.float32)` before computing the two reductions (sum_x and sum_x2 in a merged pass), derive variance as E[x\u00b2] - mean\u00b2 so host zero padding does not bias the statistics, then cast back via `.to(x.dtype)` before asc2.store. The host dispatcher `layer_norm_v4_launch(x, gamma, beta, eps)` picks full_row when `num_cols % 8 == 0` AND `num_cols * 4 * 6 <= 64 * 1024` (f32 intermediate UB budget), otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32. Host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599.",
   "kernel_path": "",
-  "date": "2026-08-10T17:15:06Z",
+  "date": "2026-08-11T08:01:12Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 29155,
-    "output": 1479,
-    "cache_read": 203904,
-    "total": 30634
+    "input": 22123,
+    "output": 1198,
+    "cache_read": 162816,
+    "total": 23321
   },
-  "elapsed_total_s": 174.79,
+  "elapsed_total_s": 162.58,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 75.98,
+      "elapsed_s": 66.31,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 13048,
-        "output": 692,
-        "cache_read": 80768,
-        "total": 13740,
+        "input": 12662,
+        "output": 549,
+        "cache_read": 61312,
+        "total": 13211,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 98.81,
+      "elapsed_s": 96.27,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 16107,
-        "output": 787,
-        "cache_read": 123136,
-        "total": 16894,
+        "input": 9461,
+        "output": 649,
+        "cache_read": 101504,
+        "total": 10110,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -89,7 +89,7 @@
   },
   "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P3, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -113,6 +113,17 @@
       "skipped": false,
       "tokens_total": 34170,
       "elapsed_s": 297.92
+    },
+    {
+      "date": "2026-08-10T17:15:06Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 30634,
+      "elapsed_s": 174.79
     }
   ]
 }

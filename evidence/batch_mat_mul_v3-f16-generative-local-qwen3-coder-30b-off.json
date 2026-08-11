@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a CUBE-only batched matmul (BatchMatMulV3) on Ascend950PR_9599 (C310) for float16 inputs with a float32 cube accumulator and float16 output, for C[b]=A[b]@B[b] at [B,M,K]x[B,K,N]=[16,256,256]x[16,256,256]. Distribute the batch axis one matrix per cube core (asc2.block_idx), flatten [B,M,K] to 2D [B*M,K] on the host, stage each batch's A/B into asc2.TileLocation.L1, copy M/N tiles to L0A/L0B, compute `a @ b`, cast the result to float16 and asc2.store. Inputs MUST be torch.Tensor.",
   "kernel_path": "",
-  "date": "2026-08-10T13:28:44Z",
+  "date": "2026-08-11T04:54:00Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -25,24 +25,24 @@
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 161565,
-    "output": 4796,
+    "input": 195139,
+    "output": 5591,
     "cache_read": 0,
-    "total": 166361
+    "total": 200730
   },
-  "elapsed_total_s": 148.63,
+  "elapsed_total_s": 122.87,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 8.94,
+      "elapsed_s": 4.58,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 7216,
-        "output": 192,
+        "output": 91,
         "cache_read": 0,
-        "total": 7408,
+        "total": 7307,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 107.93,
+      "elapsed_s": 65.6,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 110428,
-        "output": 3623,
+        "input": 76228,
+        "output": 2918,
         "cache_read": 0,
-        "total": 114051,
+        "total": 79146,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -71,14 +71,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 31.76,
+      "elapsed_s": 52.69,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 43921,
-        "output": 981,
+        "input": 111695,
+        "output": 2582,
         "cache_read": 0,
-        "total": 44902,
+        "total": 114277,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
@@ -107,7 +107,7 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-27T23:25:59Z",
@@ -119,6 +119,17 @@
       "skipped": false,
       "tokens_total": 543468,
       "elapsed_s": 795.88
+    },
+    {
+      "date": "2026-08-10T13:28:44Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 166361,
+      "elapsed_s": 148.63
     }
   ]
 }

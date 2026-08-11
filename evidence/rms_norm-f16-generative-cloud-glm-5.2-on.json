@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Create an RMSNorm capability for float16 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_f16/kernel.py",
-  "date": "2026-08-10T13:17:13Z",
+  "date": "2026-08-11T15:48:54Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -29,29 +29,29 @@
   },
   "skills_mode": "on",
   "model_profile": "cloud-glm-5.2",
-  "model": "glm-5.2",
+  "model": "dashscope/glm-5.2",
   "tokens": {
-    "input": 116126,
-    "output": 11871,
-    "cache_read": 893184,
-    "total": 127997
+    "input": 106841,
+    "output": 15654,
+    "cache_read": 1120000,
+    "total": 122495
   },
-  "elapsed_total_s": 652.72,
+  "elapsed_total_s": 1006.59,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 652.72,
+      "elapsed_s": 1006.59,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 116126,
-        "output": 11871,
-        "cache_read": 893184,
-        "total": 127997,
+        "input": 106841,
+        "output": 15654,
+        "cache_read": 1120000,
+        "total": 122495,
         "cost_usd": 0.0
       },
-      "model": "glm-5.2",
+      "model": "dashscope/glm-5.2",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "pass"
@@ -153,6 +153,18 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-glm-5.2, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
+  "history": [
+    {
+      "date": "2026-08-10T13:17:13Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 127997,
+      "elapsed_s": 652.72
+    }
+  ]
 }

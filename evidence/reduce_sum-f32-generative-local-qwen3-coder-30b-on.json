@@ -4,8 +4,8 @@
   "operation": "reduce_sum",
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float32, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum/kernel.py",
-  "date": "2026-08-10T19:08:21Z",
+  "kernel_path": "",
+  "date": "2026-08-11T17:45:18Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,138 +19,95 @@
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "self_review.md"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "on",
   "model_profile": "local-qwen3-coder-30b",
   "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 750247,
-    "output": 4521,
+    "input": 953619,
+    "output": 11326,
     "cache_read": 0,
-    "total": 754768
+    "total": 964945
   },
-  "elapsed_total_s": 234.28,
+  "elapsed_total_s": 513.01,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 234.28,
+      "elapsed_s": 134.85,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 750247,
-        "output": 4521,
+        "input": 419481,
+        "output": 2762,
         "cache_read": 0,
-        "total": 754768,
+        "total": 422243,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 183.19,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 401703,
+        "output": 5814,
+        "cache_read": 0,
+        "total": 407517,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 194.97,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 132435,
+        "output": 2750,
+        "cache_read": 0,
+        "total": 135185,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen3-coder:30b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "mode": "static_only",
+    "status": "fail",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['asc2.reduce_sum', '.sum(']",
-    "markers_found": [
-      "asc2.reduce_sum",
-      ".sum("
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 14.0,
+    "value": 0.0,
     "threshold": 12,
-    "accepted": true,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "verification call present"
-      },
-      "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
-      },
-      "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "expected>=1 params, found 2"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
-      },
-      "no_hardcoded_shapes": {
-        "passed": false,
-        "detail": "numeric shape tuples found inside JIT function"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['asc2.reduce_sum', '.sum(']"
-      }
-    },
+    "accepted": false,
+    "checks": {},
     "failure_category": null,
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": false,
-      "allow_legacy_apis": false
-    }
+    "gating_detail": {}
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T03:46:42Z",
@@ -184,6 +141,17 @@
       "skipped": false,
       "tokens_total": 583350,
       "elapsed_s": 347.89
+    },
+    {
+      "date": "2026-08-10T19:08:21Z",
+      "overall_pass": true,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 754768,
+      "elapsed_s": 234.28
     }
   ]
 }

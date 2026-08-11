@@ -4,8 +4,8 @@
   "operation": "gelu",
   "dtype": "float32",
   "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096]. Use the lean exp/sigmoid restatement of the tanh/Pad\u00e9 form (mathematically identical to PyTorch's gelu(approximate='tanh'), but cheaper per tile and within the sim budget) - GELU(x) = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))). Use asc2.exp; do NOT use asc2.tanh (it pushed the cell over the 150s sim budget) and do NOT use asc2.erf (simulator erf is too noisy on float32 \u2014 this is documented in the cell's regime_note).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f32/kernel.py",
-  "date": "2026-08-10T09:37:37Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu/kernel.py",
+  "date": "2026-08-11T17:16:05Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -31,24 +31,24 @@
   "model_profile": "cloud-qwen3.7-max",
   "model": "dashscope/qwen3.7-max",
   "tokens": {
-    "input": 133308,
-    "output": 11930,
-    "cache_read": 1592448,
-    "total": 145238
+    "input": 124097,
+    "output": 8691,
+    "cache_read": 861696,
+    "total": 132788
   },
-  "elapsed_total_s": 541.57,
+  "elapsed_total_s": 564.63,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 541.57,
+      "elapsed_s": 564.63,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 133308,
-        "output": 11930,
-        "cache_read": 1592448,
-        "total": 145238,
+        "input": 124097,
+        "output": 8691,
+        "cache_read": 861696,
+        "total": 132788,
         "cost_usd": 0.0
       },
       "model": "dashscope/qwen3.7-max",
@@ -67,11 +67,9 @@
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['asc2.tanh', '0.044715', 'asc2.erf', 'gelu']",
+    "detail": "found ['0.044715', 'gelu']",
     "markers_found": [
-      "asc2.tanh",
       "0.044715",
-      "asc2.erf",
       "gelu"
     ]
   },
@@ -142,7 +140,7 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['asc2.tanh', '0.044715', 'asc2.erf', 'gelu']"
+        "detail": "found ['0.044715', 'gelu']"
       }
     },
     "failure_category": null,
@@ -154,7 +152,7 @@
   },
   "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-06-12T03:54:55Z",
@@ -188,6 +186,17 @@
       "skipped": false,
       "tokens_total": 144862,
       "elapsed_s": 595.24
+    },
+    {
+      "date": "2026-08-10T09:37:37Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 145238,
+      "elapsed_s": 541.57
     }
   ]
 }

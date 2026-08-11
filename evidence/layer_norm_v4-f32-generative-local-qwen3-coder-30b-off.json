@@ -4,8 +4,8 @@
   "operation": "layer_norm_v4",
   "dtype": "float32",
   "prompt": "Create a LayerNormV4 capability for float32 on Ascend950PR_9599: mean/var/rstd + (x-mean)*rstd*gamma+beta, last-axis normalize with N-D flatten. Gate shape [1024,768].",
-  "kernel_path": "",
-  "date": "2026-08-10T13:55:25Z",
+  "kernel_path": "kernel.py",
+  "date": "2026-08-11T05:28:30Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,33 +19,35 @@
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": []
+    "artifacts_found": [
+      "kernel.py"
+    ]
   },
   "skills_mode": "off",
   "model_profile": "local-qwen3-coder-30b",
-  "model": "qwen3-coder:30b",
+  "model": "ollama/qwen3-coder:30b",
   "tokens": {
-    "input": 534900,
-    "output": 13958,
+    "input": 600141,
+    "output": 18824,
     "cache_read": 0,
-    "total": 548858
+    "total": 618965
   },
-  "elapsed_total_s": 636.04,
+  "elapsed_total_s": 456.68,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 173.46,
+      "elapsed_s": 208.24,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 264528,
-        "output": 5021,
+        "input": 201695,
+        "output": 4704,
         "cache_read": 0,
-        "total": 269549,
+        "total": 206399,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -53,17 +55,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 392.29,
+      "elapsed_s": 65.58,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 198431,
-        "output": 5491,
+        "input": 139979,
+        "output": 4155,
         "cache_read": 0,
-        "total": 203922,
+        "total": 144134,
         "cost_usd": 0.0
       },
-      "model": "qwen3-coder:30b",
+      "model": "ollama/qwen3-coder:30b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -71,43 +73,133 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 70.29,
+      "elapsed_s": 182.86,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 71941,
-        "output": 3446,
+        "input": 258467,
+        "output": 9965,
         "cache_read": 0,
-        "total": 75387,
+        "total": 268432,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen3-coder:30b",
-      "kernel_found": false,
+      "kernel_found": true,
       "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
     "status": "fail",
-    "shapes_verified": []
+    "detail": "Kernel executed but verification unclear: === Test Case 1: (1024, 768) ===\nCondition check:\n  num_cols = 768\n  num_cols % 8 = 0\n  num_cols * 4 * 6 = 18432\n  64 * 1024 = 65536\n  Should use full_row kernel: True\nUsing full_row kernel for shape 1024x768\n\u274c Test 1 failed: at <source>:15:20:\n        sum_x = 0.0\n        sum_x2 = 0.0\n        \n     ",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "kernel.py",
+      "is_symlink": false,
+      "resolved": "/Users/aloschilov/ar2/work/_temp/gen-layer_norm_v4-float32-a3.ri_ir8yl/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        ".agent-prompt.txt",
+        ".git",
+        "agent-output.txt",
+        "final_layer_norm_v4.py",
+        "golden",
+        "kernel.py",
+        "layer_norm_v4.py",
+        "opencode.json"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 112\ndrwx------ 10 root root   320 Aug 11 05:28 .\ndrwxr-xr-x  1 root root  4096 Aug 11 05:28 ..\n-rw-r--r--  1 root root  1646 Aug 11 05:25 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Aug 11 05:25 .git\n-rw-r--r--  1 root root 81043 Aug 11 05:28 agent-output.txt\n-rw-r--r--  1 root root  3914 Aug 11 05:28 final_layer_norm_v4.py\ndrwxr-xr-x  6 root root   192 Jul 27 15:17 golden\n-rw-r--r--  1 root root  7419 Aug 11 05:27 kernel.py\n-rw-r--r--  1 root root  4519 Aug 11 05:27 layer_norm_v4.py\n-rw-r--r--  1 root root   611 Aug 11 05:25 opencode.json\n--- ls kernel dir ---\ntotal 112\ndrwx------ 10 root root   320 Aug 11 05:28 .\ndrwxr-xr-x  1 root root  4096 Aug 11 05:28 ..\n-rw-r--r--  1 root root  1646 Aug 11 05:25 .agent-prompt.txt\ndrwxr-xr-x 10 root root   320 Aug 11 05:25 .git\n-rw-r--r--  1 root root 81043 Aug 11 05:28 agent-output.txt\n-rw-r--r--  1 root root  3914 Aug 11 05:28 final_layer_norm_v4.py\ndrwxr-xr-x  6 root root   192 Jul 27 15:17 golden\n-rw-r--r--  1 root root  7419 Aug 11 05:27 kernel.py\n-rw-r--r--  1 root root  4519 Aug 11 05:27 layer_norm_v4.py\n-rw-r--r--  1 root root   611 Aug 11 05:25 opencode.json\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "no kernel found",
+    "passed": true,
+    "detail": "no semantic markers defined for 'layer_norm_v4'",
     "markers_found": []
   },
   "score": {
-    "value": 0.0,
+    "value": 10.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {},
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "2 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": false,
+        "detail": "missing asc2.load/asc2.store"
+      },
+      "asc2_tensor": {
+        "passed": false,
+        "detail": "missing asc2.tensor"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": false,
+        "detail": "no allclose/assert_close call"
+      },
+      "launch_pattern": {
+        "passed": false,
+        "detail": "no launch pattern"
+      },
+      "global_address": {
+        "passed": false,
+        "detail": "missing GlobalAddress type"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in semantic table)"
+      }
+    },
     "failure_category": null,
-    "gating_detail": {}
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen3-coder-30b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-27T23:56:22Z",
@@ -119,6 +211,17 @@
       "skipped": false,
       "tokens_total": 476298,
       "elapsed_s": 473.63
+    },
+    {
+      "date": "2026-08-10T13:55:25Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 548858,
+      "elapsed_s": 636.04
     }
   ]
 }

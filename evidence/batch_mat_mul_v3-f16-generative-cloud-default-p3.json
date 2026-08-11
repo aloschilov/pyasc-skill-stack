@@ -4,8 +4,8 @@
   "operation": "batch_mat_mul_v3",
   "dtype": "float16",
   "prompt": "Operator: batched matmul C[b]=A[b]@B[b] (float16 inputs, float32 cube accumulator, float16 output via cast on store). Input shapes: A [B,M,K]=[16,256,256], B [B,K,N]=[16,256,256]. Output: [B,M,N]=[16,256,256]. Axis: -1 (K, contracted, per batch). Layout: flatten [B,M,K]->[B*M,K], [B,K,N]->[B*K,N], [B,M,N]->[B*M,N] on the host so each batch is a contiguous row-block. Tiling: batch_per_core -- launch CORE_NUM=B cube cores, bi=asc2.block_idx() handles batch bi (rows bi*M of A/C, bi*K of B). Stage the whole per-batch A[M,K] and B[K,N] into asc2.TileLocation.L1 once, then for each M tile copy [M_TILE,K]->L0A and for each N tile copy [K,N_TILE]->L0B, compute `a_i @ b_j`, `.to(asc2.float16)`, asc2.store. All of M,K,N,M_TILE,N_TILE must be multiples of 16; keep each L0 tile <= 64 KiB (M_TILE=128, full K=256 -> A tile 64 KiB). Accumulator: float32 (cube). Tolerance: atol=1e-2, rtol=1e-2 vs torch.bmm(a.float(), b.float()).to(torch.float16). Host inputs MUST be torch.Tensor (numpy is silently zeroed on the C310 cube path). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599.",
-  "kernel_path": "kernel.py",
-  "date": "2026-08-10T17:00:28Z",
+  "kernel_path": "",
+  "date": "2026-08-11T07:37:22Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,133 +19,77 @@
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": true,
-    "artifacts_found": [
-      "kernel.py"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 66536,
-    "output": 6196,
-    "cache_read": 1214592,
-    "total": 72732
+    "input": 160148,
+    "output": 13331,
+    "cache_read": 1493120,
+    "total": 173479
   },
-  "elapsed_total_s": 803.89,
+  "elapsed_total_s": 1659.27,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 803.89,
+      "elapsed_s": 1157.57,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 66536,
-        "output": 6196,
-        "cache_read": 1214592,
-        "total": 72732,
+        "input": 98778,
+        "output": 8290,
+        "cache_read": 1070464,
+        "total": 107068,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "pass"
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 501.7,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 61370,
+        "output": 5041,
+        "cache_read": 422656,
+        "total": 66411,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "mode": "static_only",
+    "status": "fail",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "no semantic markers defined for 'batch_mat_mul_v3'",
+    "passed": false,
+    "detail": "no kernel found",
     "markers_found": []
   },
   "score": {
-    "value": 15.0,
+    "value": 0.0,
     "threshold": 12,
-    "accepted": true,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "verification call present"
-      },
-      "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
-      },
-      "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "skipped (no --op or op not in semantic table)"
-      }
-    },
+    "accepted": false,
+    "checks": {},
     "failure_category": null,
-    "gating_detail": {
-      "legacy_api_findings": [],
-      "missing_asc2_import": false,
-      "allow_legacy_apis": false
-    }
+    "gating_detail": {}
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "Nightly CI run (protocol=P3, cloud-default)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -169,6 +113,17 @@
       "skipped": false,
       "tokens_total": 259624,
       "elapsed_s": 1646.31
+    },
+    {
+      "date": "2026-08-10T17:00:28Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 72732,
+      "elapsed_s": 803.89
     }
   ]
 }

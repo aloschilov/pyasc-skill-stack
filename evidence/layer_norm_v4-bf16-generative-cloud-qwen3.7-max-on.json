@@ -4,8 +4,8 @@
   "operation": "layer_norm_v4",
   "dtype": "bfloat16",
   "prompt": "Create a LayerNormV4 capability for bfloat16 on Ascend950PR_9599: mean/var/rstd + (x-mean)*rstd*gamma+beta, last-axis normalize with N-D flatten. Gate shape [2000,4096].",
-  "kernel_path": "",
-  "date": "2026-08-10T10:56:06Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/layer_norm_v4_bf16/kernel.py",
+  "date": "2026-08-11T18:43:35Z",
   "pyasc_revision": {
     "url": "",
     "branch": "",
@@ -19,33 +19,38 @@
     "platform": "opencode",
     "timeout_s": 1200,
     "completed": false,
-    "artifacts_found": []
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md"
+    ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-qwen3.7-max",
-  "model": "dashscope/qwen3.7-max",
+  "model": "qwen3.7-max",
   "tokens": {
-    "input": 312660,
-    "output": 23492,
-    "cache_read": 3556608,
-    "total": 336152
+    "input": 277708,
+    "output": 19109,
+    "cache_read": 1765632,
+    "total": 296817
   },
-  "elapsed_total_s": 1891.11,
+  "elapsed_total_s": 1710.0,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 691.1,
+      "elapsed_s": 509.91,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 167176,
-        "output": 16045,
-        "cache_read": 2078208,
-        "total": 183221,
+        "input": 107583,
+        "output": 11060,
+        "cache_read": 992640,
+        "total": 118643,
         "cost_usd": 0.0
       },
-      "model": "dashscope/qwen3.7-max",
+      "model": "qwen3.7-max",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "fail"
@@ -53,43 +58,131 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 1200.01,
+      "elapsed_s": 1200.09,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 145484,
-        "output": 7447,
-        "cache_read": 1478400,
-        "total": 152931,
+        "input": 170125,
+        "output": 8049,
+        "cache_read": 772992,
+        "total": 178174,
         "cost_usd": 0.0
       },
       "model": "qwen3.7-max",
-      "kernel_found": false,
-      "static_verify": "fail",
+      "kernel_found": true,
+      "static_verify": "pass",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
     "status": "fail",
-    "shapes_verified": []
+    "detail": "Exit code 1: AttributeError: 'module' object has no attribute 'tensor'\nt\n    raise CodegenError(node, self.src, f\"{e.__class__.__name__}: {e}\") from e\nasc.codegen.errors.CodegenError: at <source>:14:11:\n    tile_cols: asc.ConstExpr[int],\n    epsilon: asc.ConstExpr[float],\n):\n    x_gm = asc2.tensor(x_ptr, [num_rows, padded_cols])\n           ^\n    gamma_gm = asc2.tensor(gamma_ptr, [1, padded_cols])\n    beta_gm = asc2.tensor(beta_ptr, [1, padded_cols])\n    out_gm = asc2.tensor(out_ptr, [num_rows, padded_cols])\nAttributeError: 'module' object has no attribute 'tensor'\n",
+    "shapes_verified": [],
+    "path_diagnostics": {
+      "rel_kernel": "teams/pyasc-kernel-dev-team/kernels/layer_norm_v4_bf16/kernel.py",
+      "is_symlink": false,
+      "resolved": "/Users/aloschilov/ar3/work/_temp/gen-layer_norm_v4-bfloat16-a2.zzn_7knh/teams/pyasc-kernel-dev-team/kernels/layer_norm_v4_bf16/kernel.py",
+      "resolved_exists": true,
+      "resolved_inside_project": true,
+      "host_parent_listing": [
+        "README.md",
+        "__pycache__",
+        "conftest.py",
+        "docs",
+        "kernel.py",
+        "test"
+      ],
+      "container_view": "--- ls /workspace ---\ntotal 296\ndrwx------  9 root root    288 Aug 11 18:43 .\ndrwxr-xr-x  1 root root   4096 Aug 11 18:43 ..\n-rw-r--r--  1 root root    169 Aug 11 18:23 .agent-prompt.txt\ndrwxr-xr-x 10 root root    320 Aug 11 18:23 .git\n-rw-r--r--  1 root root 286764 Aug 11 18:43 agent-output.txt\ndrwxr-xr-x  6 root root    192 Aug 11 14:56 golden\n-rw-r--r--  1 root root    922 Aug 11 18:23 opencode.json\ndrwxr-xr-x 11 root root    352 Aug 11 14:56 skills\ndrwxr-xr-x  3 root root     96 Aug 11 14:56 teams\n--- ls kernel dir ---\ntotal 20\ndrwxr-xr-x 8 root root  256 Aug 11 18:33 .\ndrwxr-xr-x 3 root root   96 Aug 11 18:24 ..\n-rw-r--r-- 1 root root  611 Aug 11 18:24 README.md\ndrwxr-xr-x 4 root root  128 Aug 11 18:34 __pycache__\n-rw-r--r-- 1 root root  441 Aug 11 18:24 conftest.py\ndrwxr-xr-x 6 root root  192 Aug 11 18:28 docs\n-rw-r--r-- 1 root root 8728 Aug 11 18:27 kernel.py\ndrwxr-xr-x 2 root root   64 Aug 11 18:24 test\n--- readlink kernel ---"
+    }
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "no kernel found",
+    "passed": true,
+    "detail": "no semantic markers defined for 'layer_norm_v4'",
     "markers_found": []
   },
   "score": {
-    "value": 0.0,
+    "value": 15.0,
     "threshold": 12,
-    "accepted": false,
-    "checks": {},
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "2 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": false,
+        "detail": "numeric shape tuples found inside JIT function"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in semantic table)"
+      }
+    },
     "failure_category": null,
-    "gating_detail": {}
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "Cloud DashScope run (cloud-qwen3.7-max, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31365678492",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/31455491123",
   "history": [
     {
       "date": "2026-07-27T20:43:05Z",
@@ -101,6 +194,17 @@
       "skipped": false,
       "tokens_total": 368389,
       "elapsed_s": 1900.45
+    },
+    {
+      "date": "2026-08-10T10:56:06Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 336152,
+      "elapsed_s": 1891.11
     }
   ]
 }
