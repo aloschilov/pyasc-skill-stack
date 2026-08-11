@@ -201,15 +201,20 @@ def verify(path: str) -> list[CheckResult]:
             "; ".join(loop_issues) if loop_issues else "OK",
         ))
 
-    has_load = _source_has_call(source, "load")
-    has_store = _source_has_call(source, "store")
+    # Accept both the v2-mainline tile API (asc2.load/store/tensor) and the
+    # 4d1db41d target-test API (asc2.copy_in/copy_out/global_tensor); the
+    # goldens migrated to the latter on origin/v2 4d1db41d.
+    has_load = _source_has_call(source, "load") or _source_has_call(source, "copy_in")
+    has_store = _source_has_call(source, "store") or _source_has_call(source, "copy_out")
     has_load_store = has_load and has_store
     results.append(CheckResult("asc2_load_store", has_load_store,
-                               "asc2.load + asc2.store present" if has_load_store else "Missing asc2.load/asc2.store"))
+                               "asc2 load+store (or copy_in+copy_out) present" if has_load_store
+                               else "Missing asc2.load/store (or copy_in/copy_out)"))
 
-    has_tensor = _source_has_call(source, "tensor")
+    has_tensor = _source_has_call(source, "tensor") or _source_has_call(source, "global_tensor")
     results.append(CheckResult("asc2_tensor", has_tensor,
-                               "asc2.tensor present" if has_tensor else "Missing asc2.tensor"))
+                               "asc2.tensor (or global_tensor) present" if has_tensor
+                               else "Missing asc2.tensor (or global_tensor)"))
 
     has_verify = (
         _source_has_call(source, "allclose")
