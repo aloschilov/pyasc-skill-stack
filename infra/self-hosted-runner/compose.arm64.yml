@@ -7,9 +7,10 @@
 # runs the container. Bring up (from this dir, .env present):
 #   docker compose -f compose.arm64.yml up -d
 #
-# TWO runners so the nightly matrix legs fan out in parallel (roughly halves
-# wall-clock so a complete nightly fits under GitHub's 24h queued-job limit;
-# freed up now that the 68 GB gpt-oss-120b local model is out of the matrix).
+# THREE runners so the nightly matrix legs fan out 3-deep in parallel (keeps a
+# complete nightly well under GitHub's 24h queued-job limit; the 3rd was added
+# 2026-08 after the 2-runner nightly ran ~18h with the 2 slowest cloud legs
+# blocking the fast legs).
 # Each runner gets its OWN isolated, path-aligned work dir under a macOS-shared
 # path (${AR_BASE}/work and ${AR_BASE2}/work), bind-mounted at the SAME path so
 # the Docker Desktop VM sees it and the perf/gen harness sibling
@@ -48,4 +49,23 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${AR_BASE2}/work:${AR_BASE2}/work
+    restart: always
+  # THIRD runner (2026-08): the nightly's 8 generative jobs serialize 2-deep on
+  # 2 runners (~18h wall, cloud legs block the fast legs). A 3rd runner fans them
+  # 3-deep (~12h) with NO change to the gate `needs` graph (failure semantics
+  # preserved). Same image/.env (ACCESS_TOKEN PAT auto-registers); own work dir.
+  runner3:
+    image: pyasc-ci-runner:latest
+    env_file: .env
+    environment:
+      RUNNER_SCOPE: repo
+      LABELS: arm64
+      DISABLE_AUTO_UPDATE: "true"
+      START_DOCKER_SERVICE: "false"
+      CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /actions-runner-persist
+      DISABLE_AUTOMATIC_DEREGISTRATION: "true"
+      RUNNER_WORKDIR: ${AR_BASE3}/work
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${AR_BASE3}/work:${AR_BASE3}/work
     restart: always
