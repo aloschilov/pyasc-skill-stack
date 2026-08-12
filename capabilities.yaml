@@ -1130,3 +1130,465 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
       comparability_note: 'Not a like-for-like high-level comparison: the reference (ops-nn/optim/apply_adam/op_kernel/arch35/apply_adam_dag.h) hand-writes CalcMt/CalcVt/CalcVarT in register-fused SIMT micro-API (__VEC_SCOPE__, MicroAPI::RegTensor, MicroAPI::DataCopy, MaskReg), keeping the entire m_t/v_t/var_t chain in vector registers (4 copy-ins / 3 copy-outs, no UB round-trips for intermediates). pyasc2 emits only the high-level API and must materialize each intermediate tile in UB, which is exactly why it stays memory-bound. The miss is therefore SIMT-attributable, reinforcing the DMA-floor finding, not a pyasc codegen bug. See docs/perf-vs-ascendc-demo.md "Reference programming model".'
       dma_floor_ticks: 16966
       evidence: evidence/perf/ascendc-ref/apply_adam-f32-ascend950-32x4096.json
+
+# ===========================================================================
+# Operators vendored from pyasc-fork/v2-eval target tests (Phase F4).
+# These canonical, upstream-vetted kernels replace the hand-written goldens.
+# Golden status: golden_only (compile-check via run_target_test.py on 4d1db41d).
+# ===========================================================================
+- name: add_inplace
+  tier: elementwise
+  asc2_api: 'asc2.copy_in/copy_out (in-place a <- a + b)'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement add_inplace on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_add_inplace.py.'
+    prompt_variants:
+      minimal: 'Operator: add_inplace on Ascend950PR_9599, float32. Reference golden/target/test_add_inplace.py.'
+      guided: 'Operator: add_inplace on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_add_inplace.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_add_inplace.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
+- name: broadcast
+  tier: elementwise
+  asc2_api: 'asc2.broadcast_to (shape broadcast)'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement broadcast on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_broadcast.py.'
+    prompt_variants:
+      minimal: 'Operator: broadcast on Ascend950PR_9599, float32. Reference golden/target/test_broadcast.py.'
+      guided: 'Operator: broadcast on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_broadcast.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_broadcast.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
+- name: cast
+  tier: elementwise
+  asc2_api: 'asc2.cast (dtype conversion)'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement cast on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_cast.py.'
+    prompt_variants:
+      minimal: 'Operator: cast on Ascend950PR_9599, float32. Reference golden/target/test_cast.py.'
+      guided: 'Operator: cast on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_cast.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_cast.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
+- name: reciprocal
+  tier: elementwise
+  asc2_api: 'asc2.div(1.0, x) (reciprocal)'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement reciprocal on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_reciprocal.py.'
+    prompt_variants:
+      minimal: 'Operator: reciprocal on Ascend950PR_9599, float32. Reference golden/target/test_reciprocal.py.'
+      guided: 'Operator: reciprocal on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_reciprocal.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_reciprocal.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
+- name: kl_div
+  tier: composed
+  asc2_api: 'asc2.kl_div (KL divergence loss)'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement kl_div on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_kl_div.py.'
+    prompt_variants:
+      minimal: 'Operator: kl_div on Ascend950PR_9599, float32. Reference golden/target/test_kl_div.py.'
+      guided: 'Operator: kl_div on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_kl_div.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_kl_div.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
+- name: addcdiv
+  tier: composed
+  asc2_api: 'asc2.addcdiv (t/(s+eps))'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement addcdiv on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_addcdiv.py.'
+    prompt_variants:
+      minimal: 'Operator: addcdiv on Ascend950PR_9599, float32. Reference golden/target/test_addcdiv.py.'
+      guided: 'Operator: addcdiv on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_addcdiv.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_addcdiv.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
+- name: reduce_max
+  tier: reduction
+  asc2_api: 'asc2.reduce_max (last-axis max)'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: -1
+    output_shape: same_as_input
+    accumulator_dtype: float32
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement reduce_max on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_reduce_max.py.'
+    prompt_variants:
+      minimal: 'Operator: reduce_max on Ascend950PR_9599, float32. Reference golden/target/test_reduce_max.py.'
+      guided: 'Operator: reduce_max on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_reduce_max.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_reduce_max.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
+- name: matmul_k_tiled
+  tier: advanced
+  asc2_api: 'asc2.matmul (K-tiled batched matmul)'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement matmul_k_tiled on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_matmul_k_tiled.py.'
+    prompt_variants:
+      minimal: 'Operator: matmul_k_tiled on Ascend950PR_9599, float32. Reference golden/target/test_matmul_k_tiled.py.'
+      guided: 'Operator: matmul_k_tiled on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_matmul_k_tiled.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_matmul_k_tiled.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
+- name: one_hot
+  tier: advanced
+  asc2_api: 'asc2.one_hot (one-hot encoding)'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement one_hot on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_one_hot.py.'
+    prompt_variants:
+      minimal: 'Operator: one_hot on Ascend950PR_9599, float32. Reference golden/target/test_one_hot.py.'
+      guided: 'Operator: one_hot on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_one_hot.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_one_hot.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
+- name: select
+  tier: advanced
+  asc2_api: 'asc2.select (conditional select)'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement select on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_select.py.'
+    prompt_variants:
+      minimal: 'Operator: select on Ascend950PR_9599, float32. Reference golden/target/test_select.py.'
+      guided: 'Operator: select on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_select.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_select.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
+- name: split_v
+  tier: advanced
+  asc2_api: 'asc2.split_v (variable split)'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement split_v on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_split_v.py.'
+    prompt_variants:
+      minimal: 'Operator: split_v on Ascend950PR_9599, float32. Reference golden/target/test_split_v.py.'
+      guided: 'Operator: split_v on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_split_v.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_split_v.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
+- name: transpose
+  tier: advanced
+  asc2_api: 'asc2.transpose (2-D transpose)'
+  representative_of: []
+  note: 'Canonical kernel vendored from pyasc-fork/v2-eval target test. Compile-verified on 4d1db41d.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: 'Help me implement transpose on Ascend950PR_9599 for float32. Reference the canonical kernel at golden/target/test_transpose.py.'
+    prompt_variants:
+      minimal: 'Operator: transpose on Ascend950PR_9599, float32. Reference golden/target/test_transpose.py.'
+      guided: 'Operator: transpose on Ascend950PR_9599. Use the fork target-test API (asc2.global_tensor/copy_in/copy_out). Reference golden/target/test_transpose.py for the exact tiling + host pattern. Dtype: float32.'
+    shapes:
+    - - 16
+      - 2048
+    golden_status: golden_only
+    golden: golden/target/test_transpose.py
+    semantic_check:
+    - asc2.copy_in
+    - asc2.copy_out
+    - asc2.global_tensor
+    generative_status: pending
