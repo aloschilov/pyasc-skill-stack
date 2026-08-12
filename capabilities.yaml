@@ -297,7 +297,7 @@ operations:
     - - 32
       - 4096
     golden_status: confirmed
-    golden: golden/kernels/add_f16.py
+    golden: golden/target/test_vadd.py
     golden_evidence: evidence/add-f16-golden.json
     perf_ratio_demo:
       ref_source: ops-math/math/add (canonical_only)
@@ -359,7 +359,7 @@ operations:
     - - 32
       - 4096
     golden_status: confirmed
-    golden: golden/kernels/reduce_sum_f32.py
+    golden: golden/target/test_reduce_sum.py
     golden_evidence: evidence/reduce_sum-f32-golden.json
     perf_ratio_demo:
       ref_source: ops-math/math/reduce_sum (canonical_only)
@@ -404,7 +404,7 @@ operations:
     - - 32
       - 4096
     golden_status: confirmed
-    golden: golden/kernels/reduce_sum_f16.py
+    golden: golden/target/test_reduce_sum.py
     golden_evidence: evidence/reduce_sum-f16-golden.json
     perf_ratio_demo:
       ref_source: ops-math/math/reduce_sum (aclnnReduceSum, canonical_only)
@@ -461,7 +461,7 @@ operations:
     - - 32
       - 4096
     golden_status: confirmed
-    golden: golden/kernels/gelu_f16.py
+    golden: golden/target/test_gelu.py
     golden_evidence: evidence/gelu-f16-golden.json
     perf_ratio_demo:
       ref_source: ops-nn/activation/gelu (aclnnGelu, canonical_only)
@@ -540,7 +540,7 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     - - 32
       - 4096
     golden_status: confirmed
-    golden: golden/kernels/gelu_f32.py
+    golden: golden/target/test_gelu.py
     golden_evidence: evidence/gelu-f32-golden.json
     perf_ratio_demo:
       ref_source: ops-nn/activation/gelu (aclnnGelu, canonical_only)
@@ -635,7 +635,7 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     - - 32
       - 4096
     golden_status: confirmed
-    golden: golden/kernels/softmax_f16.py
+    golden: golden/target/test_softmax.py
     golden_evidence: evidence/softmax-f16-golden.json
     perf_ratio_demo:
       ref_source: ops-nn/experimental/activation/softmax_v2 (aclnnSoftmax, canonical_only)
@@ -697,7 +697,7 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     - - 32
       - 32
     golden_status: confirmed
-    golden: golden/kernels/matmul_f16.py
+    golden: golden/target/test_matmul_v3.py
     golden_evidence: evidence/matmul-f16-golden.json
     perf_ratio_demo:
       ref_source: ops-nn/matmul/mat_mul_v3 (aclnnMatmul, canonical_only)
@@ -762,7 +762,7 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
       - 256
       - 256
     golden_status: confirmed
-    golden: golden/kernels/batch_mat_mul_v3_f16.py
+    golden: golden/target/test_matmul_v3.py
     golden_evidence: evidence/batch_mat_mul_v3-f16-golden.json
     generative_status: not_attempted
     semantic_check:

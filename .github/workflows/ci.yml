@@ -183,6 +183,32 @@ jobs:
             fi
             idx=$((idx + 1))
           done
+          # Fork target-test goldens (compile-check on 4d1db41d): the canonical
+          # upstream kernels vendored from pyasc-fork/v2-eval into golden/target/.
+          # Compile-only (fast — the fork tests have ~100 cases each; the simulator
+          # runtime is slow, so the merge-gate verifies COMPILE here; the __main__
+          # goldens above provide the runtime verification). Run on shard 0 only
+          # (no shard-assignment needed — ~2min total for 18 tests).
+          if [ "$SHARD" -eq 0 ]; then
+            echo "--- [shard 0] Fork target-test compile-check ---"
+            for fork_test in golden/target/test_*.py; do
+              [ -f "$fork_test" ] || continue
+              fbase="$(basename "$fork_test")"
+              start=$(date +%s)
+              if docker run --rm --name "${CTR_NAME}-fork-${fbase%.py}" \
+                --ulimit nofile=65536:65536 \
+                -v "$PWD":/workspace:ro \
+                -w /workspace \
+                "$IMAGE" \
+                python3.11 tests/tools/run_target_test.py "$fork_test" \
+                  --backend Model --platform "$PLATFORM"; then
+                echo "[PASS] $fbase ($(( $(date +%s) - start ))s)"
+              else
+                echo "[FAIL] $fbase ($(( $(date +%s) - start ))s)"
+                FAILED=$((FAILED + 1))
+              fi
+            done
+          fi
           echo "shard $SHARD ran $ran kernel(s); $FAILED failed"
           if [ "$ran" -eq 0 ]; then
             echo "ERROR: shard $SHARD verified 0 kernels (SHARD_COUNT vs matrix mismatch?)"
