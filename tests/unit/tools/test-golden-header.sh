@@ -54,6 +54,11 @@ for op in data.get("operations", []):
         golden_path = cell.get("golden")
         if not golden_path:
             continue
+        # Fork target-test goldens (golden/target/) are canonical upstream
+        # tests with a pyasc copyright header, not the skill-stack golden
+        # header format (shape_regime/tail_behavior/partitioning). Skip them.
+        if "golden/target/" in golden_path:
+            continue
         full = candidate / golden_path
         if not full.exists():
             errors.append(f"{op_name}/{cell.get('dtype')}: golden file missing {golden_path}")
