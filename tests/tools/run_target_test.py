@@ -37,20 +37,19 @@ def main() -> None:
     ap.add_argument("--timeout", type=int, default=300, help="Per-case timeout (s)")
     ap.add_argument("--compile-only", action="store_true", default=True, help="Compile-only check (default; fast)")
     ap.add_argument("--run", action="store_true", help="Run the kernel (slow on simulator)")
-    ap.add_argument("--full", help="Run ALL cases (for nightly)")
+    ap.add_argument("--full", action="store_true", help="Run ALL cases (for nightly)")
     args = ap.parse_args()
 
-    if not args.full:
-        args.compile_only = not args.run
-        cases = parse_cases(args.test_file)
-        if not cases:
-            print(f"[SKIP] {args.test_file}: no PYASC_TESTS_BEGIN block")
-            sys.exit(0)
+    args.compile_only = not args.run
+    cases = parse_cases(args.test_file)
+    if cases and not args.full:
         rep = min(cases, key=lambda c: c[1])
         k_pattern = f"{rep[0]}-{rep[1]}-"
         label = f"{rep[0]} (block_num={rep[1]})"
         print(f"[INFO] {args.test_file}: representative case {label}")
     else:
+        # No PYASC_TESTS_BEGIN block (direct @pytest.mark.parametrize) OR --full:
+        # run the entire test. With --compile-only this is fast (~2s per test).
         k_pattern = None
         label = "ALL cases"
         print(f"[INFO] {args.test_file}: {label}")
@@ -63,6 +62,8 @@ def main() -> None:
         "--platform", args.platform,
         "-x", "-q", "-p", "no:cacheprovider",
     ]
+    if args.compile_only:
+        cmd.append("--compile-only")
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=args.timeout + 60)
     except subprocess.TimeoutExpired:
