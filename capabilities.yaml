@@ -2259,6 +2259,7 @@ operations:
     - asc2.copy_out
     - asc2.global_tensor
     generative_status: confirmed
+    generative_evidence: evidence/reduce_max-f32-generative.json
 - name: matmul_k_tiled
   tier: advanced
   asc2_api: asc2.matmul (K-tiled batched matmul)
