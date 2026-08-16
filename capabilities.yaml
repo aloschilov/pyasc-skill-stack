@@ -60,8 +60,8 @@ operations:
           4096]; perf shape [32, 4096]. Output shape: same_as_input. Dtype: float16.
           Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size
           = product of dims) inside the host launcher; the kernel takes `size: int`
-          and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size],
-          offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])`
+          and tiles 1D with `asc2.global_tensor(x_ptr, [size])`, `asc2.copy_in(x_gm, [tile_size],
+          offsets=[tile_offset])`, `asc2.copy_out(out, out_gm, [tile_offset])`
           — all ranks 1. PERF: use a WIDE tile TILE_SIZE=2048 (NOT the 128 correctness
           default) to keep the AIV vector pipeline busy and amortise per-tile MTE
           setup, mirroring the ops-math arch35 elementwise tile policy (math/abs/op_host/arch35/abs_tiling_arch35.cpp);
@@ -82,9 +82,9 @@ operations:
       guided: 'Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32,
         4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis:
         null. Tiling: flatten each test shape to 1D (size = product of dims) inside
-        the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr,
-        [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out,
-        out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT use 2D `asc2.tensor(...,
+        the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.global_tensor(x_ptr,
+        [size])`, `asc2.copy_in(x_gm, [tile_offset], [tile_size])`, `asc2.copy_out(out,
+        out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT use 2D `asc2.global_tensor(...,
         [num_rows, num_cols])` with 1D `[tile_size]` load and 2D `[row_idx, col_idx]`
         offsets; v2 raises `RuntimeError: rank of ''tensor_shape'' must match rank
         of ''shape''`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block,
@@ -144,9 +144,9 @@ operations:
       guided: 'Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32,
         4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis:
         null. Tiling: flatten each test shape to 1D (size = product of dims) inside
-        the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr,
-        [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out,
-        out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT use 2D `asc2.tensor(...,
+        the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.global_tensor(x_ptr,
+        [size])`, `asc2.copy_in(x_gm, [tile_offset], [tile_size])`, `asc2.copy_out(out,
+        out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT use 2D `asc2.global_tensor(...,
         [num_rows, num_cols])` with 1D `[tile_size]` load and 2D `[row_idx, col_idx]`
         offsets; v2 raises `RuntimeError: rank of ''tensor_shape'' must match rank
         of ''shape''`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block,
@@ -211,10 +211,10 @@ operations:
       guided: 'Operator: tanh (out = tanh(x)). Input shapes: [1, 128], [4, 2048],
         [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous.
         Axis: null. Tiling: flatten each test shape to 1D (size = product of dims)
-        inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr,
-        [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `out = asc2.tanh(x)`,
-        `asc2.store(out, out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT use
-        2D `asc2.tensor(..., [num_rows, num_cols])` with 1D `[tile_size]` load; v2
+        inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.global_tensor(x_ptr,
+        [size])`, `asc2.copy_in(x_gm, [tile_offset], [tile_size])`, `out = asc2.tanh(x)`,
+        `asc2.copy_out(out, out_gm, [tile_offset])` — all ranks 1. Do NOT use
+        2D `asc2.global_tensor(..., [num_rows, num_cols])` with 1D `[tile_size]` load; v2
         raises `RuntimeError: rank of ''tensor_shape'' must match rank of ''shape''`.
         TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block,
         unroll_factor=2)`. Tail: aligned_only — no tail logic required. Accumulator:
@@ -226,8 +226,8 @@ operations:
           [32, 4096]; perf shape [32, 4096]. Output shape: same_as_input. Dtype: float16.
           Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size
           = product of dims) inside the host launcher; the kernel takes `size: int`
-          and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size],
-          offsets=[tile_offset])`, `out = asc2.tanh(x)`, `asc2.store(out, out_gm,
+          and tiles 1D with `asc2.global_tensor(x_ptr, [size])`, `asc2.copy_in(x_gm, [tile_size],
+          offsets=[tile_offset])`, `out = asc2.tanh(x)`, `asc2.copy_out(out, out_gm,
           offsets=[tile_offset])` — all ranks 1. PERF: use a WIDE tile TILE_SIZE=2048
           (NOT the 128 correctness default) to keep the AIV vector pipeline busy and
           amortise per-tile MTE setup, mirroring the ops-math arch35 elementwise tile
@@ -320,9 +320,9 @@ operations:
         (asc.ConstExpr[float]). Input shapes: [16, 2048], [32, 4096]. Output shape:
         same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten
         to 1D in the host launcher; the kernel takes `size: int`, two GlobalAddress
-        inputs (data, mask) + one output, and tiles 1D with `asc2.tensor(ptr, [size])`,
-        two `asc2.load(..., [tile_size], offsets=[off])`, `out = (data_t * mask_t)
-        * scale`, `asc2.store(out, out_gm, offsets=[off])` — all ranks 1. TILE_SIZE=2048,
+        inputs (data, mask) + one output, and tiles 1D with `asc2.global_tensor(ptr, [size])`,
+        two `asc2.copy_in(..., [off], [tile_size])`, `out = (data_t * mask_t)
+        * scale`, `asc2.copy_out(out, out_gm, [off])` — all ranks 1. TILE_SIZE=2048,
         CORE_NUM=16; size must be a multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only);
         partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2)`.
         Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against
@@ -337,8 +337,8 @@ operations:
           shape [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous.
           Axis: null. Tiling: flatten to 1D in the host launcher; the kernel takes
           `size: int`, two GlobalAddress inputs (data, mask) + one output, tiles 1D
-          with `asc2.tensor(ptr, [size])`, two `asc2.load(..., [tile_size], offsets=[off])`,
-          `out = (data_t * mask_t) * scale`, `asc2.store(...)`. PERF: WIDE tile TILE_SIZE=2048,
+          with `asc2.global_tensor(ptr, [size])`, two `asc2.copy_in(..., [off], [tile_size])`,
+          `out = (data_t * mask_t) * scale`, `asc2.copy_out(...)`. PERF: WIDE tile TILE_SIZE=2048,
           CORE_NUM=16, double-buffer via `asc2.range(tile_per_block, unroll_factor=2)`;
           size must be a multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only). This
           two-load masked multiply lands ratio ~0.74 vs hand-written aclnnDropoutDoMask
@@ -421,8 +421,8 @@ operations:
         [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout:
         contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product
         of dims) inside the host launcher; the kernel takes `size: int` and tiles
-        1D with `asc2.tensor(x_ptr, [size])` / `asc2.tensor(y_ptr, [size])`, `asc2.load(..,
-        [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])`
+        1D with `asc2.global_tensor(x_ptr, [size])` / `asc2.global_tensor(y_ptr, [size])`, `asc2.copy_in(..,
+        [tile_size], offsets=[tile_offset])`, `asc2.copy_out(out, out_gm, [tile_offset])`
         — all ranks 1. Do NOT mix a 2D tensor declaration with a 1D load shape and
         2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of ''tensor_shape''
         must match rank of ''shape''`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core
@@ -436,9 +436,9 @@ operations:
           128], [4, 2048], [32, 4096]; perf shape [32, 4096]. Output shape: same_as_input.
           Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test
           shape to 1D (size = product of dims) inside the host launcher; the kernel
-          takes `size: int` and tiles 1D with two global loads — `asc2.tensor(x_ptr,
-          [size])`, `asc2.tensor(y_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`,
-          `asc2.load(y_gm, [tile_size], offsets=[tile_offset])`, `out = x + y`, `asc2.store(out,
+          takes `size: int` and tiles 1D with two global loads — `asc2.global_tensor(x_ptr,
+          [size])`, `asc2.global_tensor(y_ptr, [size])`, `asc2.copy_in(x_gm, [tile_offset], [tile_size])`,
+          `asc2.copy_in(y_gm, [tile_offset], [tile_size])`, `out = x + y`, `asc2.copy_out(out,
           out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT mix a 2D tensor declaration
           with a 1D load shape and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError:
           rank of ''tensor_shape'' must match rank of ''shape''`. PERF: use a WIDE
@@ -485,7 +485,7 @@ operations:
         attempt-1)
       note: RESOLVED perf pass (1.18, was 0.68). A two-input add is bound by the second
         MTE2 load stream that pyasc2 high-level lowering does not yet overlap (asc2.range
-        parallel=True software-pipelining pass not wired up). The original kernel
+         software-pipelining pass not wired up). The original kernel
         ran 16 cores x 4 tiles; the ops-math reference splits [32,4096] across all
         32 AIV cores with intra-core double buffering. Matching that core count (CORE_NUM
         16->32, TILE_SIZE=2048, 2 tiles/core) halved per-core serial load work and
@@ -543,7 +543,7 @@ operations:
           shapes: [32, 4096]; perf shape [32, 4096]. Output shape: [32]. Dtype: float32.
           Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core — distribute
           the 32 rows across cores via `asc2.range(rows_per_block, unroll_factor=2)`;
-          for each owned row load the full 4096-wide row in one shot (`asc2.load(x_gm,
+          for each owned row load the full 4096-wide row in one shot (`asc2.copy_in(x_gm,
           [num_cols], offsets=[row_offset])`) and call `asc2.reduce_sum(row)` so the
           whole row reduction is a single wide vector op rather than a per-tile accumulation
           loop; wrap the scalar result as `asc2.full([1, OUT_PAD], s, dtype=row.dtype)`
@@ -684,9 +684,9 @@ operations:
         compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4,
         2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous.
         Axis: null. Tiling: flatten each test shape to 1D (size = product of dims)
-        inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr,
-        [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out,
-        out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT use 2D `asc2.tensor(...,
+        inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.global_tensor(x_ptr,
+        [size])`, `asc2.copy_in(x_gm, [tile_offset], [tile_size])`, `asc2.copy_out(out,
+        out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT use 2D `asc2.global_tensor(...,
         [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]`
         offsets; v2 raises `RuntimeError: rank of ''tensor_shape'' must match rank
         of ''shape''`. Place `asc2.sqrt(0.5)` INSIDE the @asc2.jit body (not at module
@@ -705,14 +705,14 @@ operations:
           [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout:
           contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product
           of dims) inside the host launcher; the kernel takes `size: int` and tiles
-          1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`,
-          `asc2.store(out, out_gm, offsets=[tile_offset])` — all ranks 1. Tail: aligned_only.
+          1D with `asc2.global_tensor(x_ptr, [size])`, `asc2.copy_in(x_gm, [tile_offset], [tile_size])`,
+          `asc2.copy_out(out, out_gm, [tile_offset])` — all ranks 1. Tail: aligned_only.
           Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1
           + np.vectorize(math.erf)(x / np.sqrt(2))). Platform: Ascend950PR_9599. Build/run:
           python3.10 kernel.py -r Model -v Ascend950PR_9599. Workaround 1 (rank consistency):
           v2 strictly checks that the tensor shape rank, the load shape rank, and
           the offsets rank all match. The agent anti-pattern from the v2 Stage 3.3
-          drift run is `asc2.tensor(x_ptr, [num_rows, num_cols])` + `asc2.load(x_gm,
+          drift run is `asc2.global_tensor(x_ptr, [num_rows, num_cols])` + `asc2.copy_in(x_gm,
           [tile_size], offsets=[row_idx, col_idx])` — three different ranks; v2 raises
           `RuntimeError: rank of ''tensor_shape'' must match rank of ''shape''` immediately.
           Either flatten to 1D (use this cell''s 1D pattern) OR keep 2D and use `[1,
@@ -724,7 +724,7 @@ operations:
           — never `0.5 * x` etc. The asc2 Tile class lacks `__rmul__`. Reference skeleton:
           take the Pattern A skeleton from `skills/pyasc-api-patterns/SKILL.md` (1D
           flatten) and chain the erf body inside the inner loop: `k = asc2.sqrt(0.5);
-          x = asc2.load(...); out = x * (asc2.erf(x * k) + 1) * 0.5; asc2.store(out,
+          x = asc2.copy_in(...); out = x * (asc2.erf(x * k) + 1) * 0.5; asc2.copy_out(out,
           ...)`.'
         examples_policy:
           task_prompt: true
@@ -802,9 +802,9 @@ operations:
         shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype:
         float32. Layout: contiguous. Axis: null. Tiling: Pattern A (rank-consistent
         1D flatten) — host launcher flattens each test shape to 1D (size = product
-        of dims); the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr,
-        [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out,
-        out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT use 2D `asc2.tensor(...,
+        of dims); the kernel takes `size: int` and tiles 1D with `asc2.global_tensor(x_ptr,
+        [size])`, `asc2.copy_in(x_gm, [tile_offset], [tile_size])`, `asc2.copy_out(out,
+        out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT use 2D `asc2.global_tensor(...,
         [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]`
         offsets; v2 raises `RuntimeError: rank of ''tensor_shape'' must match rank
         of ''shape''`. Pin TILE_SIZE=64, CORE_NUM=16 (wider tiles trigger a wide-tile
@@ -828,8 +828,8 @@ operations:
           Anomaly #1). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape:
           same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: Pattern
           A (rank-consistent 1D flatten) — host launcher flattens each test shape
-          to 1D `size = product(shape)`; the kernel takes `size: int` and uses `asc2.tensor(x_ptr,
-          [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out,
+          to 1D `size = product(shape)`; the kernel takes `size: int` and uses `asc2.global_tensor(x_ptr,
+          [size])`, `asc2.copy_in(x_gm, [tile_offset], [tile_size])`, `asc2.copy_out(out,
           out_gm, offsets=[tile_offset])` — all ranks 1. TILE_SIZE=64, CORE_NUM=16
           (conservative single-lane width — wider tiles can hit a C310 lowering bug
           that writes only the first 64 elements). Module-level constants (outside
@@ -843,12 +843,12 @@ operations:
 
           @asc2.jit(always_compile=True) def gelu_kernel(x_ptr: asc.GlobalAddress,
           out_ptr: asc.GlobalAddress, size: int, tile_size: asc.ConstExpr[int], tile_per_block:
-          asc.ConstExpr[int]): x_gm = asc2.tensor(x_ptr, [size]) out_gm = asc2.tensor(out_ptr,
+          asc.ConstExpr[int]): x_gm = asc2.global_tensor(x_ptr, [size]) out_gm = asc2.global_tensor(out_ptr,
           [size]) base_offset = asc2.block_idx() * tile_size * tile_per_block for
           i in asc2.range(tile_per_block, unroll_factor=2): tile_offset = base_offset
-          + i * tile_size x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
+          + i * tile_size x = asc2.copy_in(x_gm, [tile_offset], [tile_size])
           x_cub = x * x * x inner = (x_cub * GELU_C + x) * NEG_SQRT_EIGHT_OVER_PI
-          out = x / (asc2.exp(inner) + 1) asc2.store(out, out_gm, offsets=[tile_offset])
+          out = x / (asc2.exp(inner) + 1) asc2.copy_out(out, out_gm, [tile_offset])
           ```
 
           Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against
@@ -862,8 +862,8 @@ operations:
           Tile class lacks `__rmul__`, so scalar-on-left raises `AttributeError: ''Tile''
           object has no attribute ''__rmul__''` at codegen time. Workaround 2 (rank
           consistency): v2 strictly requires the tensor-shape rank, the load-shape
-          rank, and the offsets rank to all match — using `asc2.tensor(..., [size])`
-          (rank 1) with `asc2.load(..., [tile_size], offsets=[tile_offset])` (also
+          rank, and the offsets rank to all match — using `asc2.global_tensor(..., [size])`
+          (rank 1) with `asc2.copy_in(..., [tile_offset], [tile_size])` (also
           rank 1) is the rank-consistent pattern. Workaround 3 (asc2.* placement):
           the `asc2.*` factory calls (`asc2.tensor`, `asc2.load`, `asc2.exp`, `asc2.store`)
           must appear INSIDE the @asc2.jit body — module-level `asc2.*` raises `AttributeError:
@@ -1282,7 +1282,7 @@ operations:
         L1-staged MN-block, parallel N-tile pipeline)
       perf_note: 'Initial CUBE-only operator-generation demo. Clears 0.70 against
         the canonical aclnnBatchMatMul. Levers applied: L1 staging of per-batch A/B
-        (each GM element read once) + a double-buffered (parallel=True, unroll_factor=2)
+        (each GM element read once) + a double-buffered (, unroll_factor=2)
         N-tile loop with N_TILE=64 so the 2-deep L0B copy/MMAD pipeline fits the 64
         KiB L0B budget. gen 23434 (direct GM->L0) -> 21620 (L1) -> 18758 (pipelined).
         Reference required repairing the aarch64 CANN install with the Ascend-cann-A3-ops
