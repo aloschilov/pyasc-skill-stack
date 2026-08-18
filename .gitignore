@@ -68,3 +68,4 @@ infra/self-hosted-runner/.env
 # locally; both are picked up by docker/Dockerfile.overlay at build time.
 docker/pyasc-overlay/asc_C/*.so
 docker/pyasc-overlay/asc_C/**/*.so
+.vscode/
