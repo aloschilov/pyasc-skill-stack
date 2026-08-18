@@ -771,9 +771,10 @@ jobs:
     # camodel docker sim verify, no GPU. (Formerly ran on the RTX 4090 `gpu`
     # box, now retired from CI.)
     runs-on: [self-hosted, arm64]
-    # Slowest cloud model (qwen3.7-max) reached only 16/19 cells at the implicit
-    # 6h default (timeout-minutes: 360) -> ~7.1h needed. 8h cap clears it.
-    timeout-minutes: 480
+    # Slowest cloud model (qwen3.7-max) needs ~9.5h for 19 cells x 2 attempts
+    # (was 8h cap, cancelled at the limit). 10h clears it; the nightly wall
+    # stays ~10h with 3 runners (well under 24h).
+    timeout-minutes: 600
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
