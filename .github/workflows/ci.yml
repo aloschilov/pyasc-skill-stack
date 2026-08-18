@@ -409,9 +409,11 @@ jobs:
     # the only self-hosted runner, the P2/P3/P4/P6 legs SERIALIZE on it rather
     # than running in parallel as the matrix nominally allows.
     runs-on: [self-hosted, arm64]
-    # P3 leg is the longest at ~3.3h; 5h cap overrides the implicit 6h default
-    # (timeout-minutes: 360) with headroom while still bounding a hung leg.
-    timeout-minutes: 300
+    # P3 leg with 31 cells x 2 attempts x ~15min/attempt = ~15.5h with the
+    # migrated 4d1db41d prompts (valid kernels take ~15min each vs the old
+    # ~1min fast-API-fail). 10h cap + the cloud-dashscope 10h cap fit the
+    # nightly under 24h with 3 runners (P2/P3 parallel + cloud legs parallel).
+    timeout-minutes: 600
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
