@@ -785,22 +785,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # glm-5.2 added to the comparison set (callable with the current key).
-        # deepseek-v4-pro / kimi-k2.7-code / MiniMax-M2.5 / qwen3-coder-next are
-        # intentionally NOT listed: the DashScope key returns Model.AccessDenied
-        # for them (verified 2026-07-24), so their profile templates exist but
-        # are held out of the matrix until model access is granted. Re-add them
-        # here once the key can call them.
-        profile: [cloud-glm-5.1, cloud-qwen3.7-max, cloud-glm-5.2]
-        # See comment in nightly-gate for why these are quoted.
-        # NIGHTLY BUDGET (two-runner, legs still trimmed pending wall-clock data):
-        # skills-OFF cloud legs are dropped so a complete nightly (incl.
-        # perf-gate) fits under GitHub's 24h queued-job limit across the two
-        # self-hosted runners. The OFF baseline was near-useless
-        # (glm-5.1 off scored 3/19), and the skills on/off A/B is still measured
-        # on local-stability-gate. Restore ["on", "off"] once a 2nd arm64 runner
-        # lets the matrix fan out in parallel.
-        skills_mode: ["on"]
+        # 3 DashScope API keys assigned 1-per-leg to avoid per-key throttling
+        # (a single key rate-limits when 3 legs call DashScope concurrently;
+        # spreading across 3 keys eliminates the bottleneck).
+        include:
+          - profile: cloud-glm-5.1
+            skills_mode: "on"
+            key_secret: DASHSCOPE_API_KEY
+          - profile: cloud-qwen3.7-max
+            skills_mode: "on"
+            key_secret: DASHSCOPE_API_KEY_3
+          - profile: cloud-glm-5.2
+            skills_mode: "on"
+            key_secret: DASHSCOPE_API_KEY_2
     steps:
       - uses: actions/checkout@v4
 
@@ -816,7 +813,7 @@ jobs:
       - name: Check DashScope secret
         id: secret
         env:
-          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          DASHSCOPE_API_KEY: ${{ secrets[matrix.key_secret] }}
         run: |
           if [ -z "$DASHSCOPE_API_KEY" ]; then
             echo "::warning::DASHSCOPE_API_KEY secret is not set; skipping cloud-dashscope leg"
@@ -847,7 +844,7 @@ jobs:
           PROFILE: ${{ matrix.profile }}
           SKILLS_MODE: ${{ matrix.skills_mode }}
           # Substituted into the profile template's ${DASHSCOPE_API_KEY}.
-          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          DASHSCOPE_API_KEY: ${{ secrets[matrix.key_secret] }}
         run: |
           mkdir -p generative-archive
           mapfile -t OPS < <(python3.10 tests/tools/list_generative_cells.py --platform Ascend950PR_9599)
