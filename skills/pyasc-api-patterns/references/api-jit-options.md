@@ -46,9 +46,17 @@ that overrun is destructive: `reuse_alloc=1` happens to place the destination
 last in UB, so the overrun falls off the end harmlessly, while `reuse_alloc=2`
 places it in the middle, where it clobbers the tiles the next iteration reads.
 
-The controlling quantity is the tile's **byte size**, not the loop or the
-dtype. Measured on `Ascend950PR_9599` / NPU at `reuse_alloc=2`, `int32`,
-256-byte repeats:
+#### The trigger condition
+
+A `where` destination is **exposed** — the compiler emits a write past its end —
+exactly when
+
+```
+align_to(numel * itemsize, 32)  is NOT a multiple of 256
+```
+
+The controlling quantity is the tile's byte size, not the loop, the dtype or the
+reuse setting. Measured on `Ascend950PR_9599` / NPU at `reuse_alloc=2`, `int32`:
 
 | `depth` | allocated bytes | bytes written | result |
 |---|---|---|---|
@@ -58,10 +66,52 @@ dtype. Measured on `Ascend950PR_9599` / NPU at `reuse_alloc=2`, `int32`,
 | 128 | 512 | 512 | correct |
 | 129 | 544 | 768 | corrupt |
 
-It is correct exactly when the allocation is a whole number of repeats — note
-`depth=63` survives only because 252 bytes rounds up to a 256-byte allocation.
+Note `depth=63` survives only because 252 bytes rounds up to a 256-byte
+allocation.
 
-The signature is distinctive:
+Exposure is necessary but not sufficient. To produce **wrong numbers** the
+overrun also has to land on a tile that is not rewritten before its next read.
+Two things therefore protect a kernel, and only the first is robust:
+
+- **Sizing.** Give the `where` destination a tile whose aligned byte size is a
+  multiple of 256. Then there is no overrun at all.
+- **No loop-invariant tiles.** If every tile the loop reads is `copy_in`-ed
+  *inside* the loop, the overrun is repaired before it is read and the kernel is
+  self-healing. A tile hoisted **above** the loop — a reference tile, an
+  `arange`, a splat constant — is the vulnerable kind, because nothing rewrites
+  it. This is why `one_hot` (hoisted `arange_tile`) corrupts while `select`
+  (all three inputs copied in per iteration) does not, even at tile sizes that
+  are equally exposed.
+
+#### Which operations are affected
+
+Only three lowerings use the full-mask form, all in the compare/select family:
+
+| Emitted | Reached from |
+|---|---|
+| `Select` | `asc2.where` |
+| `Compare` | comparison of two tiles |
+| `CompareScalar` | comparison of a tile against a scalar |
+
+Everything else lowers to the *counted* form, which is given the exact element
+count and is unaffected: `add`, `sub`, `mul`, `div`, `maximum`, `minimum`,
+`abs`, `exp`, `log`, `sqrt`, `relu`, `leaky_relu`, `cast`, `duplicate`, the
+reductions, the shifts and the bitwise ops. So `asc2.maximum(x, eps)` is a safe
+way to express a clamp, and a plain elementwise loop is never affected.
+
+Three rewrites also fold `where`-shaped code into a counted op before it can
+reach `Select`, which makes those spellings safe at any tile size:
+
+| Source | Folded to |
+|---|---|
+| `asc2.where(x >= 0, x, 0)` | `relu` |
+| `asc2.where(x >= 0, x, x * alpha)` | `leaky_relu` |
+| `asc2.maximum(x, 0)` | `relu` |
+
+The folds require `float16`/`float32`, so the same spelling on an integer tile
+does **not** fold and is exposed.
+
+#### Signature when it does bite
 
 - the **first** iteration is correct, every later one is wrong (a one-iteration
   launch therefore passes and hides the bug);
@@ -71,15 +121,25 @@ The signature is distinctive:
 - `reuse_alloc=1` on the same source is correct;
 - there is **no diagnostic**: it fails silently, as wrong numbers only.
 
-In two operator sweeps it hit 3 of 4 and 15 of 16 cases; the survivors had
-tiles that happened to fill whole repeats.
+Across 20 measured `one_hot` cases at `reuse_alloc=2`, the sizing rule predicted
+the outcome in 19: the single case with `depth=64, int32` (exactly 256 bytes) was
+the only geometrically safe one and the only clean pass, 17 exposed cases
+corrupted, and two (`depth=7, float32`, in both sweeps) were exposed but did not
+manifest. Note that single-element inputs are **not** safe — `depth=1` corrupted.
 
-**What to do.** Use `reuse_alloc=1` for any kernel where a comparison feeds
-`asc2.where`. A plain elementwise loop is unaffected, so this is not a reason
-to avoid `reuse_alloc=2` generally. Padding the tile to a multiple of 256 bytes
-also avoids it, and is worth knowing for diagnosis, but do not ship it as a
-workaround: it silences the symptom by making the out-of-bounds write land
-inside the allocation, and it breaks again the moment the shape changes.
+**What to do when writing a kernel.** Prefer, in order:
+
+1. size the `where` destination so `align_to(bytes, 32) % 256 == 0`;
+2. use one of the folded spellings above, or `asc2.maximum`/`asc2.minimum`,
+   when the intent is a clamp or a relu;
+3. keep no loop-invariant tile live across the `where` — copy inputs in inside
+   the loop;
+4. failing all of those, `reuse_alloc=1`, which usually places the destination
+   last so the overrun falls off the end of the used region.
+
+Only the first removes the out-of-bounds write. The others merely make it
+harmless, and they stop being true when the shape or the surrounding code
+changes.
 
 Because the overrun is in the lowering rather than the allocator, it is latent
 at `reuse_alloc=1` too — it writes into unallocated UB there rather than into a
