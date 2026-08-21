@@ -14,13 +14,13 @@
 | `always_compile` | `bool` | `False` | Force recompilation, bypass cache |
 | `opt_level` | `int` (0-3) | Compiler default | Bisheng optimization level |
 | `matmul_cube_only` | `bool` | `False` | Pure cube mode (matrix compute only) |
-| `reuse_alloc` | `int` | `1` | How aggressively `ReuseTensorAllocation` shares UB buffers between values. `2` reuses more and fits larger tiles, but see the hazard below |
+| `reuse_alloc` | `int` (0-2) | `0` | Which UB-reuse pass runs. `0` none, `1` `ReuseUBAllocation`, `2` `ReuseTensorAllocation`. `2` packs buffers differently rather than strictly tighter — see the hazard below |
 
 Note: `insert_sync=True` and `run_asc2_passes=True` are defaults for `@asc2.jit`.
 Do not disable them unless debugging a specific issue.
 
 <!-- BEGIN: temporary, delete once pyasc issue #2 is fixed -->
-### `reuse_alloc=2` corrupts comparison masks (open compiler defect)
+### `asc2.where` writes past its destination tile (open compiler defect)
 
 **This is a current compiler defect, not a property of the model.** Delete this
 section once [pyasc issue #2](https://gitcode.com/compiler-team/pyasc/issues/2)
@@ -37,27 +37,54 @@ for i in asc2.range(n):
     asc2.copy_out(result, out_gm, [i * depth])
 ```
 
-The allocator understates the mask buffer's live range, so it is reused inside
-the same iteration. The signature is distinctive:
+The compare/select pair lowers to `CompareScalar` and `Select` with
+`repeatTimes = ceil(elems / lanes)` and a **full mask**, so it writes a whole
+number of 256-byte vector repeats regardless of how small the tile is. A
+3-element `int32` tile occupies 32 bytes of UB but the `Select` writes 256 —
+up to 255 bytes past the destination. The reuse setting only decides whether
+that overrun is destructive: `reuse_alloc=1` happens to place the destination
+last in UB, so the overrun falls off the end harmlessly, while `reuse_alloc=2`
+places it in the middle, where it clobbers the tiles the next iteration reads.
+
+The controlling quantity is the tile's **byte size**, not the loop or the
+dtype. Measured on `Ascend950PR_9599` / NPU at `reuse_alloc=2`, `int32`,
+256-byte repeats:
+
+| `depth` | allocated bytes | bytes written | result |
+|---|---|---|---|
+| 3, 8, 16, 32 | 32, 32, 64, 128 | 256 | corrupt |
+| 63, 64 | 256 | 256 | correct |
+| 65, 96 | 288, 384 | 512 | corrupt |
+| 128 | 512 | 512 | correct |
+| 129 | 544 | 768 | corrupt |
+
+It is correct exactly when the allocation is a whole number of repeats — note
+`depth=63` survives only because 252 bytes rounds up to a 256-byte allocation.
+
+The signature is distinctive:
 
 - the **first** iteration is correct, every later one is wrong (a one-iteration
   launch therefore passes and hides the bug);
-- the output holds values neither `where` operand can produce, most often
-  `0x3F800000` — float `1.0`, the mask's true value — and sometimes other live
-  tiles of the kernel verbatim;
+- the output holds values neither `where` operand can produce — the clobbered
+  input tile verbatim, or `0x3F800000` / `0x40000000`, which are floats `1.0`
+  and `2.0` from the `float32` cast that `asc2.equal` inserts before comparing;
 - `reuse_alloc=1` on the same source is correct;
 - there is **no diagnostic**: it fails silently, as wrong numbers only.
 
-Verified on `Ascend950PR_9599` / NPU. In two operator sweeps it hit 3 of 4 and
-15 of 16 cases; the only survivors were single-element inputs.
+In two operator sweeps it hit 3 of 4 and 15 of 16 cases; the survivors had
+tiles that happened to fill whole repeats.
 
 **What to do.** Use `reuse_alloc=1` for any kernel where a comparison feeds
-`asc2.where`. A plain elementwise loop is unaffected, so this is not a reason to
-avoid `reuse_alloc=2` generally. If a kernel needs both the reuse and the
-select, materialising the `where` operands as real tiles instead of
-`asc2.cast(scalar, dtype)` splats reduces the damage but does **not** fix it —
-the mask itself is still corrupted on some iterations. Do not ship that as a
-workaround.
+`asc2.where`. A plain elementwise loop is unaffected, so this is not a reason
+to avoid `reuse_alloc=2` generally. Padding the tile to a multiple of 256 bytes
+also avoids it, and is worth knowing for diagnosis, but do not ship it as a
+workaround: it silences the symptom by making the out-of-bounds write land
+inside the allocation, and it breaks again the moment the shape changes.
+
+Because the overrun is in the lowering rather than the allocator, it is latent
+at `reuse_alloc=1` too — it writes into unallocated UB there rather than into a
+live tile. Do not read a passing `reuse_alloc=1` run as evidence that a
+compare/select kernel is free of it.
 
 **When measuring performance**, run both settings and treat a `reuse_alloc=2`
 miscompare as a recorded failure rather than something to work around: a kernel
