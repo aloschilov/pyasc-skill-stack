@@ -303,7 +303,8 @@ that op family**.
 | `x - y` | Subtract | |
 | `x * y` | Multiply | |
 | `x / y` | Divide | |
-| `asc2.where(cond, a, b)` | Conditional select | Like `np.where` |
+| `asc2.where(cond, a, b)` | Conditional select | Like `np.where`. See the `reuse_alloc=2` note under JIT Options before pairing it with a comparison inside a loop |
+| `asc2.equal(x, y)`, `not_equal`, `greater`, `greater_equal`, `less`, `less_equal` | Element-wise comparison, yields a mask | **No `int64` form.** Operands must be one of `int8, int16, int32, float16, bfloat16, float32`; an `int64` operand fails at codegen with `RuntimeError: 'input' dtype must be one of ..., got int64`. Narrow first — see Common Mistakes |
 
 ### Reduction operations
 
@@ -1042,6 +1043,8 @@ used` = 4 × chunk) because its two region loops each double-buffer; dividing by
 | Sizing a copy/concat tile to the **full per-input row** (`asc2.load(in_i, [1, buf_i], real_shape=[1, d1_i])` with one buffer per input) | UB then scales with input count *and* row width; wide rows / higher arity overflow. Under `static_alloc=True` the per-input buffers are **not** reused (sum, not max), and `unroll_factor` multiplies it → `UB overflow: ... bytes are used` at JIT/launch | Copy each input in **column chunks** through one reused `[chunk]` buffer (see "Multi-input / multi-axis copy" pattern). Size `chunk = (UB−1024)/itemsize / BUFFER_NUM / sibling_regions` so any width fits |
 | Taking **N input pointers** (`def concat3(in0_ptr, in1_ptr, in2_ptr, ...)`) or unrolling a Python tuple of `GlobalAddress` with `static_range` for variable arity | One kernel per arity (recompile per N); and the reviewer-rejected shape. (Note: `GlobalAddress + offset` → `emitasc.ptr_offset` to build a ranked 2-D sub-view of a packed input **now lowers** after the `AnyRankedOrUnrankedMemRef` relaxation, issue #1 — but N pointers is still the wrong shape for variable arity) | Pass **one packed input tensor** + int metadata GM tensors (`widths`/`in_bases`/`out_bases`) and a runtime `num_inputs`; address sub-inputs with flat scalar `offsets=`. GM-loaded scalars work as `asc2.ceildiv` bounds and in `offsets=`, so one `concat_generic` covers all arities. For static-arity **aligned** copies, prefer `asc2.tensor(in_ptr + B_i, [rows, w_i])` 2-D sub-views + `[ubFactorDim0, w_i]` multi-row tiles (CANN bulk copy) |
 | Shipping a kernel that is a **special case** of another (e.g. `concat_simt` = single-core whole-row copy) or guarding empty cores with `if r_start < dim0:` | Dead duplication / a guard the codegen dislikes; the special case is just a launch-param of the general kernel | Route the special case to the general kernel via launch params (single core = `block_num=1`); for a dim0 split launch exactly `usedCoreNum = ceildiv(dim0, block_factor)` cores so every core has work and no guard is needed |
+| `@asc2.jit(reuse_alloc=2)` on a loop where a comparison mask feeds `asc2.where` | Open compiler defect ([pyasc issue #2](https://gitcode.com/compiler-team/pyasc/issues/2)): the mask buffer's live range is understated and gets reused, so the first iteration is right and every later one is wrong. Silent — no diagnostic, just wrong numbers, often `0x3F800000` (float `1.0`, the mask itself) in the output. A single-iteration launch passes, which hides it | Use `reuse_alloc=1` for these kernels until the issue is fixed. Plain elementwise loops are unaffected. Materialising the `where` operands as tiles instead of `asc2.cast(scalar, dtype)` splats reduces the damage but does not fix it — do not ship that as a workaround. See [JIT Options](references/api-jit-options.md) |
+| Comparing an **`int64`** tile: `asc2.equal(arange_tile, idx_scalar)` where the index tensor is `int64` | Comparisons have no `int64` form. Codegen rejects it: `RuntimeError: 'input' dtype must be one of int8, int16, int32, float16, bfloat16, float32, got int64`. This bites immediately on index tensors, which are `int64` by default in both PyTorch and TensorFlow — pyasc issue #3 | Narrow the index to the comparison dtype: build the reference tile as `int32` and write `asc2.equal(ref_tile, asc2.cast(idx_scalar, ref_tile.dtype))`. **Precondition — state it in a comment where you use it:** this is only exact because the values fit in `int32`. For one-hot/gather indices that holds (they are below `depth`); for an `int64` that can exceed `2^31 - 1` the narrowing is silently wrong with no diagnostic, so do not apply it blindly. The operator's declared input dtype stays `int64`; only the compare is done narrower |
 | "Resolving" a UB overflow by **dropping the offending shape** from the test/case selection | Hides a real kernel limitation; the next large input fails the same way. The objective is that *all valid shapes are covered* | Fix the kernel (column-chunk to bound UB) so the shape passes, then keep it in the suite. Only report-and-skip when it is genuinely a *compiler/pass* limit you cannot work around — never silently downsize to hit a target |
 
 ### Editing `capabilities.yaml`
@@ -1132,7 +1135,10 @@ scorer will skip the ban.
 
 ## References
 
-- [JIT Options](references/api-jit-options.md)
+- [JIT Options](references/api-jit-options.md) — compile parameters, cache
+  behaviour, and the two dtype/allocation traps: the `reuse_alloc=2` mask
+  corruption defect (pyasc issue #2, delete that section when fixed) and the
+  missing `int64` comparison form (pyasc issue #3)
 - [Reduction tiling selection](references/reduction-tiling.md) — choosing a
   performant last-axis reduce tile (three levers: all AI cores, contiguous
   unpadded `tile_cols = C`, `tile_rows` from the per-core block + physical UB;
