@@ -257,10 +257,8 @@ jobs:
     # pulls/runs it through the Docker Desktop daemon. See
     # infra/self-hosted-runner/compose.arm64.yml.
     runs-on: [self-hosted, arm64]
-    # ops-nn ref builds (matmul ~20min) + gen probes (~3.1h) + vf-fusion A/B
-    # (~2.9h) run ~6.7h total, so the implicit 6h default (timeout-minutes: 360)
-    # guillotined vf-fusion mid-run. 8h cap clears it with ~1h margin.
-    timeout-minutes: 480
+    # ops-nn ref builds + gen probes + vf-fusion A/B = ~7h total. 10h cap.
+    timeout-minutes: 600
     needs: [merge-gate]
     continue-on-error: true
     if: >-
@@ -411,9 +409,9 @@ jobs:
     runs-on: [self-hosted, arm64]
     # P3 leg with 31 cells x 2 attempts x ~15min/attempt = ~15.5h with the
     # migrated 4d1db41d prompts (valid kernels take ~15min each vs the old
-    # ~1min fast-API-fail). 10h cap + the cloud-dashscope 10h cap fit the
-    # nightly under 24h with 3 runners (P2/P3 parallel + cloud legs parallel).
-    timeout-minutes: 600
+    # ~1min fast-API-fail). Extended to 24h (GitHub's per-job max) per the
+    # stabilization guidance — gives P3 maximum headroom.
+    timeout-minutes: 1440
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
@@ -584,11 +582,9 @@ jobs:
     # (pre-pulled on the host, like the pre-loaded perf image), and a missing
     # daemon/model/image is a clean skip rather than a hard failure.
     runs-on: [self-hosted, arm64]
-    # 19 cells x max-attempts 2 on the local 30B model runs ~6.5h (off) to >8h
-    # (on; skills-ON generation is ~4x heavier). The 8h cap cancelled the `on`
-    # leg at 8h0m24s in the 2026-08-07 nightly (run 31195012048); 10h clears it
-    # with margin and the full nightly wall stays ~10h, well under 24h.
-    timeout-minutes: 600
+    # 19 cells x 2 attempts on the local 30B model. With the migrated prompts
+    # (valid kernels → full runtime verify), the `on` leg takes ~10h. 12h cap.
+    timeout-minutes: 720
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
@@ -773,10 +769,9 @@ jobs:
     # camodel docker sim verify, no GPU. (Formerly ran on the RTX 4090 `gpu`
     # box, now retired from CI.)
     runs-on: [self-hosted, arm64]
-    # Slowest cloud model (qwen3.7-max) needs ~9.5h for 19 cells x 2 attempts
-    # (was 8h cap, cancelled at the limit). 10h clears it; the nightly wall
-    # stays ~10h with 3 runners (well under 24h).
-    timeout-minutes: 600
+    # 19 cells x 2 attempts; with 3 DashScope keys (1 per leg, no throttling)
+    # + migrated prompts (valid kernels), each leg takes ~5-7h. 12h cap.
+    timeout-minutes: 720
     needs: [merge-gate]
     if: >-
       github.event_name == 'schedule' ||
