@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "submission": {
+    "id": "sub_d13af9d97a79",
+    "status": "validated",
+    "content_hash": "39e3d6a4af088a2711e44fc4335241dde0b3884aa6cfe0a0deea99ab7250608e",
+    "target_hardware": "950pr",
+    "submission_tag": "pyasc-v2-full-8l1-rmsnorm-20260901",
+    "aggregation_token": "u_gc_2ce674493bd43767:default",
+    "is_private": true,
+    "workload_class": "standard"
+  },
+  "job": {
+    "id": "job_cd51d6c2ca67",
+    "status": "queued",
+    "device_id": 0,
+    "job_tag": "pyasc-v2-full-8l1-rmsnorm-20260901"
+  },
+  "credits": {
+    "quota_day": "2026-09-02",
+    "timezone": "Asia/Shanghai",
+    "resets_at": "2026-09-02T16:00:00Z",
+    "unlimited": false,
+    "bypass_active_job_limit": false,
+    "base_credits": 10,
+    "base_remaining": 1,
+    "daily_max": 30,
+    "bonus_cap": 30,
+    "bonus_earned": 0,
+    "bonus_balance": 0,
+    "bonus_counted": 0,
+    "max_active_jobs_per_user": 3,
+    "charges": 9,
+    "refunds": 0,
+    "used": 9,
+    "effective_limit": 10,
+    "remaining": 1
+  }
+}

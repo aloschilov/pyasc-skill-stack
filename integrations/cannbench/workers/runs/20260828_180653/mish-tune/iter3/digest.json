@@ -1,0 +1,133 @@
+{
+ "hard_failure": false,
+ "score": 61.89,
+ "compile": 20.0,
+ "accuracy": 30.0,
+ "perf": 11.89,
+ "avg_speedup": 0.43,
+ "passed": 20,
+ "total": 20,
+ "failed_cases": [],
+ "timings": [
+  {
+   "case_id": "mish_1",
+   "elapsed_us": 13.41,
+   "baseline_us": 5.88,
+   "speedup": 0.438
+  },
+  {
+   "case_id": "mish_2",
+   "elapsed_us": 40.95,
+   "baseline_us": 16.4,
+   "speedup": 0.4
+  },
+  {
+   "case_id": "mish_3",
+   "elapsed_us": 155.83,
+   "baseline_us": 52.37,
+   "speedup": 0.336
+  },
+  {
+   "case_id": "mish_4",
+   "elapsed_us": 620.01,
+   "baseline_us": 206.72,
+   "speedup": 0.333
+  },
+  {
+   "case_id": "mish_5",
+   "elapsed_us": 630.31,
+   "baseline_us": 388.81,
+   "speedup": 0.617
+  },
+  {
+   "case_id": "mish_6",
+   "elapsed_us": 13.82,
+   "baseline_us": 6.03,
+   "speedup": 0.436
+  },
+  {
+   "case_id": "mish_7",
+   "elapsed_us": 13.42,
+   "baseline_us": 5.645,
+   "speedup": 0.421
+  },
+  {
+   "case_id": "mish_8",
+   "elapsed_us": 14.76,
+   "baseline_us": 7.58,
+   "speedup": 0.514
+  },
+  {
+   "case_id": "mish_9",
+   "elapsed_us": 457.9,
+   "baseline_us": 148.8,
+   "speedup": 0.325
+  },
+  {
+   "case_id": "mish_10",
+   "elapsed_us": 13.71,
+   "baseline_us": 5.88,
+   "speedup": 0.429
+  },
+  {
+   "case_id": "mish_11",
+   "elapsed_us": 13.36,
+   "baseline_us": 7.19,
+   "speedup": 0.538
+  },
+  {
+   "case_id": "mish_12",
+   "elapsed_us": 13.18,
+   "baseline_us": 5.81,
+   "speedup": 0.441
+  },
+  {
+   "case_id": "mish_13",
+   "elapsed_us": 101.71,
+   "baseline_us": 39.905,
+   "speedup": 0.392
+  },
+  {
+   "case_id": "mish_14",
+   "elapsed_us": 31.31,
+   "baseline_us": 11.95,
+   "speedup": 0.382
+  },
+  {
+   "case_id": "mish_15",
+   "elapsed_us": 13.45,
+   "baseline_us": 7.09,
+   "speedup": 0.527
+  },
+  {
+   "case_id": "mish_16",
+   "elapsed_us": 23.24,
+   "baseline_us": 9.37,
+   "speedup": 0.403
+  },
+  {
+   "case_id": "mish_17",
+   "elapsed_us": 23.09,
+   "baseline_us": 9.3,
+   "speedup": 0.403
+  },
+  {
+   "case_id": "mish_18",
+   "elapsed_us": 22.84,
+   "baseline_us": 10.59,
+   "speedup": 0.464
+  },
+  {
+   "case_id": "mish_19",
+   "elapsed_us": 23.03,
+   "baseline_us": 9.5,
+   "speedup": 0.413
+  },
+  {
+   "case_id": "mish_20",
+   "elapsed_us": 98.61,
+   "baseline_us": 37.59,
+   "speedup": 0.381
+  }
+ ]
+}

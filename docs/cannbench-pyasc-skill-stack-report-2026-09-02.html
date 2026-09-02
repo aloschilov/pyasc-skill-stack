@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>CANNBench: отчёт по прогону pyasc-skill-stack</title>
+<style>
+  @page { size: A4; margin: 13mm 14mm 15mm; }
+  * { box-sizing: border-box; }
+  html { font-family: "DejaVu Sans", "Noto Sans", sans-serif; color: #172033; font-size: 10.2pt; line-height: 1.42; }
+  body { margin: 0; background: #fff; }
+  h1, h2, h3 { margin: 0; page-break-after: avoid; }
+  h1 { font-size: 27pt; line-height: 1.07; letter-spacing: -0.5px; }
+  h2 { font-size: 17pt; line-height: 1.2; margin: 5mm 0 2.5mm; border-bottom: 1px solid #ccd4df; padding-bottom: 1.8mm; }
+  h3 { font-size: 11.7pt; margin: 4mm 0 1.5mm; color: #244a80; }
+  p { margin: 0 0 2.6mm; }
+  ul, ol { margin: 1.5mm 0 3mm 5mm; padding-left: 4mm; }
+  li { margin: 0 0 1.2mm; }
+  a { color: #195bb8; text-decoration: none; }
+  code, .mono { font-family: "DejaVu Sans Mono", monospace; font-size: 8.4pt; }
+  .cover { min-height: 267mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; }
+  .cover-top { padding-top: 15mm; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 1.8px; font-size: 8.5pt; font-weight: 700; color: #2463a8; margin-bottom: 5mm; }
+  .subtitle { font-size: 14pt; line-height: 1.35; color: #4a5870; max-width: 155mm; margin-top: 5mm; }
+  .rule { height: 3px; background: #2463a8; width: 40mm; margin: 9mm 0; }
+  .cover-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin-top: 10mm; }
+  .kpi { border-top: 2px solid #2463a8; padding-top: 2.5mm; }
+  .kpi b { display: block; font-size: 20pt; line-height: 1; }
+  .kpi span { color: #657187; font-size: 8.5pt; }
+  .cover-meta { border-top: 1px solid #cbd3df; padding-top: 5mm; color: #5d687a; font-size: 9pt; }
+  .page { page-break-before: always; }
+  .keep { page-break-inside: avoid; }
+  .lead { font-size: 12pt; color: #36445a; }
+  .callout { background: #edf4fc; border-left: 4px solid #2463a8; padding: 3.5mm 4mm; margin: 3mm 0 4mm; page-break-inside: avoid; }
+  .callout.warn { background: #fff5df; border-left-color: #c67a00; }
+  .callout.bad { background: #fff0f1; border-left-color: #bd3b4b; }
+  .callout.good { background: #ebf7f2; border-left-color: #10825d; }
+  .small { font-size: 8.5pt; color: #667286; }
+  .tiny { font-size: 7.5pt; color: #6b7687; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3.5mm; }
+  .panel { border: 1px solid #d5dce6; padding: 3.5mm; page-break-inside: avoid; }
+  .panel h3 { margin-top: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm; font-size: 8.2pt; page-break-inside: auto; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+  th { background: #e9eef5; color: #243148; font-weight: 700; text-align: left; }
+  th, td { border: 1px solid #cfd6e0; padding: 1.5mm 1.7mm; vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .status-ok { color: #087a54; font-weight: 700; }
+  .status-fail { color: #b52f42; font-weight: 700; }
+  .tag { display: inline-block; padding: .4mm 1.5mm; border-radius: 2mm; background: #e9eef5; font-size: 7.8pt; margin-right: 1mm; }
+  .tag.blue { background: #e4effc; color: #174f91; }
+  .tag.green { background: #e1f3eb; color: #086a49; }
+  .tag.orange { background: #fff0d2; color: #8b5800; }
+  .metric-line { display: grid; grid-template-columns: 42mm 1fr 21mm; gap: 2mm; align-items: center; margin: 1.8mm 0; font-size: 8.5pt; }
+  .track { height: 4.2mm; background: #e5eaf0; position: relative; }
+  .bar { height: 100%; background: #2b69b1; }
+  .bar.green { background: #16815e; }
+  .bar.orange { background: #c77a12; }
+  .bar.red { background: #bd3b4b; }
+  .chart { margin: 3mm 0 4mm; border: 1px solid #d9dfe8; padding: 2mm; page-break-inside: avoid; }
+  .chart-title { font-weight: 700; font-size: 10pt; margin: 1mm 1mm 2mm; }
+  .caption { font-size: 7.6pt; color: #697589; margin: 1mm 1mm 0; }
+  .flow { width: 100%; height: auto; display: block; }
+  .formula { background: #f4f6f9; border: 1px solid #d9dfe8; padding: 3mm; font-family: "DejaVu Sans Mono", monospace; font-size: 8.2pt; margin: 2mm 0 3mm; }
+  .toc a { color: #172033; }
+  .toc-row { display: flex; justify-content: space-between; border-bottom: 1px dotted #b9c2cf; padding: 1.5mm 0; }
+  .foot { border-top: 1px solid #d6dce5; margin-top: 6mm; padding-top: 2.5mm; font-size: 7.5pt; color: #6e7889; }
+  .hash { word-break: break-all; font-family: "DejaVu Sans Mono", monospace; font-size: 7.3pt; }
+  .source-list { font-size: 8.4pt; }
+  .source-list li { margin-bottom: 2mm; }
+  .matrix-label { font: 10px "DejaVu Sans", sans-serif; fill: #243148; }
+  .legend { display: flex; gap: 4mm; align-items: center; font-size: 8pt; margin: 1mm 0 2mm; }
+  .swatch { width: 3mm; height: 3mm; display: inline-block; margin-right: 1mm; vertical-align: -0.4mm; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="cover-top">
+    <div class="eyebrow">Технический отчёт · независимая фиксация фактов прогона</div>
+    <h1>CANNBench ×<br>pyasc-skill-stack</h1>
+    <div class="rule"></div>
+    <div class="subtitle">Что было передано evaluator’у, какие операторы реально оценивались, как создавались реализации и что CANNBench может — и не может — подтвердить о происхождении кода.</div>
+
+    <div class="cover-kpis">
+      <div class="kpi"><b>9</b><span>операторов в submission</span></div>
+      <div class="kpi"><b>178/180</b><span>пройдено открытых case’ов</span></div>
+      <div class="kpi"><b>592.87</b><span>суммарный score выборки</span></div>
+      <div class="kpi"><b>0</b><span>anti-cheat failures</span></div>
+    </div>
+  </div>
+  <div class="cover-meta">
+    <b>Основной job:</b> <span class="mono">job_cd51d6c2ca67</span> ·
+    <b>submission:</b> <span class="mono">sub_d13af9d97a79</span> ·
+    <b>hardware:</b> Ascend 950PR<br>
+    Дата отчёта: 2 сентября 2026 · Рабочая копия не коммитилась
+  </div>
+</section>
+
+<section>
+  <h2>Содержание</h2>
+  <div class="toc">
+    <div class="toc-row"><a href="#summary">1. Резюме и прямые ответы</a><span>3</span></div>
+    <div class="toc-row"><a href="#position">2. Позиционирование CANNBench</a><span>4</span></div>
+    <div class="toc-row"><a href="#payload">3. Что было «скормлено» evaluator’у</a><span>5</span></div>
+    <div class="toc-row"><a href="#scope">4. Охват и список операторов</a><span>6</span></div>
+    <div class="toc-row"><a href="#evaluation">5. Что именно измеряет CANNBench</a><span>8</span></div>
+    <div class="toc-row"><a href="#provenance">6. Как создавались ядра</a><span>9</span></div>
+    <div class="toc-row"><a href="#anti-cheat">7. Атрибуция и anti-cheat</a><span>11</span></div>
+    <div class="toc-row"><a href="#results">8. Результаты аппаратного прогона</a><span>13</span></div>
+    <div class="toc-row"><a href="#limits">9. Ограничения и интерпретация</a><span>16</span></div>
+    <div class="toc-row"><a href="#next">10. Рекомендации для следующего submission</a><span>17</span></div>
+    <div class="toc-row"><a href="#evidence">Приложения: evidence, хеши и источники</a><span>18</span></div>
+  </div>
+
+  <div class="callout">
+    <b>Статус документа.</b> Это отчёт о реально выполненном private run, а не заявка на место в публичном leaderboard. Все численные результаты взяты из сохранённого финального JSON CANNBench; происхождение кода восстановлено по локальным prompt, worker-log, candidate и digest артефактам.
+  </div>
+</section>
+
+<section id="summary" class="page">
+  <h2>1. Резюме и прямые ответы</h2>
+  <p class="lead">Evaluator получил не модель и не skill-stack, а самодостаточный ZIP-проект, который собирал Python wheel <span class="mono">cann_bench</span> с девятью операторными интерфейсами и vendored runtime pyasc v2.</p>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>Что оценивалось</h3>
+      <p>Восемь операторов L1 — полный опубликованный L1-набор — и один оператор L2, RMSNorm. Всего 180 открытых case’ов: по 20 на оператор.</p>
+    </div>
+    <div class="panel">
+      <h3>Что CANNBench видел</h3>
+      <p>Исходники Python-модулей, build scripts, vendored pyasc/pybind11 и итоговые запускаемые NPU kernels. Prompt’ы, worker sessions и логи генерации в ZIP не входили.</p>
+    </div>
+    <div class="panel">
+      <h3>Что CANNBench измерял</h3>
+      <p>Собираемость/запускаемость, соответствие Golden и время device-kernel на реальном Ascend 950PR относительно baseline и HAP-якоря.</p>
+    </div>
+    <div class="panel">
+      <h3>Знает ли он, что код сгенерирован</h3>
+      <p><b>Нет, не из кода.</b> Атрибуция модели и Agent/Skill — декларативные metadata. В этом run поля <span class="mono">base_model</span> и <span class="mono">agent_skill</span> остались пустыми.</p>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <b>Главный вывод по атрибуции.</b> Ноль anti-cheat нарушений означает, что evaluator не обнаружил запрещённый способ вычисления. Это не является криптографическим доказательством, что исходники создала конкретная модель. Для доказуемого сравнения «GLM‑5.2 + pyasc-skill-stack» нужен отдельный provenance manifest и заполненные metadata.
+  </div>
+
+  <h3>Итог аппаратного прогона</h3>
+  <ul>
+    <li><b>178/180</b> case’ов прошли; pass rate 98.89%.</li>
+    <li><b>7 из 8 L1</b> и RMSNorm прошли 20/20; SwiGlu — 18/20.</li>
+    <li><b>overall score 592.8710</b>; geometric-mean speedup 0.5772×.</li>
+    <li><b>2 оператора</b> в среднем быстрее опубликованного baseline: MaskedScale и ForeachAddcdivScalar.</li>
+    <li>Job получил terminal status <span class="mono">correctness_failed</span>, поскольку CANNBench требует прохождения correctness gate для всей выбранной выборки.</li>
+  </ul>
+</section>
+
+<section id="position" class="page">
+  <h2>2. Позиционирование CANNBench</h2>
+  <p>CANNBench позиционируется как открытый, versioned benchmark для AI-generated operator kernels на Huawei Ascend NPU. Его задача — дать общую аппаратно привязанную шкалу для сравнения базовых моделей, агентов и Agent/Skill-подходов независимо от конкретного рецепта обучения.</p>
+
+  <div class="callout good">
+    <b>Официальная формулировка в практическом смысле:</b> единая спецификация задачи → проверка точности → измерение kernel time на реальном Ascend NPU → сравнение по score, speedup и coverage. Это benchmark способности системы создавать операторную реализацию, а не benchmark скорости inference самой LLM.
+  </div>
+
+  <div class="grid3 keep">
+    <div class="panel"><h3>Vendor-aligned</h3><p>Спецификации, Golden, cases и baselines поддерживаются рядом с официальным CANN repository.</p></div>
+    <div class="panel"><h3>Agent-oriented</h3><p>Score задуман как reward signal для итеративного цикла генерации, проверки и оптимизации kernels.</p></div>
+    <div class="panel"><h3>Hardware-grounded</h3><p>Performance измеряется на NPU и привязывается к baseline и аналитическому HAP limit.</p></div>
+  </div>
+
+  <h3>Ссылки на позиционирование</h3>
+  <ol>
+    <li><a href="https://cannbench.com/">Официальный портал CANNBench</a> — краткое позиционирование, task sets и путь submission.</li>
+    <li><a href="https://arxiv.org/abs/2607.20518">CANN Bench: Benchmarking Agent Generated Kernels against Real NPU and Algorithmic Limits</a> — техническая статья и заявленные design criteria.</li>
+    <li><a href="https://gitcode.com/cann/cann-bench/blob/master/docs/spec/benchmark_spec.md">Официальная benchmark specification</a> — этапы, score и состав уровней.</li>
+    <li><a href="https://cannbench.com/leaderboard">Leaderboard</a> — публичная поверхность сравнения результатов.</li>
+  </ol>
+
+  <h3>Опубликованный масштаб и фактический масштаб этого run</h3>
+  <div class="grid2">
+    <div class="panel">
+      <b>Опубликованный benchmark</b><br>
+      53 оператора · 1060 открытых case’ов · L1–L4 · FP16/BF16/FP32/INT8. Техническая статья также описывает hidden split для leaderboard.
+    </div>
+    <div class="panel">
+      <b>Наш private run</b><br>
+      9 операторов · 180 открытых case’ов · весь L1 + один L2 · FP16/BF16/FP32 и mask INT8/UINT8 paths.
+    </div>
+  </div>
+  <p class="small">Следствие: этот результат подходит для оценки полного L1-покрытия pyasc и экспериментального RMSNorm, но не является «полным CANNBench» по всем 53 операторам и не сопоставим напрямую с leaderboard total без одинакового task set.</p>
+</section>
+
+<section id="payload" class="page">
+  <h2>3. Что было «скормлено» evaluator’у</h2>
+  <p>В API CANNBench был загружен приватный ZIP <span class="mono">rms_norm_hybrid.zip</span>. CANNBench валидировал архив, поставил job в очередь, распаковал source directory, выполнил <span class="mono">build.sh</span>, установил полученный wheel и обнаружил callable’ы из Python package <span class="mono">cann_bench</span>.</p>
+
+  <svg class="flow" viewBox="0 0 1000 250" role="img" aria-label="Путь submission до результата">
+    <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#718096"/></marker></defs>
+    <g font-family="DejaVu Sans" font-size="19" fill="#172033">
+      <rect x="20" y="60" width="160" height="90" fill="#e8f1fb" stroke="#7ca5d4"/><text x="100" y="94" text-anchor="middle" font-weight="700">ZIP source</text><text x="100" y="123" text-anchor="middle" font-size="15">6.14 MB</text>
+      <rect x="225" y="60" width="160" height="90" fill="#f3f5f8" stroke="#aeb8c6"/><text x="305" y="94" text-anchor="middle" font-weight="700">build.sh</text><text x="305" y="123" text-anchor="middle" font-size="15">offline build</text>
+      <rect x="430" y="60" width="160" height="90" fill="#f3f5f8" stroke="#aeb8c6"/><text x="510" y="94" text-anchor="middle" font-weight="700">wheel</text><text x="510" y="123" text-anchor="middle" font-size="15">cann_bench</text>
+      <rect x="635" y="60" width="160" height="90" fill="#e9f5ef" stroke="#73b29a"/><text x="715" y="94" text-anchor="middle" font-weight="700">950PR runner</text><text x="715" y="123" text-anchor="middle" font-size="15">180 cases</text>
+      <rect x="840" y="60" width="140" height="90" fill="#fff2dd" stroke="#d2a151"/><text x="910" y="94" text-anchor="middle" font-weight="700">report</text><text x="910" y="123" text-anchor="middle" font-size="15">JSON + score</text>
+      <line x1="180" y1="105" x2="218" y2="105" stroke="#718096" stroke-width="3" marker-end="url(#arrow)"/>
+      <line x1="385" y1="105" x2="423" y2="105" stroke="#718096" stroke-width="3" marker-end="url(#arrow)"/>
+      <line x1="590" y1="105" x2="628" y2="105" stroke="#718096" stroke-width="3" marker-end="url(#arrow)"/>
+      <line x1="795" y1="105" x2="833" y2="105" stroke="#718096" stroke-width="3" marker-end="url(#arrow)"/>
+      <text x="500" y="205" text-anchor="middle" font-size="15" fill="#667286">Evaluator получает исполняемый artifact; генератор и его transcript остаются вне этой границы.</text>
+    </g>
+  </svg>
+
+  <h3>Идентичность submission</h3>
+  <table>
+    <tr><th>Поле</th><th>Значение</th></tr>
+    <tr><td>Submission ID</td><td class="mono">sub_d13af9d97a79</td></tr>
+    <tr><td>Job ID</td><td class="mono">job_cd51d6c2ca67</td></tr>
+    <tr><td>Tag</td><td class="mono">pyasc-v2-full-8l1-rmsnorm-20260901</td></tr>
+    <tr><td>Visibility</td><td>private</td></tr>
+    <tr><td>Target</td><td>950pr</td></tr>
+    <tr><td>ZIP SHA-256 / site content_hash</td><td class="hash">39e3d6a4af088a2711e44fc4335241dde0b3884aa6cfe0a0deea99ab7250608e</td></tr>
+    <tr><td>pyasc source</td><td><a href="https://gitcode.com/compiler-team/pyasc/tree/v2">compiler-team/pyasc, branch v2</a>, commit <span class="mono">ac1222a48c8914d3f81297c7570d1a84f0f26778</span></td></tr>
+    <tr><td>LLVM reference</td><td>LLVM 20 snapshot <span class="mono">86b69c31642e98f8357df62c09d118ad1da4e16a</span></td></tr>
+  </table>
+
+  <h3>Содержимое архива</h3>
+  <div class="grid2">
+    <div>
+      <ul>
+        <li><span class="mono">build.sh</span>, <span class="mono">setup.py</span></li>
+        <li><span class="mono">merge_wheels.py</span>, <span class="mono">verify_wheel.py</span></li>
+        <li>9 operator modules + <span class="mono">__init__.py</span></li>
+        <li><span class="mono">_pyasc_runtime.py</span></li>
+      </ul>
+    </div>
+    <div>
+      <ul>
+        <li>vendored pyasc CPython 3.12/x86_64 wheel</li>
+        <li>vendored pybind11 wheel</li>
+        <li>pyasc license и README</li>
+        <li>SHA-256 manifest runtime wheel</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout warn"><b>Чего в архиве не было:</b> prompt’ов, OpenCode session exports, worker logs, evaluator feedback history и декларации «этот файл сгенерирован GLM‑5.2». Поэтому сам submission не переносил полную цепочку происхождения.</div>
+</section>
+
+<section id="scope" class="page">
+  <h2>4. Охват и список операторов</h2>
+  <div class="chart">
+    <div class="chart-title">Покрытие опубликованного набора CANNBench</div>
+    <div class="metric-line"><span>L1 operators</span><div class="track"><div class="bar green" style="width:100%"></div></div><b>8 / 8</b></div>
+    <div class="metric-line"><span>L2 operators</span><div class="track"><div class="bar orange" style="width:6.25%"></div></div><b>1 / 16</b></div>
+    <div class="metric-line"><span>L3 operators</span><div class="track"><div class="bar" style="width:0%"></div></div><b>0 / 21</b></div>
+    <div class="metric-line"><span>L4 operators</span><div class="track"><div class="bar" style="width:0%"></div></div><b>0 / 8</b></div>
+    <div class="metric-line"><span>Все operators</span><div class="track"><div class="bar" style="width:16.98%"></div></div><b>9 / 53</b></div>
+    <div class="caption">Источник: CANNBench published catalog (53 operators) и selected_operators job_cd51d6c2ca67. Полный L1; расширение L2 ограничено RMSNorm.</div>
+  </div>
+
+  <table>
+    <thead><tr><th>#</th><th>Operator / callable</th><th>Level</th><th>Семантика</th><th>Наблюдавшиеся device-kernel entry names</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><b>Exp</b><br><span class="mono">exp</span></td><td>L1</td><td>Параметризованная экспонента</td><td class="mono">_exp_kernel</td></tr>
+      <tr><td>2</td><td><b>ForeachAddcdivScalar</b><br><span class="mono">foreach_addcdiv_scalar</span></td><td>L1</td><td>List-wise add + div × scalar</td><td class="mono">_addcdiv_scalar_kernel</td></tr>
+      <tr><td>3</td><td><b>ForeachNorm</b><br><span class="mono">foreach_norm</span></td><td>L1</td><td>Нормы p для списка tensors</td><td class="mono">_reduce_*; _finalize_*; _zero_f32_kernel</td></tr>
+      <tr><td>4</td><td><b>Gelu</b><br><span class="mono">gelu</span></td><td>L1</td><td>GELU, erf/tanh modes</td><td class="mono">_gelu_erf_kernel_u1; _gelu_tanh_kernel</td></tr>
+      <tr><td>5</td><td><b>MaskedScale</b><br><span class="mono">masked_scale</span></td><td>L1</td><td>x × mask × scale</td><td class="mono">_cast_mask_to_f32; _masked_scale_kernel</td></tr>
+      <tr><td>6</td><td><b>Mish</b><br><span class="mono">mish</span></td><td>L1</td><td>x × tanh(softplus(x))</td><td class="mono">_mish_kernel</td></tr>
+      <tr><td>7</td><td><b>Sigmoid</b><br><span class="mono">sigmoid</span></td><td>L1</td><td>Логистическая функция</td><td class="mono">_sigmoid_kernel</td></tr>
+      <tr><td>8</td><td><b>SwiGlu</b><br><span class="mono">swi_glu</span></td><td>L1</td><td>SiLU(x₀) × x₁ после split</td><td class="mono">_swiglu_2d_kernel</td></tr>
+      <tr><td>9</td><td><b>RmsNorm</b><br><span class="mono">rms_norm</span></td><td>L2</td><td>RMS normalization</td><td class="mono">_rms_norm_kernel; _rms_norm_fallback_kernel</td></tr>
+    </tbody>
+  </table>
+  <p class="small">«Ядро» в отчёте используется в двух смыслах: benchmark operator (9 callable’ов) и фактический NPU kernel entry (несколько entry на некоторых операторах). CANNBench выставляет score на уровне operator и case, а profiler фиксирует фактически исполненные device kernels.</p>
+</section>
+
+<section class="page">
+  <h2>4.1 Матрица correctness по 180 case’ам</h2>
+  <div class="legend"><span><i class="swatch" style="background:#16815e"></i>pass</span><span><i class="swatch" style="background:#bd3b4b"></i>fail</span></div>
+  <svg viewBox="0 0 980 420" style="width:100%;height:auto;border:1px solid #d9dfe8;padding:8px">
+    <g font-family="DejaVu Sans" font-size="11">
+      <text x="167" y="26" text-anchor="middle">1</text><text x="207" y="26" text-anchor="middle">2</text><text x="247" y="26" text-anchor="middle">3</text><text x="287" y="26" text-anchor="middle">4</text><text x="327" y="26" text-anchor="middle">5</text><text x="367" y="26" text-anchor="middle">6</text><text x="407" y="26" text-anchor="middle">7</text><text x="447" y="26" text-anchor="middle">8</text><text x="487" y="26" text-anchor="middle">9</text><text x="527" y="26" text-anchor="middle">10</text><text x="567" y="26" text-anchor="middle">11</text><text x="607" y="26" text-anchor="middle">12</text><text x="647" y="26" text-anchor="middle">13</text><text x="687" y="26" text-anchor="middle">14</text><text x="727" y="26" text-anchor="middle">15</text><text x="767" y="26" text-anchor="middle">16</text><text x="807" y="26" text-anchor="middle">17</text><text x="847" y="26" text-anchor="middle">18</text><text x="887" y="26" text-anchor="middle">19</text><text x="927" y="26" text-anchor="end">20</text>
+      <g fill="#16815e">
+        <!-- rows with all 20 passing -->
+        <defs><g id="allpass">
+          <rect x="150" y="0" width="30" height="24"/><rect x="190" y="0" width="30" height="24"/><rect x="230" y="0" width="30" height="24"/><rect x="270" y="0" width="30" height="24"/><rect x="310" y="0" width="30" height="24"/><rect x="350" y="0" width="30" height="24"/><rect x="390" y="0" width="30" height="24"/><rect x="430" y="0" width="30" height="24"/><rect x="470" y="0" width="30" height="24"/><rect x="510" y="0" width="30" height="24"/><rect x="550" y="0" width="30" height="24"/><rect x="590" y="0" width="30" height="24"/><rect x="630" y="0" width="30" height="24"/><rect x="670" y="0" width="30" height="24"/><rect x="710" y="0" width="30" height="24"/><rect x="750" y="0" width="30" height="24"/><rect x="790" y="0" width="30" height="24"/><rect x="830" y="0" width="30" height="24"/><rect x="870" y="0" width="30" height="24"/><rect x="910" y="0" width="30" height="24"/>
+        </g></defs>
+        <use href="#allpass" transform="translate(0,52)"/><use href="#allpass" transform="translate(0,92)"/><use href="#allpass" transform="translate(0,132)"/><use href="#allpass" transform="translate(0,172)"/><use href="#allpass" transform="translate(0,212)"/><use href="#allpass" transform="translate(0,252)"/><use href="#allpass" transform="translate(0,292)"/><use href="#allpass" transform="translate(0,332)"/><use href="#allpass" transform="translate(0,372)"/>
+      </g>
+      <rect x="470" y="292" width="30" height="24" fill="#bd3b4b"/><rect x="590" y="292" width="30" height="24" fill="#bd3b4b"/>
+      <g fill="#243148" font-weight="700">
+        <text x="5" y="69">Exp</text><text x="5" y="109" font-size="9">ForeachAddcdivScalar</text><text x="5" y="149">ForeachNorm</text><text x="5" y="189">Gelu</text><text x="5" y="229">MaskedScale</text><text x="5" y="269">Mish</text><text x="5" y="309">SwiGlu</text><text x="5" y="349">Sigmoid</text><text x="5" y="389">RmsNorm</text>
+      </g>
+    </g>
+  </svg>
+  <div class="caption">Источник: eval1/report.json, job_cd51d6c2ca67. Красные клетки: SwiGlu case 9 и 12.</div>
+
+  <div class="grid2">
+    <div class="callout bad">
+      <b>SwiGlu case 9.</b> BF16, shape [363, 367, 14], dim=-1. Host-side <span class="mono">narrow(...).contiguous()</span> попал в <span class="mono">aclnnInplaceCopy</span> и завершился CANN runtime error.
+    </div>
+    <div class="callout bad">
+      <b>SwiGlu case 12.</b> BF16, shape [1000003, 2], dim=1, special Inf input. Численные ошибки MERE/MARE нулевые, но позиции NaN не совпали с Golden.
+    </div>
+  </div>
+</section>
+
+<section id="evaluation" class="page">
+  <h2>5. Что именно измеряет CANNBench</h2>
+  <p>CANNBench оценивает <b>результат работы программной системы</b> — реализованный оператор, который можно собрать и запустить на NPU. Модель и skills находятся upstream: они могут создавать или улучшать исходники, но в timed path не участвуют.</p>
+
+  <svg class="flow" viewBox="0 0 1000 310">
+    <defs><marker id="arrow2" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#718096"/></marker></defs>
+    <g font-family="DejaVu Sans" fill="#172033">
+      <rect x="20" y="35" width="250" height="82" fill="#e8f1fb" stroke="#7ca5d4"/><text x="145" y="68" text-anchor="middle" font-size="20" font-weight="700">1 · Compile / runtime</text><text x="145" y="94" text-anchor="middle" font-size="15">вес 0.2</text>
+      <rect x="375" y="35" width="250" height="82" fill="#e9f5ef" stroke="#73b29a"/><text x="500" y="68" text-anchor="middle" font-size="20" font-weight="700">2 · Accuracy</text><text x="500" y="94" text-anchor="middle" font-size="15">Golden · вес 0.3</text>
+      <rect x="730" y="35" width="250" height="82" fill="#fff2dd" stroke="#d2a151"/><text x="855" y="68" text-anchor="middle" font-size="20" font-weight="700">3 · Performance</text><text x="855" y="94" text-anchor="middle" font-size="15">NPU time · вес 0.5</text>
+      <line x1="270" y1="76" x2="365" y2="76" stroke="#718096" stroke-width="3" marker-end="url(#arrow2)"/><line x1="625" y1="76" x2="720" y2="76" stroke="#718096" stroke-width="3" marker-end="url(#arrow2)"/>
+      <rect x="190" y="185" width="620" height="75" fill="#f3f5f8" stroke="#aeb8c6"/>
+      <text x="500" y="215" text-anchor="middle" font-size="19" font-weight="700">Per-operator composite score, максимум 100</text>
+      <text x="500" y="242" text-anchor="middle" font-size="14">case-level accuracy gate × hardware-anchored performance sub-score</text>
+    </g>
+  </svg>
+
+  <div class="formula">scoreᵢ = (T_baseline,ᵢ − T_HW,ᵢ) /
+((T_candidate,ᵢ − T_HW,ᵢ) + (T_baseline,ᵢ − T_HW,ᵢ))</div>
+  <div class="formula">OperatorScore = [0.2·δ_runtime +
+(1/N)·Σᵢ δ_accuracy,ᵢ·(0.3 + 0.5·scoreᵢ)] · 100</div>
+
+  <ul>
+    <li><b>T_candidate</b> берётся из kernel-level profiler на NPU, а не из wall-clock времени Python.</li>
+    <li><b>T_baseline</b> — versioned out-of-the-box PyTorch-on-Ascend/CANN reference.</li>
+    <li><b>T_HW</b> — аналитический Hardware-Anchored Performance limit для конкретного case.</li>
+    <li>Неверный case не получает functional/performance contribution; runtime failure также уменьшает compile/runtime component.</li>
+  </ul>
+
+  <div class="callout">
+    <b>Ответ на вопрос «модель или модель + skills?»</b> CANNBench непосредственно оценивает ни то и ни другое: он оценивает итоговый operator artifact. На leaderboard можно позиционировать связку <i>base model + agent/skill</i>, если она честно указана в metadata и подкреплена воспроизводимым generation trail.
+  </div>
+</section>
+
+<section id="provenance" class="page">
+  <h2>6. Как создавались ядра</h2>
+  <p>Для L1 использовался локальный worker-driven цикл в репозитории pyasc-skill-stack. Драйвер формировал определённый self-contained prompt и запускал локальный OpenCode worker с моделью <span class="mono">dashscope/glm-5.2</span>.</p>
+
+  <div class="formula">opencode run --pure -m dashscope/glm-5.2 &lt;definite prompt&gt;</div>
+
+  <svg class="flow" viewBox="0 0 1000 430">
+    <defs><marker id="arrow3" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#718096"/></marker></defs>
+    <g font-family="DejaVu Sans" fill="#172033">
+      <rect x="35" y="35" width="260" height="92" fill="#e8f1fb" stroke="#7ca5d4"/><text x="165" y="66" text-anchor="middle" font-size="19" font-weight="700">CANNBench task</text><text x="165" y="92" text-anchor="middle" font-size="14">desc · proto · golden · cases</text>
+      <rect x="370" y="35" width="260" height="92" fill="#e8f1fb" stroke="#7ca5d4"/><text x="500" y="66" text-anchor="middle" font-size="19" font-weight="700">pyasc context</text><text x="500" y="92" text-anchor="middle" font-size="14">constraints · patterns · guidance</text>
+      <rect x="705" y="35" width="260" height="92" fill="#e8f1fb" stroke="#7ca5d4"/><text x="835" y="66" text-anchor="middle" font-size="19" font-weight="700">Measured evidence</text><text x="835" y="92" text-anchor="middle" font-size="14">incumbent · timings · failures</text>
+      <line x1="165" y1="127" x2="380" y2="190" stroke="#718096" stroke-width="3" marker-end="url(#arrow3)"/><line x1="500" y1="127" x2="500" y2="185" stroke="#718096" stroke-width="3" marker-end="url(#arrow3)"/><line x1="835" y1="127" x2="620" y2="190" stroke="#718096" stroke-width="3" marker-end="url(#arrow3)"/>
+      <rect x="360" y="190" width="280" height="78" fill="#f3f5f8" stroke="#aeb8c6"/><text x="500" y="220" text-anchor="middle" font-size="19" font-weight="700">Definite prompt</text><text x="500" y="246" text-anchor="middle" font-size="14">одна задача → candidate.py</text>
+      <line x1="500" y1="268" x2="500" y2="312" stroke="#718096" stroke-width="3" marker-end="url(#arrow3)"/>
+      <rect x="345" y="315" width="310" height="75" fill="#e9f5ef" stroke="#73b29a"/><text x="500" y="345" text-anchor="middle" font-size="19" font-weight="700">OpenCode + GLM‑5.2</text><text x="500" y="370" text-anchor="middle" font-size="14">generate / tune worker</text>
+      <line x1="655" y1="352" x2="760" y2="352" stroke="#718096" stroke-width="3" marker-end="url(#arrow3)"/>
+      <rect x="770" y="315" width="195" height="75" fill="#fff2dd" stroke="#d2a151"/><text x="867" y="345" text-anchor="middle" font-size="18" font-weight="700">Static gate</text><text x="867" y="370" text-anchor="middle" font-size="13">AST + py_compile</text>
+      <line x1="345" y1="352" x2="240" y2="352" stroke="#718096" stroke-width="3" marker-end="url(#arrow3)"/>
+      <rect x="35" y="315" width="195" height="75" fill="#fff2dd" stroke="#d2a151"/><text x="132" y="345" text-anchor="middle" font-size="18" font-weight="700">Private NPU eval</text><text x="132" y="370" text-anchor="middle" font-size="13">score + failures</text>
+      <path d="M132 315 C130 245, 255 228, 352 228" fill="none" stroke="#718096" stroke-width="3" marker-end="url(#arrow3)"/>
+    </g>
+  </svg>
+  <div class="caption">Цикл: сгенерировать → статически проверить → отправить immutable private submission → вернуть worker’у digest → принять только корректный/лучший candidate.</div>
+
+  <h3>Что попадало в definite prompt</h3>
+  <ul>
+    <li><span class="mono">desc.md</span>, <span class="mono">proto.yaml</span>, <span class="mono">golden.py</span>, сводка всех 20 cases;</li>
+    <li>ограничения pyasc asc2, UB/alignment notes, известные codegen hazards;</li>
+    <li>проверенный reference module Sigmoid для generation-задач;</li>
+    <li>для tuning — текущий source, per-case NPU timings, baseline, HAP и предыдущие ошибки;</li>
+    <li>требование писать только полный <span class="mono">candidate.py</span> с точной сигнатурой.</li>
+  </ul>
+</section>
+
+<section class="page">
+  <h2>6.1 Трассировка финальных модулей</h2>
+  <table>
+    <thead><tr><th>Operator</th><th>Режим</th><th>Трассируемый источник</th><th>Итерация</th><th>SHA-256 prefix</th></tr></thead>
+    <tbody>
+      <tr><td>Exp</td><td><span class="tag blue">GLM tune</span></td><td class="mono">20260828_180653/exp-tune</td><td>iter2/3</td><td class="mono">6dbde956aa9f</td></tr>
+      <tr><td>Sigmoid</td><td><span class="tag blue">GLM tune</span></td><td class="mono">20260828_180653/sigmoid-tune</td><td>iter2/3</td><td class="mono">14bcbcb71f4f</td></tr>
+      <tr><td>Mish</td><td><span class="tag blue">GLM tune</span></td><td class="mono">20260828_180653/mish-tune</td><td>iter3</td><td class="mono">edcf4f15b083</td></tr>
+      <tr><td>Gelu</td><td><span class="tag blue">GLM tune</span></td><td class="mono">20260828_195630/gelu-tune</td><td>iter3</td><td class="mono">c139b5db752c</td></tr>
+      <tr><td>MaskedScale</td><td><span class="tag green">GLM generate</span></td><td class="mono">20260828_234415/masked_scale-generate</td><td>iter3</td><td class="mono">587df4ad6d3b</td></tr>
+      <tr><td>SwiGlu</td><td><span class="tag green">GLM generate</span></td><td class="mono">20260828_222246/swi_glu-generate</td><td>iter2</td><td class="mono">d4c98c318f02*</td></tr>
+      <tr><td>ForeachAddcdivScalar</td><td><span class="tag green">GLM generate</span></td><td class="mono">20260828_195630/...-generate</td><td>iter1</td><td class="mono">241aa7fd8a07</td></tr>
+      <tr><td>ForeachNorm</td><td><span class="tag green">GLM generate</span></td><td class="mono">20260828_222246/...-generate</td><td>iter3</td><td class="mono">58836e1ab059</td></tr>
+      <tr><td>RmsNorm</td><td><span class="tag orange">code-assisted</span></td><td class="mono">20260901_code_rms_norm/candidate_builtin.py</td><td>hybrid</td><td class="mono">cf9080043186</td></tr>
+    </tbody>
+  </table>
+  <p class="tiny">* SwiGlu worker candidate и canonical source логически идентичны; canonical copy содержит дополнительный завершающий newline, поэтому byte-level hash отличается.</p>
+
+  <div class="chart">
+    <div class="chart-title">Подтверждённый provenance финального 9-op package</div>
+    <svg viewBox="0 0 900 150" style="width:100%;height:auto">
+      <rect x="35" y="42" width="720" height="44" fill="#2b69b1"/>
+      <rect x="755" y="42" width="90" height="44" fill="#c77a12"/>
+      <text x="395" y="70" text-anchor="middle" fill="white" font-family="DejaVu Sans" font-size="17" font-weight="700">8 L1 · OpenCode / GLM‑5.2 traceable</text>
+      <text x="800" y="70" text-anchor="middle" fill="white" font-family="DejaVu Sans" font-size="15" font-weight="700">1 L2</text>
+      <text x="35" y="118" fill="#667286" font-family="DejaVu Sans" font-size="14">88.9% package operators</text>
+      <text x="845" y="118" text-anchor="end" fill="#667286" font-family="DejaVu Sans" font-size="14">11.1% code-assisted</text>
+    </svg>
+    <div class="caption">Источник: byte-level matching canonical modules к archived candidate.py и worker summaries.</div>
+  </div>
+
+  <div class="callout warn">
+    <b>Честная граница утверждения.</b> Нельзя называть весь 9-op package результатом только GLM‑5.2: GLM-run для RMSNorm не создал candidate, а принятый RMSNorm был получен в отдельном code-assisted/hybrid цикле. Для «чистого» сравнения GLM‑5.2 + skill-stack следует либо ограничить submission восемью L1, либо заново получить RMSNorm через тот же фиксированный worker protocol.
+  </div>
+</section>
+
+<section id="anti-cheat" class="page">
+  <h2>7. Как система понимает, что ей не «подсунули» готовый ответ</h2>
+  <p><b>Она не определяет автора.</b> Вместо этого CANNBench проверяет, что вычисление действительно выполнено submitted NPU kernel и что реализация не эксплуатирует evaluator. Это защита от reward hacking, а не детектор AI authorship.</p>
+
+  <table>
+    <thead><tr><th>Контроль</th><th>Что предотвращает</th><th>Тип</th></tr></thead>
+    <tbody>
+      <tr><td>Golden accuracy + fresh-input retry</td><td>Неверную математику, кэширование заранее вычисленного результата</td><td>автоматический</td></tr>
+      <tr><td>Input address rotation</td><td>Кэш по <span class="mono">data_ptr()</span> и повторное возвращение старого output</td><td>автоматический</td></tr>
+      <tr><td>TorchOpGuard / DeviceResidencyGuard</td><td>Вызов PyTorch/ATen/CANN built-ins вместо собственного kernel, CPU offload</td><td>автоматический</td></tr>
+      <tr><td>NPU profiler attribution</td><td>Performance score без фактического исполнения submitted NPU kernel</td><td>автоматический</td></tr>
+      <tr><td>Timing/profiler integrity rules</td><td>Monkey-patching synchronize, profiler и timing API</td><td>автоматический + review</td></tr>
+      <tr><td>Contiguous output check</td><td>Возврат view/FakeTensor без реального вычисления</td><td>автоматический</td></tr>
+      <tr><td>Запрет host-side layout/data transforms</td><td>Перенос значимой части семантики в wrapper</td><td>частично ручной review</td></tr>
+      <tr><td>Hidden cases для leaderboard</td><td>Подгонку по опубликованным shapes/values</td><td>protocol-level</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Официальные запрещённые классы поведения</h3>
+  <div class="grid2">
+    <ul>
+      <li>SUB-BEH-001: встроенные PyTorch/torch_npu compute API;</li>
+      <li>SUB-BEH-002: существенная обработка I/O tensor в wrapper;</li>
+      <li>SUB-BEH-003: routing к встроенному одноимённому CANN op;</li>
+      <li>SUB-BEH-004: CPU fallback / отсутствие submitted NPU kernel.</li>
+    </ul>
+    <ul>
+      <li>SUB-BEH-005: cached/fixed output, case hardcoding;</li>
+      <li>SUB-BEH-006: подмена profiler/timing/runtime;</li>
+      <li>SUB-BEH-007: FakeTensor или lazy wrapper;</li>
+      <li>обязательный реальный contiguous <span class="mono">torch.Tensor</span> output.</li>
+    </ul>
+  </div>
+  <p>Подробная официальная граница: <a href="https://gitcode.com/cann/cann-bench/blob/master/docs/guide/submission_rules.md">«算子提交行为与禁止规则» / Submission behavior and prohibited rules</a>.</p>
+
+  <div class="callout good">
+    <b>Наш результат:</b> <span class="mono">anti_cheat_failed_cases = 0</span>. В profiler CANNBench видны custom entry names pyasc kernels. Это подтверждает допустимый execution path в данном прогоне, но не заменяет provenance модели.
+  </div>
+</section>
+
+<section class="page">
+  <h2>7.1 Что нужно для доказуемой AI-атрибуции</h2>
+  <p>Официальная specification предусматривает поля <span class="mono">base_model</span> и <span class="mono">agent_skill</span>, а также указывает model information, full prompt и operator source как входы официальной оценки. Но это декларативные данные: benchmark не может восстановить их из машинного кода.</p>
+
+  <table>
+    <thead><tr><th>Слой доказательности</th><th>В текущем run</th><th>Что добавить</th></tr></thead>
+    <tbody>
+      <tr><td>Report metadata</td><td class="status-fail">base_model = ""<br>agent_skill = ""</td><td><span class="mono">dashscope/glm-5.2</span>; <span class="mono">pyasc-skill-stack</span>; отдельно отметить mixed RMSNorm</td></tr>
+      <tr><td>Prompt trail</td><td class="status-ok">локально сохранён</td><td>Включить SHA-256 prompts и immutable archive/session export</td></tr>
+      <tr><td>Candidate trail</td><td class="status-ok">candidate.py + digest сохранены</td><td>Manifest: operator → run/iter → candidate hash → acceptance reason</td></tr>
+      <tr><td>Toolchain identity</td><td class="status-ok">pyasc/LLVM pinned</td><td>Добавить wheel hash, Python/CANN target и build recipe в manifest</td></tr>
+      <tr><td>Human intervention</td><td class="status-fail">не представлено evaluator’у</td><td>Явный log: какие правки сделаны человеком/Codex после worker output</td></tr>
+      <tr><td>Submission binding</td><td class="status-ok">ZIP content_hash есть</td><td>Подписать manifest и связать его с CANNBench submission ID/hash</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <b>Минимальный provenance manifest.</b> Для каждого operator: task version/hash, exact prompt hash, model provider/id, agent/skill versions, command line, session ID/export, candidate hash, evaluator digest, принятые ручные изменения и final source hash. На верхнем уровне — pyasc commit, LLVM commit, submission ZIP hash и CANNBench job ID.
+  </div>
+
+  <p>Если цель исследования — сравнить <i>модель</i>, фиксируются prompt, skills, tool budget и число итераций. Если цель — сравнить <i>agentic system</i>, модель считается компонентом системы, а score атрибутируется всей связке: модель + skills + orchestration + compiler/runtime + feedback loop.</p>
+</section>
+
+<section id="results" class="page">
+  <h2>8. Результаты аппаратного прогона</h2>
+  <table>
+    <thead><tr><th>Operator</th><th class="num">Cases</th><th class="num">Score /100</th><th class="num">Avg speedup</th><th class="num">Compile</th><th class="num">Accuracy</th><th class="num">Perf</th></tr></thead>
+    <tbody>
+      <tr><td>Exp</td><td class="num">20/20</td><td class="num">68.72</td><td class="num">0.745×</td><td class="num">20</td><td class="num">30</td><td class="num">18.72</td></tr>
+      <tr><td>ForeachAddcdivScalar</td><td class="num">20/20</td><td class="num">79.76</td><td class="num">1.181×</td><td class="num">20</td><td class="num">30</td><td class="num">29.76</td></tr>
+      <tr><td>ForeachNorm</td><td class="num">20/20</td><td class="num">62.52</td><td class="num">0.498×</td><td class="num">20</td><td class="num">30</td><td class="num">12.52</td></tr>
+      <tr><td>Gelu</td><td class="num">20/20</td><td class="num">56.37</td><td class="num">0.238×</td><td class="num">20</td><td class="num">30</td><td class="num">6.37</td></tr>
+      <tr><td>MaskedScale</td><td class="num">20/20</td><td class="num">82.38</td><td class="num">1.546×</td><td class="num">20</td><td class="num">30</td><td class="num">32.38</td></tr>
+      <tr><td>Mish</td><td class="num">20/20</td><td class="num">60.60</td><td class="num">0.379×</td><td class="num">20</td><td class="num">30</td><td class="num">10.60</td></tr>
+      <tr><td>Sigmoid</td><td class="num">20/20</td><td class="num">68.92</td><td class="num">0.752×</td><td class="num">20</td><td class="num">30</td><td class="num">18.92</td></tr>
+      <tr><td>SwiGlu</td><td class="num status-fail">18/20</td><td class="num">55.81</td><td class="num">0.459×</td><td class="num">19</td><td class="num">27</td><td class="num">9.81</td></tr>
+      <tr><td>RmsNorm</td><td class="num">20/20</td><td class="num">57.79</td><td class="num">0.338×</td><td class="num">20</td><td class="num">30</td><td class="num">7.79</td></tr>
+      <tr><th>Итого / aggregate</th><th class="num">178/180</th><th class="num">592.87</th><th class="num">0.577× geo</th><th class="num">—</th><th class="num">—</th><th class="num">—</th></tr>
+    </tbody>
+  </table>
+
+  <div class="chart">
+    <div class="chart-title">Composite score по operator (максимум 100)</div>
+    <div class="metric-line"><span>MaskedScale</span><div class="track"><div class="bar green" style="width:82.38%"></div></div><b>82.38</b></div>
+    <div class="metric-line"><span>ForeachAddcdivScalar</span><div class="track"><div class="bar green" style="width:79.76%"></div></div><b>79.76</b></div>
+    <div class="metric-line"><span>Sigmoid</span><div class="track"><div class="bar" style="width:68.92%"></div></div><b>68.92</b></div>
+    <div class="metric-line"><span>Exp</span><div class="track"><div class="bar" style="width:68.72%"></div></div><b>68.72</b></div>
+    <div class="metric-line"><span>ForeachNorm</span><div class="track"><div class="bar" style="width:62.52%"></div></div><b>62.52</b></div>
+    <div class="metric-line"><span>Mish</span><div class="track"><div class="bar" style="width:60.60%"></div></div><b>60.60</b></div>
+    <div class="metric-line"><span>RmsNorm</span><div class="track"><div class="bar orange" style="width:57.79%"></div></div><b>57.79</b></div>
+    <div class="metric-line"><span>Gelu</span><div class="track"><div class="bar" style="width:56.37%"></div></div><b>56.37</b></div>
+    <div class="metric-line"><span>SwiGlu</span><div class="track"><div class="bar red" style="width:55.81%"></div></div><b>55.81</b></div>
+    <div class="caption">Источник: CANNBench final report, job_cd51d6c2ca67, 2026-09-02. Score включает compile/runtime, accuracy и HAP-anchored performance.</div>
+  </div>
+</section>
+
+<section class="page">
+  <h2>8.1 Производительность относительно baseline</h2>
+  <p>Средний speedup выше 1× означает преимущество над baseline; ниже 1× — замедление. Поскольку composite score включает 50 points за compile+accuracy, корректный, но медленный оператор может иметь score выше 50.</p>
+
+  <svg viewBox="0 0 900 500" style="width:100%;height:auto;border:1px solid #d9dfe8;padding:10px">
+    <g font-family="DejaVu Sans" font-size="13" fill="#243148">
+      <line x1="210" y1="30" x2="210" y2="450" stroke="#9da8b7"/>
+      <line x1="210" y1="450" x2="850" y2="450" stroke="#9da8b7"/>
+      <line x1="610" y1="25" x2="610" y2="450" stroke="#c77a12" stroke-width="2" stroke-dasharray="6 5"/>
+      <text x="610" y="18" text-anchor="middle" fill="#8b5800">baseline 1.0×</text>
+      <text x="210" y="475" text-anchor="middle">0×</text><text x="410" y="475" text-anchor="middle">0.5×</text><text x="610" y="475" text-anchor="middle">1.0×</text><text x="810" y="475" text-anchor="middle">1.5×</text>
+      <text x="18" y="65">Exp</text><rect x="210" y="45" width="298" height="25" fill="#2b69b1"/><text x="516" y="63">0.745×</text>
+      <text x="18" y="110">ForeachAddcdiv</text><rect x="210" y="90" width="472" height="25" fill="#16815e"/><text x="690" y="108">1.181×</text>
+      <text x="18" y="155">ForeachNorm</text><rect x="210" y="135" width="199" height="25" fill="#2b69b1"/><text x="417" y="153">0.498×</text>
+      <text x="18" y="200">Gelu</text><rect x="210" y="180" width="95" height="25" fill="#2b69b1"/><text x="313" y="198">0.238×</text>
+      <text x="18" y="245">MaskedScale</text><rect x="210" y="225" width="618" height="25" fill="#16815e"/><text x="836" y="243" text-anchor="end">1.546×</text>
+      <text x="18" y="290">Mish</text><rect x="210" y="270" width="152" height="25" fill="#2b69b1"/><text x="370" y="288">0.379×</text>
+      <text x="18" y="335">Sigmoid</text><rect x="210" y="315" width="301" height="25" fill="#2b69b1"/><text x="519" y="333">0.752×</text>
+      <text x="18" y="380">SwiGlu</text><rect x="210" y="360" width="184" height="25" fill="#bd3b4b"/><text x="402" y="378">0.459×</text>
+      <text x="18" y="425">RmsNorm</text><rect x="210" y="405" width="135" height="25" fill="#c77a12"/><text x="353" y="423">0.338×</text>
+    </g>
+  </svg>
+  <div class="caption">Avg speedup по успешным case’ам. Aggregate geometric mean по run: 0.5772×. Источник: eval1/report.json.</div>
+
+  <h3>Интерпретация</h3>
+  <ul>
+    <li><b>MaskedScale</b> — сильнейший результат: 20/20, score 82.38, 1.546×.</li>
+    <li><b>ForeachAddcdivScalar</b> — 20/20, score 79.76, 1.181×.</li>
+    <li><b>Exp и Sigmoid</b> близки друг к другу и сохраняют полную correctness, но уступают baseline примерно на четверть.</li>
+    <li><b>Gelu, Mish, RmsNorm</b> функционально полны, но требуют системного perf tuning; особенно дорогие fallback paths RMSNorm.</li>
+    <li><b>SwiGlu</b> сначала требует закрытия двух correctness gaps; perf tuning до этого вторичен.</li>
+  </ul>
+</section>
+
+<section class="page">
+  <h2>8.2 Среда и воспроизводимость</h2>
+  <table>
+    <tr><th>Компонент</th><th>Зафиксированное значение</th></tr>
+    <tr><td>CANNBench framework/tasks</td><td>1.0.0 / 1.0.0</td></tr>
+    <tr><td>Runner CANNBench ref</td><td class="mono">e8609f6b5891361fb6f0afb141eb8909c1b4a59b</td></tr>
+    <tr><td>Hardware</td><td>Ascend950PR_957c × 1</td></tr>
+    <tr><td>CANN / driver</td><td>9.1.0 / cann-9.1.0</td></tr>
+    <tr><td>Python</td><td>3.12.13, x86_64</td></tr>
+    <tr><td>PyTorch / torch_npu</td><td>2.10.0+cpu / 2.10.0.post4</td></tr>
+    <tr><td>pyasc</td><td>branch v2, commit <span class="mono">ac1222a48c8914d3f81297c7570d1a84f0f26778</span></td></tr>
+    <tr><td>pyasc runtime wheel hash</td><td class="hash">27e675fe2446b9ff8b2841688218c2d6b3ace877a3c4be491d0cba68af4dfcdd</td></tr>
+    <tr><td>LLVM</td><td>20 snapshot <span class="mono">86b69c31642e98f8357df62c09d118ad1da4e16a</span></td></tr>
+    <tr><td>Eval code / timestamp</td><td class="mono">cann_final_eval_20260902_032606 · 2026-09-02T03:26:06Z</td></tr>
+  </table>
+
+  <div class="callout">
+    <b>QEMU использовался только для build portability.</b> На локальной ARM-машине x86_64 CPython 3.12 pyasc runtime wheel собирался через Docker Buildx/QEMU с pinned LLVM. Измерения производительности выполнялись не в QEMU и не в CaModel, а реальным CANNBench runner на Ascend 950PR.
+  </div>
+
+  <p><b>CaModel role:</b> быстрая локальная проверка codegen/UB/компилируемости и отбраковка кандидатов. <b>CANNBench role:</b> authoritative correctness и kernel timing на настоящем NPU. Поэтому CaModel полезен как inner loop, но не заменяет score CANNBench.</p>
+</section>
+
+<section id="limits" class="page">
+  <h2>9. Ограничения и корректная интерпретация</h2>
+  <ol>
+    <li><b>Private run, не leaderboard entry.</b> Submission имел <span class="mono">is_private=true</span>; место в публичном рейтинге не создавалось.</li>
+    <li><b>Это не все 53 оператора.</b> Охвачен полный L1 и один L2: 9/53 operators.</li>
+    <li><b>Открытые 20-case наборы.</b> В job фактически оценено 20 cases/operator. Hidden leaderboard split, описанный в статье, этим report не подтверждён.</li>
+    <li><b>Пустые model/skill metadata.</b> Финальный CANNBench JSON не атрибутирует результат GLM‑5.2 или pyasc-skill-stack.</li>
+    <li><b>Mixed provenance.</b> Восемь L1 трассируются к OpenCode/GLM‑5.2; RMSNorm — отдельный code-assisted candidate.</li>
+    <li><b>Сравнивать только одинаковые task/hardware versions.</b> Overall 592.87 — сумма по выбранным 9 operators; она не равна leaderboard total для полного набора.</li>
+    <li><b>Ноль anti-cheat failures не доказывает authorship.</b> Он показывает отсутствие обнаруженных forbidden execution paths.</li>
+    <li><b>Terminal status корректен.</b> <span class="mono">correctness_failed</span> отражает 2 failed cases и не отменяет сохранённые scores остальных operators.</li>
+  </ol>
+
+  <h3>Неудачный follow-up SwiGlu</h3>
+  <p>Отдельный job <span class="mono">job_0f5fdee4443a</span> проверял kernel-only fallback для SwiGlu. Он завершился 0/20 с одинаковым subprocess <span class="mono">rc=1</span>; site report не содержал stderr/traceback. Локальный pyasc/CaModel compile проходил. Кандидат отклонён, canonical SwiGlu восстановлен к подтверждённой версии 18/20.</p>
+
+  <div class="callout bad">
+    Этот 0/20 результат нельзя использовать как измерение качества алгоритма нового fallback: evaluator не дошёл до case-level accuracy diagnostics. Он пригоден только как evidence неуспешного запуска конкретного submission.
+  </div>
+</section>
+
+<section id="next" class="page">
+  <h2>10. Рекомендации для следующего submission</h2>
+  <h3>Приоритет A — сделать результат научно атрибутируемым</h3>
+  <ol>
+    <li>Выбрать объект сравнения: <b>чистый GLM‑5.2 + pyasc-skill-stack</b> или <b>смешанная agentic system</b>.</li>
+    <li>Для чистого варианта заново провести RMSNorm тем же OpenCode worker protocol либо исключить RMSNorm и подать полный 8-op L1.</li>
+    <li>Заполнить CANNBench metadata: <span class="mono">base_model</span>, <span class="mono">agent_skill</span>, harness/orchestrator version.</li>
+    <li>Сгенерировать immutable provenance manifest и связать его hash с submission tag.</li>
+  </ol>
+
+  <h3>Приоритет B — закрыть correctness</h3>
+  <ol>
+    <li>Сначала контрольный one-op run прежнего SwiGlu 18/20 для проверки runner/packaging.</li>
+    <li>Заменить host-side Slice/contiguous path case 9 на NPU-kernel data movement, не нарушающий SUB-BEH-002.</li>
+    <li>Для case 12 явно проверить IEEE Inf/NaN propagation BF16 против Golden.</li>
+    <li>Только после 20/20 запускать perf tuning SwiGlu.</li>
+  </ol>
+
+  <h3>Приоритет C — performance loop</h3>
+  <ol>
+    <li>Профилировать Gelu, Mish и RMSNorm по case classes; отделить launch-bound, DMA-bound и UB/codegen-limited группы.</li>
+    <li>Использовать CaModel/LLVM для inner-loop compile/UB проверки, но принимать perf изменения только по NPU run.</li>
+    <li>Сохранять одинаковый task version, hardware class и CANN version для всех сравнений.</li>
+    <li>После полного 20/20 выполнить один 9-op validation run и затем отдельный public/leaderboard submission.</li>
+  </ol>
+
+  <div class="callout good">
+    <b>Рекомендуемый следующий benchmark artifact:</b> 8-op L1, все prompt/session/candidate hashes, metadata <span class="mono">GLM‑5.2 + pyasc-skill-stack</span>, 160/160 correctness, затем hidden/leaderboard evaluation. RMSNorm можно публиковать отдельным mixed-system extension до его чистой регенерации.
+  </div>
+</section>
+
+<section id="evidence" class="page">
+  <h2>Приложение A. Локальные evidence paths</h2>
+  <table>
+    <thead><tr><th>Назначение</th><th>Путь относительно workspace</th></tr></thead>
+    <tbody>
+      <tr><td>Финальный CANNBench report</td><td class="mono">integrations/cannbench/workers/runs/20260901_full_official/eval1/report.json</td></tr>
+      <tr><td>Job API payload</td><td class="mono">.../eval1/site_job.json</td></tr>
+      <tr><td>Submission API payload</td><td class="mono">.../eval1/site_submission.json</td></tr>
+      <tr><td>Stage logs</td><td class="mono">.../eval1/site_logs.json</td></tr>
+      <tr><td>Compact result</td><td class="mono">.../eval1/summary.json</td></tr>
+      <tr><td>Uploaded ZIP</td><td class="mono">integrations/cannbench/.uploads/rms_norm_hybrid.zip</td></tr>
+      <tr><td>Generation/tuning trails</td><td class="mono">integrations/cannbench/workers/runs/20260828_*/</td></tr>
+      <tr><td>RMSNorm hybrid candidate</td><td class="mono">integrations/cannbench/workers/runs/20260901_code_rms_norm/candidate_builtin.py</td></tr>
+      <tr><td>SwiGlu failed follow-up</td><td class="mono">.../eval2_swi_glu_fix/</td></tr>
+      <tr><td>Canonical submission sources</td><td class="mono">integrations/cannbench/submission/</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Ключевые идентификаторы</h3>
+  <table>
+    <tr><th>Объект</th><th>SHA-256 / ID</th></tr>
+    <tr><td>Uploaded ZIP</td><td class="hash">39e3d6a4af088a2711e44fc4335241dde0b3884aa6cfe0a0deea99ab7250608e</td></tr>
+    <tr><td>Vendored pyasc runtime wheel</td><td class="hash">27e675fe2446b9ff8b2841688218c2d6b3ace877a3c4be491d0cba68af4dfcdd</td></tr>
+    <tr><td>pyasc source commit</td><td class="hash">ac1222a48c8914d3f81297c7570d1a84f0f26778</td></tr>
+    <tr><td>LLVM snapshot</td><td class="hash">86b69c31642e98f8357df62c09d118ad1da4e16a</td></tr>
+    <tr><td>Submission / Job</td><td class="mono">sub_d13af9d97a79 / job_cd51d6c2ca67</td></tr>
+  </table>
+</section>
+
+<section class="page">
+  <h2>Приложение B. Источники</h2>
+  <ol class="source-list">
+    <li><a href="https://cannbench.com/">CANNBench official portal</a>. Позиционирование, task sets и схема запуска.</li>
+    <li><a href="https://cannbench.com/leaderboard">CANNBench leaderboard</a>. Публичная поверхность сравнения submissions.</li>
+    <li><a href="https://gitcode.com/cann/cann-bench">CANN/cann-bench official repository</a>. Source of truth для harness, tasks и документации.</li>
+    <li><a href="https://gitcode.com/cann/cann-bench/blob/master/docs/spec/benchmark_spec.md">Benchmark specification</a>. Три измерения, HAP score, levels и report metadata.</li>
+    <li><a href="https://gitcode.com/cann/cann-bench/blob/master/docs/guide/submission_rules.md">Submission behavior and prohibited rules</a>. SUB-BEH-001…007 и anti-cheat boundary.</li>
+    <li><a href="https://gitcode.com/cann/cann-bench/blob/master/docs/spec/submission_spec.md">Submission input/interface specification</a>. build.sh, wheel, callable discovery и runtime constraints.</li>
+    <li><a href="https://gitcode.com/cann/cann-bench/blob/master/docs/guide/auto_pipeline_agent_integration.md">Auto-pipeline agent integration guide</a>. Разделение Prompt → Generator → Artifact → Converter → Submission.</li>
+    <li><a href="https://arxiv.org/abs/2607.20518">Gao et al., “CANN Bench: Benchmarking Agent Generated Kernels against Real NPU and Algorithmic Limits”, arXiv:2607.20518</a>.</li>
+    <li><a href="https://gitcode.com/compiler-team/pyasc/tree/v2">compiler-team/pyasc, branch v2</a>. Runtime/compiler source evaluated in this work.</li>
+  </ol>
+
+  <h3>Методика подготовки отчёта</h3>
+  <p>Официальные statements сверены с CANNBench portal, paper и repository documentation. Числа и environment fields извлечены из сохранённого site report без пересчёта. Provenance определён сравнением SHA-256 canonical sources с archived worker candidates и чтением worker summaries/logs. Все выводы, выходящие за прямые поля источников, помечены как интерпретация или рекомендация.</p>
+
+  <div class="foot">
+    Отчёт подготовлен 2 сентября 2026 года в workspace <span class="mono">pyasc-skill-stack</span>. HTML является исходником печатного PDF. Ни plan-файл, ни git history не изменялись; commit не создавался.
+  </div>
+</section>
+
+</body>
+</html>

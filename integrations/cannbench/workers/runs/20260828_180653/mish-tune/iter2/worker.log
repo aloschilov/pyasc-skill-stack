@@ -1,0 +1,35 @@
+rc=0
+=== STDOUT ===
+I have enough to finalize. Key findings from the skill docs:
+
+- The `asc2.where` destination-overrun bug is a real risk — but only when destination tile bytes aren't a multiple of 256. At TILE=2048 (f32 = 8192 B, 8192 % 256 == 0) it's safe.
+- The UB budget rule: `visible_values * 4 * TILE * 2(unroll) * 1.6(empirical) ≤ 253952`. At TILE=2048 this allows ~9.7 visible values.
+- `asc2.full([shape], scalar, dtype=...)` is a listed available op (so I can avoid risky scalar `where` args).
+- The current harness API is `global_tensor`/`copy_in`/`copy_out` (the working module proves it) — I'll keep that, NOT switch to `tensor`/`load`/`store`.
+
+**Strategy:** The one effective lever is *wider tile + fewer simultaneous live tiles*. The original computes 4 separate branch tiles (`num_pos/den_pos/num_neg/den_neg`) keeping ~4 tiles alive through the final `where`, forcing TILE=1024. I'll factor algebraically so `a = 2w` is shared and `num`/`den` each reuse it:
+
+- `num = a + where(cond, 1, b)` → `1+2w` (x≥0) or `2w+w²` (x<0)
+- `den = num + (where(cond, b, 1) * 2)` → `num+2w²` (x≥0) or `num+2` (x<0)
+
+This is bit-identical to the original (same `w=exp(-|x|)`, same divisions, cancellation-free, no positive exp arg), but peak simultaneous live tiles drops from ~10 to ~6. At TILE=2048 that's `6 × 4 × 2048 × 2 × 1.6 ≈ 157 KB ≪ 254 KB` — comfortable margin. Every case has ≥1M elements (≥488 tiles at TILE=2048 ≫ 72 cores), so a single TILE=2048 variant fully saturates all 72 cores with no parallelism starvation — no second narrow variant needed.
+DONE.
+
+`candidate.py` written. Summary of the change (behavior-preserving, speed-only):
+
+- **TILE 1024 → 2048**: amortizes per-tile DMA/loop setup and feeds the AIV vector pipeline — the dominant lever for this op (every case is ≥1M elements, so all 72 cores stay saturated at the wider tile; no parallelism starvation, no second variant needed).
+- **Factored numerator/denominator** through the shared `a = 2w` and `b = w²`, producing each via one `asc2.where` blend (`num = a + where(cond, one, b)`; `den = num + where(cond, b, one)*2`) instead of four branch tiles held live until a final quotient-select. This cuts peak simultaneous live UB tiles from ~10 to ~6, which is what makes TILE=2048 fit (≈157 KB ≪ 254 KB UB budget at the empirical 1.6× factor).
+- **Math bit-identical** to the passing original: same `w = exp(-|x|)` (no positive exp arg, no cancellation), same `num/den` per-branch values, same blend condition. Kept the harness-proven `global_tensor`/`copy_in`/`copy_out` API and `real_shape` tail handling.
+- Scalar `where` args avoided (use `asc2.full` tile) to dodge an unverified codegen path; where/compare destinations are 8192 B (≡0 mod 256), clear of the known destination-overrun defect.
+
+=== STDERR ===
+[0m
+> build · glm-5.2
+[0m
+[0m← [0mWrite candidate.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 -m py_compile /tmp/cbworkers/20260828_180653/mish-tune/candidate.py && echo "SYNTAX OK"
+SYNTAX OK
+[0m
+

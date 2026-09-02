@@ -1,0 +1,93 @@
+{
+ "hard_failure": false,
+ "score": 0.0,
+ "compile": 0.0,
+ "accuracy": 0.0,
+ "perf": 0.0,
+ "avg_speedup": 0.0,
+ "passed": 0,
+ "total": 20,
+ "failed_cases": [
+  {
+   "case_id": "level1/mish_1",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | \u7b97\u5b50\u6267\u884c\u671f\u95f4\u8f93\u51fa: | /home/l00958488/cann-bench/src/kernel_eval/security/torch_op_guard.py:313: UserWarning: Cannot create tensor with interal format while allow_internel_format=False, tensor will be created with base format. (Triggered internally at ../torch_npu/csrc/aten/common/TensorFactories.cpp:340.)"
+  },
+  {
+   "case_id": "level1/mish_2",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 328448 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_3",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_4",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_5",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 328448 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_6",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_7",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_8",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 328448 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_9",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_10",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_11",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 328448 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_12",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_13",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 328448 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_14",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_15",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 328448 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_16",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_17",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_18",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 328448 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_19",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 353024 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/mish_20",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 328448 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  }
+ ],
+ "timings": []
+}

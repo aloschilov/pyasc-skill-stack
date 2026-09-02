@@ -1,0 +1,133 @@
+{
+ "hard_failure": false,
+ "score": 67.46,
+ "compile": 20.0,
+ "accuracy": 30.0,
+ "perf": 17.46,
+ "avg_speedup": 0.752,
+ "passed": 20,
+ "total": 20,
+ "failed_cases": [],
+ "timings": [
+  {
+   "case_id": "foreach_norm_1",
+   "elapsed_us": 19.83,
+   "baseline_us": 10.225,
+   "speedup": 0.516
+  },
+  {
+   "case_id": "foreach_norm_2",
+   "elapsed_us": 70.19,
+   "baseline_us": 43.365,
+   "speedup": 0.618
+  },
+  {
+   "case_id": "foreach_norm_3",
+   "elapsed_us": 79.72,
+   "baseline_us": 31.59,
+   "speedup": 0.396
+  },
+  {
+   "case_id": "foreach_norm_4",
+   "elapsed_us": 24.14,
+   "baseline_us": 14.595,
+   "speedup": 0.605
+  },
+  {
+   "case_id": "foreach_norm_5",
+   "elapsed_us": 136.23,
+   "baseline_us": 92.105,
+   "speedup": 0.676
+  },
+  {
+   "case_id": "foreach_norm_6",
+   "elapsed_us": 11.07,
+   "baseline_us": 13.1,
+   "speedup": 1.183
+  },
+  {
+   "case_id": "foreach_norm_7",
+   "elapsed_us": 11.68,
+   "baseline_us": 12.9,
+   "speedup": 1.104
+  },
+  {
+   "case_id": "foreach_norm_8",
+   "elapsed_us": 12.06,
+   "baseline_us": 22.625,
+   "speedup": 1.876
+  },
+  {
+   "case_id": "foreach_norm_9",
+   "elapsed_us": 444.43,
+   "baseline_us": 152.215,
+   "speedup": 0.342
+  },
+  {
+   "case_id": "foreach_norm_10",
+   "elapsed_us": 10.7,
+   "baseline_us": 8.19,
+   "speedup": 0.765
+  },
+  {
+   "case_id": "foreach_norm_11",
+   "elapsed_us": 28.9,
+   "baseline_us": 17.345,
+   "speedup": 0.6
+  },
+  {
+   "case_id": "foreach_norm_12",
+   "elapsed_us": 22.78,
+   "baseline_us": 8.68,
+   "speedup": 0.381
+  },
+  {
+   "case_id": "foreach_norm_13",
+   "elapsed_us": 60.08,
+   "baseline_us": 49.14,
+   "speedup": 0.818
+  },
+  {
+   "case_id": "foreach_norm_14",
+   "elapsed_us": 19.58,
+   "baseline_us": 12.805,
+   "speedup": 0.654
+  },
+  {
+   "case_id": "foreach_norm_15",
+   "elapsed_us": 20.17,
+   "baseline_us": 13.385,
+   "speedup": 0.664
+  },
+  {
+   "case_id": "foreach_norm_16",
+   "elapsed_us": 56.31,
+   "baseline_us": 18.78,
+   "speedup": 0.334
+  },
+  {
+   "case_id": "foreach_norm_17",
+   "elapsed_us": 17.39,
+   "baseline_us": 26.2,
+   "speedup": 1.507
+  },
+  {
+   "case_id": "foreach_norm_18",
+   "elapsed_us": 29.36,
+   "baseline_us": 19.405,
+   "speedup": 0.661
+  },
+  {
+   "case_id": "foreach_norm_19",
+   "elapsed_us": 31.7,
+   "baseline_us": 21.44,
+   "speedup": 0.676
+  },
+  {
+   "case_id": "foreach_norm_20",
+   "elapsed_us": 224.18,
+   "baseline_us": 147.84,
+   "speedup": 0.659
+  }
+ ]
+}

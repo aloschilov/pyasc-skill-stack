@@ -1,0 +1,36 @@
+Local fix to the installed tbetoolkits (TTK) one_hot golden function.
+
+Without it TTK reports CST_GOLD: GOLDEN_FAILURE for every one_hot case, because
+the golden raises before any comparison runs:
+
+    Input must be scalar but has rank 1 for '{{node OneHot}} = OneHot[...]'
+    with input shapes: [1,1,593,1,1], [1], [], []
+
+TTK case lists carry scalar attrs as one-element lists ({'axis': -1,
+'depth': [31]}), which is what the operator binding consumes, but TensorFlow's
+gen_array_ops.one_hot requires a rank-0 depth. The NPU output was therefore
+never compared against anything.
+
+Applies to:
+  ttk_test1/tbetoolkits/user_defined_modules/op/golden_funcs/transformation.py
+
+This edit lives in an installed tbetoolkits tree, not in a repository, so it is
+lost on reinstall or upgrade. It has no upstream home in either
+compiler-team/tools (MR !21) or compiler-team/pyasc (MR !487).
+
+Verified: CST_GOLD 100.0%, PRECISION_STATUS PASS on Ascend950PR_9599, CANN 9.1.0.
+The operator invocation is unchanged; only the golden's local read is patched.
+
+--- a/tbetoolkits/user_defined_modules/op/golden_funcs/transformation.py
++++ b/tbetoolkits/user_defined_modules/op/golden_funcs/transformation.py
+@@ -888,6 +888,10 @@
+     data2 = context.input_arrays[2]
+     data_dtype = data1.dtype
+     depth = context.other_runtime_params["depth"]
++    if isinstance(depth, (list, tuple)):
++        # TTK carries scalar attrs as one-element lists, which is what the
++        # operator binding consumes; TensorFlow's OneHot needs a rank-0 depth.
++        depth = depth[0]
+     axis = context.other_compilation_params["axis"]
+     on_value = tf.constant(data1, shape=(), dtype=data_dtype)
+     off_value = tf.constant(data2, shape=(), dtype=data_dtype)

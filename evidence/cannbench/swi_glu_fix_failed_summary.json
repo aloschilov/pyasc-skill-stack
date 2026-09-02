@@ -1,0 +1,114 @@
+[
+  {
+    "operator": "SwiGlu",
+    "passed_cases": 0,
+    "total_cases": 20,
+    "score": 0.0,
+    "avg_speedup": 0.0,
+    "compile_runtime_score": 0.0,
+    "function_score": 0.0,
+    "performance_score": 0.0,
+    "failed_cases": [
+      {
+        "case_id": "level1/swi_glu_1",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_2",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_3",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_4",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_5",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_6",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_7",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_8",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_9",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_10",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_11",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_12",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_13",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_14",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_15",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_16",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_17",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_18",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_19",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      },
+      {
+        "case_id": "level1/swi_glu_20",
+        "status": "failed",
+        "error_msg": "\u91cd\u8bd5\u540e\u4ecd\u5f02\u5e38\u9000\u51fa rc=1"
+      }
+    ]
+  }
+]

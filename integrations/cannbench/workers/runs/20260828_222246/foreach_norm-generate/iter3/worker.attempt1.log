@@ -1,0 +1,32 @@
+rc=0
+=== STDOUT ===
+The static checker bans `torch.zeros`. I'll replace it with `torch.empty` + a tiny asc2 zero kernel.
+No banned torch calls remain — only `torch.empty` (allowed for output allocation). The `torch.norm` mention is inside a docstring comment only. DONE.
+
+=== STDERR ===
+[0m
+> build · glm-5.2
+[0m
+[0m✗ [0mRead candidate.py failed
+[91m[1mError: [0mFile not found: /tmp/cbworkers/20260828_222246/foreach_norm-generate/candidate.py
+[0m
+[0m$ [0mls -la
+total 12
+drwxrwxr-x 3 aloschilov aloschilov 4096 Aug 28 23:31 .
+drwxrwxr-x 5 aloschilov aloschilov 4096 Aug 28 22:54 ..
+drwxrwxr-x 2 aloschilov aloschilov 4096 Aug 28 23:31 __pycache__
+[0m
+[0m← [0mWrite candidate.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 -m py_compile candidate.py && echo "SYNTAX OK"
+SYNTAX OK
+[0m
+[0m$ [0mrg 'torch\.' candidate.py
+out8[0] (0-dim view, matching torch.norm output shape).
+  - Accumulator buffer zeroed by a tiny asc2 kernel (no torch.zeros).
+        acc8 = torch.empty(8, dtype=torch.float32, device=tensor.device)
+        out8 = torch.empty(8, dtype=input_dtype, device=tensor.device)
+            tmpl = torch.empty(1, dtype=input_dtype, device=tensor.device)
+[0m
+

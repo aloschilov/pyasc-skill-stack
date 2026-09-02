@@ -1,0 +1,93 @@
+{
+ "hard_failure": false,
+ "score": 0.0,
+ "compile": 0.0,
+ "accuracy": 0.0,
+ "perf": 0.0,
+ "avg_speedup": 0.0,
+ "passed": 0,
+ "total": 20,
+ "failed_cases": [
+  {
+   "case_id": "level1/sigmoid_1",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | \u7b97\u5b50\u6267\u884c\u671f\u95f4\u8f93\u51fa: | /home/l00958488/cann-bench/src/kernel_eval/security/torch_op_guard.py:313: UserWarning: Cannot create tensor with interal format while allow_internel_format=False, tensor will be created with base format. (Triggered internally at ../torch_npu/csrc/aten/common/TensorFactories.cpp:340.)"
+  },
+  {
+   "case_id": "level1/sigmoid_2",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 262144 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_3",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_4",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_5",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 262144 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_6",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_7",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_8",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 262144 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_9",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_10",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_11",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 262144 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_12",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_13",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 262144 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_14",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_15",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 262144 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_16",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_17",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_18",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 262144 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_19",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 311296 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  },
+  {
+   "case_id": "level1/sigmoid_20",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: UB overflow: 253952 bytes are available, 262144 bytes are used. | Traceback (most recent call last): |   File \"/home/l00958488/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple"
+  }
+ ],
+ "timings": []
+}

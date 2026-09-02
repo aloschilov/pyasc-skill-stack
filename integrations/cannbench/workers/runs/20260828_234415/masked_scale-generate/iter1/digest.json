@@ -1,0 +1,132 @@
+{
+ "hard_failure": false,
+ "score": 80.44,
+ "compile": 19.0,
+ "accuracy": 28.5,
+ "perf": 32.94,
+ "avg_speedup": 1.691,
+ "passed": 19,
+ "total": 20,
+ "failed_cases": [
+  {
+   "case_id": "level1/masked_scale_3",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: compile failed! | Error message is In file included from <built-in>:1: | In file included from /home/f00816836/Ascend0615/cann-9.1.0/tools/bisheng_compiler/lib/clang/15.0.5/include/__clang_cce_runtime_wrapper.h:43:"
+  }
+ ],
+ "timings": [
+  {
+   "case_id": "masked_scale_1",
+   "elapsed_us": 5.98,
+   "baseline_us": 11.495,
+   "speedup": 1.922
+  },
+  {
+   "case_id": "masked_scale_2",
+   "elapsed_us": 25.82,
+   "baseline_us": 31.83,
+   "speedup": 1.233
+  },
+  {
+   "case_id": "masked_scale_4",
+   "elapsed_us": 353.01,
+   "baseline_us": 817.845,
+   "speedup": 2.317
+  },
+  {
+   "case_id": "masked_scale_5",
+   "elapsed_us": 383.88,
+   "baseline_us": 1353.855,
+   "speedup": 3.527
+  },
+  {
+   "case_id": "masked_scale_6",
+   "elapsed_us": 9.65,
+   "baseline_us": 11.485,
+   "speedup": 1.19
+  },
+  {
+   "case_id": "masked_scale_7",
+   "elapsed_us": 6.23,
+   "baseline_us": 11.59,
+   "speedup": 1.86
+  },
+  {
+   "case_id": "masked_scale_8",
+   "elapsed_us": 7.65,
+   "baseline_us": 14.5,
+   "speedup": 1.895
+  },
+  {
+   "case_id": "masked_scale_9",
+   "elapsed_us": 255.67,
+   "baseline_us": 588.285,
+   "speedup": 2.301
+  },
+  {
+   "case_id": "masked_scale_10",
+   "elapsed_us": 9.68,
+   "baseline_us": 11.46,
+   "speedup": 1.184
+  },
+  {
+   "case_id": "masked_scale_11",
+   "elapsed_us": 6.92,
+   "baseline_us": 13.24,
+   "speedup": 1.913
+  },
+  {
+   "case_id": "masked_scale_12",
+   "elapsed_us": 6.45,
+   "baseline_us": 9.21,
+   "speedup": 1.428
+  },
+  {
+   "case_id": "masked_scale_13",
+   "elapsed_us": 64.61,
+   "baseline_us": 87.7,
+   "speedup": 1.357
+  },
+  {
+   "case_id": "masked_scale_14",
+   "elapsed_us": 12.07,
+   "baseline_us": 17.95,
+   "speedup": 1.487
+  },
+  {
+   "case_id": "masked_scale_15",
+   "elapsed_us": 9.72,
+   "baseline_us": 13.07,
+   "speedup": 1.345
+  },
+  {
+   "case_id": "masked_scale_16",
+   "elapsed_us": 9.33,
+   "baseline_us": 14.21,
+   "speedup": 1.523
+  },
+  {
+   "case_id": "masked_scale_17",
+   "elapsed_us": 15.76,
+   "baseline_us": 13.92,
+   "speedup": 0.883
+  },
+  {
+   "case_id": "masked_scale_18",
+   "elapsed_us": 11.64,
+   "baseline_us": 19.52,
+   "speedup": 1.677
+  },
+  {
+   "case_id": "masked_scale_19",
+   "elapsed_us": 11.76,
+   "baseline_us": 17.62,
+   "speedup": 1.498
+  },
+  {
+   "case_id": "masked_scale_20",
+   "elapsed_us": 43.3,
+   "baseline_us": 69.12,
+   "speedup": 1.596
+  }
+ ]
+}

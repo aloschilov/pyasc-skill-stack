@@ -1,0 +1,133 @@
+{
+ "hard_failure": false,
+ "score": 64.46,
+ "compile": 20.0,
+ "accuracy": 30.0,
+ "perf": 14.46,
+ "avg_speedup": 0.592,
+ "passed": 20,
+ "total": 20,
+ "failed_cases": [],
+ "timings": [
+  {
+   "case_id": "swi_glu_1",
+   "elapsed_us": 11.99,
+   "baseline_us": 6.75,
+   "speedup": 0.563
+  },
+  {
+   "case_id": "swi_glu_2",
+   "elapsed_us": 32.47,
+   "baseline_us": 27.47,
+   "speedup": 0.846
+  },
+  {
+   "case_id": "swi_glu_3",
+   "elapsed_us": 130.36,
+   "baseline_us": 57.455,
+   "speedup": 0.441
+  },
+  {
+   "case_id": "swi_glu_4",
+   "elapsed_us": 532.17,
+   "baseline_us": 294.38,
+   "speedup": 0.553
+  },
+  {
+   "case_id": "swi_glu_5",
+   "elapsed_us": 786.7,
+   "baseline_us": 620.68,
+   "speedup": 0.789
+  },
+  {
+   "case_id": "swi_glu_6",
+   "elapsed_us": 12.05,
+   "baseline_us": 6.3,
+   "speedup": 0.523
+  },
+  {
+   "case_id": "swi_glu_7",
+   "elapsed_us": 16.75,
+   "baseline_us": 6.985,
+   "speedup": 0.417
+  },
+  {
+   "case_id": "swi_glu_8",
+   "elapsed_us": 11.74,
+   "baseline_us": 9.55,
+   "speedup": 0.813
+  },
+  {
+   "case_id": "swi_glu_9",
+   "elapsed_us": 23.3,
+   "baseline_us": 21.21,
+   "speedup": 0.91
+  },
+  {
+   "case_id": "swi_glu_10",
+   "elapsed_us": 25.31,
+   "baseline_us": 6.725,
+   "speedup": 0.266
+  },
+  {
+   "case_id": "swi_glu_11",
+   "elapsed_us": 6.13,
+   "baseline_us": 3.83,
+   "speedup": 0.625
+  },
+  {
+   "case_id": "swi_glu_12",
+   "elapsed_us": 23.31,
+   "baseline_us": 25.0,
+   "speedup": 1.073
+  },
+  {
+   "case_id": "swi_glu_13",
+   "elapsed_us": 5.21,
+   "baseline_us": 3.52,
+   "speedup": 0.676
+  },
+  {
+   "case_id": "swi_glu_14",
+   "elapsed_us": 41.65,
+   "baseline_us": 9.06,
+   "speedup": 0.218
+  },
+  {
+   "case_id": "swi_glu_15",
+   "elapsed_us": 10.5,
+   "baseline_us": 8.73,
+   "speedup": 0.831
+  },
+  {
+   "case_id": "swi_glu_16",
+   "elapsed_us": 20.03,
+   "baseline_us": 9.47,
+   "speedup": 0.473
+  },
+  {
+   "case_id": "swi_glu_17",
+   "elapsed_us": 19.33,
+   "baseline_us": 9.72,
+   "speedup": 0.503
+  },
+  {
+   "case_id": "swi_glu_18",
+   "elapsed_us": 32.12,
+   "baseline_us": 27.47,
+   "speedup": 0.855
+  },
+  {
+   "case_id": "swi_glu_19",
+   "elapsed_us": 38.23,
+   "baseline_us": 16.15,
+   "speedup": 0.422
+  },
+  {
+   "case_id": "swi_glu_20",
+   "elapsed_us": 514.4,
+   "baseline_us": 21.225,
+   "speedup": 0.041
+  }
+ ]
+}

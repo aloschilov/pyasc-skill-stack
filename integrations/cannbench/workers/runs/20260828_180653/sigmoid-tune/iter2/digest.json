@@ -1,0 +1,133 @@
+{
+ "hard_failure": false,
+ "score": 71.86,
+ "compile": 20.0,
+ "accuracy": 30.0,
+ "perf": 21.86,
+ "avg_speedup": 0.862,
+ "passed": 20,
+ "total": 20,
+ "failed_cases": [],
+ "timings": [
+  {
+   "case_id": "sigmoid_1",
+   "elapsed_us": 6.0,
+   "baseline_us": 4.25,
+   "speedup": 0.708
+  },
+  {
+   "case_id": "sigmoid_2",
+   "elapsed_us": 15.11,
+   "baseline_us": 15.23,
+   "speedup": 1.008
+  },
+  {
+   "case_id": "sigmoid_3",
+   "elapsed_us": 49.02,
+   "baseline_us": 29.635,
+   "speedup": 0.605
+  },
+  {
+   "case_id": "sigmoid_4",
+   "elapsed_us": 210.37,
+   "baseline_us": 168.32,
+   "speedup": 0.8
+  },
+  {
+   "case_id": "sigmoid_5",
+   "elapsed_us": 334.71,
+   "baseline_us": 387.715,
+   "speedup": 1.158
+  },
+  {
+   "case_id": "sigmoid_6",
+   "elapsed_us": 5.68,
+   "baseline_us": 4.51,
+   "speedup": 0.794
+  },
+  {
+   "case_id": "sigmoid_7",
+   "elapsed_us": 5.99,
+   "baseline_us": 4.41,
+   "speedup": 0.736
+  },
+  {
+   "case_id": "sigmoid_8",
+   "elapsed_us": 6.26,
+   "baseline_us": 6.42,
+   "speedup": 1.026
+  },
+  {
+   "case_id": "sigmoid_9",
+   "elapsed_us": 153.03,
+   "baseline_us": 113.67,
+   "speedup": 0.743
+  },
+  {
+   "case_id": "sigmoid_10",
+   "elapsed_us": 5.82,
+   "baseline_us": 4.41,
+   "speedup": 0.758
+  },
+  {
+   "case_id": "sigmoid_11",
+   "elapsed_us": 6.14,
+   "baseline_us": 6.16,
+   "speedup": 1.003
+  },
+  {
+   "case_id": "sigmoid_12",
+   "elapsed_us": 5.75,
+   "baseline_us": 4.36,
+   "speedup": 0.758
+  },
+  {
+   "case_id": "sigmoid_13",
+   "elapsed_us": 38.64,
+   "baseline_us": 37.825,
+   "speedup": 0.979
+  },
+  {
+   "case_id": "sigmoid_14",
+   "elapsed_us": 11.23,
+   "baseline_us": 8.32,
+   "speedup": 0.741
+  },
+  {
+   "case_id": "sigmoid_15",
+   "elapsed_us": 5.95,
+   "baseline_us": 6.04,
+   "speedup": 1.015
+  },
+  {
+   "case_id": "sigmoid_16",
+   "elapsed_us": 8.37,
+   "baseline_us": 6.83,
+   "speedup": 0.816
+  },
+  {
+   "case_id": "sigmoid_17",
+   "elapsed_us": 8.51,
+   "baseline_us": 6.66,
+   "speedup": 0.783
+  },
+  {
+   "case_id": "sigmoid_18",
+   "elapsed_us": 8.98,
+   "baseline_us": 8.97,
+   "speedup": 0.999
+  },
+  {
+   "case_id": "sigmoid_19",
+   "elapsed_us": 8.63,
+   "baseline_us": 6.79,
+   "speedup": 0.787
+  },
+  {
+   "case_id": "sigmoid_20",
+   "elapsed_us": 35.56,
+   "baseline_us": 36.74,
+   "speedup": 1.033
+  }
+ ]
+}

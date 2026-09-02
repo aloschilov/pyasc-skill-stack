@@ -1,0 +1,19 @@
+rc=0
+=== STDOUT ===
+DONE. `candidate.py` written with:
+
+- **Erf kernel**: 2 variants — wide (TILE=1024, unroll=1) and safe (TILE=512, unroll=2). Kept full NR 9-step erfc polynomial (cancellation-free). Applied algebraic output `y = where(xf>=0, xf - y_neg, y_neg)` (saves 1 temp vs original `2-erfc` branch). Eliminated intermediate `v` variable.
+- **Tanh kernel**: Kept stable sigmoid (NOT `asc2.tanh` — that has cancellation for large negative x). Factored cubic polynomial with precomputed `_GC_T` (saves 1 multiply). Wide TILE=1536, safe TILE=1024.
+- **Host**: try-except fallback with cached global state — tries wide tile first, falls back on UB overflow RuntimeError.
+
+=== STDERR ===
+[0m
+> build · glm-5.2
+[0m
+[0m← [0mWrite candidate.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 -m py_compile candidate.py && echo "SYNTAX OK"
+SYNTAX OK
+[0m
+

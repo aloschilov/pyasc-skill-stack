@@ -1,0 +1,13 @@
+rc=0
+=== STDOUT ===
+I'll start by reading the pyasc skill documentation to understand the exact asc2 API surface, then write the kernel. Let me read the relevant skills in parallel.
+
+=== STDERR ===
+[0m
+> build · glm-5.2
+[0m
+[0m→ [0mRead /home/aloschilov/.config/opencode/skills/pyasc-api-patterns/SKILL.md
+[0m→ [0mRead /home/aloschilov/.config/opencode/skills/pyasc-syntax-constraints/SKILL.md
+[0m→ [0mRead /home/aloschilov/.config/opencode/skills/pyasc-build-run-verify/SKILL.md
+[0m→ [0mRead /home/aloschilov/.config/opencode/skills/pyasc-docs-search/SKILL.md
+

@@ -1,7 +1,14 @@
 __pycache__/
 *.pyc
+integrations/cannbench/.qemu-runtime-dist/
 .codex
 .eval-history/
+.secrets/
+.tools/benchsite-mcp/
+integrations/cannbench/submission/.self-contained-build/
+integrations/cannbench/submission/build/
+integrations/cannbench/submission/dist/
+integrations/cannbench/submission/*.egg-info/
 
 # Agent-generated kernel outputs (test artifacts from opencode runs).
 # Typed kernel directories (e.g. gelu_f16/, abs_float32/, matmul_f16/) are

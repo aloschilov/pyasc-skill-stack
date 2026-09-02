@@ -1,0 +1,27 @@
+rc=0
+=== STDOUT ===
+`candidate.py` written and passes syntax check.
+
+Key design points:
+- **Zero-copy strided split**: input viewed as 2-D `[outer, C*inner]`; x0/x1 are the two column halves, output `[outer, half_cols]` matches golden's contiguous layout — no `.narrow()`/`.contiguous()` device copies.
+- **Grid-stride over rows×col-tiles** (`row = t // num_col_tiles`, `col_tile = t % num_col_tiles`) so small-outer cases (dim=0) still fill 72 cores.
+- **Stable sigmoid** `exp(min(s,0)) / (1 + exp(-|s|))` — both exp args non-positive, no overflow; `min(s,0) = (s - |s|)*0.5` avoids the `minimum` function.
+- **Saturation clamp** `asc2.where(s >= -88.7228, sig, 0)` to bit-match golden's `1/(1+exp(-s))` in the f32 overflow tail (case 5, x0≈-100) — without it golden gives -0.0 there while the stable form gives a tiny nonzero.
+- **Odd-dim rejection** (case 13) via `ValueError` — matches golden's chunk-shape-mismatch error and the spec's "dim must be even" constraint.
+- **UB budget**: ~12 f32 temporaries × 4 × 1024 × 2(unroll) × 1.6 ≈ 188 KB < 253952 → TILE=1024.
+- f16/bf16 promoted to f32 internally, cast back on `copy_out`.
+
+DONE
+
+=== STDERR ===
+[0m
+> build · glm-5.2
+[0m
+[0m← [0mWrite candidate.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 -m py_compile candidate.py && echo "SYNTAX OK"
+SYNTAX OK
+[0m
+[0m→ [0mRead candidate.py
+

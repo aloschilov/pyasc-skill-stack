@@ -1,0 +1,76 @@
+{
+  "job_id": "job_9cb9913ccd4a",
+  "stage_summary": {
+    "current_stage": "correctness",
+    "last_stage": "archive",
+    "last_stage_status": "archiving",
+    "failed_stage": "correctness",
+    "failed_status": "correctness_failed",
+    "failed_message": "correctness check failed: 0/20 cases passed",
+    "event_count": 6
+  },
+  "stages": [
+    {
+      "stage": "prepare",
+      "status": "preparing",
+      "message": "downloading benchmark/submission",
+      "payload": {
+        "workspace": "/data0/pd/benchsite-dev-runner-jobs-5/job_9cb9913ccd4a"
+      },
+      "created_at": "2026-08-31T18:16:34.100075"
+    },
+    {
+      "stage": "compile",
+      "status": "compiling",
+      "message": "running cann-bench staged evaluation",
+      "payload": {
+        "stage": "staged",
+        "timeout_sec": 1400,
+        "operator_count": 1,
+        "case_count": 20,
+        "op_timeout_sec": 240,
+        "case_timeout_sec": 40
+      },
+      "created_at": "2026-08-31T18:16:35.080533"
+    },
+    {
+      "stage": "correctness",
+      "status": "correctness",
+      "message": "staged eval: correctness",
+      "payload": {
+        "stage": "staged",
+        "substage": "correctness"
+      },
+      "created_at": "2026-08-31T18:16:55.228122"
+    },
+    {
+      "stage": "correctness",
+      "status": "correctness",
+      "message": "cann-bench staged evaluation completed",
+      "payload": {
+        "stage": "staged",
+        "result_stage": "final"
+      },
+      "created_at": "2026-08-31T18:17:11.689289"
+    },
+    {
+      "stage": "performance",
+      "status": "performance",
+      "message": "cann-bench staged evaluation completed",
+      "payload": {
+        "stage": "staged",
+        "result_stage": "final"
+      },
+      "created_at": "2026-08-31T18:17:11.839785"
+    },
+    {
+      "stage": "archive",
+      "status": "archiving",
+      "message": "archiving outputs",
+      "payload": {
+        "workspace": "/data0/pd/benchsite-dev-runner-jobs-5/job_9cb9913ccd4a"
+      },
+      "created_at": "2026-08-31T18:17:11.982532"
+    }
+  ]
+}

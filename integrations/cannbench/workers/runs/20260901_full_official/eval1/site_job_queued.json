@@ -1,0 +1,112 @@
+{
+  "job": {
+    "id": "job_cd51d6c2ca67",
+    "status": "queued",
+    "stage_summary": {
+      "current_stage": "queued",
+      "last_stage": "queued",
+      "last_stage_status": "queued",
+      "failed_stage": null,
+      "failed_status": null,
+      "failed_message": null,
+      "event_count": 0
+    },
+    "device_id": 0,
+    "runner_id": null,
+    "runner": null,
+    "runner_name": null,
+    "runner_hardware": "950pr",
+    "runner_hardware_label": "950PR",
+    "user_id": "u_gc_2ce674493bd43767",
+    "display_user": "loschilovalexander",
+    "submission_id": "sub_d13af9d97a79",
+    "target_hardware": "950pr",
+    "job_tag": "pyasc-v2-full-8l1-rmsnorm-20260901",
+    "submission_tag": "pyasc-v2-full-8l1-rmsnorm-20260901",
+    "submission_tags": {
+      "agent": "",
+      "harness": "",
+      "model": "",
+      "organization": ""
+    },
+    "scheme": null,
+    "is_private": true,
+    "aggregation_token": "u_gc_2ce674493bd43767:default",
+    "case_set": "standard",
+    "selected_operators": [
+      "sigmoid",
+      "exp",
+      "mish",
+      "gelu",
+      "masked_scale",
+      "swi_glu",
+      "foreach_addcdiv_scalar",
+      "foreach_norm",
+      "rms_norm"
+    ],
+    "benchmark_slug": "official-tasks",
+    "benchmark_name": "official-tasks",
+    "benchmark_version": "1.1.1",
+    "workload_class": "standard",
+    "is_migration": false,
+    "is_debug": false,
+    "failure_kind": null,
+    "job_completed": false,
+    "operator_names": [
+      "sigmoid",
+      "exp",
+      "mish",
+      "gelu",
+      "masked_scale",
+      "swi_glu",
+      "foreach_addcdiv_scalar",
+      "foreach_norm",
+      "rms_norm"
+    ],
+    "operator_count": 9,
+    "has_results": false,
+    "result_score": null,
+    "passed_cases": null,
+    "total_cases": null,
+    "queued_at": "2026-09-01T19:52:10.614425",
+    "claimed_at": null,
+    "finished_at": null,
+    "queue_eta": {
+      "job_id": "job_cd51d6c2ca67",
+      "status": "no_capacity",
+      "calculated_at": "2026-09-01T20:13:35.091179Z",
+      "valid_until": "2026-09-01T20:29:35.091179Z",
+      "predicted_claim_at": null,
+      "estimated_wait_seconds": null,
+      "confidence": "low",
+      "reason": "no_eligible_runner",
+      "stale": false
+    },
+    "error_code": null,
+    "submission_download_url": "/api/jobs/job_cd51d6c2ca67/submission/download",
+    "submission": {
+      "id": "sub_d13af9d97a79",
+      "original_filename": "rms_norm_hybrid.zip",
+      "target_hardware": "950pr",
+      "submission_tag": "pyasc-v2-full-8l1-rmsnorm-20260901",
+      "aggregation_token": "u_gc_2ce674493bd43767:default",
+      "is_private": true,
+      "workload_class": "standard",
+      "download_url": "/api/submissions/sub_d13af9d97a79/download"
+    },
+    "benchmark": {
+      "slug": "official-tasks",
+      "name": "official-tasks",
+      "version": "1.1.1",
+      "manifest": {
+        "name": "official-tasks",
+        "version": "1.1.1",
+        "description": "\u66f4\u65b0golden",
+        "operator_count": 53
+      },
+      "bundle_url": "/api/benchmarks/official-tasks/versions/1.1.1/bundle"
+    },
+    "error_message": null,
+    "results": null
+  }
+}

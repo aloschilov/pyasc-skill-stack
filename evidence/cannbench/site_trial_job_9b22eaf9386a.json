@@ -1,0 +1,215 @@
+{
+  "job": {
+    "id": "job_9b22eaf9386a",
+    "status": "compile_failed",
+    "stage_summary": {
+      "current_stage": "compile",
+      "last_stage": "compile",
+      "last_stage_status": "failed",
+      "failed_stage": "compile",
+      "failed_status": "compile_failed",
+      "failed_message": "staged evaluation failed without producing evaluation_results.json",
+      "event_count": 3
+    },
+    "device_id": 0,
+    "runner_id": "runner-950pr-multi-1",
+    "runner": {
+      "id": "runner-950pr-multi-1",
+      "name": "runner-950pr-multi #1",
+      "kind": "npu-container",
+      "status": "online",
+      "hardware": "950pr",
+      "hardware_label": "950PR",
+      "sandbox_enabled": true,
+      "sandbox_required": true,
+      "cann_bench_ref": "e8609f6b5891361fb6f0afb141eb8909c1b4a59b",
+      "cann_bench_ref_short": "e8609f6b5891",
+      "cann_bench_version": "e8609f6b5891",
+      "benchsite_ref": "605a23e3e3b857353689282cc7de1b0bf66e8c99",
+      "benchsite_ref_short": "605a23e3e3b8",
+      "last_seen_at": "2026-08-31T11:54:00.288689Z",
+      "seconds_since_seen": 15,
+      "is_enabled": true,
+      "pool_id": "system-shared-950pr",
+      "pool_purpose": "shared",
+      "workload_mode": "shared",
+      "migration_only": false,
+      "max_operators": 0,
+      "load_policy": {
+        "busy_process_threshold": 1,
+        "short_ratio_threshold": 0.5,
+        "mid_ratio_threshold": 0.5,
+        "long_ratio_threshold": 0.5,
+        "day_ratio_threshold": 1.0,
+        "ext_kill_enabled": false
+      },
+      "device_load": {
+        "1": {
+          "busy_now": false,
+          "process_count": 0,
+          "own_process_count": 2,
+          "total_process_count": 2,
+          "busy_ratio_short": 0.0,
+          "busy_ratio_mid": 0.009,
+          "busy_ratio_long": 0.0036,
+          "busy_ratio_day": 0.0622,
+          "bench_ratio_short": 0.7391,
+          "bench_ratio_mid": 0.9459,
+          "bench_ratio_long": 0.5871,
+          "bench_ratio_day": 0.1404,
+          "availability": "free",
+          "load_rank": 0.0025,
+          "last_busy_at": 1788176599.6141455
+        }
+      },
+      "device_topology": {
+        "chips_per_card": 1,
+        "chip_ids": [
+          1
+        ],
+        "card_ids": [
+          1
+        ]
+      },
+      "storage": {
+        "sampled_at": "2026-08-31T11:49:21.061042+00:00",
+        "workspace_bytes": 2209820618,
+        "workspace_jobs": 775,
+        "reported_jobs": 740,
+        "terminal_unreported_jobs": 4,
+        "oldest_workspace_age_sec": 3791321,
+        "runner_log_bytes": 311583,
+        "terminal_unreported_job_ids": [
+          "job_577a9f977305",
+          "job_491d4caa679f",
+          "job_c810020d71a7",
+          "job_b3bd81e68837"
+        ]
+      },
+      "active_jobs": []
+    },
+    "runner_name": "runner-950pr-multi #1",
+    "runner_hardware": "950pr",
+    "runner_hardware_label": "950PR",
+    "user_id": "u_gc_2ce674493bd43767",
+    "display_user": "loschilovalexander",
+    "submission_id": "sub_780c7c122b1c",
+    "target_hardware": "950pr",
+    "job_tag": "pyasc-skill-stack-private-trial-20260831",
+    "submission_tag": "pyasc-skill-stack-private-trial-20260831",
+    "submission_tags": {
+      "agent": "",
+      "harness": "",
+      "model": "",
+      "organization": ""
+    },
+    "scheme": null,
+    "is_private": true,
+    "aggregation_token": "u_gc_2ce674493bd43767:default",
+    "case_set": "standard",
+    "selected_operators": [
+      "masked_scale"
+    ],
+    "benchmark_slug": "official-tasks",
+    "benchmark_name": "official-tasks",
+    "benchmark_version": "1.1.1",
+    "workload_class": "standard",
+    "is_migration": false,
+    "is_debug": false,
+    "failure_kind": "hard_failure",
+    "job_completed": true,
+    "operator_names": [
+      "masked_scale"
+    ],
+    "operator_count": 1,
+    "has_results": true,
+    "result_score": null,
+    "passed_cases": 0,
+    "total_cases": 0,
+    "queued_at": "2026-08-31T11:45:09.848617",
+    "claimed_at": "2026-08-31T11:53:24.383374",
+    "finished_at": "2026-08-31T11:53:33.373001",
+    "queue_eta": null,
+    "error_code": "staged_rc_1_missing_report",
+    "submission_download_url": "/api/jobs/job_9b22eaf9386a/submission/download",
+    "submission": {
+      "id": "sub_780c7c122b1c",
+      "original_filename": "benchsite-sub-hueg2tsq.zip",
+      "target_hardware": "950pr",
+      "submission_tag": "pyasc-skill-stack-private-trial-20260831",
+      "aggregation_token": "u_gc_2ce674493bd43767:default",
+      "is_private": true,
+      "workload_class": "standard",
+      "download_url": "/api/submissions/sub_780c7c122b1c/download"
+    },
+    "benchmark": {
+      "slug": "official-tasks",
+      "name": "official-tasks",
+      "version": "1.1.1",
+      "manifest": {
+        "name": "official-tasks",
+        "version": "1.1.1",
+        "description": "更新golden",
+        "operator_count": 53
+      },
+      "bundle_url": "/api/benchmarks/official-tasks/versions/1.1.1/bundle"
+    },
+    "error_message": "staged evaluation failed without producing evaluation_results.json",
+    "results": {
+      "eval_code": "benchsite_runner_fallback_failure",
+      "score_settled": false,
+      "timestamp": "2026-08-31T11:51:43Z",
+      "job_id": "job_9b22eaf9386a",
+      "result_stage": "compile",
+      "status": "compile_failed",
+      "error_code": "staged_rc_1_missing_report",
+      "error_message": "staged evaluation failed without producing evaluation_results.json",
+      "failure_origin": null,
+      "device": "npu:0",
+      "hardware": "950pr",
+      "devices": "1",
+      "contains_performance": false,
+      "total_operators": 0,
+      "total_cases": 0,
+      "passed_cases": 0,
+      "failed_cases": 0,
+      "overall_score": null,
+      "summary": {
+        "total_operators": 0,
+        "total_cases": 0,
+        "passed_cases": 0,
+        "failed_cases": 0,
+        "pass_rate": 0.0,
+        "overall_score": null,
+        "failed_stage": "compile",
+        "status": "compile_failed",
+        "error_code": "staged_rc_1_missing_report",
+        "score_unavailable_reason": "performance stage has not completed",
+        "failure_origin": null,
+        "settled_score": null
+      },
+      "failure": {
+        "stage": "compile",
+        "status": "compile_failed",
+        "error_code": "staged_rc_1_missing_report",
+        "error_message": "staged evaluation failed without producing evaluation_results.json",
+        "returncode": 1,
+        "timed_out": false,
+        "duration_sec": 7.4246410229825415,
+        "log_artifact_name": "compile.log",
+        "log_bytes_total": 3695
+      },
+      "operators": [],
+      "result_contract": {
+        "valid": true,
+        "errors": [],
+        "repairs": [
+          {
+            "reason": "accepted_runner_diagnostic_fallback"
+          }
+        ]
+      },
+      "settled_score": null
+    }
+  }
+}

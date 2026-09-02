@@ -1,0 +1,108 @@
+{
+ "hard_failure": false,
+ "score": 30.39,
+ "compile": 7.0,
+ "accuracy": 10.5,
+ "perf": 12.89,
+ "avg_speedup": 1.694,
+ "passed": 7,
+ "total": 20,
+ "failed_cases": [
+  {
+   "case_id": "level1/masked_scale_1",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  },
+  {
+   "case_id": "level1/masked_scale_2",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  },
+  {
+   "case_id": "level1/masked_scale_3",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: compile failed! | Error message is In file included from <built-in>:1: | In file included from /home/f00816836/Ascend0615/cann-9.1.0/tools/bisheng_compiler/lib/clang/15.0.5/include/__clang_cce_runtime_wrapper.h:43:"
+  },
+  {
+   "case_id": "level1/masked_scale_5",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  },
+  {
+   "case_id": "level1/masked_scale_6",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  },
+  {
+   "case_id": "level1/masked_scale_7",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  },
+  {
+   "case_id": "level1/masked_scale_10",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  },
+  {
+   "case_id": "level1/masked_scale_11",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  },
+  {
+   "case_id": "level1/masked_scale_14",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  },
+  {
+   "case_id": "level1/masked_scale_15",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  },
+  {
+   "case_id": "level1/masked_scale_16",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  },
+  {
+   "case_id": "level1/masked_scale_17",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  },
+  {
+   "case_id": "level1/masked_scale_20",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:18:13: |         n = tile_size if off + tile_size <= size else size - off |         x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])"
+  }
+ ],
+ "timings": [
+  {
+   "case_id": "masked_scale_4",
+   "elapsed_us": 380.44,
+   "baseline_us": 817.845,
+   "speedup": 2.15
+  },
+  {
+   "case_id": "masked_scale_8",
+   "elapsed_us": 8.17,
+   "baseline_us": 14.5,
+   "speedup": 1.775
+  },
+  {
+   "case_id": "masked_scale_9",
+   "elapsed_us": 278.94,
+   "baseline_us": 588.285,
+   "speedup": 2.109
+  },
+  {
+   "case_id": "masked_scale_12",
+   "elapsed_us": 6.59,
+   "baseline_us": 9.21,
+   "speedup": 1.398
+  },
+  {
+   "case_id": "masked_scale_13",
+   "elapsed_us": 66.74,
+   "baseline_us": 87.7,
+   "speedup": 1.314
+  },
+  {
+   "case_id": "masked_scale_18",
+   "elapsed_us": 12.04,
+   "baseline_us": 19.52,
+   "speedup": 1.621
+  },
+  {
+   "case_id": "masked_scale_19",
+   "elapsed_us": 11.8,
+   "baseline_us": 17.62,
+   "speedup": 1.493
+  }
+ ]
+}

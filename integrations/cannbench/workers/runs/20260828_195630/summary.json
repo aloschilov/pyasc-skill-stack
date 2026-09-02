@@ -1,0 +1,102 @@
+[
+ {
+  "item": "masked_scale-generate",
+  "status": "done, best score None",
+  "history": [
+   {
+    "iter": 1,
+    "result": "reject",
+    "score": 28.85,
+    "passed": "7/20"
+   },
+   {
+    "iter": 2,
+    "result": "reject",
+    "score": 30.43,
+    "passed": "7/20"
+   },
+   {
+    "iter": 3,
+    "result": "reject",
+    "score": 30.39,
+    "passed": "7/20"
+   }
+  ]
+ },
+ {
+  "item": "swi_glu-generate",
+  "status": "done, best score None",
+  "history": [
+   {
+    "iter": 1,
+    "result": "no candidate"
+   },
+   {
+    "iter": 2,
+    "result": "reject",
+    "score": 58.0,
+    "passed": "19/20"
+   },
+   {
+    "iter": 3,
+    "result": "reject",
+    "score": 59.35,
+    "passed": "19/20"
+   }
+  ]
+ },
+ {
+  "item": "foreach_addcdiv_scalar-generate",
+  "status": "generated, score 82.62",
+  "history": [
+   {
+    "iter": 1,
+    "result": "accept",
+    "score": 82.62,
+    "passed": "20/20"
+   }
+  ]
+ },
+ {
+  "item": "foreach_norm-generate",
+  "status": "done, best score None",
+  "history": [
+   {
+    "iter": 1,
+    "result": "no candidate"
+   },
+   {
+    "iter": 2,
+    "result": "reject",
+    "score": 0.0,
+    "passed": "0/20"
+   },
+   {
+    "iter": 3,
+    "result": "reject",
+    "score": 0.0,
+    "passed": "0/20"
+   }
+  ]
+ },
+ {
+  "item": "gelu-tune",
+  "status": "done, best score 57.79",
+  "history": [
+   {
+    "iter": 1,
+    "result": "no candidate"
+   },
+   {
+    "iter": 2,
+    "result": "no candidate"
+   },
+   {
+    "iter": 3,
+    "result": "accept",
+    "score": 57.79,
+    "passed": "20/20"
+   }
+  ]
+ }
+]

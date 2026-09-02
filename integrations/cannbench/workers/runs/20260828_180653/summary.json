@@ -1,0 +1,86 @@
+[
+ {
+  "item": "sigmoid-tune",
+  "status": "done, best score 71.86",
+  "history": [
+   {
+    "iter": 1,
+    "result": "no candidate"
+   },
+   {
+    "iter": 2,
+    "result": "accept",
+    "score": 71.86,
+    "passed": "20/20"
+   },
+   {
+    "iter": 3,
+    "result": "reject",
+    "score": 71.86,
+    "passed": "20/20"
+   }
+  ]
+ },
+ {
+  "item": "exp-tune",
+  "status": "done, best score 71.39",
+  "history": [
+   {
+    "iter": 1,
+    "result": "no candidate"
+   },
+   {
+    "iter": 2,
+    "result": "accept",
+    "score": 71.39,
+    "passed": "20/20"
+   },
+   {
+    "iter": 3,
+    "result": "reject",
+    "score": 71.11,
+    "passed": "20/20"
+   }
+  ]
+ },
+ {
+  "item": "mish-tune",
+  "status": "done, best score 61.89",
+  "history": [
+   {
+    "iter": 1,
+    "result": "no candidate"
+   },
+   {
+    "iter": 2,
+    "result": "reject",
+    "score": 0.0,
+    "passed": "0/20"
+   },
+   {
+    "iter": 3,
+    "result": "accept",
+    "score": 61.89,
+    "passed": "20/20"
+   }
+  ]
+ },
+ {
+  "item": "gelu-tune",
+  "status": "done, best score 57.19",
+  "history": [
+   {
+    "iter": 1,
+    "result": "no candidate"
+   },
+   {
+    "iter": 2,
+    "result": "no candidate"
+   },
+   {
+    "iter": 3,
+    "result": "no candidate"
+   }
+  ]
+ }
+]

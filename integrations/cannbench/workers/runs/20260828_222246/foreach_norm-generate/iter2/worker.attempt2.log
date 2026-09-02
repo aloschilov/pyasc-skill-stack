@@ -1,0 +1,15 @@
+rc=0
+=== STDOUT ===
+DONE.
+
+=== STDERR ===
+[0m
+> build · glm-5.2
+[0m
+[0m← [0mWrite candidate.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 -m py_compile candidate.py && echo "SYNTAX OK"
+SYNTAX OK
+[0m
+

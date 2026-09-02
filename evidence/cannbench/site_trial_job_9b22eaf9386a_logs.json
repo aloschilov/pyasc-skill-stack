@@ -1,0 +1,55 @@
+{
+  "job_id": "job_9b22eaf9386a",
+  "stage_summary": {
+    "current_stage": "compile",
+    "last_stage": "compile",
+    "last_stage_status": "failed",
+    "failed_stage": "compile",
+    "failed_status": "compile_failed",
+    "failed_message": "staged evaluation failed without producing evaluation_results.json",
+    "event_count": 3
+  },
+  "stages": [
+    {
+      "stage": "prepare",
+      "status": "preparing",
+      "message": "downloading benchmark/submission",
+      "payload": {
+        "workspace": "/data0/pd/benchsite-dev-runner-jobs-1/job_9b22eaf9386a"
+      },
+      "created_at": "2026-08-31T11:53:24.580000"
+    },
+    {
+      "stage": "compile",
+      "status": "compiling",
+      "message": "running cann-bench staged evaluation",
+      "payload": {
+        "stage": "staged",
+        "timeout_sec": 1400,
+        "operator_count": 1,
+        "case_count": 20,
+        "op_timeout_sec": 240,
+        "case_timeout_sec": 40
+      },
+      "created_at": "2026-08-31T11:53:25.723336"
+    },
+    {
+      "stage": "compile",
+      "status": "failed",
+      "message": "staged evaluation failed without producing evaluation_results.json",
+      "payload": {
+        "stage": "staged",
+        "result_stage": "",
+        "returncode": 1,
+        "timed_out": false,
+        "log_tail": "running bdist_wheel\nrunning build\nrunning build_py\ncreating build/lib/cann_bench\ncopying cann_bench/foreach_addcdiv_scalar.py -> build/lib/cann_bench\ncopying cann_bench/__init__.py -> build/lib/cann_bench\ncopying cann_bench/_pyasc_runtime.py -> build/lib/cann_bench\ncopying cann_bench/mish.py -> build/lib/cann_bench\ncopying cann_bench/masked_scale.py -> build/lib/cann_bench\ncopying cann_bench/foreach_norm.py -> build/lib/cann_bench\ncopying cann_bench/exp.py -> build/lib/cann_bench\ncopying cann_bench/sigmoid.py -> build/lib/cann_bench\ncopying cann_bench/swi_glu.py -> build/lib/cann_bench\ncopying cann_bench/gelu.py -> build/lib/cann_bench\n/usr/local/python3.12.13/lib/python3.12/site-packages/setuptools/_distutils/cmd.py:90: SetuptoolsDeprecationWarning: setup.py install is deprecated.\n!!\n\n        ********************************************************************************\n        Please avoid running ``setup.py`` directly.\n        Instead, use pypa/build, pypa/installer or other\n        standards-based tools.\n\n        This deprecation is overdue, please update your project and remove deprecated\n        calls to avoid build errors in the future.\n\n        See https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html for details.\n        ********************************************************************************\n\n!!\n  self.initialize_options()\ninstalling to build/bdist.linux-x86_64/wheel\nrunning install\nrunning install_lib\ncreating build/bdist.linux-x86_64/wheel\ncreating build/bdist.linux-x86_64/wheel/cann_bench\ncopying build/lib/cann_bench/foreach_addcdiv_scalar.py -> build/bdist.linux-x86_64/wheel/./cann_bench\ncopying build/lib/cann_bench/__init__.py -> build/bdist.linux-x86_64/wheel/./cann_bench\ncopying build/lib/cann_bench/_pyasc_runtime.py -> build/bdist.linux-x86_64/wheel/./cann_bench\ncopying build/lib/cann_bench/mish.py -> build/bdist.linux-x86_64/wheel/./cann_bench\ncopying build/lib/cann_bench/masked_scale.py -> build/bdist.linux-x86_64/wheel/./cann_bench\ncopying build/lib/cann_bench/foreach_norm.py -> build/bdist.linux-x86_64/wheel/./cann_bench\ncopying build/lib/cann_bench/exp.py -> build/bdist.linux-x86_64/wheel/./cann_bench\ncopying build/lib/cann_bench/sigmoid.py -> build/bdist.linux-x86_64/wheel/./cann_bench\ncopying build/lib/cann_bench/swi_glu.py -> build/bdist.linux-x86_64/wheel/./cann_bench\ncopying build/lib/cann_bench/gelu.py -> build/bdist.linux-x86_64/wheel/./cann_bench\nrunning install_egg_info\nrunning egg_info\ncreating cann_bench.egg-info\nwriting cann_bench.egg-info/PKG-INFO\nwriting dependency_links to cann_bench.egg-info/dependency_links.txt\nwriting top-level names to cann_bench.egg-info/top_level.txt\nwriting manifest file 'cann_bench.egg-info/SOURCES.txt'\nreading manifest file 'cann_bench.egg-info/SOURCES.txt'\nwriting manifest file 'cann_bench.egg-info/SOURCES.txt'\nCopying cann_bench.egg-info to build/bdist.linux-x86_64/wheel/./cann_bench-1.0.0-py3.12.egg-info\nrunning install_scripts\ncreating build/bdist.linux-x86_64/wheel/cann_bench-1.0.0.dist-info/WHEEL\ncreating 'dist/cann_bench-1.0.0-py3-none-any.whl' and adding 'build/bdist.linux-x86_64/wheel' to it\nadding 'cann_bench/__init__.py'\nadding 'cann_bench/_pyasc_runtime.py'\nadding 'cann_bench/exp.py'\nadding 'cann_bench/foreach_addcdiv_scalar.py'\nadding 'cann_bench/foreach_norm.py'\nadding 'cann_bench/gelu.py'\nadding 'cann_bench/masked_scale.py'\nadding 'cann_bench/mish.py'\nadding 'cann_bench/sigmoid.py'\nadding 'cann_bench/swi_glu.py'\nadding 'cann_bench-1.0.0.dist-info/METADATA'\nadding 'cann_bench-1.0.0.dist-info/WHEEL'\nadding 'cann_bench-1.0.0.dist-info/top_level.txt'\nadding 'cann_bench-1.0.0.dist-info/RECORD'\nremoving build/bdist.linux-x86_64/wheel\n",
+        "log_bytes_total": 3695,
+        "truncated": false,
+        "log_artifact_uploaded": true,
+        "log_artifact_name": "compile.log",
+        "log_artifact_size_bytes": 3695
+      },
+      "created_at": "2026-08-31T11:53:33.302663"
+    }
+  ]
+}

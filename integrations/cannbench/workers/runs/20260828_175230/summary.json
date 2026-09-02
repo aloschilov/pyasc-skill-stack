@@ -1,0 +1,14 @@
+[
+ {
+  "item": "sigmoid-tune",
+  "status": "done, best score 68.65",
+  "history": [
+   {
+    "iter": 1,
+    "result": "reject",
+    "score": 0.0,
+    "passed": "0/20"
+   }
+  ]
+ }
+]

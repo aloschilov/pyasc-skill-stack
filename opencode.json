@@ -3,6 +3,18 @@
   "skills": {
     "paths": ["./skills"]
   },
+  "mcp": {
+    "cann-bench-site": {
+      "type": "local",
+      "command": [
+        "/bin/bash",
+        "-c",
+        "exec ./integrations/cannbench/site-mcp.sh"
+      ],
+      "enabled": true,
+      "timeout": 120000
+    }
+  },
   "permission": {
     "read": "allow",
     "edit": "allow",

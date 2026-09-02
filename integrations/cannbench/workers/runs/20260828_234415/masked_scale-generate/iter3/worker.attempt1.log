@@ -1,0 +1,31 @@
+rc=0
+=== STDOUT ===
+Case 3 still fails — my hypothesis about tail-tile padding was wrong. The bug is triggered by the mere coexistence of f16 and bf16 copy_in/copy_out in the same kernel, not by padding. I need to use the **two-pass approach unconditionally** for all f16/bf16 cross-type cases: cast the mask to f32 in a separate kernel (no bf16 present), then compute with the f32 mask (no f16 present).
+Syntax OK. The key change from the previous attempt: **always** use two-pass for f16/bf16 cross-type (not conditionally on divisibility). The codegen bug is triggered by the mere coexistence of f16 and bf16 copy_in/copy_out in one kernel — not by padding zeros.
+
+**Two-pass for case 3 (bf16 x + f16 mask)**:
+- Pass 1 (`_cast_mask_to_f32`): loads f16 mask → casts to f32 temp. Kernel has only f16 + f32. No bf16. Safe.
+- Pass 2 (`_masked_scale_kernel` with mask_kind=4): loads bf16 x + f32 temp → computes → stores bf16 output. Kernel has only bf16 + f32. No f16. Safe.
+
+All other 19 cases use the unchanged single-pass path. Case 3 will be slower (extra pass + 64MB temp buffer) but will compile and pass accuracy — currently it scores 0.
+
+=== STDERR ===
+[0m
+> build · glm-5.2
+[0m
+[0m✗ [0mRead candidate.py failed
+[91m[1mError: [0mFile not found: /tmp/cbworkers/20260828_234415/masked_scale-generate/candidate.py
+[0m
+[0m$ [0mls -la /tmp/cbworkers/20260828_234415/masked_scale-generate/
+total 12
+drwxrwxr-x 3 aloschilov aloschilov 4096 Aug 29 00:44 .
+drwxrwxr-x 3 aloschilov aloschilov 4096 Aug 28 23:44 ..
+drwxrwxr-x 2 aloschilov aloschilov 4096 Aug 29 00:36 __pycache__
+[0m
+[0m← [0mWrite candidate.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 -m py_compile candidate.py && echo "SYNTAX OK"
+SYNTAX OK
+[0m
+

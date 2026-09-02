@@ -1,0 +1,133 @@
+{
+ "hard_failure": false,
+ "score": 71.11,
+ "compile": 20.0,
+ "accuracy": 30.0,
+ "perf": 21.11,
+ "avg_speedup": 0.836,
+ "passed": 20,
+ "total": 20,
+ "failed_cases": [],
+ "timings": [
+  {
+   "case_id": "exp_1",
+   "elapsed_us": 5.72,
+   "baseline_us": 3.75,
+   "speedup": 0.656
+  },
+  {
+   "case_id": "exp_2",
+   "elapsed_us": 17.03,
+   "baseline_us": 16.25,
+   "speedup": 0.954
+  },
+  {
+   "case_id": "exp_3",
+   "elapsed_us": 44.68,
+   "baseline_us": 32.08,
+   "speedup": 0.718
+  },
+  {
+   "case_id": "exp_4",
+   "elapsed_us": 200.81,
+   "baseline_us": 173.62,
+   "speedup": 0.865
+  },
+  {
+   "case_id": "exp_5",
+   "elapsed_us": 359.39,
+   "baseline_us": 388.95,
+   "speedup": 1.082
+  },
+  {
+   "case_id": "exp_6",
+   "elapsed_us": 5.59,
+   "baseline_us": 4.7,
+   "speedup": 0.841
+  },
+  {
+   "case_id": "exp_7",
+   "elapsed_us": 5.68,
+   "baseline_us": 4.6,
+   "speedup": 0.81
+  },
+  {
+   "case_id": "exp_8",
+   "elapsed_us": 6.86,
+   "baseline_us": 5.99,
+   "speedup": 0.873
+  },
+  {
+   "case_id": "exp_9",
+   "elapsed_us": 141.56,
+   "baseline_us": 115.655,
+   "speedup": 0.817
+  },
+  {
+   "case_id": "exp_10",
+   "elapsed_us": 5.68,
+   "baseline_us": 4.68,
+   "speedup": 0.824
+  },
+  {
+   "case_id": "exp_11",
+   "elapsed_us": 6.17,
+   "baseline_us": 5.59,
+   "speedup": 0.906
+  },
+  {
+   "case_id": "exp_12",
+   "elapsed_us": 5.69,
+   "baseline_us": 4.51,
+   "speedup": 0.793
+  },
+  {
+   "case_id": "exp_13",
+   "elapsed_us": 39.86,
+   "baseline_us": 44.76,
+   "speedup": 1.123
+  },
+  {
+   "case_id": "exp_14",
+   "elapsed_us": 10.57,
+   "baseline_us": 8.1,
+   "speedup": 0.766
+  },
+  {
+   "case_id": "exp_15",
+   "elapsed_us": 6.47,
+   "baseline_us": 5.52,
+   "speedup": 0.853
+  },
+  {
+   "case_id": "exp_16",
+   "elapsed_us": 8.35,
+   "baseline_us": 6.32,
+   "speedup": 0.757
+  },
+  {
+   "case_id": "exp_17",
+   "elapsed_us": 8.17,
+   "baseline_us": 6.36,
+   "speedup": 0.778
+  },
+  {
+   "case_id": "exp_18",
+   "elapsed_us": 10.21,
+   "baseline_us": 8.61,
+   "speedup": 0.843
+  },
+  {
+   "case_id": "exp_19",
+   "elapsed_us": 8.23,
+   "baseline_us": 6.39,
+   "speedup": 0.776
+  },
+  {
+   "case_id": "exp_20",
+   "elapsed_us": 29.11,
+   "baseline_us": 20.2,
+   "speedup": 0.694
+  }
+ ]
+}

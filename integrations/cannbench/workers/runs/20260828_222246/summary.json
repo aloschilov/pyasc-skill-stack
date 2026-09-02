@@ -1,0 +1,65 @@
+[
+ {
+  "item": "masked_scale-generate",
+  "status": "done, best score None",
+  "history": [
+   {
+    "iter": 1,
+    "result": "reject",
+    "score": 78.01,
+    "passed": "19/20"
+   },
+   {
+    "iter": 2,
+    "result": "reject",
+    "score": 79.13,
+    "passed": "19/20"
+   },
+   {
+    "iter": 3,
+    "result": "reject",
+    "score": 78.76,
+    "passed": "19/20"
+   }
+  ]
+ },
+ {
+  "item": "swi_glu-generate",
+  "status": "generated, score 64.46",
+  "history": [
+   {
+    "iter": 1,
+    "result": "no candidate"
+   },
+   {
+    "iter": 2,
+    "result": "accept",
+    "score": 64.46,
+    "passed": "20/20"
+   }
+  ]
+ },
+ {
+  "item": "foreach_norm-generate",
+  "status": "generated, score 67.46",
+  "history": [
+   {
+    "iter": 1,
+    "result": "no candidate"
+   },
+   {
+    "iter": 2,
+    "result": "static-fail",
+    "problems": [
+     "banned torch call: torch.zeros() \u2014 torch is allowed only for ['empty', 'empty_like']; all math must be asc2 kernels"
+    ]
+   },
+   {
+    "iter": 3,
+    "result": "accept",
+    "score": 67.46,
+    "passed": "20/20"
+   }
+  ]
+ }
+]

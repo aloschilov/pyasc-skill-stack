@@ -1,0 +1,21 @@
+rc=0
+=== STDOUT ===
+Syntax check passed. `candidate.py` written with:
+
+- **TILE=3072 for f16/bf16** (13 cases): 1.5x wider tiles, ~233 KB UB (under 254 KB). Targets the worst-performing cases (exp_3: 0.56x, exp_4: 0.72x, exp_20: 0.55x).
+- **TILE=2048 for f32** (7 cases): kept proven — 6 f32 temporaries would overflow UB at 3072 (~280 KB).
+- Single `@asc2.jit` kernel, `ConstExpr` specialization handles both tile sizes. Kernel body and math unchanged.
+
+DONE
+
+=== STDERR ===
+[0m
+> build · glm-5.2
+[0m
+[0m← [0mWrite candidate.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 -m py_compile candidate.py 2>&1
+(no output)
+[0m
+

@@ -1,0 +1,46 @@
+rc=0
+=== STDOUT ===
+Looking at this task, I need to implement a `MaskedScale` operator as a pyasc asc2 JIT kernel. Let me analyze the requirements carefully before writing the code.
+Now let me write the `candidate.py` file based on my analysis:
+Now let me verify the code statically and run a syntax check:
+Syntax check passes. Let me complete the static review:
+DONE
+
+`candidate.py` is written and passes syntax check. Key design decisions:
+
+- **Single kernel** with `mask_kind` ConstExpr (0=int8, 1=uint8, 2=float) for compile-time branching — the JIT traces only the applicable path per specialization
+- **int8 masks**: `asc2.cast(m, asc.float16)` → `.to(asc.float32)` (direct int8→f32 fails on hardware)
+- **uint8 masks**: host `mask.view(torch.int8)` reinterpretation, in-kernel `asc2.where(mf < 0.0, mf + 256.0, mf)` fixup for bytes 128-255
+- **float masks**: direct `.to(asc.float32)`
+- **f16/bf16 x**: promoted to f32 for compute, cast back on store
+- **TILE=2048** for int8/float masks (~144K UB), **TILE=1024** for uint8 (~111K UB) — both under the 254K budget
+- **inf/nan** (cases 12-13) propagate through IEEE hardware multiply ops naturally
+- All 20 cases covered: 3 mask_kind variants × x/mask dtype specializations
+
+=== STDERR ===
+[0m
+> build · glm-5.2
+[0m
+[0m# [0mTodos
+[✓] Analyze operator spec, cases, dtype combinations, and constraints
+[✓] Determine kernel design: tile sizes, mask dtype handling (int8/uint8/float), UB budget
+[•] Write candidate.py with @asc2.jit kernel and masked_scale wrapper
+[ ] Static review: numerical stability, UB budget, anti-cheat compliance
+[ ] Syntax check with py_compile
+[0m
+[0m← [0mWrite candidate.py
+Wrote file successfully.
+[0m
+[0m→ [0mRead candidate.py
+[0m
+[0m$ [0mpython3 -m py_compile /tmp/cbworkers/20260828_222246/masked_scale-generate/candidate.py 2>&1
+(no output)
+[0m
+[0m# [0mTodos
+[✓] Analyze operator spec, cases, dtype combinations, and constraints
+[✓] Determine kernel design: tile sizes, mask dtype handling (int8/uint8/float), UB budget
+[✓] Write candidate.py with @asc2.jit kernel and masked_scale wrapper
+[✓] Static review: numerical stability, UB budget, anti-cheat compliance
+[✓] Syntax check with py_compile
+[0m
+

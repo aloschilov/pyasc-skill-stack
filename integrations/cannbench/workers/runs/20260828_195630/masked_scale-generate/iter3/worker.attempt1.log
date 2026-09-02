@@ -1,0 +1,35 @@
+rc=0
+=== STDOUT ===
+The same 13 cases still fail — removing the `where` did NOT fix int8/uint8 masks. The "Failed to run passes" error persists for ALL int8/uint8 cases even with the simplest possible kernel. This means the issue is more fundamental than the `where`: either `asc2.copy_in` for int8 or `.to(asc.float32)` from int8 triggers a compiler pass failure.
+
+Key insight from the error: "Failed to run passes" is a **pass-stage** failure (after C code generation succeeds), NOT a "compile failed!" (C compilation) error. The C code for int8 IS generated, but optimization/scheduling passes can't handle int8→float conversion.
+
+**New strategy:** Two separate kernels:
+1. **Float mask kernel** (proven working): `.to(asc.float32)`, `unroll_factor=2`, TILE=2048
+2. **Int8 mask kernel** (experimental): Replace `m.to(asc.float32)` with `m * 1.0` (arithmetic promotion instead of cast — generates different C code, might avoid the pass failure), `unroll_factor=1`, TILE=1024
+
+The int8 kernel avoids the `.to(asc.float32)` cast operation that likely triggers the pass failure, using scalar multiplication instead (which generates a multiply instruction, not a cast function call).
+Syntax passes. The code is ready.
+
+**Summary of changes:**
+- Split into two kernels: `_masked_scale_kernel` (float masks, proven working) and `_masked_scale_kernel_int` (int8 masks, experimental fix)
+- **Int8 kernel key change**: `mf = m * 1.0` instead of `mf = m.to(asc.float32)` — arithmetic promotion via scalar multiplication generates a multiply instruction rather than a cast function call, which may avoid the "Failed to run passes" error that occurs when the compiler's optimization/scheduling passes process the int8→float32 cast
+- **Int8 kernel secondary changes**: `unroll_factor=1` (reduce concurrent int8 tiles) and `TILE=1024` (smaller tiles) as additional safety measures
+- Float mask kernel unchanged — 7 passing cases should remain passing
+
+**UB budget**: Int8 kernel with unroll=1, TILE=1024: ~46KB (very safe). Float kernel: ~184KB (same as proven).
+
+**Expected outcome**: If `m * 1.0` works for int8 tiles (promotes to float32), all 12 int8/uint8 cases should compile and run. If it doesn't work, the error type will change (likely "compile failed!" instead of "Failed to run passes"), giving diagnostic info for the next iteration.
+
+=== STDERR ===
+[0m
+> build · glm-5.2
+[0m
+[0m← [0mWrite candidate.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 -m py_compile candidate.py && echo "SYNTAX OK"
+SYNTAX OK
+[0m
+[0m→ [0mRead candidate.py
+

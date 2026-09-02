@@ -1,0 +1,29 @@
+rc=0
+=== STDOUT ===
+DONE.
+
+Wrote `candidate.py` with two optimizations over the working 100%-correct kernel:
+
+1. **Wider tile (`_WIDE_TILE = 3072`)** — the previous `TILE=2048` left ~98 KB of the 253952-byte UB budget unused. Using the contract's measured 1.583× overhead factor (which *exactly* predicted the 4096-overflow of 311296 B), TILE=3072 consumes ~233472 B (20480 B spare, safe). This cuts the per-tile DMA/loop-setup cost by 1.5× for the large/medium cases — the f16/bf16 cases currently sit at ~0.6× baseline largely due to per-tile overhead, so this is the biggest available lever.
+
+2. **Narrow variant (`_NARROW_TILE = 1024`) for small shapes** — selected at the host when `numel < 72 * 3072` (only case 11, 109 K elems). Without it, the wide tile drops that case to 36 tiles → 36 cores; the narrow path keeps all 72 cores active (107 tiles), matching the harness's stated recovery-of-parallelism pattern.
+
+The math (`asc2.div(1.0, asc2.exp(-xf) + 1.0)`), f32-promotion, grid-stride loop with `unroll_factor=2`, tail handling via `real_shape`, and `sigmoid` signature are all unchanged — behavior and numerical stability are preserved. `python3 -m py_compile` passes.
+
+=== STDERR ===
+[0m
+> build · glm-5.2
+[0m
+[0m$ [0mpwd && ls -la
+/tmp/cbworkers/20260828_180653/sigmoid-tune
+total 8
+drwxrwxr-x 2 aloschilov aloschilov 4096 Aug 28 18:06 .
+drwxrwxr-x 4 aloschilov aloschilov 4096 Aug 28 18:06 ..
+[0m
+[0m← [0mWrite candidate.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 -m py_compile candidate.py && echo "SYNTAX OK"
+SYNTAX OK
+[0m
+

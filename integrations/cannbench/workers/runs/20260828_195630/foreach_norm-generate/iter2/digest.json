@@ -1,0 +1,93 @@
+{
+ "hard_failure": false,
+ "score": 0.0,
+ "compile": 0.0,
+ "accuracy": 0.0,
+ "perf": 0.0,
+ "avg_speedup": 0.0,
+ "passed": 0,
+ "total": 20,
+ "failed_cases": [
+  {
+   "case_id": "level1/foreach_norm_1",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_2",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_3",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_4",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_5",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:12:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_6",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:12:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_7",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:12:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_8",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:12:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_9",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_10",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_11",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_12",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_13",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:12:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_14",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_15",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_16",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_17",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:12:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_18",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:11:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_19",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:12:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  },
+  {
+   "case_id": "level1/foreach_norm_20",
+   "error": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: at <source>:12:4: | ): |     x_gm = asc2.global_tensor(x_ptr, [size])"
+  }
+ ],
+ "timings": []
+}

@@ -1,0 +1,12 @@
+[
+ {
+  "item": "sigmoid-tune",
+  "status": "dry-run: prompt written",
+  "history": []
+ },
+ {
+  "item": "masked_scale-generate",
+  "status": "dry-run: prompt written",
+  "history": []
+ }
+]

@@ -1,0 +1,121 @@
+[
+  {
+    "operator_name": null,
+    "operator": "Exp",
+    "passed_cases": 20,
+    "total_cases": 20,
+    "score": 68.72450967383509,
+    "avg_speedup": 0.7448314460129397,
+    "compile_runtime_score": 20.0,
+    "function_score": 30.0,
+    "performance_score": 18.724509673835087,
+    "failed_cases": []
+  },
+  {
+    "operator_name": null,
+    "operator": "ForeachAddcdivScalar",
+    "passed_cases": 20,
+    "total_cases": 20,
+    "score": 79.75998042432367,
+    "avg_speedup": 1.1805422196185071,
+    "compile_runtime_score": 20.0,
+    "function_score": 30.0,
+    "performance_score": 29.75998042432367,
+    "failed_cases": []
+  },
+  {
+    "operator_name": null,
+    "operator": "ForeachNorm",
+    "passed_cases": 20,
+    "total_cases": 20,
+    "score": 62.51606833914495,
+    "avg_speedup": 0.4979972261681741,
+    "compile_runtime_score": 20.0,
+    "function_score": 30.0,
+    "performance_score": 12.516068339144953,
+    "failed_cases": []
+  },
+  {
+    "operator_name": null,
+    "operator": "Gelu",
+    "passed_cases": 20,
+    "total_cases": 20,
+    "score": 56.37484840589574,
+    "avg_speedup": 0.23773886700139052,
+    "compile_runtime_score": 20.0,
+    "function_score": 30.0,
+    "performance_score": 6.374848405895742,
+    "failed_cases": []
+  },
+  {
+    "operator_name": null,
+    "operator": "MaskedScale",
+    "passed_cases": 20,
+    "total_cases": 20,
+    "score": 82.3796552747238,
+    "avg_speedup": 1.5455627057740502,
+    "compile_runtime_score": 20.0,
+    "function_score": 30.0,
+    "performance_score": 32.37965527472381,
+    "failed_cases": []
+  },
+  {
+    "operator_name": null,
+    "operator": "Mish",
+    "passed_cases": 20,
+    "total_cases": 20,
+    "score": 60.59537143476158,
+    "avg_speedup": 0.37877559679422296,
+    "compile_runtime_score": 20.0,
+    "function_score": 30.0,
+    "performance_score": 10.59537143476158,
+    "failed_cases": []
+  },
+  {
+    "operator_name": null,
+    "operator": "Sigmoid",
+    "passed_cases": 20,
+    "total_cases": 20,
+    "score": 68.92289545207379,
+    "avg_speedup": 0.7524382491156412,
+    "compile_runtime_score": 20.0,
+    "function_score": 30.0,
+    "performance_score": 18.922895452073796,
+    "failed_cases": []
+  },
+  {
+    "operator_name": null,
+    "operator": "SwiGlu",
+    "passed_cases": 18,
+    "total_cases": 20,
+    "score": 55.81266089106198,
+    "avg_speedup": 0.45884648109556625,
+    "compile_runtime_score": 19.0,
+    "function_score": 26.999999999999996,
+    "performance_score": 9.812660891061977,
+    "failed_cases": [
+      {
+        "case_id": "level1/swi_glu_9",
+        "status": "failed",
+        "error_msg": "AI\u7b97\u5b50\u6267\u884c\u5931\u8d25: The Inner error is reported as above. The process exits for this inner error, and the current working operator name is aclnnInplaceCopy.\nSince the operator is called asynchronously, the stacktrace may be inaccurate. If you want to get the accurate stacktrace, please set the environment variable ASCEND_LAUNCH_BLOCKING=1.\nNote: ASCEND_LAUNCH_BLOCKING=1 will force ops to run in synchronous mode, resulting in performance degradation. Please unset ASCEND_LAUNCH_BLOCKING in time after debugging.\n[ERROR] 2026-09-02-03:19:17 (PID:1232, Device:0, RankID:-1) ERR00100 PTA call acl api failed.\n\nTraceback (most recent call last):\n  File \"/data0/pd/benchsite-dev-releases-5/605a23e3e3b857353689282cc7de1b0bf66e8c99/third_party/cann-bench/src/kernel_eval/eval/op_runner.py\", line 395, in _run_simple\n    outputs = func(**updated_params)\n              ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/python3.12.13/lib/python3.12/site-packages/cann_bench/swi_glu.py\", line 136, in swi_glu\n    x0 = input.narrow(dim, 0, half_C).contiguous()\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/data0/pd/benchsite-dev-releases-5/605a23e3e3b857353689282cc7de1b0bf66e8c99/third_party/cann-bench/src/kernel_eval/security/torch_op_guard.py\", line 313, in __torch_function__\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/data0/pd/benchsite-dev-releases-5/605a23e3e3b857353689282cc7de1b0bf66e8c99/third_party/cann-bench/src/kernel_eval/security/device_residency_guard.py\", line 197, in __torch_dispatch__\n    out = func(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/python3.12.13/lib/python3.12/site-packages/torch/_ops.py\", line 819, in __call__\n    return self._op(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: The Inner error is reported as above. The process exits for this inner error, and the current working operator name is aclnnInplaceCopy.\nSince the operator is called asynchronously, the stacktrace may be inaccurate. If you want to get the accurate stacktrace, please set the environment variable ASCEND_LAUNCH_BLOCKING=1.\nNote: ASCEND_LAUNCH_BLOCKING=1 will force ops to run in synchronous mode, resulting in performance degradation. Please unset ASCEND_LAUNCH_BLOCKING in time after debugging.\n[ERROR] 2026-09-02-03:19:17 (PID:1232, Device:0, RankID:-1) ERR00100 PTA call acl api failed."
+      },
+      {
+        "case_id": "level1/swi_glu_12",
+        "status": "failed",
+        "error_msg": "\u7cbe\u5ea6\u4e0d\u8fbe\u6807:   - bfloat16[output]: \u274c MERE=0.000000, MARE=0.000000 (threshold=7.812500e-03, mare_threshold=7.812500e-02), NaN\u4f4d\u7f6e\u4e0d\u5339\u914d"
+      }
+    ]
+  },
+  {
+    "operator_name": null,
+    "operator": "RmsNorm",
+    "passed_cases": 20,
+    "total_cases": 20,
+    "score": 57.785021404204784,
+    "avg_speedup": 0.33775858059070757,
+    "compile_runtime_score": 20.0,
+    "function_score": 30.0,
+    "performance_score": 7.785021404204786,
+    "failed_cases": []
+  }
+]
