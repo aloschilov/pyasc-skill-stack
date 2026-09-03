@@ -58,10 +58,11 @@ jobs:
       - name: Add swap for the AMD64 native link
         if: ${{ inputs.arch == 'amd64' && !inputs.merge_only }}
         run: |
-          sudo fallocate -l 8G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          pyasc_swap_path=/mnt/pyasc-swapfile
+          sudo fallocate -l 8G "$pyasc_swap_path"
+          sudo chmod 600 "$pyasc_swap_path"
+          sudo mkswap "$pyasc_swap_path"
+          sudo swapon "$pyasc_swap_path"
           free -h
 
       - name: Build + push ${{ inputs.arch }} leg
