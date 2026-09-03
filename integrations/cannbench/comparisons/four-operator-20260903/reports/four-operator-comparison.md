@@ -52,11 +52,11 @@ Worker prose that called a local compile result `verified-cannbench` is rejected
 
 Run pages:
 
-- current series is waiting for submission credits; [CANNBench jobs workspace](https://cannbench.com/workspace/jobs) will expose each run after submission.
+- Handwritten target-derived: [`job_00385e9c7a19`](https://cannbench.com/workspace/jobs/job_00385e9c7a19)
 
 | Arm | Job | Cases | Score | GMean speedup | Anti-cheat | Status |
 |---|---|---:|---:|---:|---:|---|
-| Handwritten target-derived | [pending](https://cannbench.com/workspace/jobs) | — | — | — | — | pending |
+| Handwritten target-derived | [`job_00385e9c7a19`](https://cannbench.com/workspace/jobs/job_00385e9c7a19) | — | — | — | — | queued |
 | Generated without skills | [pending](https://cannbench.com/workspace/jobs) | — | — | — | — | pending |
 | Generated with skills | [pending](https://cannbench.com/workspace/jobs) | — | — | — | — | pending |
 

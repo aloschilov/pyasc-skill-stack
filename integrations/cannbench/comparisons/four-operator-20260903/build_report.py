@@ -20,6 +20,7 @@ LABELS = {
     "with_skills": "Generated with skills",
 }
 JOBS_URL = "https://cannbench.com/workspace/jobs"
+TERMINAL_STATUSES = {"completed", "failed", "cancelled", "canceled", "rejected", "timed_out", "timeout"}
 
 
 def job_url(job_id: str) -> str:
@@ -33,7 +34,22 @@ def read_json(path: Path):
 def remote_row(index: int, arm: str) -> dict:
     payload = read_json(ROOT / "remote_runs" / f"{index:02d}-{arm}-job.json")
     if not payload:
-        return {"arm": arm, "status": "pending"}
+        submission = read_json(ROOT / "remote_runs" / f"{index:02d}-{arm}-submission.json")
+        if not submission:
+            return {"arm": arm, "status": "pending"}
+        response = submission.get("response") or {}
+        job = response.get("job") or {}
+        return {
+            "arm": arm,
+            "status": job.get("status", "submitted"),
+            "job_id": job.get("id") or submission.get("job_id"),
+            "passed": None,
+            "total": None,
+            "score": None,
+            "gmean": None,
+            "anti_cheat": None,
+            "operators": [],
+        }
     job = payload.get("job", payload)
     results = job.get("results") or {}
     summary = results.get("summary") or {}
@@ -261,7 +277,7 @@ code {{ font-family:ui-monospace, monospace; }} li {{ margin:5px 0; }} .pending 
     browser = next((p for p in ("/usr/bin/google-chrome", "/usr/bin/chromium-browser", "/snap/bin/chromium") if Path(p).exists()), None)
     if browser:
         subprocess.run([browser, "--headless", "--no-sandbox", "--disable-gpu", f"--print-to-pdf={pdf_path}", html_path.as_uri()], check=False, timeout=120)
-    print(json.dumps({"markdown": str(REPORTS / 'four-operator-comparison.md'), "html": str(html_path), "pdf": str(pdf_path) if pdf_path.exists() else None, "remote_complete": all(r['status'] != 'pending' for r in remote)}, indent=2))
+    print(json.dumps({"markdown": str(REPORTS / 'four-operator-comparison.md'), "html": str(html_path), "pdf": str(pdf_path) if pdf_path.exists() else None, "remote_complete": all(r['status'] in TERMINAL_STATUSES for r in remote)}, indent=2))
     return 0
 
 
