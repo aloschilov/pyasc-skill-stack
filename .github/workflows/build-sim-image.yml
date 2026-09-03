@@ -20,6 +20,10 @@ on:
         description: "pyasc git rev (must match bundled source; current skills pin 030e9b2c)"
         type: string
         default: 030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d
+      setup_jobs:
+        description: "native extension build parallelism (use 1 on memory-constrained runners)"
+        type: string
+        default: "2"
       merge:
         description: "after push, also merge the multiarch manifest (needs both legs pushed)"
         type: boolean
@@ -56,7 +60,7 @@ jobs:
         env:
           OWNER: ${{ github.repository_owner }}
           PYASC_GIT_REV: ${{ inputs.pyasc_rev }}
-          PYASC_SETUP_JOBS: "2"
+          PYASC_SETUP_JOBS: ${{ inputs.setup_jobs }}
         run: bash docker/build-sim-image.sh --arch ${{ inputs.arch }} --push
 
       - name: Merge multiarch manifest
