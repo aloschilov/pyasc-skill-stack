@@ -6,8 +6,9 @@ name: Build pyasc-sim image
 # merge. After both the arm64 leg (built on the Mac) + the amd64 leg (this)
 # are pushed, set merge=true to publish the version-coupled manifest.
 #
-# Requires the GITCODE_CREDENTIALS repo secret: a git-credentials line
-# `https://<user>:<token>@gitcode.com` (gitcode.com needs auth on clone).
+# The pinned public pyasc source is cloned anonymously. Do not inject the
+# legacy GITCODE_CREDENTIALS secret: an expired optional credential overrides
+# anonymous access and makes an otherwise public clone fail.
 on:
   workflow_dispatch:
     inputs:
@@ -47,23 +48,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Write gitcode credentials
-        env:
-          GITCODE_CREDENTIALS: ${{ secrets.GITCODE_CREDENTIALS }}
-        run: |
-          if [ -n "$GITCODE_CREDENTIALS" ]; then
-            printf '%s\n' "$GITCODE_CREDENTIALS" > /tmp/git-credentials
-            chmod 600 /tmp/git-credentials
-            echo "gitcode credentials present; passing as a BuildKit secret."
-          else
-            echo "::warning::GITCODE_CREDENTIALS secret not set; the gitcode clone will fail if the repo requires auth."
-          fi
-
       - name: Build + push ${{ inputs.arch }} leg
         env:
           OWNER: ${{ github.repository_owner }}
           PYASC_GIT_REV: ${{ inputs.pyasc_rev }}
-          GIT_CREDENTIALS_FILE: ${{ secrets.GITCODE_CREDENTIALS && '/tmp/git-credentials' || '' }}
           PYASC_SETUP_JOBS: "2"
         run: bash docker/build-sim-image.sh --arch ${{ inputs.arch }} --push
 
