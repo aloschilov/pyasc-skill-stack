@@ -62,7 +62,6 @@ LABEL org.opencontainers.image.source="https://github.com/aloschilov/pyasc-skill
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git ca-certificates curl build-essential ccache clang lld \
-        zlib1g-dev libxml2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LLVM_INSTALL_PREFIX=/opt/llvm
@@ -83,6 +82,13 @@ RUN set -eux ; \
     echo "Downloaded $(stat -c '%s' /tmp/llvm.tar.gz) bytes" ; \
     tar -xzf /tmp/llvm.tar.gz --strip-components=1 -C "${LLVM_INSTALL_PREFIX}" ; \
     rm -f /tmp/llvm.tar.gz
+
+# LLVM's exported CMake targets reference these system libraries. Keep this
+# small layer after the large LLVM archive so dependency tweaks do not force a
+# 1.25 GB toolchain re-download.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        zlib1g-dev libxml2-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
         "numpy<2.0" \
