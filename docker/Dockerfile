@@ -32,16 +32,12 @@
 #   the pyasc build is auto-selected by `uname -m` at build time.
 #
 # Build args:
-#   PYASC_GIT_URL         pyasc source repository
-#                         (default: https://gitcode.com/compiler-team/pyasc.git)
-#   PYASC_GIT_REV         SHA on origin/v2 to pin (default: 030e9b2c, the
+#   PYASC_GIT_REV         SHA represented by the bundled source (default:
+#                         030e9b2c, the
 #                         2026-09-03 asctile snapshot used by the skills).
 #                         Bump in lock-step with the host-side pyasc-v2-eval
 #                         checkout used by the harness so docker and host runs stay
 #                         apples-to-apples.
-#   PYASC_GIT_REF         optional non-SHA ref (refs/merge-requests/N/head, branch
-#                         name, etc). When set, takes precedence over PYASC_GIT_REV.
-#                         Leave empty for the canonical pinned-SHA build.
 #   LLVM_ARCHIVE_X86_64   prebuilt LLVM tarball URL for x86_64 hosts
 #   LLVM_ARCHIVE_AARCH64  prebuilt LLVM tarball URL for aarch64 hosts
 #   LLVM_ARCHIVE          optional override; if non-empty, used regardless of arch
@@ -52,13 +48,10 @@ ENV CANN_HOME=/usr/local/Ascend/ascend-toolkit/latest
 ENV ASCEND_HOME_PATH=${CANN_HOME}
 ENV LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/lib64:${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:${ASCEND_HOME_PATH}/tools/simulator/Ascend950PR_9599/lib:${LD_LIBRARY_PATH}
 
-ARG PYASC_GIT_URL=https://gitcode.com/compiler-team/pyasc.git
-# Pin to a specific SHA on origin/v2 so every image build is reproducible.
-# Bump this together with the host-side pyasc-v2-eval checkout when the
-# evaluation owner is ready to refresh the baseline. Leaving PYASC_GIT_REF
-# as a legacy override hook for callers that still need a non-SHA ref.
+# Pin to the SHA stored in docker/pyasc-030e9b2c.bundle so every image build is
+# reproducible and independent of GitCode credentials/network availability.
+# Bump the bundle and this argument together.
 ARG PYASC_GIT_REV=030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d
-ARG PYASC_GIT_REF=
 ARG LLVM_ARCHIVE_X86_64=https://oaitriton.blob.core.windows.net/public/llvm-builds/llvm-86b69c31-ubuntu-x64.tar.gz
 ARG LLVM_ARCHIVE_AARCH64=https://oaitriton.blob.core.windows.net/public/llvm-builds/llvm-86b69c31-ubuntu-arm64.tar.gz
 ARG LLVM_ARCHIVE=
@@ -105,30 +98,11 @@ RUN pip install --no-cache-dir \
         --index-url https://download.pytorch.org/whl/cpu
 
 ENV PYASC_SRC=/opt/pyasc
-# Default path pins PYASC_GIT_REV (a SHA on origin/v2). The PYASC_GIT_REF
-# fallback exists for ad-hoc callers that still need refs/merge-requests/N/head
-# or similar; it must resolve to something git fetch understands.
-# The git_credentials secret is OPTIONAL (required=false): on networks where
-# gitcode.com serves the repo anonymously the clone just works, but some egress
-# paths (e.g. the arm64 Docker Desktop VM) get an HTTP 401 and need credentials.
-# The secret is mounted only for this RUN and is never written into a layer, so
-# no token is baked into the image history.
-RUN --mount=type=secret,id=git_credentials,target=/run/secrets/git_credentials,required=false \
-    if [ -s /run/secrets/git_credentials ]; then \
-        install -m600 /run/secrets/git_credentials /root/.git-credentials \
-     && git config --global credential.helper store ; \
-    fi \
- && git clone "${PYASC_GIT_URL}" "${PYASC_SRC}" \
- && cd "${PYASC_SRC}" \
- && if [ -n "${PYASC_GIT_REF}" ]; then \
-        git fetch origin "+${PYASC_GIT_REF}:pyasc-ref" \
-     && git checkout pyasc-ref ; \
-    else \
-        git fetch origin v2 \
-     && git checkout "${PYASC_GIT_REV}" ; \
-    fi \
- && git --no-pager log -1 --format='pyasc revision: %H (%s)' \
- && rm -f /root/.git-credentials
+COPY pyasc-030e9b2c.bundle /tmp/pyasc.bundle
+RUN git clone -b pyasc-030e9b2c /tmp/pyasc.bundle "${PYASC_SRC}" \
+ && test "$(git -C "${PYASC_SRC}" rev-parse HEAD)" = "${PYASC_GIT_REV}" \
+ && git -C "${PYASC_SRC}" --no-pager log -1 --format='pyasc revision: %H (%s)' \
+ && rm -f /tmp/pyasc.bundle
 
 ENV PYASC_SETUP_CLANG_LLD=1 \
     PYASC_SETUP_CCACHE=1

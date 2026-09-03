@@ -6,9 +6,8 @@ name: Build pyasc-sim image
 # merge. After both the arm64 leg (built on the Mac) + the amd64 leg (this)
 # are pushed, set merge=true to publish the version-coupled manifest.
 #
-# The pinned public pyasc source is cloned anonymously. Do not inject the
-# legacy GITCODE_CREDENTIALS secret: an expired optional credential overrides
-# anonymous access and makes an otherwise public clone fail.
+# The pinned pyasc source is carried as a verified Git bundle in docker/, so
+# hosted builds do not depend on GitCode credentials or availability.
 on:
   workflow_dispatch:
     inputs:
@@ -18,7 +17,7 @@ on:
         options: [amd64, arm64]
         default: amd64
       pyasc_rev:
-        description: "pyasc git rev (SHA on origin/v2; current skills pin 030e9b2c)"
+        description: "pyasc git rev (must match bundled source; current skills pin 030e9b2c)"
         type: string
         default: 030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d
       merge:

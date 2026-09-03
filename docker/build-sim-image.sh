@@ -33,10 +33,7 @@
 # Env overrides:
 #   OWNER       ghcr owner used to derive the image (default: aloschilov)
 #   IMAGE       multiarch manifest tag (default derives from PYASC_GIT_REV)
-#   PYASC_GIT_URL / PYASC_GIT_REV / PYASC_GIT_REF   forwarded to Dockerfile build args
-#   GIT_CREDENTIALS_FILE  optional path to a git-credentials file (e.g. a line
-#                         https://user:token@gitcode.com); passed as a BuildKit
-#                         secret for the clone when the host egress requires auth.
+#   PYASC_GIT_REV  revision asserted against the bundled pyasc source
 #   PYASC_SETUP_JOBS  optional cap on native-build parallelism (cmake --parallel N).
 #                     Set low (e.g. 2) on small-RAM build hosts to avoid OOM.
 set -euo pipefail
@@ -89,15 +86,8 @@ build_arch() {
     echo "== build-sim-image (arch=$arch) =="
     echo "  tag : $tag"
     local build_args=()
-    [ -n "${PYASC_GIT_URL:-}" ] && build_args+=(--build-arg "PYASC_GIT_URL=${PYASC_GIT_URL}")
     build_args+=(--build-arg "PYASC_GIT_REV=${PYASC_GIT_REV}")
-    [ -n "${PYASC_GIT_REF:-}" ] && build_args+=(--build-arg "PYASC_GIT_REF=${PYASC_GIT_REF}")
     [ -n "${PYASC_SETUP_JOBS:-}" ] && build_args+=(--build-arg "PYASC_SETUP_JOBS=${PYASC_SETUP_JOBS}")
-
-    # Optional git credentials for the clone (passed as a BuildKit secret, so the
-    # token is mounted only during the clone RUN and never baked into a layer).
-    # Needed when gitcode.com requires auth on the build host's egress path.
-    [ -n "${GIT_CREDENTIALS_FILE:-}" ] && build_args+=(--secret "id=git_credentials,src=${GIT_CREDENTIALS_FILE}")
 
     # NB: "${build_args[@]+...}" guards against the empty-array-under-`set -u`
     # error on macOS's stock bash 3.2 (where a bare "${build_args[@]}" is
