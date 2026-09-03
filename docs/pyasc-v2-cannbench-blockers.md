@@ -66,6 +66,18 @@ root cause has not been isolated.
   ForeachAddcdivScalar output still matched Torch. The skill now requires an
   operation-neutral explicit `pad_value`; this is an API semantic constraint,
   not a failed logical-output case.
+- **Native BF16 elementwise arithmetic is incomplete.** A current-v2 GeLU
+  probe lowered native FP16 and FP32 `adv.erfc`/`adv.tanh` routes, but BF16
+  failed at the first `asc.mul`: the accepted destination/source set excludes
+  bfloat16. Exact and tanh BF16 therefore require an explicit FP32 compute
+  path and output cast in this release.
+- **The fused AscendC GeLU primitive is not exposed.** The installed CANN
+  headers provide `AscendC::Gelu`, while commit `0a631f70` has no corresponding
+  pyasc dialect or Python operation. The CANNBench implementation must compose
+  erf/erfc/tanh/exp with basic vector operations. This is a confirmed API gap
+  and a suspected cause of the remaining sub-1x GeLU performance; causality
+  still requires a like-for-like hardware measurement after an upstream
+  binding exists.
 
 ## Confirmed integration and skill-stack defects
 

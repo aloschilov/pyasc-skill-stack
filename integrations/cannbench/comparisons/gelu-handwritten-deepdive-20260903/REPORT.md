@@ -96,6 +96,31 @@ that compile/UB success was insufficient for this long fused loop. Iteration
   Achieving it needs compiler/runtime work or a faster exact primitive, not
   another unevidenced tile increase.
 
+## Offline native-primitive probe
+
+After iteration 03 was frozen, a skills-driven OpenCode review identified
+`asc.adv.tanh` as the only untested low-level transcendental likely to shorten
+the tanh path. A separate compile-only probe exercised native-dtype
+`asc.adv.erfc` and `asc.adv.tanh` across the same 20-case dispatch matrix. FP16
+and FP32 lowered through the repaired C310 ABI, producing compact 2.1--3.2 KB
+AscendC sources. BF16 failed in the first basic vector multiplication because
+current v2 accepts only FP16/FP32/int16/int32 there; the existing FP32
+promotion is therefore required rather than accidental overhead.
+
+The native FP16 tanh formula was also checked against Torch over every FP16
+benchmark range. It violates the CANNBench MARE bound on `[-10, 10]` because
+`1 + tanh(u)` cancels in the negative tail. A native FP16 erfc variant showed
+the same risk near tiny exact outputs. Neither route replaces the queued
+cancellation-free iteration 03. The probe is evidence about API feasibility,
+not NPU correctness or speed.
+
+The installed CANN headers expose a fused `AscendC::Gelu` implementation, but
+the pinned pyasc v2 dialect/Python API has no corresponding operation. That
+missing binding is now the leading explanation for the remaining gap to the
+single-kernel CANN baseline: the available pyasc routes must compose several
+vector operations and, for BF16, two conversions. This is a documented v2
+performance blocker, not yet a measured causal proof.
+
 ## Next run
 
 Iteration 03 is immutable at the hash recorded in `MANIFEST.json` and its

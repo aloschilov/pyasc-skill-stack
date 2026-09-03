@@ -64,6 +64,16 @@ Avoid large `vf_fusion=True, reuse_alloc=1` tanh loops merely because they fit
 the static UB budget. A 72-core, tile-13,824 GeLU route compiled at 221,184
 bytes and then hit vector-core timeout 507034 on the 67M-element official case.
 
+Do not replace the cancellation-free tanh route with
+`0.5*x*(1+asc.adv.tanh(u))` based on source size alone. A native FP16 probe
+lowers to much smaller AscendC, but CPU formula validation violates the
+CANNBench MARE bound on the `[-10, 10]` case because the negative tail rounds
+`1+tanh(u)` to zero. Native BF16 basic multiplication does not lower at all in
+commit `0a631f70`, so retain FP32 promotion for BF16. The installed CANN API
+has a fused `AscendC::Gelu`; pyasc v2 does not expose it, which should be filed
+as a performance/API blocker rather than worked around with an inaccurate
+formula.
+
 Pinned-v2 scalar rule: both data branches of `asctile.where(condition, a, b)`
 must be LocalTensor values. A Python scalar branch such as
 `asctile.where(x >= 0, 1.0, tile)` fails with `AttributeError: 'float' object has

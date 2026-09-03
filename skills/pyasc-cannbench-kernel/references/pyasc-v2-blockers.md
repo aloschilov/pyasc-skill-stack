@@ -39,6 +39,13 @@ This is a routing summary. Detailed evidence and confidence labels live in
   72-core, tile-13,824 GeLU tanh route with VF+reuse fit 221,184 bytes but timed
   out on the vector core in official case 4. Treat the combination as unsafe
   until separately reproduced and bounded.
+- Native low-level GeLU arithmetic supports FP16/FP32 in the current compile
+  probe, but basic `asc.mul` rejects BF16. Keep BF16 computation promoted to
+  FP32 and cast once on output.
+- CANN exposes a fused `AscendC::Gelu` helper, but pyasc v2 at `0a631f70` has no
+  dialect/Python binding for it. Composed `erfc`/`tanh`/`exp` routes cannot be
+  assumed to match the fused baseline; record this as an upstream API and
+  performance blocker.
 - Target-derived kernels may rely on launch-time `asctile.ConstExpr` wrappers
   even when their JIT signatures are unannotated. Preserve the upstream test's
   dispatch contract; this is required by current-v2 RMSNorm.
