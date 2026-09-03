@@ -1,12 +1,12 @@
-# pyasc asc2 kernel contract (follow EXACTLY — every rule below was learned from real failures on this hardware)
+# pyasc asctile kernel contract (follow EXACTLY — every rule below was learned from real failures on this hardware)
 
 ## Module shape
 
 Your file becomes `cann_bench/<module>.py` inside the submission wheel. It must contain:
 
-- imports at module top: `import torch`, `import asc`, `import asc2`,
+- imports at module top: `import torch`, `import asc`, `import asctile`,
   `from ._pyasc_runtime import ensure_npu_platform` (and `import math` if needed)
-- one or more `@asc2.jit` kernel functions
+- one or more `@asctile.jit` kernel functions
 - ONE public callable matching the operator schema exactly (name and signature)
 - wrapper body: call `ensure_npu_platform()` first; make inputs contiguous if
   needed (`x = x.contiguous()` is allowed); allocate outputs with
@@ -16,8 +16,8 @@ Your file becomes `cann_bench/<module>.py` inside the submission wheel. It must 
 
 ## Kernel authoring rules
 
-- Global memory views: `asc2.global_tensor(ptr, [size])` (1-D) or
-  `asc2.global_tensor(ptr, [rows, cols])` (2-D). Ranks of global_tensor /
+- Global memory views: `asctile.global_tensor(ptr, [size])` (1-D) or
+  `asctile.global_tensor(ptr, [rows, cols])` (2-D). Ranks of global_tensor /
   copy_in / copy_out / offsets must ALL match — never mix 1-D and 2-D.
 - Kernel params: pointers typed `asc.GlobalAddress`; sizes as plain `int`
   (runtime); tile sizes as `asc.ConstExpr[int]` (compile-time; REQUIRED for any
@@ -25,29 +25,35 @@ Your file becomes `cann_bench/<module>.py` inside the submission wheel. It must 
 - Grid-stride tile loop (the proven pattern):
 
 ```python
-for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(), unroll_factor=2):
+for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(), unroll_factor=2):
     off = t * tile_size
     n = tile_size if off + tile_size <= size else size - off   # tail handling
-    x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])
+    x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[n])
     ...compute on tiles...
-    asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
+    asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
 ```
+
+- `real_shape` padding participates in vector arithmetic even though it is not
+  copied back. Set `pad_value` to an operation-neutral, exception-safe value:
+  zero for additive/reduction inputs, one for divisors, and a finite value
+  before `log`/reciprocal paths. The default zero is unsafe for a padded
+  divisor and may trigger CAModel divide-by-zero diagnostics.
 
 - Launch: `kernel[cores](...)` with `cores = min(72, num_tiles)` (72 AIV cores
   on this 950PR box). No stream argument.
-- Available tile ops: `+ - * /` (tile-tile and tile-scalar), `asc2.abs`,
-  `asc2.exp`, `asc2.exp2`, `asc2.log`, `asc2.log2`, `asc2.sqrt`,
-  `asc2.rsqrt`, `asc2.tanh`, `asc2.erf`, `asc2.sin`, `asc2.cos`,
-  `asc2.floor`, `asc2.ceil`, `asc2.relu`, `asc2.maximum`, `asc2.minimum`,
-  comparisons (`x >= 0.0`, `asc2.less(a, b)`, ... — NO int64 operands),
-  `asc2.where(cond, a, b)`, `asc2.reduce_sum(x)`, `asc2.reduce_max(x)`,
-  `asc2.reduce_min(x)`, `asc2.full([shape], scalar, dtype=...)`,
-  `asc2.cast(tile, dtype)` / `tile.to(dtype)` casts, integer
-  `asc2.left_shift`/`asc2.right_shift`, tile-shape ops `asc2.reshape`,
-  `asc2.transpose`, `asc2.ravel`, `asc2.expand_dims`, `asc2.squeeze`,
-  `asc2.broadcast_to`, `asc2.concat`, unary `-x`.
+- Available tile ops: `+ - * /` (tile-tile and tile-scalar), `asctile.abs`,
+  `asctile.exp`, `asctile.exp2`, `asctile.log`, `asctile.log2`, `asctile.sqrt`,
+  `asctile.rsqrt`, `asctile.tanh`, `asctile.erf`, `asctile.sin`, `asctile.cos`,
+  `asctile.floor`, `asctile.ceil`, `asctile.relu`, `asctile.maximum`, `asctile.minimum`,
+  comparisons (`x >= 0.0`, `asctile.less(a, b)`, ... — NO int64 operands),
+  `asctile.where(cond, a, b)`, `asctile.reduce_sum(x)`, `asctile.reduce_max(x)`,
+  `asctile.reduce_min(x)`, `asctile.full([shape], scalar, dtype=...)`,
+  `asctile.cast(tile, dtype)` / `tile.to(dtype)` casts, integer
+  `asctile.left_shift`/`asctile.right_shift`, tile-shape ops `asctile.reshape`,
+  `asctile.transpose`, `asctile.ravel`, `asctile.expand_dims`, `asctile.squeeze`,
+  `asctile.broadcast_to`, `asctile.concat`, unary `-x`.
 - int8 tiles: loading (copy_in) is fine but NO vector op accepts int8 input
-  (not even `.to`); convert with `asc2.cast(t, asc.float16)` first. There is
+  (not even `.to`); convert with `asctile.cast(t, asc.float16)` first. There is
   no uint8 tile dtype at all.
 - Scalars go on the RIGHT of tile arithmetic (Tile has no `__rmul__`):
   write `x * 0.5`, NEVER `0.5 * x`. Same for `+ - /`.
@@ -64,28 +70,28 @@ for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(), unroll_factor
   512 for long (> 16). A launch failing with `RuntimeError: UB overflow: X
   bytes are available, Y bytes are used` means: halve TILE (do NOT drop
   cases).
-- `asc2.where` / comparison destination tiles must be a multiple of 256 bytes
+- `asctile.where` / comparison destination tiles must be a multiple of 256 bytes
   (`TILE * 4 % 256 == 0` for f32 — any TILE >= 64 is safe).
 - Loop-carried scalar accumulators (VERIFIED on this build): seed with
-  `acc = asc2.reduce_sum(asc2.full([1, 64], 0.0, dtype=asc.float32))`
+  `acc = asctile.reduce_sum(asctile.full([1, 64], 0.0, dtype=asc.float32))`
   (a bare `acc = 0.0` fails codegen with "re-assigned to an object with
-  different type"), then `acc = acc + asc2.reduce_sum(x)` inside a plain
-  `asc2.range(...)` loop. `asc2.range` accepts ONLY `unroll_factor` and
-  `parallel` — there is NO `gm_barrier` kwarg on this build (it raises
-  TypeError).
-- Cross-core reductions (VERIFIED): `asc2.atomic_add(src_tile, dst_gm,
+  different type"), then `acc = acc + asctile.reduce_sum(x)` inside a plain
+  `asctile.range(...)` loop. Current `v2@030e9b2c` accepts `unroll_factor`
+  and `gm_barrier`; it does not accept `parallel`. Use `gm_barrier=True` only
+  when one iteration depends on global-memory writes from the previous one.
+- Cross-core reductions (VERIFIED): `asctile.atomic_add(src_tile, dst_gm,
   [offset])` atomically accumulates a tile into global memory (dtypes int16/
-  int32/f16/bf16/f32; also `asc2.atomic_max`). Host must zero the
+  int32/f16/bf16/f32; also `asctile.atomic_max`). Host must zero the
   destination first (`torch.zeros(...)` — tensor creation is allowed).
   Pattern: each core reduce_sums its tiles into a scalar, widens it with
-  `asc2.full([8], s, dtype=...)`, and atomic_adds slot [0]; a second tiny
+  `asctile.full([8], s, dtype=...)`, and atomic_adds slot [0]; a second tiny
   kernel (or the same one on one core) applies any final transform.
 - Scalar reduction results must be widened before store:
-  `asc2.copy_out(asc2.full([8], s, dtype=...), out_gm, [0], real_shape=[8])`
+  `asctile.copy_out(asctile.full([8], s, dtype=...), out_gm, [0], real_shape=[8])`
   style (min 32 bytes).
-- Inside `@asc2.jit`: NO `print`, NO imports, NO `break`/`continue`/early
+- Inside `@asctile.jit`: NO `print`, NO imports, NO `break`/`continue`/early
   `return`, NO exceptions, NO Python `range()` over runtime values (use
-  `asc2.range`), NO `math.*` calls (precompute module-level constants).
+  `asctile.range`), NO `math.*` calls (precompute module-level constants).
 
 ## Numerical stability (MANDATORY — f32 cases use ranges like [-88, 88] and [-100, 100] under a ~1.2e-4 relative-error threshold)
 
@@ -97,7 +103,7 @@ for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(), unroll_factor
   - `1 + tanh(u) = 2 * sigmoid(2u)`
   - `tanh(softplus(x))`: with `w = exp(-|x|)`, equals
     `(1 + 2w) / (1 + 2w + 2w^2)` for `x >= 0`, `(w^2 + 2w) / (w^2 + 2w + 2)`
-    for `x < 0` (exact identities; blend with `asc2.where(xf >= 0.0, ...)`)
+    for `x < 0` (exact identities; blend with `asctile.where(xf >= 0.0, ...)`)
   - `erfc(z)` for `z >= 0`: Numerical Recipes fit `t * exp(-z*z + P(t))`,
     `t = 1/(1 + z/2)`, rel. err < 1.2e-7 (see the gelu reference module for
     the 9-coefficient Horner chain)
@@ -107,7 +113,7 @@ for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(), unroll_factor
 
 ## Anti-cheat (violations zero the submission)
 
-- ALL numerical work happens inside `@asc2.jit` kernels launched on the NPU.
+- ALL numerical work happens inside `@asctile.jit` kernels launched on the NPU.
 - torch usage is allowed ONLY for: output allocation (`torch.empty`,
   `torch.empty_like`), metadata (`.shape`, `.numel()`, `.stride()`, `.dtype`,
   `.is_contiguous()`), contiguity (`.contiguous()`), and views (`.view`,

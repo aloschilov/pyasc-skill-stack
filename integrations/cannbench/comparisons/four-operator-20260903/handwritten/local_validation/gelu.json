@@ -1,0 +1,301 @@
+{
+  "candidate": "integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/gelu.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:19:20:\n        input_cub = input_sq * row\n        input_cub = row + input_cub * TANH_APPROX_FACTOR\n        input_cub = input_cub * NEG_SQRT_EIGHT_OVER_PI\n        input_cub = asctile.exp(input_cub)\n                    ^\n        input_cub = input_cub + 1\n        out = row / input_cub\n        asctile.copy_out(out, out_gm, [current_offset])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_length\": \"PlainArgType:int32\", \"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff624e5da0>\", \"max\": \"<function max at 0xffff624e5bc0>\", \"min\": \"<function min at 0xffff624e5c60>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff624e5d00>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 1, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"NEG_SQRT_EIGHT_OVER_PI\": \"ConstExpr[float](-0.071354816245515)\", \"TANH_APPROX_FACTOR\": \"ConstExpr[float](22.363860002236386)\", \"tile_length\": \"ConstExpr[int](15872)\", \"unroll_factor\": \"ConstExpr[int](2)\"}, \"kernel\": \"_target_gelu_kernel\"}",
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:19:20:\n        input_cub = input_sq * row\n        input_cub = row + input_cub * TANH_APPROX_FACTOR\n        input_cub = input_cub * NEG_SQRT_EIGHT_OVER_PI\n        input_cub = asctile.exp(input_cub)\n                    ^\n        input_cub = input_cub + 1\n        out = row / input_cub\n        asctile.copy_out(out, out_gm, [current_offset])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_length\": \"PlainArgType:int32\", \"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff624e5da0>\", \"max\": \"<function max at 0xffff624e5bc0>\", \"min\": \"<function min at 0xffff624e5c60>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff624e5d00>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 1, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"NEG_SQRT_EIGHT_OVER_PI\": \"ConstExpr[float](-0.071354816245515)\", \"TANH_APPROX_FACTOR\": \"ConstExpr[float](22.363860002236386)\", \"tile_length\": \"ConstExpr[int](15872)\", \"unroll_factor\": \"ConstExpr[int](2)\"}, \"kernel\": \"_target_gelu_kernel\"}",
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:19:20:\n        input_cub = input_sq * row\n        input_cub = row + input_cub * TANH_APPROX_FACTOR\n        input_cub = input_cub * NEG_SQRT_EIGHT_OVER_PI\n        input_cub = asctile.exp(input_cub)\n                    ^\n        input_cub = input_cub + 1\n        out = row / input_cub\n        asctile.copy_out(out, out_gm, [current_offset])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_length\": \"PlainArgType:int32\", \"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff624e5da0>\", \"max\": \"<function max at 0xffff624e5bc0>\", \"min\": \"<function min at 0xffff624e5c60>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff624e5d00>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 1, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"NEG_SQRT_EIGHT_OVER_PI\": \"ConstExpr[float](-0.071354816245515)\", \"TANH_APPROX_FACTOR\": \"ConstExpr[float](22.363860002236386)\", \"tile_length\": \"ConstExpr[int](15872)\", \"unroll_factor\": \"ConstExpr[int](2)\"}, \"kernel\": \"_target_gelu_kernel\"}",
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:19:20:\n        input_cub = input_sq * row\n        input_cub = row + input_cub * TANH_APPROX_FACTOR\n        input_cub = input_cub * NEG_SQRT_EIGHT_OVER_PI\n        input_cub = asctile.exp(input_cub)\n                    ^\n        input_cub = input_cub + 1\n        out = row / input_cub\n        asctile.copy_out(out, out_gm, [current_offset])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_length\": \"PlainArgType:int32\", \"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff624e5da0>\", \"max\": \"<function max at 0xffff624e5bc0>\", \"min\": \"<function min at 0xffff624e5c60>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff624e5d00>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 1, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"NEG_SQRT_EIGHT_OVER_PI\": \"ConstExpr[float](-0.071354816245515)\", \"TANH_APPROX_FACTOR\": \"ConstExpr[float](22.363860002236386)\", \"tile_length\": \"ConstExpr[int](15872)\", \"unroll_factor\": \"ConstExpr[int](2)\"}, \"kernel\": \"_target_gelu_kernel\"}",
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:19:20:\n        input_cub = input_sq * row\n        input_cub = row + input_cub * TANH_APPROX_FACTOR\n        input_cub = input_cub * NEG_SQRT_EIGHT_OVER_PI\n        input_cub = asctile.exp(input_cub)\n                    ^\n        input_cub = input_cub + 1\n        out = row / input_cub\n        asctile.copy_out(out, out_gm, [current_offset])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_length\": \"PlainArgType:int32\", \"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff624e5da0>\", \"max\": \"<function max at 0xffff624e5bc0>\", \"min\": \"<function min at 0xffff624e5c60>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff624e5d00>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 1, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"NEG_SQRT_EIGHT_OVER_PI\": \"ConstExpr[float](-0.071354816245515)\", \"TANH_APPROX_FACTOR\": \"ConstExpr[float](22.363860002236386)\", \"tile_length\": \"ConstExpr[int](15872)\", \"unroll_factor\": \"ConstExpr[int](2)\"}, \"kernel\": \"_target_gelu_kernel\"}",
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:19:20:\n        input_cub = input_sq * row\n        input_cub = row + input_cub * TANH_APPROX_FACTOR\n        input_cub = input_cub * NEG_SQRT_EIGHT_OVER_PI\n        input_cub = asctile.exp(input_cub)\n                    ^\n        input_cub = input_cub + 1\n        out = row / input_cub\n        asctile.copy_out(out, out_gm, [current_offset])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_length\": \"PlainArgType:int32\", \"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff624e5da0>\", \"max\": \"<function max at 0xffff624e5bc0>\", \"min\": \"<function min at 0xffff624e5c60>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff624e5d00>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 1, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"NEG_SQRT_EIGHT_OVER_PI\": \"ConstExpr[float](-0.071354816245515)\", \"TANH_APPROX_FACTOR\": \"ConstExpr[float](22.363860002236386)\", \"tile_length\": \"ConstExpr[int](15872)\", \"unroll_factor\": \"ConstExpr[int](2)\"}, \"kernel\": \"_target_gelu_kernel\"}",
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_target_gelu_kernel"
+      ]
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 14,
+  "dispatch_passed": 14,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "gelu",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [
+    {
+      "ascendc_bytes": 9027,
+      "memory_consumed": {
+        "UB": 126976
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 9211,
+      "memory_consumed": {
+        "UB": 253952
+      },
+      "status": "passed"
+    },
+    {
+      "error": "CodegenError: at <source>:19:20:\n        input_cub = input_sq * row\n        input_cub = row + input_cub * TANH_APPROX_FACTOR\n        input_cub = input_cub * NEG_SQRT_EIGHT_OVER_PI\n        input_cub = asctile.exp(input_cub)\n                    ^\n        input_cub = input_cub + 1\n        out = row / input_cub\n        asctile.copy_out(out, out_gm, [current_offset])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16",
+      "status": "failed"
+    }
+  ],
+  "status": "failed",
+  "unique_specializations": 3,
+  "unique_specializations_passed": 2
+}

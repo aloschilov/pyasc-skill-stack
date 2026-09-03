@@ -1,0 +1,24 @@
+{
+  "phase": "repair",
+  "model": "dashscope/glm-5.2",
+  "session_id": "ses_f9ddc7f06ffeJ3H0asQaZ0LNAz",
+  "required_skills": [
+    "pyasc-cannbench-kernel",
+    "pyasc-code-review"
+  ],
+  "loaded_skills": [
+    "pyasc-cannbench-kernel",
+    "pyasc-code-review"
+  ],
+  "observed_skill_dirs": {
+    "pyasc-cannbench-kernel": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-cannbench-kernel",
+    "pyasc-code-review": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-code-review"
+  },
+  "missing_skills": [],
+  "artifact": "candidate.py",
+  "artifact_exists": true,
+  "completion_marker": "REPAIR_DONE",
+  "completion_marker_seen": false,
+  "skill_gate_passed": false,
+  "returncode": 124
+}

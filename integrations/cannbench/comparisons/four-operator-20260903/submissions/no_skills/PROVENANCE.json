@@ -1,0 +1,29 @@
+{
+  "arm": "no_skills",
+  "operators": [
+    "gelu",
+    "rms_norm",
+    "softmax",
+    "transpose"
+  ],
+  "runtime_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "runtime_wheel_sha256": "c86802f7cd33e96657ef3ba26573d40a54de3875dafe7995cb0dc960758e5479",
+  "candidates": {
+    "gelu": {
+      "sha256": "d74d059af15df90ebd5e386a0c2596c553423309a0e82ebf01ed866304c1608a",
+      "path": "integrations/cannbench/comparisons/four-operator-20260903/no_skills/candidates/gelu.py"
+    },
+    "rms_norm": {
+      "sha256": "d99df6e42d5a7959bf1bee2afba214666ade60f1ef6c3c4c7a9a45303edc55d9",
+      "path": "integrations/cannbench/comparisons/four-operator-20260903/no_skills/candidates/rms_norm.py"
+    },
+    "softmax": {
+      "sha256": "ce232b6d4b938667080a7f5c6fbe83d5186bea0b0d25aca4661876430db21f85",
+      "path": "integrations/cannbench/comparisons/four-operator-20260903/no_skills/candidates/softmax.py"
+    },
+    "transpose": {
+      "sha256": "887e9d7cca7134bbd9894ab597ec0f6718c2e60a091727ec5991180aab60aac5",
+      "path": "integrations/cannbench/comparisons/four-operator-20260903/no_skills/candidates/transpose.py"
+    }
+  }
+}

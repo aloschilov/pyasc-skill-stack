@@ -5,6 +5,12 @@ description: pyasc development resource index (local-first). Provides local API 
 
 # pyasc Development Resources
 
+For CANNBench, read the vendored task files and
+`integrations/cannbench/pyasc-v2-source` before any external or machine-local
+checkout. The exact commit in `SOURCE_COMMIT` outranks examples from a newer or
+older pyasc v2 tree. Load `pyasc-cannbench-kernel` for the compact operator
+contract and known-workaround routing.
+
 ## Overview
 
 This skill provides local-first documentation search for pyasc kernel development:

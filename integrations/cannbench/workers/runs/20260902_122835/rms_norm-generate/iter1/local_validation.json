@@ -1,0 +1,29 @@
+{
+  "target": "Ascend950PR_9599",
+  "candidate_sha256": "583e9d68064c47a7215208f6b3cf527ba67ff1face5e9d753b90d2964de42ed1",
+  "python_syntax": "passed",
+  "repository_static_gate": "passed",
+  "llvm_lowering": {
+    "passed_cases": 20,
+    "total_cases": 20,
+    "ub_overflows": 0,
+    "method": "local pyasc JIT with MockTensor over every CANNBench case dispatch"
+  },
+  "camodel": [
+    {
+      "shape": [8, 256],
+      "dtype": "float16",
+      "route": "full-row",
+      "status": "passed",
+      "max_abs_error": 0.0
+    },
+    {
+      "shape": [8, 1055],
+      "dtype": "float16",
+      "route": "split-D",
+      "status": "passed",
+      "max_abs_error": 0.00048828125
+    }
+  ],
+  "limitation": "Local camodel checks are representative; the official 20-case performance and accuracy result must come from CANNBench hardware."
+}

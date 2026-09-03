@@ -5,6 +5,17 @@ description: pyasc Python syntax support and restrictions reference. Documents s
 
 # pyasc Syntax Constraints
 
+> Current-v2 CANNBench override: commit `030e9b2c` renamed the tile package
+> from `asc2` to `asctile`. When `pyasc-cannbench-kernel` is loaded, translate
+> every legacy `asc2.*` spelling below to the corresponding `asctile.*`
+> spelling and use that campaign's vendored source as the API authority.
+
+Syntax and keyword support varies across v2 snapshots. For CANNBench, the
+source of truth is `integrations/cannbench/pyasc-v2-source` at the commit in
+`SOURCE_COMMIT`; load `pyasc-cannbench-kernel` and verify uncertain constructs
+against that source plus the exact-v2 compile gate. In particular, its
+`asc2.range` supports `unroll_factor` and `gm_barrier`, but not `parallel`.
+
 ## Overview
 
 pyasc compiles Python code to Ascend C via JIT. Only a subset of Python syntax is supported inside `@asc2.jit`-decorated functions. This skill documents what is and is not allowed.
@@ -82,7 +93,8 @@ def kernel(x_ptr: asc.GlobalAddress, tile_size: asc.ConstExpr[int]):
 
 Only these built-ins are available: `dict`, `float`, `int`, `isinstance`, `issubclass`, `len`, `list`, `range`, `repr`, `str`, `tuple`, `type`
 
-Note: For iteration inside `@asc2.jit`, use `asc2.range()` instead of `range()`. `asc2.range()` supports `unroll_factor` and `parallel` options.
+Note: For iteration inside `@asc2.jit`, use `asc2.range()` instead of `range()`.
+Do not assume optional keywords are portable between pyasc snapshots.
 
 ### Cube (matmul) loop + placement notes
 

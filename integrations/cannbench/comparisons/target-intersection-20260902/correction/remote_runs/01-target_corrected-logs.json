@@ -1,0 +1,114 @@
+{
+  "job_id": "job_a3e9153a2930",
+  "stage_summary": {
+    "current_stage": "archive",
+    "last_stage": "archive",
+    "last_stage_status": "archiving",
+    "failed_stage": null,
+    "failed_status": null,
+    "failed_message": null,
+    "event_count": 9
+  },
+  "stages": [
+    {
+      "stage": "prepare",
+      "status": "preparing",
+      "message": "downloading benchmark/submission",
+      "payload": {
+        "workspace": "/data0/pd/benchsite-dev-runner-jobs-0/job_a3e9153a2930"
+      },
+      "created_at": "2026-09-03T00:20:45.700944"
+    },
+    {
+      "stage": "compile",
+      "status": "compiling",
+      "message": "running cann-bench staged evaluation",
+      "payload": {
+        "stage": "staged",
+        "timeout_sec": 2200,
+        "operator_count": 2,
+        "case_count": 40,
+        "op_timeout_sec": 240,
+        "case_timeout_sec": 40
+      },
+      "created_at": "2026-09-03T00:20:46.385225"
+    },
+    {
+      "stage": "correctness",
+      "status": "correctness",
+      "message": "staged eval: correctness",
+      "payload": {
+        "stage": "staged",
+        "substage": "correctness"
+      },
+      "created_at": "2026-09-03T00:21:06.536298"
+    },
+    {
+      "stage": "correctness",
+      "status": "correctness",
+      "message": "staged eval: correctness (in progress)",
+      "payload": {
+        "stage": "staged",
+        "substage": "correctness",
+        "heartbeat": true,
+        "log_tail": "[truncated: 1068 earlier bytes omitted]\nget env ASCEND_RT_VISIBLE_DEVICES = 0\n[staged_eval] stage 1/3: compile\n[INFO] \u7f16\u8bd1: bash build.sh \u2192 _compile.log\n[INFO] \u7f16\u8bd1\u6210\u529f\n[staged_eval] compile: built cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl\n[staged_eval] stage 2/3: correctness\n[INFO] \u5b89\u88c5whl\u5305: cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl\n[INFO] \u5b89\u88c5: pip install --force-reinstall --no-deps /data0/pd/benchsite-dev-runner-jobs-0/job_a3e9153a2930/input/submission/dist/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl\n[pip] Processing ./input/submission/dist/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl\n[pip] Installing collected packages: cann-bench\n[pip]   Attempting uninstall: cann-bench\n[pip]     Found existing installation: cann_bench 1.0.0\n[pip]     Uninstalling cann_bench-1.0.0:\n[pip]       Successfully uninstalled cann_bench-1.0.0\n[pip] Successfully installed cann-bench-1.1.0\n[pip-warn] WARNING: The directory '/data0/pd/benchsite-dev-runner-jobs-0/job_a3e9153a2930/work/home/.cache/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.\n[pip-warn] WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\n[INFO] cann_bench \u5b89\u88c5\u4f4d\u7f6e: /usr/local/python3.12.13/lib/python3.12/site-packages/cann_bench/__init__.py\n[INFO] whl\u5305\u5b89\u88c5\u6210\u529f\n[INFO] \u8df3\u8fc7\u7f16\u8bd1\u5b89\u88c5\uff0c\u626b\u63cf\u5df2\u5b89\u88c5\u7684cann_bench\n\n============================================================\n\u626b\u63cf\u5230\u7684 cann_bench \u63a5\u53e3:\n============================================================\n  1. exp(x: torch.Tensor, base: float = -1.0, scale: float = 1.0, shift: float = 0.0) -> torch.Tensor\n  2. foreach_addcdiv_scalar(x1: list, x2: list, x3: list, scalar: float) -> list\n  3. foreach_norm(x, scalar)\n  4. gelu(x: torch.Tensor, approximate: str = 'none') -> torch.Tensor\n  5. masked_scale(x: torch.Tensor, mask: torch.Tensor, scale: float = 1.0) -> torch.Tensor\n  6. mish(x: torch.Tensor) -> torch.Tensor\n  7. rms_norm(x: torch.Tensor, gamma: torch.Tensor, epsilon: float = 1e-06) -> torch.Tensor\n  8. sigmoid(x: torch.Tensor) -> torch.Tensor\n  9. swi_glu(input: torch.Tensor, dim: int = -1) -> torch.Tensor\n\n\u5171 9 \u4e2a\u7b97\u5b50\u63a5\u53e3\n============================================================\n\n[INFO] \u5339\u914d\u5230 9 \u4e2atasks \u7b97\u5b50:\n       - Exp\n       - ForeachAddcdivScalar\n       - ForeachNorm\n       - Gelu\n       - MaskedScale\n       - Mish\n       - Sigmoid\n       - SwiGlu\n       - RmsNorm\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[INFO] \u914d\u7f6e: 1 \u5361 \u00d7 1 \u5e76\u53d1/\u5361\n[INFO] TaskUnit \u6570: 2, \u7528\u4f8b\u6570: 40\n[INFO] \u5355\u7b97\u5b50\u8d85\u65f6: 240s\n[INFO] \u6700\u5927\u5e76\u53d1: 1\n[INFO] \u91cd\u8bd5\u7b56\u7565: \u6700\u5927\u91cd\u8bd5 1 \u6b21 (timeout=True, oom=True, failure=True)\n[INFO] oom_score_adj=1000 \u8bbe\u7f6e\u6210\u529f: PID=162\n[INFO] oom_score_adj=1000 \u8bbe\u7f6e\u6210\u529f: PID=162\n[eval-child] \u5730\u5740\u7a7a\u95f4\u4e0a\u9650: \u5f53\u524d VmSize 2306.9 GiB + \u9884\u7b97 47104 MB \u2192 RLIMIT_AS 2352.9 GiB\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[eval-child] Card 0: 20 \u7528\u4f8b\u5f00\u59cb\u8bc4\u6d4b\n[INFO] \u8bc4\u6d4b\u7b97\u5b50 ForeachAddcdivScalar (level1/foreach_addcdiv_scalar), \u7528\u4f8b\u6570: 20\n[1/20] level1/foreach_addcdiv_scalar_1: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.777290e-08, MARE=1.192086e-07, float32[1]: \u2705 MERE=1.779210e-08, MARE=1.192089e-07)\n[2/20] level1/foreach_addcdiv_scalar_2: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=1.411683e-09, MARE=9.569377e-04, float16[1]: \u2705 MERE=2.597304e-09, MARE=9.606147e-04, float16[2]: \u2705 MERE=1.446331e-09, MARE=9.496676e-04)\n[3/20] level1/foreach_addcdiv_scalar_3: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[4/20] level1/foreach_addcdiv_scalar_4: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.621733e-08, MARE=1.192092e-07)\n[5/20] level1/foreach_addcdiv_scalar_5: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=4.091683e-09, MARE=9.737098e-04, float16[1]: \u2705 MERE=4.049024e-09, MARE=9.756097e-04)\n[6/20] level1/foreach_addcdiv_scalar_6: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=1.097608e-07, MARE=0.007746)\n[7/20] level1/foreach_addcdiv_scalar_7: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=2.459420e-08, MARE=1.882400e-07)\n[8/20] level1/foreach_addcdiv_scalar_8: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=4.190505e-10, MARE=4.952947e-04)\n[9/20] level1/foreach_addcdiv_scalar_9: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000, bfloat16[1]: \u2705 MERE=0.000000, MARE=0.000000)\n[10/20] level1/foreach_addcdiv_scalar_10: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.779200e-08, MARE=1.192088e-07)\n[11/20] level1/foreach_addcdiv_scalar_11: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=2.104423e-09, MARE=8.561644e-04, float16[1]: \u2705 MERE=1.487478e-09, MARE=9.624638e-04)\n[12/20] level1/foreach_addcdiv_scalar_12: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=0.000000, MARE=0.000000)\ncompare: \u6240\u6709\u6709\u6548\u4f4d\u7f6e\u5747\u4e3a NaN/Inf \u4e14\u5339\u914d\uff1b\u4e24\u4e2a\u7b97\u5b50\u5747\u8f93\u51fa NaN \u7684\u6781\u7aef\u60c5\u51b5\u53ef\u80fd\u63a9\u76d6\u72ec\u7acb\u7684\u6570\u503c bug\uff0c\u8bf7\u4eba\u5de5\u6838\u67e5 case \u8f93\u5165\u5206\u5e03\u3002 (total=10912759, dtype=bfloat16)\n[13/20] level1/foreach_addcdiv_scalar_13: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[14/20] level1/foreach_addcdiv_scalar_14: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.776440e-08, MARE=1.192087e-07)\n[15/20] level1/foreach_addcdiv_scalar_15: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.782287e-08, MARE=1.192079e-07, float32[1]: \u2705 MERE=1.781781e-08, MARE=1.192089e-07)\n[16/20] level1/foreach_addcdiv_scalar_16: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000, bfloat16[1]: \u2705 MERE=0.000000, MARE=0.000000, bfloat16[2]: \u2705 MERE=0.000000, MARE=0.000000, bfloat16[3]: \u2705 MERE=0.000000, MARE=0.000000)\n[17/20] level1/foreach_addcdiv_scalar_17: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[18/20] level1/foreach_addcdiv_scalar_18: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.885871e-08, MARE=1.192092e-07, float32[1]: \u2705 MERE=1.886341e-08, MARE=1.192089e-07)\n[19/20] level1/foreach_addcdiv_scalar_19: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=1.007341e-07, MARE=0.007749)\n[20/20] level1/foreach_addcdiv_scalar_20: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=2.461550e-08, MARE=2.289367e-07)\n[eval-child] Card 0: \u5b8c\u6210 20/20 \u901a\u8fc7\n\n\u6267\u884c\u8017\u65f6: 112.44s\n[INFO] [1/2] Card 0: ForeachAddcdivScalar \u2705 (20/20)\n[INFO] oom_score_adj=1000 \u8bbe\u7f6e\u6210\u529f: PID=266\n[INFO] oom_score_adj=1000 \u8bbe\u7f6e\u6210\u529f: PID=266\n[eval-child] \u5730\u5740\u7a7a\u95f4\u4e0a\u9650: \u5f53\u524d VmSize 2306.9 GiB + \u9884\u7b97 47104 MB \u2192 RLIMIT_AS 2352.9 GiB\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[eval-child] Card 0: 20 \u7528\u4f8b\u5f00\u59cb\u8bc4\u6d4b\n[INFO] \u8bc4\u6d4b\u7b97\u5b50 Gelu (level1/gelu), \u7528\u4f8b\u6570: 20\n[1/20] level1/gelu_1: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=3.783980e-08, MARE=9.074194e-04)\n[2/20] level1/gelu_2: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=7.262629e-08, MARE=6.252526e-07)\n[3/20] level1/gelu_3: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[4/20] level1/gelu_4: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=8.654444e-09, MARE=7.111315e-04)\n",
+        "log_bytes_total": 9260,
+        "truncated": true
+      },
+      "created_at": "2026-09-03T00:24:08.404893"
+    },
+    {
+      "stage": "performance",
+      "status": "performance",
+      "message": "staged eval: performance",
+      "payload": {
+        "stage": "staged",
+        "substage": "performance"
+      },
+      "created_at": "2026-09-03T00:25:08.714546"
+    },
+    {
+      "stage": "performance",
+      "status": "performance",
+      "message": "staged eval: performance (in progress)",
+      "payload": {
+        "stage": "staged",
+        "substage": "performance",
+        "heartbeat": true,
+        "log_tail": "[truncated: 14157 earlier bytes omitted]\n[INFO] \u8df3\u8fc7\u7f16\u8bd1\u5b89\u88c5\uff0c\u626b\u63cf\u5df2\u5b89\u88c5\u7684cann_bench\n\n============================================================\n\u626b\u63cf\u5230\u7684 cann_bench \u63a5\u53e3:\n============================================================\n  1. exp(x: torch.Tensor, base: float = -1.0, scale: float = 1.0, shift: float = 0.0) -> torch.Tensor\n  2. foreach_addcdiv_scalar(x1: list, x2: list, x3: list, scalar: float) -> list\n  3. foreach_norm(x, scalar)\n  4. gelu(x: torch.Tensor, approximate: str = 'none') -> torch.Tensor\n  5. masked_scale(x: torch.Tensor, mask: torch.Tensor, scale: float = 1.0) -> torch.Tensor\n  6. mish(x: torch.Tensor) -> torch.Tensor\n  7. rms_norm(x: torch.Tensor, gamma: torch.Tensor, epsilon: float = 1e-06) -> torch.Tensor\n  8. sigmoid(x: torch.Tensor) -> torch.Tensor\n  9. swi_glu(input: torch.Tensor, dim: int = -1) -> torch.Tensor\n\n\u5171 9 \u4e2a\u7b97\u5b50\u63a5\u53e3\n============================================================\n\n[INFO] \u5339\u914d\u5230 9 \u4e2atasks \u7b97\u5b50:\n       - Exp\n       - ForeachAddcdivScalar\n       - ForeachNorm\n       - Gelu\n       - MaskedScale\n       - Mish\n       - Sigmoid\n       - SwiGlu\n       - RmsNorm\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[INFO] \u914d\u7f6e: 1 \u5361 \u00d7 1 \u5e76\u53d1/\u5361\n[INFO] TaskUnit \u6570: 2, \u7528\u4f8b\u6570: 40\n[INFO] \u5355\u7b97\u5b50\u8d85\u65f6: 240s\n[INFO] \u6700\u5927\u5e76\u53d1: 1\n[INFO] \u91cd\u8bd5\u7b56\u7565: \u6700\u5927\u91cd\u8bd5 1 \u6b21 (timeout=True, oom=True, failure=True)\n[WARN] oom_score_adj \u5199\u5165\u5931\u8d25: /proc/462/oom_score_adj \u2014 \u8fdb\u7a0b\u5df2\u9000\u51fa\uff08\u5b50\u8fdb\u7a0b\u53ef\u80fd\u77ac\u95f4\u5d29\u6e83\uff09\n[WARN] \u5b50\u8fdb\u7a0b PID=462 oom_score_adj \u8bbe\u7f6e\u5931\u8d25\uff08OOM Kill \u65f6\u4e3b\u8fdb\u7a0b\u4e5f\u53ef\u80fd\u88ab\u6740\uff09\n[WARN] oom_score_adj \u5199\u5165\u5931\u8d25: /proc/462/oom_score_adj \u2014 \u8fdb\u7a0b\u5df2\u9000\u51fa\uff08\u5b50\u8fdb\u7a0b\u53ef\u80fd\u77ac\u95f4\u5d29\u6e83\uff09\n[eval-child] \u5730\u5740\u7a7a\u95f4\u4e0a\u9650: \u5f53\u524d VmSize 2306.9 GiB + \u9884\u7b97 47104 MB \u2192 RLIMIT_AS 2352.9 GiB\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[eval-child] Card 0: 20 \u7528\u4f8b\u5f00\u59cb\u8bc4\u6d4b\n[INFO] \u8bc4\u6d4b\u7b97\u5b50 ForeachAddcdivScalar (level1/foreach_addcdiv_scalar), \u7528\u4f8b\u6570: 20\n[1/20] level1/foreach_addcdiv_scalar_1: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.777290e-08, MARE=1.192086e-07, float32[1]: \u2705 MERE=1.779210e-08, MARE=1.192089e-07)\n[2/20] level1/foreach_addcdiv_scalar_2: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=1.411683e-09, MARE=9.569377e-04, float16[1]: \u2705 MERE=2.597304e-09, MARE=9.606147e-04, float16[2]: \u2705 MERE=1.446331e-09, MARE=9.496676e-04)\n[3/20] level1/foreach_addcdiv_scalar_3: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[4/20] level1/foreach_addcdiv_scalar_4: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.621733e-08, MARE=1.192092e-07)\n[5/20] level1/foreach_addcdiv_scalar_5: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=4.091683e-09, MARE=9.737098e-04, float16[1]: \u2705 MERE=4.049024e-09, MARE=9.756097e-04)\n[6/20] level1/foreach_addcdiv_scalar_6: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=1.097608e-07, MARE=0.007746)\n[7/20] level1/foreach_addcdiv_scalar_7: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=2.459420e-08, MARE=1.882400e-07)\n[8/20] level1/foreach_addcdiv_scalar_8: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=4.190505e-10, MARE=4.952947e-04)\n[9/20] level1/foreach_addcdiv_scalar_9: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000, bfloat16[1]: \u2705 MERE=0.000000, MARE=0.000000)\n[10/20] level1/foreach_addcdiv_scalar_10: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.779200e-08, MARE=1.192088e-07)\n[11/20] level1/foreach_addcdiv_scalar_11: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=2.104423e-09, MARE=8.561644e-04, float16[1]: \u2705 MERE=1.487478e-09, MARE=9.624638e-04)\n[12/20] level1/foreach_addcdiv_scalar_12: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=0.000000, MARE=0.000000)\ncompare: \u6240\u6709\u6709\u6548\u4f4d\u7f6e\u5747\u4e3a NaN/Inf \u4e14\u5339\u914d\uff1b\u4e24\u4e2a\u7b97\u5b50\u5747\u8f93\u51fa NaN \u7684\u6781\u7aef\u60c5\u51b5\u53ef\u80fd\u63a9\u76d6\u72ec\u7acb\u7684\u6570\u503c bug\uff0c\u8bf7\u4eba\u5de5\u6838\u67e5 case \u8f93\u5165\u5206\u5e03\u3002 (total=10912759, dtype=bfloat16)\n[13/20] level1/foreach_addcdiv_scalar_13: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[14/20] level1/foreach_addcdiv_scalar_14: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.776440e-08, MARE=1.192087e-07)\n[15/20] level1/foreach_addcdiv_scalar_15: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.782287e-08, MARE=1.192079e-07, float32[1]: \u2705 MERE=1.781781e-08, MARE=1.192089e-07)\n[16/20] level1/foreach_addcdiv_scalar_16: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000, bfloat16[1]: \u2705 MERE=0.000000, MARE=0.000000, bfloat16[2]: \u2705 MERE=0.000000, MARE=0.000000, bfloat16[3]: \u2705 MERE=0.000000, MARE=0.000000)\n[17/20] level1/foreach_addcdiv_scalar_17: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[18/20] level1/foreach_addcdiv_scalar_18: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.885871e-08, MARE=1.192092e-07, float32[1]: \u2705 MERE=1.886341e-08, MARE=1.192089e-07)\n[19/20] level1/foreach_addcdiv_scalar_19: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=1.007341e-07, MARE=0.007749)\n[20/20] level1/foreach_addcdiv_scalar_20: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=2.461550e-08, MARE=2.289367e-07)\n[INFO] \u6279\u91cf\u6027\u80fd\u91c7\u96c6\u5b8c\u6210: 20/20 \u6709\u6548, 0 \u4e2a case \u56de\u9000\u9010 case\n[eval-child] Card 0: \u5b8c\u6210 20/20 \u901a\u8fc7\n\n\u6267\u884c\u8017\u65f6: 103.42s\n[INFO] [1/2] Card 0: ForeachAddcdivScalar \u2705 (20/20)\n[WARN] oom_score_adj \u5199\u5165\u5931\u8d25: /proc/854/oom_score_adj \u2014 \u8fdb\u7a0b\u5df2\u9000\u51fa\uff08\u5b50\u8fdb\u7a0b\u53ef\u80fd\u77ac\u95f4\u5d29\u6e83\uff09\n[WARN] \u5b50\u8fdb\u7a0b PID=854 oom_score_adj \u8bbe\u7f6e\u5931\u8d25\uff08OOM Kill \u65f6\u4e3b\u8fdb\u7a0b\u4e5f\u53ef\u80fd\u88ab\u6740\uff09\n[WARN] oom_score_adj \u5199\u5165\u5931\u8d25: /proc/854/oom_score_adj \u2014 \u8fdb\u7a0b\u5df2\u9000\u51fa\uff08\u5b50\u8fdb\u7a0b\u53ef\u80fd\u77ac\u95f4\u5d29\u6e83\uff09\n[eval-child] \u5730\u5740\u7a7a\u95f4\u4e0a\u9650: \u5f53\u524d VmSize 2306.9 GiB + \u9884\u7b97 47104 MB \u2192 RLIMIT_AS 2352.9 GiB\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[eval-child] Card 0: 20 \u7528\u4f8b\u5f00\u59cb\u8bc4\u6d4b\n[INFO] \u8bc4\u6d4b\u7b97\u5b50 Gelu (level1/gelu), \u7528\u4f8b\u6570: 20\n[1/20] level1/gelu_1: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=3.783980e-08, MARE=9.074194e-04)\n[2/20] level1/gelu_2: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=7.262629e-08, MARE=6.252526e-07)\n[3/20] level1/gelu_3: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[4/20] level1/gelu_4: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=8.654444e-09, MARE=7.111315e-04)\n[5/20] level1/gelu_5: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=6.512232e-09, MARE=1.744719e-06)\n[6/20] level1/gelu_6: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[7/20] level1/gelu_7: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=2.855500e-08, MARE=9.074194e-04)\n[8/20] level1/gelu_8: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=7.996492e-08, MARE=1.652358e-06)\n[9/20] level1/gelu_9: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=8.095691e-12, MARE=2.307182e-09)\n[10/20] level1/gelu_10: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[11/20] level1/gelu_11: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=1.085722e-08, MARE=2.172535e-06)\n[12/20] level1/gelu_12: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[13/20] level1/gelu_13: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=7.081385e-08, MARE=5.469487e-07)\n[14/20] level1/gelu_14: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[15/20] level1/gelu_15: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=8.156159e-08, MARE=4.845926e-07)\n[16/20] level1/gelu_16: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[17/20] level1/gelu_17: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[18/20] level1/gelu_18: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=8.859495e-08, MARE=5.123476e-07)\n[19/20] level1/gelu_19: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n[20/20] level1/gelu_20: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=3.195170e-08, MARE=2.274887e-06)\n",
+        "log_bytes_total": 22349,
+        "truncated": true
+      },
+      "created_at": "2026-09-03T00:28:10.536692"
+    },
+    {
+      "stage": "correctness",
+      "status": "correctness",
+      "message": "cann-bench staged evaluation completed",
+      "payload": {
+        "stage": "staged",
+        "result_stage": "final"
+      },
+      "created_at": "2026-09-03T00:28:27.890555"
+    },
+    {
+      "stage": "performance",
+      "status": "performance",
+      "message": "cann-bench staged evaluation completed",
+      "payload": {
+        "stage": "staged",
+        "result_stage": "final"
+      },
+      "created_at": "2026-09-03T00:28:28.040154"
+    },
+    {
+      "stage": "archive",
+      "status": "archiving",
+      "message": "archiving outputs",
+      "payload": {
+        "workspace": "/data0/pd/benchsite-dev-runner-jobs-0/job_a3e9153a2930"
+      },
+      "created_at": "2026-09-03T00:28:28.183022"
+    }
+  ]
+}

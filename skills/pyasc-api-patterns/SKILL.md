@@ -5,6 +5,19 @@ description: pyasc asc2 API usage patterns and best practices. Provides correct 
 
 # pyasc asc2 API Best Practices
 
+> **Select the runtime profile before copying an API pattern.** The generic
+> examples below describe the stack's simulator/golden profile and include
+> APIs from more than one pyasc v2 snapshot. For CANNBench, load
+> `pyasc-cannbench-kernel` instead: the submitted runtime is pinned to
+> `compiler-team/pyasc:v2@030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d` and its
+> memory API is `global_tensor` / `copy_in` / `copy_out`, with `real_shape`
+> for tails. Do not translate a CANNBench module from the older
+> `tensor` / `load` / `store` examples in this file.
+
+This file is intentionally a broad catalog. Load only the directly relevant
+reference section after the profile is selected; loading the entire catalog
+can exhaust a worker's context before it writes code.
+
 ## API Category Index
 
 | API Category | Key APIs | Typical Scenarios |

@@ -1,0 +1,14 @@
+{
+  "phase": "design",
+  "attempt": 1,
+  "model": "dashscope/glm-5.2",
+  "returncode": -2,
+  "timed_out": false,
+  "session_id": "ses_f99db6534ffe4GRx1cPb4Aq3qj",
+  "skill_calls": [],
+  "required_skills": [],
+  "verified_loaded_skills": [],
+  "completion_marker_seen": false,
+  "artifact_exists": false,
+  "accepted": false
+}

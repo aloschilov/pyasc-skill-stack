@@ -1,0 +1,31 @@
+{
+  "phase": "review",
+  "model": "dashscope/glm-5.2",
+  "session_id": "ses_f9e0688eeffeOZEv0S2Q9M1lYa",
+  "required_skills": [
+    "pyasc-cannbench-kernel",
+    "pyasc-code-review",
+    "pyasc-build-run-verify"
+  ],
+  "loaded_skills": [
+    "pyasc-cannbench-kernel",
+    "pyasc-code-review",
+    "pyasc-build-run-verify",
+    "pyasc-api-patterns",
+    "pyasc-syntax-constraints"
+  ],
+  "observed_skill_dirs": {
+    "pyasc-cannbench-kernel": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-cannbench-kernel",
+    "pyasc-code-review": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-code-review",
+    "pyasc-build-run-verify": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-build-run-verify",
+    "pyasc-api-patterns": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-api-patterns",
+    "pyasc-syntax-constraints": "/home/aloschilov/.config/opencode/skills/pyasc-syntax-constraints"
+  },
+  "missing_skills": [],
+  "artifact": "candidate.py",
+  "artifact_exists": true,
+  "completion_marker": "REVIEW_DONE",
+  "completion_marker_seen": false,
+  "skill_gate_passed": false,
+  "returncode": 124
+}

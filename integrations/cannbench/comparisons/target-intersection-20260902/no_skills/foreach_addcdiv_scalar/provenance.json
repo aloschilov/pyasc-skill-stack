@@ -1,0 +1,49 @@
+{
+  "variant": "opencode-no-skills",
+  "operator": "foreach_addcdiv_scalar",
+  "models": {
+    "design": "dashscope/qwen3.7-max",
+    "implement": "dashscope/qwen3.7-max",
+    "review": "dashscope/glm-5.2"
+  },
+  "phases": [
+    {
+      "phase": "design",
+      "model": "dashscope/qwen3.7-max",
+      "returncode": 0,
+      "timed_out": false,
+      "session_id": "ses_f9d76c6e8ffeDhvrVn5tMJFeZg",
+      "skill_calls": [],
+      "skill_call_count": 0,
+      "completion_marker": "DESIGN_DONE",
+      "completion_marker_seen": true
+    },
+    {
+      "phase": "implement",
+      "model": "dashscope/qwen3.7-max",
+      "returncode": 0,
+      "timed_out": false,
+      "session_id": "ses_f9d7501b7ffemVjLvDUCXF0Xg3",
+      "skill_calls": [],
+      "skill_call_count": 0,
+      "completion_marker": "IMPLEMENT_DONE",
+      "completion_marker_seen": true
+    },
+    {
+      "phase": "review",
+      "model": "dashscope/glm-5.2",
+      "returncode": 0,
+      "timed_out": false,
+      "session_id": "ses_f9d7478e2ffetKv2qs0lIm11YD",
+      "skill_calls": [],
+      "skill_call_count": 0,
+      "completion_marker": "REVIEW_DONE",
+      "completion_marker_seen": true
+    }
+  ],
+  "skill_call_count": 0,
+  "task_sha256": "4b1cc97ccfdb906cc75281bdffe5520f443cdb3e60d1d26d12c2bf2ccf443983",
+  "design_sha256": "a7f86d87f1b26745189a309ae5c9d28faa733d74ffad10fed16e53ded016c5ac",
+  "candidate_sha256": "db12829e2034b1cfa1709cec8b50115345785f1ba432e4ca2bce02532dbf189d",
+  "runtime_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778"
+}

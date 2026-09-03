@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "status": "locally-qualified-full-matrix",
+  "evidence": "verified-local-compile",
+  "operators": [
+    "sigmoid",
+    "exp",
+    "mish",
+    "gelu",
+    "masked_scale",
+    "swi_glu",
+    "foreach_addcdiv_scalar",
+    "foreach_norm",
+    "rms_norm"
+  ],
+  "cases_per_operator": 20,
+  "matrix_evidence": {
+    "path": "evidence/cannbench/generated_full_coverage_20260902/summary.json",
+    "sha256": "42ed5c39f8ef51375b14e611e5d2ff907571c50de5eb752fdc2aff7c8056cacb",
+    "operators_passed": 9,
+    "compile_routes_passed": 180
+  },
+  "camodel_smoke_evidence": {
+    "path": "evidence/cannbench/generated_camodel_smoke_20260902/summary.json",
+    "sha256": "cf0c8e4cefe30ca667fe70c4775c2b1f46c705972e5446a0acee7fa2d6b12023",
+    "operators_passed": 9,
+    "routes_passed": 20,
+    "scope": "9 basic float32 plus 11 selected dtype/control-flow routes"
+  },
+  "pyasc_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+  "sources": {
+    "sigmoid": {
+      "candidate": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/cann_bench/sigmoid.py",
+      "provenance": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/provenance/sigmoid.json"
+    },
+    "exp": {
+      "candidate": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/cann_bench/exp.py",
+      "provenance": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/provenance/exp.json"
+    },
+    "mish": {
+      "candidate": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/cann_bench/mish.py",
+      "provenance": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/provenance/mish.json"
+    },
+    "gelu": {
+      "candidate": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/cann_bench/gelu.py",
+      "provenance": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/provenance/gelu.json"
+    },
+    "masked_scale": {
+      "candidate": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/cann_bench/masked_scale.py",
+      "provenance": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/provenance/masked_scale.json"
+    },
+    "foreach_addcdiv_scalar": {
+      "candidate": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/cann_bench/foreach_addcdiv_scalar.py",
+      "provenance": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_140812/locally_qualified/provenance/foreach_addcdiv_scalar.json"
+    },
+    "swi_glu": {
+      "candidate": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_staged_completion3/swi_glu/qualified/swi_glu.py",
+      "provenance": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_staged_completion3/swi_glu/qualified/provenance.json"
+    },
+    "foreach_norm": {
+      "candidate": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_staged_completion2/foreach_norm/qualified/foreach_norm.py",
+      "provenance": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_staged_completion2/foreach_norm/qualified/provenance.json"
+    },
+    "rms_norm": {
+      "candidate": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_staged_completion2/rms_norm/qualified/rms_norm.py",
+      "provenance": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/runs/20260902_staged_completion2/rms_norm/qualified/provenance.json"
+    }
+  },
+  "limitations": [
+    "full 180-case numerical execution is pending; only 20 representative smoke routes are verified",
+    "no NPU performance measurement",
+    "not promoted to the canonical submission package"
+  ]
+}

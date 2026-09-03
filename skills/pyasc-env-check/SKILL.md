@@ -5,6 +5,16 @@ description: pyasc development environment check skill. Verifies Python version,
 
 # pyasc Environment Check
 
+## CANNBench pinned-runtime profile
+
+`compiler-team/pyasc` branch `v2` is not available from the Python package
+repositories used by this project. For CANNBench, do not run `pip install
+pyasc` and do not trust another local checkout. Verify
+`integrations/cannbench/pyasc-v2-source/SOURCE_COMMIT` and use the vendored
+CPython 3.12 x86_64 wheel through
+`integrations/cannbench/workers/run_local_compile_gate.sh`. The normal checks
+below apply to standalone simulator development.
+
 Quickly verify the development environment for pyasc kernel development.
 
 ## Workflow
@@ -69,7 +79,8 @@ This project is verified against **CANN 9.0.0** (`ascendai/cann:9.0.0-beta.2-910
 
 ## Troubleshooting
 
-- **`import asc` fails**: Install pyasc with `pip install pyasc` or build from source
+- **`import asc` fails**: for standalone development, build the selected pyasc
+  source; for CANNBench use the vendored exact-runtime gate above
 - **CANN not found**: Run `source /usr/local/Ascend/ascend-toolkit/set_env.sh`
 - **numpy >= 2.0 error**: Downgrade with `pip install "numpy<2"`
 - **Model backend fails**: Check `LD_LIBRARY_PATH` includes CANN simulator libs

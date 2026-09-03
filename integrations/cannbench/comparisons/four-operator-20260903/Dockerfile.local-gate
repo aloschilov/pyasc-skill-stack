@@ -1,0 +1,15 @@
+FROM python:3.12.13-slim-bookworm
+
+RUN python -m pip install --no-cache-dir \
+    "numpy<2" packaging pybind11==2.13.6 pyyaml typing_extensions
+
+COPY comparisons/four-operator-20260903/runtime-dist/pyasc-1.1.1-cp312-cp312-linux_x86_64.whl /tmp/pyasc-1.1.1-cp312-cp312-linux_x86_64.whl
+RUN python -m pip install --no-cache-dir --no-deps /tmp/pyasc-1.1.1-cp312-cp312-linux_x86_64.whl \
+    && rm /tmp/pyasc-1.1.1-cp312-cp312-linux_x86_64.whl
+
+ENV PYASC_COMPILER=/bin/true \
+    PYASC_LINKER=/bin/true \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /workspace
+ENTRYPOINT ["python", "integrations/cannbench/comparisons/four-operator-20260903/local_compile_gate.py"]

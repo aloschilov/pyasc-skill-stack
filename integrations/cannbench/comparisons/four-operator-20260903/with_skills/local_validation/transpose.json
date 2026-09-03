@@ -1,0 +1,567 @@
+{
+  "candidate": "integrations/cannbench/comparisons/four-operator-20260903/with_skills/candidates/transpose.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "passed",
+      "cores": [
+        72,
+        72,
+        72,
+        72,
+        72,
+        72,
+        72,
+        72,
+        72,
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "passed",
+      "cores": [
+        72,
+        72,
+        72,
+        72,
+        72,
+        72,
+        72,
+        72,
+        72,
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis",
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 20,
+  "dispatch_passed": 20,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "transpose",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [
+    {
+      "ascendc_bytes": 3124,
+      "memory_consumed": {
+        "UB": 65536
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3107,
+      "memory_consumed": {
+        "UB": 16384
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3111,
+      "memory_consumed": {
+        "UB": 8192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3125,
+      "memory_consumed": {
+        "UB": 16384
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2291,
+      "memory_consumed": {
+        "UB": 32
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3160,
+      "memory_consumed": {
+        "UB": 1024
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3106,
+      "memory_consumed": {
+        "UB": 8192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3212,
+      "memory_consumed": {
+        "UB": 16384
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3250,
+      "memory_consumed": {
+        "UB": 8192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3213,
+      "memory_consumed": {
+        "UB": 16384
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3179,
+      "memory_consumed": {
+        "UB": 8192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3124,
+      "memory_consumed": {
+        "UB": 768
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3099,
+      "memory_consumed": {
+        "UB": 7168
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3153,
+      "memory_consumed": {
+        "UB": 448
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2643,
+      "memory_consumed": {
+        "UB": 2144
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2902,
+      "memory_consumed": {
+        "UB": 2720
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3229,
+      "memory_consumed": {
+        "UB": 4576
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2728,
+      "memory_consumed": {
+        "UB": 352
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2168,
+      "memory_consumed": {
+        "UB": 544
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2313,
+      "memory_consumed": {
+        "UB": 832
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3123,
+      "memory_consumed": {
+        "UB": 23584
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2169,
+      "memory_consumed": {
+        "UB": 416
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2311,
+      "memory_consumed": {
+        "UB": 352
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2169,
+      "memory_consumed": {
+        "UB": 352
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2314,
+      "memory_consumed": {
+        "UB": 416
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3175,
+      "memory_consumed": {
+        "UB": 7392
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3184,
+      "memory_consumed": {
+        "UB": 672
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2711,
+      "memory_consumed": {
+        "UB": 96
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2299,
+      "memory_consumed": {
+        "UB": 352
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3089,
+      "memory_consumed": {
+        "UB": 2912
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3103,
+      "memory_consumed": {
+        "UB": 1248
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2295,
+      "memory_consumed": {
+        "UB": 224
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3090,
+      "memory_consumed": {
+        "UB": 1056
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2293,
+      "memory_consumed": {
+        "UB": 96
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3211,
+      "memory_consumed": {
+        "UB": 16384
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3257,
+      "memory_consumed": {
+        "UB": 8192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3073,
+      "memory_consumed": {
+        "UB": 4096
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2798,
+      "memory_consumed": {
+        "UB": 512
+      },
+      "status": "passed"
+    }
+  ],
+  "status": "passed",
+  "unique_specializations": 38,
+  "unique_specializations_passed": 38
+}

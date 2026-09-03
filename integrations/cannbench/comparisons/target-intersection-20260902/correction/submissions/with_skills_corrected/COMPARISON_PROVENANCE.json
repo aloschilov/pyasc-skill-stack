@@ -1,0 +1,25 @@
+{
+  "variant": "with_skills_corrected",
+  "selected_operators": [
+    "gelu",
+    "foreach_addcdiv_scalar"
+  ],
+  "candidates": {
+    "gelu": {
+      "source": "integrations/cannbench/comparisons/target-intersection-20260902/correction/with_skills/work/candidate.py",
+      "sha256": "794e4ad018ba82487b36247eff5c3af5e1ee4925f384a09bb8d4a194a77fc1de"
+    },
+    "foreach_addcdiv_scalar": {
+      "source": "integrations/cannbench/comparisons/target-intersection-20260902/with_skills/candidates/foreach_addcdiv_scalar.py",
+      "sha256": "e7fabe7173785ff5cf47778ff0f7c4f1b3e4df2cb3847053056793c10b509f0c"
+    }
+  },
+  "method": "OpenCode repair with repository-local skill invocation and measured compile feedback",
+  "worker_sessions": {
+    "accepted_repair": "ses_f9c952882ffeAnIEP58bPaIy7l",
+    "accepted_review": "ses_f9c8e48c5ffeFcOrr6Qvqf72Tj",
+    "timed_out_review": "ses_f9c93e480ffeq5Hu4yhp750SLO"
+  },
+  "required_skill": "pyasc-cannbench-kernel",
+  "skill_loaded_in_accepted_phases": true
+}

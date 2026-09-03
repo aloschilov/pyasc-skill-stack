@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "evidence": "verified-camodel-smoke",
+  "platform": "Ascend950PR_9599",
+  "suite": "critical",
+  "operators": [
+    {
+      "operator": "rms_norm",
+      "status": "passed",
+      "camodel_ticks": 6208,
+      "error": null
+    }
+  ],
+  "status": "passed",
+  "limitations": [
+    "selected dtype and control-flow routes only",
+    "not the official 180-case matrix",
+    "camodel ticks are not silicon performance"
+  ]
+}

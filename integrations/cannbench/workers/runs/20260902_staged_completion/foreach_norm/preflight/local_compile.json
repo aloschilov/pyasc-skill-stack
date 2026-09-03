@@ -1,0 +1,205 @@
+{
+  "candidate": "integrations/cannbench/workers/.scratch/staged_20260902_153337_foreach_norm/candidate.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 2,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 3,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 4,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 5,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 6,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 7,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 8,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 9,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 10,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 11,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 12,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 13,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 14,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 15,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 16,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 17,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 18,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 19,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    },
+    {
+      "case_id": 20,
+      "compile": "failed",
+      "compile_errors": [],
+      "cores": [],
+      "dispatch": "failed",
+      "error": "AttributeError: 'FakeTensor' object has no attribute 'data_ptr'",
+      "kernels": []
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 0,
+  "dispatch_passed": 0,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "foreach_norm",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "returncode": 1,
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [],
+  "status": "failed",
+  "unique_specializations": 0,
+  "unique_specializations_passed": 0
+}

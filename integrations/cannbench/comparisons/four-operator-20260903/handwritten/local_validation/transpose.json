@@ -1,0 +1,405 @@
+{
+  "candidate": "integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/transpose.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:18:21:\n        load_height = block_height if block_height < height - offset_y else height - offset_y\n        input = asctile.copy_in(global_tensor, [offset_y, offset_x], [tile_height, tile_width],\n                                real_shape=[load_height, load_width])\n        transposed = input.transpose()\n                     ^\n        asctile.copy_out(transposed, result_tensor, [offset_x, offset_y], real_shape=[load_width, load_height])\nRuntimeError: 'input' dtype must be one of int8, int16, int32, float16, bfloat16, float32, got int64"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_ptr\": \"PointerArgType:int64\", \"output_ptr\": \"PointerArgType:int64\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff71ab1e40>\", \"max\": \"<function max at 0xffff71ab1c60>\", \"min\": \"<function min at 0xffff71ab1d00>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff71ab1da0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 1, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"block_height\": \"ConstExpr[int](32)\", \"block_width\": \"ConstExpr[int](32)\", \"height\": \"ConstExpr[int](4096)\", \"repeat\": \"ConstExpr[int](32768)\", \"tile_height\": \"ConstExpr[int](32)\", \"tile_width\": \"ConstExpr[int](32)\", \"unroll_factor\": \"ConstExpr[int](1)\", \"width\": \"ConstExpr[int](8192)\"}, \"kernel\": \"transpose_block\"}",
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "failed",
+      "compile_errors": [
+        "RuntimeError: Failed to run passes:\n/workspace/integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/transpose.py:189:59: error: Store tensors with dim > 4 not implemented\n/workspace/integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/transpose.py:189:59: note: see current operation: \"asctile.store\"(%70, %9, %13, %11, %1, %1, %1) <{operandSegmentSizes = array<i32: 1, 1, 5, 0>}> : (tensor<16x1x17x13x16xf16, #asctile.local<UB>>, tensor<67x67x17x13x11xf16, #asctile.global>, i32, i32, i32, i32, i32) -> ()\n/workspace/integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/transpose.py:189:59: error: failed to legalize operation 'asctile.store' that was explicitly marked illegal\n/workspace/integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/transpose.py:189:59: note: see current operation: \"asctile.store\"(%69, %9, %12, %10, %1, %1, %1) <{operandSegmentSizes = array<i32: 1, 1, 5, 0>}> : (tensor<16x1x17x13x16xf16, #asctile.local<UB>>, tensor<67x67x17x13x11xf16, #asctile.global>, i32, i32, i32, i32, i32) -> ()\n"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_ptr\": \"PointerArgType:float16\", \"output_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff71ab1e40>\", \"max\": \"<function max at 0xffff71ab1c60>\", \"min\": \"<function min at 0xffff71ab1d00>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff71ab1da0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 1, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"axis_step\": \"ConstExpr[list]([1, 16])\", \"block_count\": \"ConstExpr[int](335)\", \"block_width\": \"ConstExpr[int](67)\", \"input_shape\": \"ConstExpr[list]([11, 13, 17, 67, 67])\", \"load_shape\": \"ConstExpr[list]([11, 13, 17, 1, 16])\", \"permute\": \"ConstExpr[list]([4, 3, 2, 1, 0])\", \"store_axis\": \"ConstExpr[list]([1, 0])\", \"ub_load_shape\": \"ConstExpr[list]([16, 13, 17, 1, 16])\", \"unroll_factor\": \"ConstExpr[int](1)\"}, \"kernel\": \"transpose_2_axis\"}",
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:44:28:\n        read_count[load_shape_axis1] = count1\n\n        load_tensor = asctile.copy_in(input_tensor, read_offsets, ub_load_shape)\n        transposed_tensor = load_tensor.transpose(*permute)\n                            ^\n\n        write_offsets = [0] * len(load_shape)\n        write_offsets[store_axis[0]] = offset0\nRuntimeError: 'input' dtype must be one of int8, int16, int32, float16, bfloat16, float32, got int64"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_ptr\": \"PointerArgType:int64\", \"output_ptr\": \"PointerArgType:int64\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff71ab1e40>\", \"max\": \"<function max at 0xffff71ab1c60>\", \"min\": \"<function min at 0xffff71ab1d00>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff71ab1da0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 1, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"axis_step\": \"ConstExpr[list]([4, 1])\", \"block_count\": \"ConstExpr[int](3302)\", \"block_width\": \"ConstExpr[int](254)\", \"input_shape\": \"ConstExpr[list]([3, 7, 11, 13, 1013])\", \"load_shape\": \"ConstExpr[list]([3, 7, 11, 1, 4])\", \"permute\": \"ConstExpr[list]([4, 3, 2, 1, 0])\", \"store_axis\": \"ConstExpr[list]([0, 1])\", \"ub_load_shape\": \"ConstExpr[list]([4, 7, 11, 1, 4])\", \"unroll_factor\": \"ConstExpr[int](1)\"}, \"kernel\": \"transpose_2_axis\"}",
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_block"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "transpose_2_axis"
+      ]
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 17,
+  "dispatch_passed": 17,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "transpose",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [
+    {
+      "ascendc_bytes": 3124,
+      "memory_consumed": {
+        "UB": 65536
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3107,
+      "memory_consumed": {
+        "UB": 16384
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3111,
+      "memory_consumed": {
+        "UB": 8192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3125,
+      "memory_consumed": {
+        "UB": 16384
+      },
+      "status": "passed"
+    },
+    {
+      "error": "CodegenError: at <source>:18:21:\n        load_height = block_height if block_height < height - offset_y else height - offset_y\n        input = asctile.copy_in(global_tensor, [offset_y, offset_x], [tile_height, tile_width],\n                                real_shape=[load_height, load_width])\n        transposed = input.transpose()\n                     ^\n        asctile.copy_out(transposed, result_tensor, [offset_x, offset_y], real_shape=[load_width, load_height])\nRuntimeError: 'input' dtype must be one of int8, int16, int32, float16, bfloat16, float32, got int64",
+      "status": "failed"
+    },
+    {
+      "ascendc_bytes": 3160,
+      "memory_consumed": {
+        "UB": 1024
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3106,
+      "memory_consumed": {
+        "UB": 8192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3212,
+      "memory_consumed": {
+        "UB": 16384
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3250,
+      "memory_consumed": {
+        "UB": 8192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3213,
+      "memory_consumed": {
+        "UB": 16384
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3179,
+      "memory_consumed": {
+        "UB": 8192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3124,
+      "memory_consumed": {
+        "UB": 768
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3099,
+      "memory_consumed": {
+        "UB": 7168
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3153,
+      "memory_consumed": {
+        "UB": 448
+      },
+      "status": "passed"
+    },
+    {
+      "error": "RuntimeError: Failed to run passes:\n/workspace/integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/transpose.py:189:59: error: Store tensors with dim > 4 not implemented\n/workspace/integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/transpose.py:189:59: note: see current operation: \"asctile.store\"(%70, %9, %13, %11, %1, %1, %1) <{operandSegmentSizes = array<i32: 1, 1, 5, 0>}> : (tensor<16x1x17x13x16xf16, #asctile.local<UB>>, tensor<67x67x17x13x11xf16, #asctile.global>, i32, i32, i32, i32, i32) -> ()\n/workspace/integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/transpose.py:189:59: error: failed to legalize operation 'asctile.store' that was explicitly marked illegal\n/workspace/integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/transpose.py:189:59: note: see current operation: \"asctile.store\"(%69, %9, %12, %10, %1, %1, %1) <{operandSegmentSizes = array<i32: 1, 1, 5, 0>}> : (tensor<16x1x17x13x16xf16, #asctile.local<UB>>, tensor<67x67x17x13x11xf16, #asctile.global>, i32, i32, i32, i32, i32) -> ()\n",
+      "status": "failed"
+    },
+    {
+      "error": "CodegenError: at <source>:44:28:\n        read_count[load_shape_axis1] = count1\n\n        load_tensor = asctile.copy_in(input_tensor, read_offsets, ub_load_shape)\n        transposed_tensor = load_tensor.transpose(*permute)\n                            ^\n\n        write_offsets = [0] * len(load_shape)\n        write_offsets[store_axis[0]] = offset0\nRuntimeError: 'input' dtype must be one of int8, int16, int32, float16, bfloat16, float32, got int64",
+      "status": "failed"
+    },
+    {
+      "ascendc_bytes": 3211,
+      "memory_consumed": {
+        "UB": 16384
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3257,
+      "memory_consumed": {
+        "UB": 8192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3073,
+      "memory_consumed": {
+        "UB": 4096
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2798,
+      "memory_consumed": {
+        "UB": 512
+      },
+      "status": "passed"
+    }
+  ],
+  "status": "failed",
+  "unique_specializations": 20,
+  "unique_specializations_passed": 17
+}

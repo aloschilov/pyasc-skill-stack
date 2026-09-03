@@ -1,0 +1,11 @@
+{
+  "attempt": 3,
+  "model": "dashscope/qwen3.7-max",
+  "session_id": "ses_f99dabae2ffe5dmuIlv2JhOuYb",
+  "returncode": 124,
+  "timed_out": true,
+  "skill_call_count": 3,
+  "completion_marker_seen": false,
+  "wrapper_exists": false,
+  "accepted": false
+}

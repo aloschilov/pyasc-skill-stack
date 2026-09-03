@@ -5,6 +5,25 @@ description: pyasc asc2 kernel build, run, and verification skill. Provides JIT 
 
 # pyasc Build, Run, and Verify (asc2)
 
+> Current-v2 CANNBench override: commit `030e9b2c` packages `asctile` instead
+> of `asc2`. The campaign-specific wheel, compile gate, and candidates must all
+> use `asctile`; the `asc2` commands below describe older snapshots only.
+
+## Runtime profiles
+
+- **Standalone simulator/golden:** use the Python/toolkit instructions below
+  and numpy or the operator-specific torch reference.
+- **CANNBench pinned v2:** load `pyasc-cannbench-kernel` and run
+  `integrations/cannbench/workers/run_local_compile_gate.sh`. That QEMU gate
+  uses CPython 3.12 and the exact vendored self-contained wheel; the host's
+  default `import asc2` is not proof that the candidate targets the submitted
+  runtime. Its result is compile/lowering evidence only.
+- **Real NPU:** only an official CANNBench run establishes benchmark accuracy
+  and performance. Never relabel a compile-only result as a numerical pass.
+
+The `python3.10` and numpy-only directions below apply to the standalone
+simulator profile, not to CANNBench modules whose public interface is torch.
+
 ## Overview
 
 pyasc uses JIT (Just-In-Time) compilation: Python -> ASC-IR -> Ascend C -> Bisheng compiler -> NPU binary. The asc2 API simplifies this by handling synchronization and memory management automatically.

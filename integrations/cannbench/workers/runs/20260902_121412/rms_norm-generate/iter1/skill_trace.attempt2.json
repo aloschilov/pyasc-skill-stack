@@ -1,0 +1,26 @@
+{
+  "model": "dashscope/glm-5.2",
+  "session_id": null,
+  "required_skills": [
+    "pyasc-codegen-workflow",
+    "pyasc-env-check",
+    "pyasc-docs-search",
+    "pyasc-api-patterns",
+    "pyasc-syntax-constraints",
+    "pyasc-code-review",
+    "pyasc-build-run-verify"
+  ],
+  "loaded_skills": [],
+  "observed_skill_dirs": {},
+  "missing_skills": [
+    "pyasc-codegen-workflow",
+    "pyasc-env-check",
+    "pyasc-docs-search",
+    "pyasc-api-patterns",
+    "pyasc-syntax-constraints",
+    "pyasc-code-review",
+    "pyasc-build-run-verify"
+  ],
+  "skill_gate_passed": false,
+  "returncode": -2
+}

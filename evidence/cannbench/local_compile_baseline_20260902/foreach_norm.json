@@ -1,0 +1,588 @@
+{
+  "candidate": "integrations/cannbench/submission/cann_bench/foreach_norm.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_abs_sum_kernel",
+        "_finalize_copy_kernel",
+        "_zero_f32_kernel",
+        "_reduce_abs_sum_kernel",
+        "_finalize_copy_kernel"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1,
+        1,
+        72,
+        1,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_abs_sum_kernel",
+        "_finalize_copy_kernel",
+        "_zero_f32_kernel",
+        "_reduce_abs_sum_kernel",
+        "_finalize_copy_kernel",
+        "_zero_f32_kernel",
+        "_reduce_abs_sum_kernel",
+        "_finalize_copy_kernel"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_abs_sum_kernel",
+        "_finalize_copy_kernel"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_sq_sum_kernel",
+        "_finalize_sqrt_kernel"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1,
+        1,
+        72,
+        1,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel",
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel",
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_sq_sum_kernel",
+        "_finalize_sqrt_kernel",
+        "_zero_f32_kernel",
+        "_reduce_sq_sum_kernel",
+        "_finalize_sqrt_kernel"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_abs_sum_kernel",
+        "_finalize_copy_kernel"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1,
+        1,
+        72,
+        1,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_sq_sum_kernel",
+        "_finalize_sqrt_kernel",
+        "_zero_f32_kernel",
+        "_reduce_sq_sum_kernel",
+        "_finalize_sqrt_kernel",
+        "_zero_f32_kernel",
+        "_reduce_sq_sum_kernel",
+        "_finalize_sqrt_kernel"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_max_abs_kernel",
+        "_finalize_copy_kernel"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_sq_sum_kernel",
+        "_finalize_sqrt_kernel"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_sq_sum_kernel",
+        "_finalize_sqrt_kernel",
+        "_zero_f32_kernel",
+        "_reduce_sq_sum_kernel",
+        "_finalize_sqrt_kernel"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1,
+        1,
+        72,
+        1,
+        1,
+        72,
+        1,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_abs_sum_kernel",
+        "_finalize_copy_kernel",
+        "_zero_f32_kernel",
+        "_reduce_abs_sum_kernel",
+        "_finalize_copy_kernel",
+        "_zero_f32_kernel",
+        "_reduce_abs_sum_kernel",
+        "_finalize_copy_kernel",
+        "_zero_f32_kernel",
+        "_reduce_abs_sum_kernel",
+        "_finalize_copy_kernel"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_sq_sum_kernel",
+        "_finalize_sqrt_kernel",
+        "_zero_f32_kernel",
+        "_reduce_sq_sum_kernel",
+        "_finalize_sqrt_kernel"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel",
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "passed",
+      "cores": [
+        1,
+        72,
+        1,
+        1,
+        72,
+        1,
+        1,
+        72,
+        1,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel",
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel",
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel",
+        "_zero_f32_kernel",
+        "_reduce_pow_sum_kernel",
+        "_finalize_pow_kernel"
+      ]
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 20,
+  "dispatch_passed": 20,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "foreach_norm",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "returncode": 0,
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [
+    {
+      "ascendc_bytes": 831,
+      "memory_consumed": {
+        "UB": 32
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 9885,
+      "memory_consumed": {
+        "UB": 62272
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2067,
+      "memory_consumed": {
+        "UB": 160
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 9077,
+      "memory_consumed": {
+        "UB": 49984
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 1594,
+      "memory_consumed": {
+        "UB": 128
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 9994,
+      "memory_consumed": {
+        "UB": 62272
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2097,
+      "memory_consumed": {
+        "UB": 160
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 9899,
+      "memory_consumed": {
+        "UB": 62272
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2274,
+      "memory_consumed": {
+        "UB": 192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 11230,
+      "memory_consumed": {
+        "UB": 123712
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2241,
+      "memory_consumed": {
+        "UB": 224
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 12147,
+      "memory_consumed": {
+        "UB": 136000
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2744,
+      "memory_consumed": {
+        "UB": 256
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 12038,
+      "memory_consumed": {
+        "UB": 136000
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2714,
+      "memory_consumed": {
+        "UB": 256
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 10008,
+      "memory_consumed": {
+        "UB": 62272
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2304,
+      "memory_consumed": {
+        "UB": 192
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 9091,
+      "memory_consumed": {
+        "UB": 49984
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 1801,
+      "memory_consumed": {
+        "UB": 160
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 10060,
+      "memory_consumed": {
+        "UB": 62016
+      },
+      "status": "passed"
+    }
+  ],
+  "status": "passed",
+  "unique_specializations": 20,
+  "unique_specializations_passed": 20
+}

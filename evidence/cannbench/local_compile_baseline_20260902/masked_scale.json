@@ -1,0 +1,352 @@
+{
+  "candidate": "integrations/cannbench/submission/cann_bench/masked_scale.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "passed",
+      "cores": [
+        72,
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_cast_mask_to_f32",
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_masked_scale_kernel"
+      ]
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 20,
+  "dispatch_passed": 20,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "masked_scale",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "returncode": 0,
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [
+    {
+      "ascendc_bytes": 15040,
+      "memory_consumed": {
+        "UB": 211968
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 17161,
+      "memory_consumed": {
+        "UB": 166656
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 8053,
+      "memory_consumed": {
+        "UB": 55296
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 13960,
+      "memory_consumed": {
+        "UB": 184320
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 13773,
+      "memory_consumed": {
+        "UB": 184320
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 13462,
+      "memory_consumed": {
+        "UB": 175104
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 18976,
+      "memory_consumed": {
+        "UB": 191232
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 12954,
+      "memory_consumed": {
+        "UB": 165888
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 18789,
+      "memory_consumed": {
+        "UB": 191232
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 12736,
+      "memory_consumed": {
+        "UB": 202752
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 10063,
+      "memory_consumed": {
+        "UB": 147456
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 15227,
+      "memory_consumed": {
+        "UB": 211968
+      },
+      "status": "passed"
+    }
+  ],
+  "status": "passed",
+  "unique_specializations": 12,
+  "unique_specializations_passed": 12
+}

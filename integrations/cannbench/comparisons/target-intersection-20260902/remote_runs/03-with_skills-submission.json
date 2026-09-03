@@ -1,0 +1,49 @@
+{
+  "order": 3,
+  "variant": "with_skills",
+  "tag": "pyasc-v2-target-intersection-03-with_skills-20260902",
+  "selected_operators": [
+    "gelu",
+    "foreach_addcdiv_scalar"
+  ],
+  "preexisting_job_ids": [],
+  "response": {
+    "ok": true,
+    "submission": {
+      "id": "sub_6c333600146c",
+      "status": "validated",
+      "content_hash": "4cc84f9abe4dc6c912708af3655022987fa8081f526480111ce4d3b3fd8db21e",
+      "target_hardware": "950pr",
+      "submission_tag": "pyasc-v2-target-intersection-03-with_skills-20260902",
+      "aggregation_token": "u_gc_2ce674493bd43767:default",
+      "is_private": true,
+      "workload_class": "standard"
+    },
+    "job": {
+      "id": "job_ae3bfdefd087",
+      "status": "queued",
+      "device_id": 0,
+      "job_tag": "pyasc-v2-target-intersection-03-with_skills-20260902"
+    },
+    "credits": {
+      "quota_day": "2026-09-03",
+      "timezone": "Asia/Shanghai",
+      "resets_at": "2026-09-03T16:00:00Z",
+      "unlimited": false,
+      "bypass_active_job_limit": false,
+      "base_credits": 10,
+      "base_remaining": 4,
+      "daily_max": 30,
+      "bonus_cap": 30,
+      "bonus_earned": 0,
+      "bonus_balance": 0,
+      "bonus_counted": 0,
+      "max_active_jobs_per_user": 3,
+      "charges": 6,
+      "refunds": 0,
+      "used": 6,
+      "effective_limit": 10,
+      "remaining": 4
+    }
+  }
+}

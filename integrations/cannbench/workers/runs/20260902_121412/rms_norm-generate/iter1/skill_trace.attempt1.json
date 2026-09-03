@@ -1,0 +1,33 @@
+{
+  "model": "dashscope/glm-5.2",
+  "session_id": "ses_f9e9a3fffffeVNAaRo8UjRxV32",
+  "required_skills": [
+    "pyasc-codegen-workflow",
+    "pyasc-env-check",
+    "pyasc-docs-search",
+    "pyasc-api-patterns",
+    "pyasc-syntax-constraints",
+    "pyasc-code-review",
+    "pyasc-build-run-verify"
+  ],
+  "loaded_skills": [
+    "pyasc-codegen-workflow",
+    "pyasc-env-check",
+    "pyasc-docs-search",
+    "pyasc-api-patterns",
+    "pyasc-syntax-constraints"
+  ],
+  "observed_skill_dirs": {
+    "pyasc-codegen-workflow": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-codegen-workflow",
+    "pyasc-env-check": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-env-check",
+    "pyasc-docs-search": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-docs-search",
+    "pyasc-api-patterns": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-api-patterns",
+    "pyasc-syntax-constraints": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-syntax-constraints"
+  },
+  "missing_skills": [
+    "pyasc-code-review",
+    "pyasc-build-run-verify"
+  ],
+  "skill_gate_passed": false,
+  "returncode": 0
+}

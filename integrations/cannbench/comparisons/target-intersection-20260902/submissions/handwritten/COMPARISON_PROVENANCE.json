@@ -1,0 +1,63 @@
+{
+  "variant": "handwritten",
+  "selected_operators": [
+    "gelu",
+    "foreach_addcdiv_scalar"
+  ],
+  "candidates": {
+    "gelu": {
+      "path": "integrations/cannbench/comparisons/target-intersection-20260902/handwritten/candidates/gelu.py",
+      "sha256": "3c08d8eee2afeff42d4294db3ce90631830b9f9b8ac68c652546a53d3918152d"
+    },
+    "foreach_addcdiv_scalar": {
+      "path": "integrations/cannbench/comparisons/target-intersection-20260902/handwritten/candidates/foreach_addcdiv_scalar.py",
+      "sha256": "b21ffc88ff985036af26b0f90f5d5c9acd32d8158d254261bc4a686a152ea03f"
+    }
+  },
+  "local_validation": [
+    {
+      "variant": "handwritten",
+      "operator": "gelu",
+      "gate_returncode": 1,
+      "status": "failed",
+      "dispatch_passed": 14,
+      "compile_passed": 14,
+      "total_cases": 20,
+      "unique_specializations": 13,
+      "unique_specializations_passed": 8
+    },
+    {
+      "variant": "handwritten",
+      "operator": "foreach_addcdiv_scalar",
+      "gate_returncode": 1,
+      "status": "failed",
+      "dispatch_passed": 14,
+      "compile_passed": 14,
+      "total_cases": 20,
+      "unique_specializations": 13,
+      "unique_specializations_passed": 9
+    }
+  ],
+  "provenance": {
+    "variant": "pyasc-v2-target-derived",
+    "label_requested": "handwritten target kernels",
+    "source_repository": "https://gitcode.com/compiler-team/pyasc",
+    "source_ref": "v2",
+    "source_commit": "4d1db41d61cabf565bca1cfb0b11ef5ec4f84c7f",
+    "source_files": {
+      "gelu": "python/test/asc2/target/test_gelu.py",
+      "foreach_addcdiv_scalar": [
+        "python/test/asc2/target/test_addcdiv.py",
+        "python/test/asc2/target/helpers.py"
+      ]
+    },
+    "adapter_changes": [
+      "CANNBench public signatures and platform initialization",
+      "safe real_shape tails",
+      "TensorList host iteration for ForeachAddcdivScalar",
+      "runtime scalar replacing the target test's fixed 0.5"
+    ],
+    "known_source_coverage_gap": "target GELU has no approximate=none implementation",
+    "runtime_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778"
+  }
+}

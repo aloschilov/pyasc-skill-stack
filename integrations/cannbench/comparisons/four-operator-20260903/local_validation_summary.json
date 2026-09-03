@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "runtime_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "image": "pyasc-cannbench-local-current:030e9b2",
+  "results": [
+    {
+      "variant": "handwritten",
+      "operator": "gelu",
+      "gate_returncode": 1,
+      "status": "failed",
+      "dispatch_passed": 14,
+      "compile_passed": 14,
+      "total_cases": 20,
+      "unique_specializations": 3,
+      "unique_specializations_passed": 2,
+      "fatal_error": null
+    },
+    {
+      "variant": "handwritten",
+      "operator": "rms_norm",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 20,
+      "unique_specializations_passed": 20,
+      "fatal_error": null
+    },
+    {
+      "variant": "handwritten",
+      "operator": "softmax",
+      "gate_returncode": 1,
+      "status": "failed",
+      "dispatch_passed": 14,
+      "compile_passed": 14,
+      "total_cases": 20,
+      "unique_specializations": 20,
+      "unique_specializations_passed": 14,
+      "fatal_error": null
+    },
+    {
+      "variant": "handwritten",
+      "operator": "transpose",
+      "gate_returncode": 1,
+      "status": "failed",
+      "dispatch_passed": 17,
+      "compile_passed": 17,
+      "total_cases": 20,
+      "unique_specializations": 20,
+      "unique_specializations_passed": 17,
+      "fatal_error": null
+    },
+    {
+      "variant": "no_skills",
+      "operator": "gelu",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 6,
+      "unique_specializations_passed": 6,
+      "fatal_error": null
+    },
+    {
+      "variant": "no_skills",
+      "operator": "rms_norm",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 3,
+      "unique_specializations_passed": 3,
+      "fatal_error": null
+    },
+    {
+      "variant": "no_skills",
+      "operator": "softmax",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 9,
+      "unique_specializations_passed": 9,
+      "fatal_error": null
+    },
+    {
+      "variant": "no_skills",
+      "operator": "transpose",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 38,
+      "unique_specializations_passed": 38,
+      "fatal_error": null
+    },
+    {
+      "variant": "with_skills",
+      "operator": "gelu",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 6,
+      "unique_specializations_passed": 6,
+      "fatal_error": null
+    },
+    {
+      "variant": "with_skills",
+      "operator": "rms_norm",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 9,
+      "unique_specializations_passed": 9,
+      "fatal_error": null
+    },
+    {
+      "variant": "with_skills",
+      "operator": "softmax",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 9,
+      "unique_specializations_passed": 9,
+      "fatal_error": null
+    },
+    {
+      "variant": "with_skills",
+      "operator": "transpose",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 38,
+      "unique_specializations_passed": 38,
+      "fatal_error": null
+    }
+  ]
+}

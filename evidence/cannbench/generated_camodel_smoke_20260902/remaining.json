@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "evidence": "verified-camodel-smoke",
+  "platform": "Ascend950PR_9599",
+  "operators": [
+    {
+      "operator": "exp",
+      "status": "passed",
+      "camodel_ticks": 8106,
+      "error": null
+    },
+    {
+      "operator": "mish",
+      "status": "passed",
+      "camodel_ticks": 4587,
+      "error": null
+    },
+    {
+      "operator": "gelu",
+      "status": "passed",
+      "camodel_ticks": 4385,
+      "error": null
+    },
+    {
+      "operator": "masked_scale",
+      "status": "passed",
+      "camodel_ticks": 3827,
+      "error": null
+    },
+    {
+      "operator": "swi_glu",
+      "status": "passed",
+      "camodel_ticks": 8228,
+      "error": null
+    },
+    {
+      "operator": "foreach_addcdiv_scalar",
+      "status": "passed",
+      "camodel_ticks": 4489,
+      "error": null
+    },
+    {
+      "operator": "foreach_norm",
+      "status": "passed",
+      "camodel_ticks": 8053,
+      "error": null
+    },
+    {
+      "operator": "rms_norm",
+      "status": "passed",
+      "camodel_ticks": 5788,
+      "error": null
+    }
+  ],
+  "status": "passed",
+  "limitations": [
+    "one small float32 route per operator",
+    "not the official 180-case matrix",
+    "camodel ticks are not silicon performance"
+  ]
+}

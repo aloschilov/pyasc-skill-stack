@@ -1,0 +1,49 @@
+{
+  "variant": "opencode-no-skills",
+  "operator": "gelu",
+  "models": {
+    "design": "dashscope/qwen3.7-max",
+    "implement": "dashscope/qwen3.7-max",
+    "review": "dashscope/glm-5.2"
+  },
+  "phases": [
+    {
+      "phase": "design",
+      "model": "dashscope/qwen3.7-max",
+      "returncode": 0,
+      "session_id": "ses_f9d891892ffeNctxGu8mIIn1gn",
+      "skill_calls": [],
+      "skill_call_count": 0,
+      "completion_marker": "DESIGN_DONE",
+      "completion_marker_seen": true
+    },
+    {
+      "phase": "implement",
+      "model": "dashscope/qwen3.7-max",
+      "returncode": 0,
+      "session_id": "ses_f9d863b20ffeSNRHmQ1eOxbtm5",
+      "skill_calls": [],
+      "skill_call_count": 0,
+      "completion_marker": "IMPLEMENT_DONE",
+      "completion_marker_seen": true
+    },
+    {
+      "phase": "review",
+      "model": "dashscope/glm-5.2",
+      "returncode": 0,
+      "timed_out": false,
+      "session_id": "ses_f9d7e98cbffeoUG075Ucf6yLfh",
+      "skill_calls": [],
+      "skill_call_count": 0,
+      "completion_marker": "REVIEW_DONE",
+      "completion_marker_seen": false,
+      "accepted": false,
+      "reason": "review returned without completion marker or edits"
+    }
+  ],
+  "skill_call_count": 0,
+  "task_sha256": "f15206423cff967efd53323963a8f9ddb628631fb167ef759f0165a29eed0beb",
+  "design_sha256": "4fd7c24f0ece7b4231e482605610c7a7810ca0d2f864866a0e9275cf8644f52f",
+  "candidate_sha256": "ca789d8cfffc8c2fe674ef215e6a5e4e0e49b23c3f14544464fe6c01105fc8c4",
+  "runtime_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778"
+}

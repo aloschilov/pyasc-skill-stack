@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "evidence": "verified-camodel-smoke",
+  "platform": "Ascend950PR_9599",
+  "operators": [
+    {
+      "operator": "sigmoid",
+      "status": "passed",
+      "camodel_ticks": 8161,
+      "error": null
+    }
+  ],
+  "status": "passed",
+  "limitations": [
+    "one small float32 route per operator",
+    "not the official 180-case matrix",
+    "camodel ticks are not silicon performance"
+  ]
+}

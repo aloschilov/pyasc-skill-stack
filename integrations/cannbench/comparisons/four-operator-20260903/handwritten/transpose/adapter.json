@@ -1,0 +1,47 @@
+{
+  "attempt": 0,
+  "model": "deterministic-manual-transport",
+  "session_id": null,
+  "returncode": 0,
+  "timed_out": false,
+  "skill_call_count": 0,
+  "completion_marker_seen": true,
+  "wrapper_exists": true,
+  "accepted": true,
+  "attempts": [
+    {
+      "attempt": 1,
+      "model": "dashscope/qwen3.7-max",
+      "session_id": "ses_f99ed2184ffez1DhiELgdUfotp",
+      "returncode": 124,
+      "timed_out": true,
+      "skill_call_count": 0,
+      "completion_marker_seen": false,
+      "wrapper_exists": false,
+      "accepted": false
+    },
+    {
+      "attempt": 2,
+      "model": "dashscope/glm-5.2",
+      "session_id": "ses_f99e3f92dffeiHBt08f2Sl9Xhu",
+      "returncode": 0,
+      "timed_out": false,
+      "skill_call_count": 0,
+      "completion_marker_seen": false,
+      "wrapper_exists": false,
+      "accepted": false
+    },
+    {
+      "attempt": 3,
+      "model": "dashscope/qwen3.7-max",
+      "session_id": "ses_f99dabae2ffe5dmuIlv2JhOuYb",
+      "returncode": 124,
+      "timed_out": true,
+      "skill_call_count": 3,
+      "completion_marker_seen": false,
+      "wrapper_exists": false,
+      "accepted": false
+    }
+  ],
+  "reason": "model adapters failed; deterministic host transport does not alter upstream JIT bodies"
+}

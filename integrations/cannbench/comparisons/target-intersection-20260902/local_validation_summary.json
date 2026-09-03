@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "runtime_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+  "results": [
+    {
+      "variant": "handwritten",
+      "operator": "gelu",
+      "gate_returncode": 1,
+      "status": "failed",
+      "dispatch_passed": 14,
+      "compile_passed": 14,
+      "total_cases": 20,
+      "unique_specializations": 13,
+      "unique_specializations_passed": 8
+    },
+    {
+      "variant": "handwritten",
+      "operator": "foreach_addcdiv_scalar",
+      "gate_returncode": 1,
+      "status": "failed",
+      "dispatch_passed": 14,
+      "compile_passed": 14,
+      "total_cases": 20,
+      "unique_specializations": 13,
+      "unique_specializations_passed": 9
+    },
+    {
+      "variant": "no_skills",
+      "operator": "gelu",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 6,
+      "unique_specializations_passed": 6
+    },
+    {
+      "variant": "no_skills",
+      "operator": "foreach_addcdiv_scalar",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 3,
+      "unique_specializations_passed": 3
+    },
+    {
+      "variant": "with_skills",
+      "operator": "gelu",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 6,
+      "unique_specializations_passed": 6
+    },
+    {
+      "variant": "with_skills",
+      "operator": "foreach_addcdiv_scalar",
+      "gate_returncode": 0,
+      "status": "passed",
+      "dispatch_passed": 20,
+      "compile_passed": 20,
+      "total_cases": 20,
+      "unique_specializations": 3,
+      "unique_specializations_passed": 3
+    }
+  ]
+}

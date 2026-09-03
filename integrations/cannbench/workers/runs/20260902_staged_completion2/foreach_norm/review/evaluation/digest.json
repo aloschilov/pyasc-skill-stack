@@ -1,0 +1,365 @@
+{
+  "hard_failure": false,
+  "status": "passed",
+  "passed": 20,
+  "total": 20,
+  "dispatch_passed": 20,
+  "unique_specializations": 19,
+  "unique_specializations_passed": 19,
+  "fatal_error": null,
+  "failure_details": [
+    {
+      "case_id": 1,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_abs",
+        "_k_final_identity"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt",
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_abs",
+        "_k_final_identity"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt",
+        "_k_sum_sq",
+        "_k_final_sqrt",
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_max_abs",
+        "_k_final_identity"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt",
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt",
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    }
+  ],
+  "evidence": "verified-local-compile",
+  "limitations": [
+    "does not execute numerical code",
+    "does not measure NPU performance"
+  ]
+}

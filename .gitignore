@@ -1,6 +1,22 @@
 __pycache__/
 *.pyc
 integrations/cannbench/.qemu-runtime-dist/
+integrations/cannbench/.camodel-runtime-dist/
+integrations/cannbench/.camodel-venv/
+integrations/cannbench/pyasc-v2-source/*.egg-info/
+integrations/cannbench/comparisons/**/pyasc-v2-source/
+integrations/cannbench/comparisons/**/runtime-dist*/
+integrations/cannbench/comparisons/**/submissions/*.zip
+integrations/cannbench/comparisons/**/submissions/**/vendor/runtime-wheels/
+integrations/cannbench/comparisons/**/submissions/**/.base-dist/
+integrations/cannbench/comparisons/**/submissions/**/build/
+integrations/cannbench/comparisons/**/submissions/**/dist/
+integrations/cannbench/comparisons/**/submissions/**/*.egg-info/
+
+# CANN Model writes these process-local simulator artifacts in the cwd.
+/instr.bin
+/route_table.txt
+/rtb_debug.txt
 .codex
 .eval-history/
 .secrets/
@@ -9,6 +25,7 @@ integrations/cannbench/submission/.self-contained-build/
 integrations/cannbench/submission/build/
 integrations/cannbench/submission/dist/
 integrations/cannbench/submission/*.egg-info/
+integrations/cannbench/workers/.scratch/
 
 # Agent-generated kernel outputs (test artifacts from opencode runs).
 # Typed kernel directories (e.g. gelu_f16/, abs_float32/, matmul_f16/) are

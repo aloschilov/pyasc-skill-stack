@@ -1,0 +1,27 @@
+{
+  "phase": "design",
+  "model": "dashscope/glm-5.2",
+  "session_id": "ses_f9e8d1600ffeTOnADKxO6TVRTr",
+  "required_skills": [
+    "pyasc-codegen-workflow",
+    "pyasc-env-check",
+    "pyasc-docs-search"
+  ],
+  "loaded_skills": [
+    "pyasc-env-check",
+    "pyasc-codegen-workflow",
+    "pyasc-docs-search"
+  ],
+  "observed_skill_dirs": {
+    "pyasc-env-check": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-env-check",
+    "pyasc-codegen-workflow": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-codegen-workflow",
+    "pyasc-docs-search": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-docs-search"
+  },
+  "missing_skills": [],
+  "artifact": "design.md",
+  "artifact_exists": true,
+  "completion_marker": "DESIGN_DONE",
+  "completion_marker_seen": true,
+  "skill_gate_passed": true,
+  "returncode": 0
+}

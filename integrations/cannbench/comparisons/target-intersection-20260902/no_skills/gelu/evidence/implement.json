@@ -1,0 +1,10 @@
+{
+  "phase": "implement",
+  "model": "dashscope/qwen3.7-max",
+  "returncode": 0,
+  "session_id": "ses_f9d863b20ffeSNRHmQ1eOxbtm5",
+  "skill_calls": [],
+  "skill_call_count": 0,
+  "completion_marker": "IMPLEMENT_DONE",
+  "completion_marker_seen": true
+}

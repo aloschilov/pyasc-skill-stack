@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>CANNBench corrective reruns</title>
+  <style>
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 10pt/1.45 Arial, sans-serif; color: #18243a; }
+    h1 { margin: 2mm 0 5mm; font-size: 25pt; line-height: 1.08; color: #102d58; }
+    h2 { margin: 8mm 0 3mm; font-size: 15pt; color: #174b7a; break-after: avoid; }
+    h3 { margin: 5mm 0 2mm; font-size: 11.5pt; color: #176b73; break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    code { font-family: "DejaVu Sans Mono", monospace; font-size: .84em; }
+    .kicker { color: #61728a; font-size: 8pt; letter-spacing: .12em; text-transform: uppercase; }
+    .hero { padding: 8mm; border-radius: 12px; color: white; background: linear-gradient(125deg,#173e76,#16858b); }
+    .hero b { display: block; margin: 1mm 0; font-size: 18pt; }
+    .note { margin: 4mm 0; padding: 3mm 4mm; border-left: 4px solid #1d9c9b; background: #effafa; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+    .card { padding: 4mm; border: 1px solid #d8e2ee; border-radius: 9px; background: #f8fbff; break-inside: avoid; }
+    table { width: 100%; border-collapse: collapse; margin: 3mm 0; font-size: 8.2pt; }
+    th { padding: 2mm; text-align: left; color: white; background: #234f7d; }
+    td { padding: 1.8mm 2mm; vertical-align: top; border-bottom: 1px solid #dce4ed; }
+    tr:nth-child(even) td { background: #f4f7fb; }
+    .pass { color: #087b62; font-weight: bold; }
+    .break { break-before: page; }
+    .small { color: #586b84; font-size: 8.4pt; }
+    svg { width: 100%; height: auto; break-inside: avoid; }
+    .track { fill: #e7edf5; } .bar { fill: #1a9a9a; } .bar2 { fill: #e0a126; }
+    .label { font-size: 12px; fill: #24344d; } .value { font-size: 12px; font-weight: bold; fill: #173e76; }
+    .flow { display: flex; align-items: stretch; gap: 2mm; margin: 4mm 0; break-inside: avoid; }
+    .step { flex: 1; padding: 3mm 2mm; text-align: center; border-radius: 7px; background: #e9f2fb; border: 1px solid #cad9ea; }
+    .arrow { align-self: center; color: #16858b; font-size: 16pt; }
+  </style>
+</head>
+<body>
+  <div class="kicker">pyasc v2 · CANNBench official-tasks v1.1.1 · 950PR</div>
+  <h1>Target provenance, diagnosis<br>и corrective reruns</h1>
+  <div class="hero">
+    <span>Финальный результат</span>
+    <b>40/40 в обоих corrective runs</b>
+    <span>Ноль anti-cheat failures; manual score 135.0845, skill-driven score 128.7255</span>
+  </div>
+
+  <h2>Что именно было взято из pyasc targets</h2>
+  <p>Первый «handwritten» arm не являлся буквальной копией текущего каталога
+  <code>/home/aloschilov/workspace/pyasc-fork/python/test/asc2/target</code>.
+  Исходники были извлечены из Git objects того же репозитория на commit
+  <code>4d1db41d…</code> и адаптированы к CANNBench. Текущий <code>origin/v2</code>
+  — <code>030e9b2c…</code> — уже использует <code>python/test/asctile/target</code>.</p>
+  <div class="note"><b>Корректная классификация:</b> target-derived adapter.
+  Успешный ручной rerun — target-derived contract completion, а не verbatim target test.</div>
+
+  <h2>Remote result matrix</h2>
+  <table>
+    <thead><tr><th>Вариант</th><th>Job</th><th>Cases</th><th>Score</th><th>GMean</th><th>AC</th></tr></thead>
+    <tbody>
+      <tr><td>Target-derived, first</td><td><a href="https://cannbench.com/workspace/jobs/job_79c05b96ed9d"><code>job_79c05b96ed9d</code></a></td><td>14/40</td><td>69.794947</td><td>1.023126×</td><td>0</td></tr>
+      <tr><td>Without skills</td><td><a href="https://cannbench.com/workspace/jobs/job_75a7fee4ae6f"><code>job_75a7fee4ae6f</code></a></td><td>35/40</td><td>125.452428</td><td>0.616455×</td><td>0</td></tr>
+      <tr><td>With skills, first</td><td><a href="https://cannbench.com/workspace/jobs/job_ae3bfdefd087"><code>job_ae3bfdefd087</code></a></td><td>36/40</td><td>124.607094</td><td>0.595558×</td><td>0</td></tr>
+      <tr><td>Manual corrected</td><td><a href="https://cannbench.com/workspace/jobs/job_a3e9153a2930"><code>job_a3e9153a2930</code></a></td><td class="pass">40/40</td><td class="pass">135.084504</td><td>0.525847×</td><td>0</td></tr>
+      <tr><td>Skills corrected</td><td><a href="https://cannbench.com/workspace/jobs/job_028f05fd8ec8"><code>job_028f05fd8ec8</code></a></td><td class="pass">40/40</td><td class="pass">128.725482</td><td>0.457136×</td><td>0</td></tr>
+    </tbody>
+  </table>
+
+  <svg viewBox="0 0 900 320" aria-label="Passed cases chart">
+    <text x="0" y="24" class="value">Correctness: passed cases из 40</text>
+    <g transform="translate(0,42)">
+      <text x="0" y="20" class="label">Target-derived, first</text><rect x="235" y="0" width="600" height="26" rx="6" class="track"/><rect x="235" y="0" width="210" height="26" rx="6" class="bar2"/><text x="454" y="19" class="value">14</text>
+      <text x="0" y="76" class="label">Without skills</text><rect x="235" y="56" width="600" height="26" rx="6" class="track"/><rect x="235" y="56" width="525" height="26" rx="6" class="bar2"/><text x="769" y="75" class="value">35</text>
+      <text x="0" y="132" class="label">With skills, first</text><rect x="235" y="112" width="600" height="26" rx="6" class="track"/><rect x="235" y="112" width="540" height="26" rx="6" class="bar2"/><text x="784" y="131" class="value">36</text>
+      <text x="0" y="188" class="label">Manual corrected</text><rect x="235" y="168" width="600" height="26" rx="6" class="track"/><rect x="235" y="168" width="600" height="26" rx="6" class="bar"/><text x="844" y="187" class="value">40</text>
+      <text x="0" y="244" class="label">Skills corrected</text><rect x="235" y="224" width="600" height="26" rx="6" class="track"/><rect x="235" y="224" width="600" height="26" rx="6" class="bar"/><text x="844" y="243" class="value">40</text>
+    </g>
+  </svg>
+
+  <h2 class="break">Per-operator result</h2>
+  <table>
+    <thead><tr><th>Вариант</th><th>Оператор</th><th>Cases</th><th>Avg speedup</th><th>Score</th></tr></thead>
+    <tbody>
+      <tr><td>Target first</td><td>Addcdiv</td><td>13/20</td><td>1.189408×</td><td>53.191518</td></tr>
+      <tr><td>Target first</td><td>GELU</td><td>1/20</td><td>0.880090×</td><td>16.603429</td></tr>
+      <tr><td>Without skills</td><td>Addcdiv</td><td>20/20</td><td>1.082186×</td><td>76.274837</td></tr>
+      <tr><td>Without skills</td><td>GELU</td><td>15/20</td><td>0.351157×</td><td>49.177591</td></tr>
+      <tr><td>Skills first</td><td>Addcdiv</td><td>20/20</td><td>0.920270×</td><td>72.679093</td></tr>
+      <tr><td>Skills first</td><td>GELU</td><td>16/20</td><td>0.385419×</td><td>51.928002</td></tr>
+      <tr><td>Manual corrected</td><td>Addcdiv</td><td class="pass">20/20</td><td>1.147209×</td><td>78.626238</td></tr>
+      <tr><td>Manual corrected</td><td>GELU</td><td class="pass">20/20</td><td>0.241033×</td><td>56.458266</td></tr>
+      <tr><td>Skills corrected</td><td>Addcdiv</td><td class="pass">20/20</td><td>0.917337×</td><td>72.599692</td></tr>
+      <tr><td>Skills corrected</td><td>GELU</td><td class="pass">20/20</td><td>0.227804×</td><td>56.125790</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Partial-run GMean is not comparable as a complete-solution metric. Correctness is a hard gate.</p>
+
+  <h2>Root cause and corrections</h2>
+  <div class="grid">
+    <div class="card"><h3>Target coverage gap</h3><p>GELU target covered one FP32 approximation, not exact/BF16/wide ranges. Addcdiv fixed scalar=0.5 and bounded divisors. These tests were narrower than the CANNBench contract.</p></div>
+    <div class="card"><h3>GELU</h3><p>Stable erfc/Horner exact path and bounded-exp sigmoid tanh path remove negative-tail cancellation. Internal compute is FP32.</p></div>
+    <div class="card"><h3>Addcdiv</h3><p>FP32 internal division fixes unsupported BF16 division and scalar-zero FP16 NaN-position mismatch; one cast occurs at output.</p></div>
+    <div class="card"><h3>Skill / UB</h3><p>Exact tile 2048 used 795–820 KB versus a 253952-byte limit. The measured-safe tile 512 uses 199–205 KB. The skill now records this and requires adversarial camodel evidence.</p></div>
+  </div>
+
+  <h2>Validation flow</h2>
+  <div class="flow">
+    <div class="step">Target references<br><b>source audit</b></div><div class="arrow">→</div>
+    <div class="step">Manual / OpenCode<br><b>provenance</b></div><div class="arrow">→</div>
+    <div class="step">Pinned-v2 QEMU<br><b>40/40 each</b></div><div class="arrow">→</div>
+    <div class="step">950PR camodel<br><b>passed</b></div><div class="arrow">→</div>
+    <div class="step">CANNBench silicon<br><b>40/40 each</b></div>
+  </div>
+  <p>Camodel adversarial suites passed dtype-specific tolerances and exact NaN/Inf positions. Cumulative suite ticks: manual GELU 40386 / Addcdiv 16201; skill GELU 38344 / Addcdiv 15277. Simulator ticks are not silicon speedups.</p>
+
+  <h2>Worker provenance</h2>
+  <ul>
+    <li>Accepted repair: Qwen session <code>ses_f9c952882ffeAnIEP58bPaIy7l</code>.</li>
+    <li>Accepted review: Qwen session <code>ses_f9c8e48c5ffeFcOrr6Qvqf72Tj</code>.</li>
+    <li>Both loaded repository-local <code>pyasc-cannbench-kernel</code>.</li>
+    <li>GLM review <code>ses_f9c93e480ffeq5Hu4yhp750SLO</code> loaded the skill but timed out and was rejected.</li>
+    <li>Accepted GELU SHA-256: <code>794e4ad018ba82487b36247eff5c3af5e1ee4925f384a09bb8d4a194a77fc1de</code>.</li>
+  </ul>
+
+  <h2>What CANNBench evaluates</h2>
+  <p>CANNBench installs the self-contained wheel and runs exported operator functions on 950PR. It evaluates compile/runtime behavior, numerical correctness, anti-cheat, and case-level latency/speedup. It does not discover the skill-stack or generation history. “Without skills” versus “with skills” is established by local prompts, event logs, session IDs, native skill calls, and immutable hashes. See the <a href="https://cannbench.com/leaderboard">leaderboard</a>.</p>
+
+  <h2>Next performance iteration</h2>
+  <ul>
+    <li>GELU exact: compare tile 512/unroll2 with 1024/unroll1 while preserving 20/20.</li>
+    <li>Addcdiv: add size-dispatched tile 2048; manual 1.147209× versus skill 0.917337× is the clearest tuning gap.</li>
+    <li>Compare only complete, correctness-passing runs using case-level silicon latency.</li>
+    <li>Keep source and runtime commits explicit during the upstream asc2→asctile transition.</li>
+  </ul>
+
+  <p class="small">Artifacts: initial diagnosis, corrective manifest, QEMU reports, camodel JSON, remote payloads/logs, immutable ZIPs, and worker traces are stored under <code>integrations/cannbench/comparisons/target-intersection-20260902/</code>.</p>
+</body>
+</html>

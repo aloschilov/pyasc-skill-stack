@@ -1,0 +1,23 @@
+{
+  "variant": "target_corrected",
+  "selected_operators": [
+    "gelu",
+    "foreach_addcdiv_scalar"
+  ],
+  "candidates": {
+    "gelu": {
+      "source": "integrations/cannbench/submission/cann_bench/gelu.py",
+      "sha256": "c139b5db752c31c14b0723369fe682e29c2696657b090d0a58ddbbc6d30ea02a"
+    },
+    "foreach_addcdiv_scalar": {
+      "source": "integrations/cannbench/submission/cann_bench/foreach_addcdiv_scalar.py",
+      "sha256": "241aa7fd8a07d50bacb7a5bf4cbe5869b9a3ad3eca8a7813e65a2f33c25caebb"
+    }
+  },
+  "method": "manual CANNBench contract completion of the target-derived kernels: FP32 internal addcdiv and stable exact/tanh GELU",
+  "classification": "target-derived corrective adapter, not a verbatim target test",
+  "prior_hardware_evidence": {
+    "gelu": "job_cd51d6c2ca67: 20/20",
+    "foreach_addcdiv_scalar": "job_75a7fee4ae6f and job_ae3bfdefd087: 20/20"
+  }
+}

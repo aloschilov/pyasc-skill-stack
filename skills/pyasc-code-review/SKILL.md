@@ -5,6 +5,22 @@ description: pyasc asc2 kernel code review skill. Reviews kernel code against py
 
 # pyasc Code Review (asc2)
 
+> Current-v2 CANNBench override: commit `030e9b2c` uses `asctile`, not
+> `asc2`. Reject new CANNBench candidates that import the removed legacy
+> package; otherwise apply the same review rules with the renamed symbols.
+
+> CANNBench routing: for files under `integrations/cannbench/`, invoke
+> `pyasc-cannbench-kernel` and use its compact contract as the review checklist.
+> Do not load the generic references below unless the task is a standalone
+> pyasc program. The pinned benchmark API is `global_tensor` / `copy_in` /
+> `copy_out`; pass tensors to JIT launches, not `Tensor.data_ptr()`.
+
+For a CANNBench candidate, load `pyasc-cannbench-kernel` first. Review against
+the pinned `global_tensor` / `copy_in` / `copy_out` API and the exact task
+schema; do not require `always_compile=True`, `asc2.tensor/load/store`, a
+`__main__`, or numpy verification. Require all 20 case routes to pass the
+exact-v2 local compile gate, and label numerical/performance status separately.
+
 ## Core Principles
 
 1. **Syntax compliance** — all code inside `@asc2.jit` must use only supported Python syntax
@@ -42,13 +58,13 @@ If required parameters are missing:
 |-------|---------------|-----------|
 | **Syntax compliance** | All constructs inside `@asc2.jit` are in the supported set | `pyasc-syntax-constraints` |
 | **No unsupported constructs** | No `print`, `break`, `continue`, `lambda`, `try/except`, nested functions, `global`, `import` inside JIT | `pyasc-syntax-constraints` |
-| **`@asc2.jit` correctness** | Kernel decorated with `@asc2.jit(always_compile=True)`; device functions separated; no class methods | `pyasc-api-patterns` |
+| **`@asc2.jit` correctness** | Kernel decorated with `@asc2.jit`; `always_compile=True` is standalone-development-only; device functions separated; no class methods | `pyasc-api-patterns` |
 | **Type correctness** | Kernel params use supported types; `ConstExpr` for tile_size/tile_per_block | `pyasc-syntax-constraints` |
 | **asc2.load/asc2.store** | Tiles loaded via `asc2.load()` and written via `asc2.store()` — NOT manual `asc.data_copy` | `pyasc-api-patterns` |
 | **asc2.tensor usage** | Global memory wrapped via `asc2.tensor(ptr, [shape])` | `pyasc-api-patterns` |
 | **asc2.range usage** | Tile loops use `asc2.range()`, NOT `range()` | `pyasc-syntax-constraints` |
 | **Launch syntax** | `kernel[core_num](...)` — no stream argument | `pyasc-api-patterns` |
-| **Output verification** | `np.testing.assert_allclose` present (numpy only; no torch/scipy) | `pyasc-build-run-verify` |
+| **Output verification** | Standalone: operator-appropriate numpy/torch reference. CANNBench: compile evidence and hardware result are reported separately | `pyasc-build-run-verify` |
 | **Variable scoping** | No use of variables only defined inside one `if` branch | `pyasc-syntax-constraints` |
 
 ### Red flags — asc v1 API in asc2 kernel

@@ -1,0 +1,50 @@
+{
+  "arm": "no_skills",
+  "operator": "transpose",
+  "runtime_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "derivation": "no-skills generated design; exact current-v2 target baseline; deterministic human integration remediation for the three v2-blocked CANNBench routes; no-skills worker review",
+  "phases": [
+    {
+      "phase": "design",
+      "attempt": 2,
+      "model": "dashscope/qwen3.7-max",
+      "returncode": 0,
+      "timed_out": false,
+      "session_id": "ses_f99fbaf37ffeyhT3mhaOoAkvwi",
+      "skill_calls": [],
+      "required_skills": [],
+      "verified_loaded_skills": [],
+      "completion_marker_seen": true,
+      "artifact_exists": true,
+      "accepted": true
+    },
+    {
+      "phase": "integration_remediation",
+      "model": "deterministic:human",
+      "session_id": null,
+      "skill_calls": [],
+      "required_skills": [],
+      "verified_loaded_skills": [],
+      "completion_marker_seen": true,
+      "artifact_exists": true,
+      "accepted": true,
+      "scope": "rank-5 adjacent-swap decomposition and bit-preserving int64-to-int32 metadata views"
+    },
+    {
+      "phase": "review",
+      "model": "dashscope/qwen3.7-max",
+      "session_id": "ses_f99916d81ffeccorcZm6Iu813n",
+      "skill_calls": [],
+      "required_skills": [],
+      "verified_loaded_skills": [],
+      "completion_marker_seen": true,
+      "artifact_exists": true,
+      "accepted": true
+    }
+  ],
+  "task_sha256": "b534020a7c7c4f086ff82b5de4ffed8069ba2b29251e2b928cf74a9b9e71f5eb",
+  "design_sha256": "87c40f914f60e467566917769b4dd58b7ee008295d144207f5bfa4e8fefd4643",
+  "candidate_sha256": "887e9d7cca7134bbd9894ab597ec0f6718c2e60a091727ec5991180aab60aac5",
+  "skills_root": null,
+  "local_gate": {"status": "passed", "cases": 20, "dispatch_passed": 20, "compile_passed": 20, "specializations": 38}
+}

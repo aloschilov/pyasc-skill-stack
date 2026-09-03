@@ -1,0 +1,505 @@
+{
+  "candidate": "integrations/cannbench/workers/.scratch/staged_20260902_155449_foreach_norm/candidate.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_abs",
+        "_k_final_identity"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt",
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_abs",
+        "_k_final_identity"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt",
+        "_k_sum_sq",
+        "_k_final_sqrt",
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:14:14:\n        xf = x.to(asc.float32)\n        a = asc2.abs(xf)\n        m = asc2.reduce_max(a)\n        acc = asc2.maximum(acc, m)\n              ^\n    s = asc2.full([8], acc, dtype=asc.float32)\n    asc2.atomic_max(s, out_gm, [0])\nBinaryOperandTypeError: At least one operand must be tensor, got <class 'asc.language.core.ir_value.PlainValue'> and <class 'asc.language.core.ir_value.PlainValue'>"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"num_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float32\", \"size\": \"PlainArgType:int32\", \"x_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff5f254040>\", \"max\": \"<function max at 0xffff5f237e20>\", \"min\": \"<function min at 0xffff5f237ec0>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff5f237f60>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_size\": \"ConstExpr[int](2048)\"}, \"kernel\": \"_k_max_abs\"}",
+      "kernels": [
+        "_k_max_abs"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt",
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity",
+        "_k_sum_abs",
+        "_k_final_identity"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "passed",
+      "cores": [
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_sq",
+        "_k_final_sqrt",
+        "_k_sum_sq",
+        "_k_final_sqrt"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "passed",
+      "cores": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power",
+        "_k_sum_gen",
+        "_k_final_power"
+      ]
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 19,
+  "dispatch_passed": 19,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "foreach_norm",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "returncode": 1,
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [
+    {
+      "ascendc_bytes": 9873,
+      "memory_consumed": {
+        "UB": 62272
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 1524,
+      "memory_consumed": {
+        "UB": 64
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 9065,
+      "memory_consumed": {
+        "UB": 49984
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 1020,
+      "memory_consumed": {
+        "UB": 32
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 9982,
+      "memory_consumed": {
+        "UB": 62272
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 1554,
+      "memory_consumed": {
+        "UB": 64
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 9887,
+      "memory_consumed": {
+        "UB": 62272
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 1726,
+      "memory_consumed": {
+        "UB": 96
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 11214,
+      "memory_consumed": {
+        "UB": 62080
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 1694,
+      "memory_consumed": {
+        "UB": 128
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 12129,
+      "memory_consumed": {
+        "UB": 68224
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2197,
+      "memory_consumed": {
+        "UB": 160
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 12020,
+      "memory_consumed": {
+        "UB": 68224
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2167,
+      "memory_consumed": {
+        "UB": 160
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 9996,
+      "memory_consumed": {
+        "UB": 62272
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 1756,
+      "memory_consumed": {
+        "UB": 96
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 9079,
+      "memory_consumed": {
+        "UB": 49984
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 1254,
+      "memory_consumed": {
+        "UB": 64
+      },
+      "status": "passed"
+    },
+    {
+      "error": "CodegenError: at <source>:14:14:\n        xf = x.to(asc.float32)\n        a = asc2.abs(xf)\n        m = asc2.reduce_max(a)\n        acc = asc2.maximum(acc, m)\n              ^\n    s = asc2.full([8], acc, dtype=asc.float32)\n    asc2.atomic_max(s, out_gm, [0])\nBinaryOperandTypeError: At least one operand must be tensor, got <class 'asc.language.core.ir_value.PlainValue'> and <class 'asc.language.core.ir_value.PlainValue'>",
+      "status": "failed"
+    }
+  ],
+  "status": "failed",
+  "unique_specializations": 19,
+  "unique_specializations_passed": 18
+}

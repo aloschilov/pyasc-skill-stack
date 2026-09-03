@@ -1,0 +1,14 @@
+{
+  "phase": "design",
+  "attempt": 3,
+  "model": "dashscope/qwen3.7-max",
+  "returncode": 0,
+  "timed_out": false,
+  "session_id": "ses_f99dd6d0affea4eIRvuWCa9Q75",
+  "skill_calls": [],
+  "required_skills": [],
+  "verified_loaded_skills": [],
+  "completion_marker_seen": true,
+  "artifact_exists": true,
+  "accepted": true
+}

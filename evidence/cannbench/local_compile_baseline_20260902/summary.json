@@ -1,0 +1,102 @@
+{
+  "cases": 180,
+  "compile_passed": 180,
+  "dispatch_passed": 180,
+  "failure_signatures": {},
+  "operators": 9,
+  "operators_passed": 9,
+  "results": [
+    {
+      "cases": 20,
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "fatal_error": null,
+      "operator": "sigmoid",
+      "status": "passed",
+      "unique_specializations": 3,
+      "unique_specializations_passed": 3
+    },
+    {
+      "cases": 20,
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "fatal_error": null,
+      "operator": "exp",
+      "status": "passed",
+      "unique_specializations": 3,
+      "unique_specializations_passed": 3
+    },
+    {
+      "cases": 20,
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "fatal_error": null,
+      "operator": "mish",
+      "status": "passed",
+      "unique_specializations": 3,
+      "unique_specializations_passed": 3
+    },
+    {
+      "cases": 20,
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "fatal_error": null,
+      "operator": "gelu",
+      "status": "passed",
+      "unique_specializations": 7,
+      "unique_specializations_passed": 6
+    },
+    {
+      "cases": 20,
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "fatal_error": null,
+      "operator": "masked_scale",
+      "status": "passed",
+      "unique_specializations": 12,
+      "unique_specializations_passed": 12
+    },
+    {
+      "cases": 20,
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "fatal_error": null,
+      "operator": "swi_glu",
+      "status": "passed",
+      "unique_specializations": 4,
+      "unique_specializations_passed": 4
+    },
+    {
+      "cases": 20,
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "fatal_error": null,
+      "operator": "foreach_addcdiv_scalar",
+      "status": "passed",
+      "unique_specializations": 3,
+      "unique_specializations_passed": 3
+    },
+    {
+      "cases": 20,
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "fatal_error": null,
+      "operator": "foreach_norm",
+      "status": "passed",
+      "unique_specializations": 20,
+      "unique_specializations_passed": 20
+    },
+    {
+      "cases": 20,
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "fatal_error": null,
+      "operator": "rms_norm",
+      "status": "passed",
+      "unique_specializations": 13,
+      "unique_specializations_passed": 13
+    }
+  ],
+  "schema_version": 1,
+  "status": "passed"
+}

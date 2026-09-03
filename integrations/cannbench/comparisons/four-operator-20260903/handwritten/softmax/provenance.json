@@ -1,0 +1,54 @@
+{
+  "arm": "handwritten_target",
+  "operator": "softmax",
+  "source_repository": "https://gitcode.com/compiler-team/pyasc",
+  "source_ref": "v2",
+  "source_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "source_path": "python/test/asctile/target/test_softmax.py",
+  "copied_definitions": [
+    "softmax_fused",
+    "softmax_small_row"
+  ],
+  "source_definition_sha256": {
+    "softmax_fused": "a1e2bdaabde60fe4a984f61159dee9c0fdd42f09752a13ede6d04de3633f4f84",
+    "softmax_small_row": "f610361d46c4d7d6184a834653419bdfe2408dc1bf8ba37f64d9f03023e92752"
+  },
+  "adapter": {
+    "attempt": 0,
+    "model": "deterministic-manual-transport",
+    "session_id": null,
+    "returncode": 0,
+    "timed_out": false,
+    "skill_call_count": 0,
+    "completion_marker_seen": true,
+    "wrapper_exists": true,
+    "accepted": true,
+    "attempts": [
+      {
+        "attempt": 1,
+        "model": "dashscope/qwen3.7-max",
+        "session_id": "ses_f9a0ff576ffePHQzwEnDmWyRmA",
+        "returncode": 124,
+        "timed_out": true,
+        "skill_call_count": 0,
+        "completion_marker_seen": false,
+        "wrapper_exists": false,
+        "accepted": false
+      },
+      {
+        "attempt": 2,
+        "model": "dashscope/glm-5.2",
+        "session_id": "ses_f9a06ccf2ffeWWSV7hkAQpl91w",
+        "returncode": 124,
+        "timed_out": true,
+        "skill_call_count": 0,
+        "completion_marker_seen": false,
+        "wrapper_exists": false,
+        "accepted": false
+      }
+    ],
+    "reason": "model adapters failed; deterministic host transport does not alter upstream JIT bodies"
+  },
+  "candidate_sha256": "cc3927175e5346fab073bc46d5d220a4ed66babc1613b5763e05fa1619bccc21",
+  "adapter_scope": "host signature/allocation/launch transport only; upstream JIT definition text retained"
+}

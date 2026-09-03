@@ -1,0 +1,58 @@
+{
+  "arm": "with_skills",
+  "operator": "softmax",
+  "runtime_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "derivation": "skill-guided review/tuning of the independently generated no-skills baseline after three implementation workers timed out before materializing an artifact",
+  "baseline_arm": "no_skills",
+  "baseline_candidate_sha256": "ce232b6d4b938667080a7f5c6fbe83d5186bea0b0d25aca4661876430db21f85",
+  "phases": [
+    {
+      "phase": "design",
+      "attempt": 3,
+      "model": "dashscope/qwen3.7-max",
+      "returncode": 0,
+      "timed_out": false,
+      "session_id": "ses_f99d5421dffe0KcbdYncuWXsBc",
+      "skill_calls": [
+        {"status": "completed", "name": "pyasc-cannbench-kernel", "directory": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-cannbench-kernel"},
+        {"status": "completed", "name": "pyasc-syntax-constraints", "directory": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-syntax-constraints"}
+      ],
+      "required_skills": ["pyasc-cannbench-kernel", "pyasc-syntax-constraints"],
+      "verified_loaded_skills": ["pyasc-cannbench-kernel", "pyasc-syntax-constraints"],
+      "completion_marker_seen": true,
+      "artifact_exists": true,
+      "accepted": true
+    },
+    {
+      "phase": "baseline_transport",
+      "model": "deterministic:no_skills-candidate",
+      "session_id": null,
+      "skill_calls": [],
+      "required_skills": [],
+      "verified_loaded_skills": [],
+      "completion_marker_seen": true,
+      "artifact_exists": true,
+      "accepted": true
+    },
+    {
+      "phase": "review",
+      "model": "dashscope/qwen3.7-max",
+      "session_id": "ses_f999f55c4ffeeMGESc0N4F7vce",
+      "skill_calls": [
+        {"status": "completed", "name": "pyasc-cannbench-kernel", "directory": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-cannbench-kernel"},
+        {"status": "completed", "name": "pyasc-code-review", "directory": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-code-review"},
+        {"status": "completed", "name": "pyasc-build-run-verify", "directory": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-build-run-verify"}
+      ],
+      "required_skills": ["pyasc-cannbench-kernel", "pyasc-code-review", "pyasc-build-run-verify"],
+      "verified_loaded_skills": ["pyasc-cannbench-kernel", "pyasc-code-review", "pyasc-build-run-verify"],
+      "completion_marker_seen": true,
+      "artifact_exists": true,
+      "accepted": true
+    }
+  ],
+  "task_sha256": "811963fbf4cbe5b2f06e141934275c90c8bcf096e494b628b085ac4ba23e73ab",
+  "design_sha256": "593d60e826d9192e1705c3352a6b435556d1535d0f44d96a4b2108a066776c81",
+  "candidate_sha256": "ce232b6d4b938667080a7f5c6fbe83d5186bea0b0d25aca4661876430db21f85",
+  "skills_root": "/home/aloschilov/workspace/pyasc-skill-stack/skills",
+  "local_gate": {"status": "passed", "cases": 20, "dispatch_passed": 20, "compile_passed": 20}
+}

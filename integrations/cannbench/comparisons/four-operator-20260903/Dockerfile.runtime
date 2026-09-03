@@ -1,0 +1,60 @@
+FROM python:3.12.13-slim-bookworm
+
+ARG LLVM_ARCHIVE_URL=https://oaitriton.blob.core.windows.net/public/llvm-builds/llvm-86b69c31-ubuntu-x64.tar.gz
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates clang cmake curl libffi-dev libncurses-dev libxml2-dev \
+        libzstd-dev lld ninja-build zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN --mount=type=cache,target=/var/cache/pyasc-llvm \
+    archive=/var/cache/pyasc-llvm/llvm-86b69c31-ubuntu-x64.tar.gz \
+    && partial="${archive}.part" \
+    && if ! tar -tzf "$archive" >/dev/null 2>&1; then \
+         if [ -s "$archive" ] && [ ! -e "$partial" ]; then mv "$archive" "$partial"; fi \
+         && curl -fL --retry 5 --retry-all-errors -C - "$LLVM_ARCHIVE_URL" -o "$partial" \
+         && mv "$partial" "$archive"; \
+       fi \
+    && mkdir -p /opt/llvm \
+    && tar -xzf "$archive" -C /opt/llvm --strip-components=1 \
+    && test "$(/opt/llvm/bin/llvm-config --version)" = "20.0.0git"
+
+RUN python -m pip install --no-cache-dir \
+        "setuptools<81" wheel packaging pybind11==2.13.6 setuptools_scm
+
+COPY strip-runtime-wheel.py /usr/local/bin/strip-runtime-wheel.py
+WORKDIR /src
+RUN rm -rf /src/pyasc && mkdir -p /src/pyasc
+WORKDIR /src/pyasc
+COPY comparisons/four-operator-20260903/pyasc-v2-source/ /src/pyasc/
+
+ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_PYASC=1.1.1+g030e9b2 \
+    LLVM_INSTALL_PREFIX=/opt/llvm \
+    PYASC_SETUP_JOBS=4 \
+    PYASC_SETUP_BUILD_DIR=/tmp/pyasc-build \
+    PYASC_SETUP_CLANG_LLD=ON \
+    PYASC_SETUP_CMAKE_APPEND=-DCMAKE_CXX_FLAGS_RELEASE=-O1
+
+RUN --mount=type=cache,target=/tmp/pyasc-build \
+    rm -rf /tmp/pyasc-build/lib.linux-x86_64-cpython-3.12/asc2 \
+           /tmp/pyasc-build/bdist.linux-x86_64-cpython-3.12 \
+    && python setup.py bdist_wheel --dist-dir /out \
+    && python /usr/local/bin/strip-runtime-wheel.py \
+         /out/pyasc-*.whl --strip /opt/llvm/bin/llvm-strip \
+    && python - /out/pyasc-*.whl <<'PY'
+import sys
+import zipfile
+
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    names = archive.namelist()
+    assert "asctile/__init__.py" in names
+    assert "asc2/__init__.py" not in names
+    assert any(
+        name.startswith("asc/_C/libpyasc") and name.endswith(".so")
+        for name in names
+    )
+PY
+
+FROM scratch AS wheel
+COPY --from=0 /out/ /

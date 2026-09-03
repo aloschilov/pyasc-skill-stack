@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "operator": "softmax",
+  "candidate_sha256": "3de2e5e51f13183899cd452ea9e1c963c0991a60c9f546b41a1c33285543e6be",
+  "cases": 20,
+  "compile_passed": 17,
+  "dispatch_passed": 17,
+  "failed_case_ids": [3, 12, 18],
+  "failed_specialization": {
+    "dtype": "bfloat16",
+    "tile_size": 4096,
+    "unroll_factor": 2,
+    "ub_available_bytes": 253952,
+    "ub_used_bytes": 345792
+  },
+  "note": "Compact preservation of the gate report consumed by repair session ses_f99c51d77ffe79nso1PTjKxsH5; the complete pre-repair report is retained in that OpenCode session export."
+}

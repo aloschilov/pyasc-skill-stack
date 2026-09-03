@@ -1,0 +1,11 @@
+{
+  "model": "dashscope/qwen3.7-max",
+  "session_id": "ses_f99c51d77ffe79nso1PTjKxsH5",
+  "skill_calls": [],
+  "completion_marker": "REPAIR_DONE",
+  "input_validation": "no_skills/local_validation/softmax.initial-before-repair.json",
+  "change": "tile_size=4096 route uses unroll_factor=1 instead of 2",
+  "candidate_sha256_before": "3de2e5e51f13183899cd452ea9e1c963c0991a60c9f546b41a1c33285543e6be",
+  "candidate_sha256_after": "ce232b6d4b938667080a7f5c6fbe83d5186bea0b0d25aca4661876430db21f85",
+  "local_gate_after": "20/20 compile and dispatch"
+}

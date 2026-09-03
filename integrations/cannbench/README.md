@@ -4,6 +4,9 @@ Runs the official [CANN Bench](https://gitcode.com/cann/cann-bench) harness
 against pyasc asc2 kernels, producing scores comparable with the
 [cannbench.com leaderboard](https://cannbench.com/leaderboard).
 
+Published evaluation artifacts and direct links to private CANNBench jobs are
+listed in [the CANNBench report index](../../docs/cannbench-reports.md).
+
 ## Layout
 
 | Path | Role |
@@ -114,7 +117,7 @@ commit `ac1222a48c8914d3f81297c7570d1a84f0f26778`. It builds a
 `cp312-cp312-linux_x86_64` CANNBench wheel offline, including `asc`, `asc2`,
 the native `libpyasc` extension, and pybind11's runtime build helper.
 
-Private CANNBench job `job_5a902df0e8c1` (`sub_a395400f9c50`) succeeded on
+Private CANNBench job [`job_5a902df0e8c1`](https://cannbench.com/workspace/jobs/job_5a902df0e8c1) (`sub_a395400f9c50`) succeeded on
 950PR with 20/20 MaskedScale cases, score **82.6074**, geometric-mean speedup
 1.5539×, and no anti-cheat failures. The runner used Python 3.12.13 and
 `Ascend950PR_957c`; platform selection is intentionally auto-detected so the
@@ -124,7 +127,7 @@ and `evidence/cannbench/site_prebuilt_job_5a902df0e8c1_logs.json`.
 
 ### Full official private run (2026-09-02)
 
-Job `job_cd51d6c2ca67` (`sub_d13af9d97a79`) evaluated the complete package on
+Job [`job_cd51d6c2ca67`](https://cannbench.com/workspace/jobs/job_cd51d6c2ca67) (`sub_d13af9d97a79`) evaluated the complete package on
 950PR: all eight L1 operators plus the L2 RMSNorm expansion. It passed 178/180
 cases with no anti-cheat failures and an aggregate geometric-mean speedup of
 0.5772×.
@@ -150,7 +153,7 @@ compact per-operator result are archived as
 `evidence/cannbench/site_full_job_cd51d6c2ca67_logs.json`, and
 `evidence/cannbench/full_official_9op_summary.json`.
 
-A targeted kernel-only fallback rerun, job `job_0f5fdee4443a`
+A targeted kernel-only fallback rerun, job [`job_0f5fdee4443a`](https://cannbench.com/workspace/jobs/job_0f5fdee4443a)
 (`sub_37a5f6fb2734`), terminated with subprocess failures on all 20 cases.
 The site report exposes only `rc=1`, without stderr or a traceback; local
 pyasc/CaModel compilation succeeds, so the exact runner-side failure cannot

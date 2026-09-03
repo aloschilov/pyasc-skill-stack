@@ -239,7 +239,12 @@ class EvalQueue:
             raise RemoteError("CANNBench upload returned invalid JSON") from exc
 
     @staticmethod
-    def _stage_submission(candidate: Path, init_source: str, op: str) -> Path:
+    def _stage_submission(
+        candidate: Path,
+        init_source: str,
+        op: str,
+        provenance_path: Path | None = None,
+    ) -> Path:
         stage = Path(tempfile.mkdtemp(prefix=f"cannbench-{op}-"))
         shutil.copytree(
             SUBMISSION_ROOT,
@@ -253,6 +258,8 @@ class EvalQueue:
         (stage / "cann_bench" / "__init__.py").write_text(
             init_source, encoding="utf-8"
         )
+        if provenance_path is not None:
+            shutil.copy2(provenance_path, stage / "PROVENANCE.json")
         return stage
 
     def evaluate(
@@ -261,11 +268,17 @@ class EvalQueue:
         candidate: Path,
         init_source: str,
         workdir: Path,
+        *,
+        tag: str | None = None,
+        provenance_path: Path | None = None,
     ) -> dict:
         """Submit one candidate privately and return its score digest."""
         self._check_credit()
-        stage = self._stage_submission(candidate, init_source, op)
-        tag = f"pyasc-v2-worker-{op}-{time.strftime('%Y%m%d-%H%M%S')}"
+        stage = self._stage_submission(
+            candidate, init_source, op, provenance_path=provenance_path
+        )
+        if tag is None:
+            tag = f"pyasc-v2-worker-{op}-{time.strftime('%Y%m%d-%H%M%S')}"
         try:
             with self._prepare_zip(str(stage)) as zip_path:
                 submitted = self._submit_streaming(zip_path, op, tag)

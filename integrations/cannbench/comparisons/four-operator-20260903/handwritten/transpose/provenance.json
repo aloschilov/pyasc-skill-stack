@@ -1,0 +1,79 @@
+{
+  "arm": "handwritten_target",
+  "operator": "transpose",
+  "source_repository": "https://gitcode.com/compiler-team/pyasc",
+  "source_ref": "v2",
+  "source_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "source_path": "python/test/asctile/target/test_transpose.py",
+  "copied_definitions": [
+    "transpose_block",
+    "transpose_column",
+    "transpose_line",
+    "transpose_nlast_axis",
+    "transpose_nlast_axis_fat",
+    "transpose_one_axis",
+    "simple_copy",
+    "transpose_2_axis",
+    "simplify_shape"
+  ],
+  "source_definition_sha256": {
+    "transpose_block": "607c6f078d8b00934ec511c0c89ed75911fcc73bf06305a6a9a6a1f16c571da6",
+    "transpose_column": "f19da364a88abb0f0ab4d2d892781098e0bb97bf67bc2eb12f14004666d3e305",
+    "transpose_line": "99748a0924d39a1b233d9eddc1e5e9801304ab212d8f04369e00ea00b9ce9d0e",
+    "transpose_nlast_axis": "bc4db017926e4ce9691681d1cb71b5bf12be2ca4546dd0ad4bbb833656274c9e",
+    "transpose_nlast_axis_fat": "f4a148b695715588af7120214f59441b90364c6596a3ffae22a2cc156e0d3e3b",
+    "transpose_one_axis": "368eb1ea19d01d4d60461bead8fca46bd77bf8be06344b8e72c9a5dfef74b651",
+    "simple_copy": "1df3fb595f36608766564c6b122217fcd927e5dbfc0f2d8f8402e03f0daaf116",
+    "transpose_2_axis": "e0f90d0cbb58b0107891b5a1531ce30ae9559d504e1f94e1fe26f86e99c024bc",
+    "simplify_shape": "73db4b6258285e8482fb4b12779bb4fded183e455533bec30dd689dacb8513c0"
+  },
+  "adapter": {
+    "attempt": 0,
+    "model": "deterministic-manual-transport",
+    "session_id": null,
+    "returncode": 0,
+    "timed_out": false,
+    "skill_call_count": 0,
+    "completion_marker_seen": true,
+    "wrapper_exists": true,
+    "accepted": true,
+    "attempts": [
+      {
+        "attempt": 1,
+        "model": "dashscope/qwen3.7-max",
+        "session_id": "ses_f99ed2184ffez1DhiELgdUfotp",
+        "returncode": 124,
+        "timed_out": true,
+        "skill_call_count": 0,
+        "completion_marker_seen": false,
+        "wrapper_exists": false,
+        "accepted": false
+      },
+      {
+        "attempt": 2,
+        "model": "dashscope/glm-5.2",
+        "session_id": "ses_f99e3f92dffeiHBt08f2Sl9Xhu",
+        "returncode": 0,
+        "timed_out": false,
+        "skill_call_count": 0,
+        "completion_marker_seen": false,
+        "wrapper_exists": false,
+        "accepted": false
+      },
+      {
+        "attempt": 3,
+        "model": "dashscope/qwen3.7-max",
+        "session_id": "ses_f99dabae2ffe5dmuIlv2JhOuYb",
+        "returncode": 124,
+        "timed_out": true,
+        "skill_call_count": 3,
+        "completion_marker_seen": false,
+        "wrapper_exists": false,
+        "accepted": false
+      }
+    ],
+    "reason": "model adapters failed; deterministic host transport does not alter upstream JIT bodies"
+  },
+  "candidate_sha256": "3c007dc11bd63653db34eb6f78ebb5dc66b240c13b343f3b9e087368af250cca",
+  "adapter_scope": "host signature/allocation/launch transport only; upstream JIT definition text retained"
+}

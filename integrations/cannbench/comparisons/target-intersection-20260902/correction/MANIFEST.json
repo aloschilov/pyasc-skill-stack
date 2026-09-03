@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "benchmark_slug": "official-tasks",
+  "selected_operators": [
+    "gelu",
+    "foreach_addcdiv_scalar"
+  ],
+  "submission_runtime_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+  "source_audit": {
+    "first_run_source_repository": "https://gitcode.com/compiler-team/pyasc",
+    "first_run_source_commit": "4d1db41d61cabf565bca1cfb0b11ef5ec4f84c7f",
+    "first_run_source_directory": "python/test/asc2/target",
+    "first_run_source_access": "read from Git objects, not copied from the current worktree",
+    "current_origin_v2_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+    "current_origin_v2_directory": "python/test/asctile/target"
+  },
+  "variants": {
+    "target_corrected": {
+      "variant": "target_corrected",
+      "selected_operators": [
+        "gelu",
+        "foreach_addcdiv_scalar"
+      ],
+      "candidates": {
+        "gelu": {
+          "source": "integrations/cannbench/submission/cann_bench/gelu.py",
+          "sha256": "c139b5db752c31c14b0723369fe682e29c2696657b090d0a58ddbbc6d30ea02a"
+        },
+        "foreach_addcdiv_scalar": {
+          "source": "integrations/cannbench/submission/cann_bench/foreach_addcdiv_scalar.py",
+          "sha256": "241aa7fd8a07d50bacb7a5bf4cbe5869b9a3ad3eca8a7813e65a2f33c25caebb"
+        }
+      },
+      "method": "manual CANNBench contract completion of the target-derived kernels: FP32 internal addcdiv and stable exact/tanh GELU",
+      "classification": "target-derived corrective adapter, not a verbatim target test",
+      "prior_hardware_evidence": {
+        "gelu": "job_cd51d6c2ca67: 20/20",
+        "foreach_addcdiv_scalar": "job_75a7fee4ae6f and job_ae3bfdefd087: 20/20"
+      },
+      "submission_zip": {
+        "path": "integrations/cannbench/comparisons/target-intersection-20260902/correction/submissions/target_corrected.zip",
+        "sha256": "a80dac264af30f17ce4361e0daaa90667e5697e060b47bce5d879301b31ad4f7",
+        "size_bytes": 6038008
+      }
+    },
+    "with_skills_corrected": {
+      "variant": "with_skills_corrected",
+      "selected_operators": [
+        "gelu",
+        "foreach_addcdiv_scalar"
+      ],
+      "candidates": {
+        "gelu": {
+          "source": "integrations/cannbench/comparisons/target-intersection-20260902/correction/with_skills/work/candidate.py",
+          "sha256": "794e4ad018ba82487b36247eff5c3af5e1ee4925f384a09bb8d4a194a77fc1de"
+        },
+        "foreach_addcdiv_scalar": {
+          "source": "integrations/cannbench/comparisons/target-intersection-20260902/with_skills/candidates/foreach_addcdiv_scalar.py",
+          "sha256": "e7fabe7173785ff5cf47778ff0f7c4f1b3e4df2cb3847053056793c10b509f0c"
+        }
+      },
+      "method": "OpenCode repair with repository-local skill invocation and measured compile feedback",
+      "worker_sessions": {
+        "accepted_repair": "ses_f9c952882ffeAnIEP58bPaIy7l",
+        "accepted_review": "ses_f9c8e48c5ffeFcOrr6Qvqf72Tj",
+        "timed_out_review": "ses_f9c93e480ffeq5Hu4yhp750SLO"
+      },
+      "required_skill": "pyasc-cannbench-kernel",
+      "skill_loaded_in_accepted_phases": true,
+      "submission_zip": {
+        "path": "integrations/cannbench/comparisons/target-intersection-20260902/correction/submissions/with_skills_corrected.zip",
+        "sha256": "d715923280e2d7fda9caee8e3bf6774f5a84c4fe0c87afba6db82259010ad0c7",
+        "size_bytes": 6036491
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "attempt": 2,
+  "model": "dashscope/glm-5.2",
+  "session_id": "ses_f9a06ccf2ffeWWSV7hkAQpl91w",
+  "returncode": 124,
+  "timed_out": true,
+  "skill_call_count": 0,
+  "completion_marker_seen": false,
+  "wrapper_exists": false,
+  "accepted": false
+}

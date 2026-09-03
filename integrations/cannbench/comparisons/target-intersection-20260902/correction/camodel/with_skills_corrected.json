@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "evidence": "verified-camodel-smoke",
+  "platform": "Ascend950PR_9599",
+  "suite": "adversarial",
+  "operators": [
+    {
+      "operator": "gelu",
+      "status": "passed",
+      "camodel_ticks": 38344,
+      "error": null
+    },
+    {
+      "operator": "foreach_addcdiv_scalar",
+      "status": "passed",
+      "camodel_ticks": 15277,
+      "error": null
+    }
+  ],
+  "status": "passed",
+  "limitations": [
+    "simulator-sized adversarial routes, not full shapes",
+    "not the official 180-case matrix",
+    "camodel ticks are not silicon performance"
+  ]
+}

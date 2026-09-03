@@ -5,11 +5,19 @@ description: pyasc kernel development standard workflow using the asc2 tile-base
 
 # pyasc kernel development workflow (asc2 API)
 
+> **CANNBench exception:** when the target is under
+> `integrations/cannbench/`, load `pyasc-cannbench-kernel` and follow its
+> compact `candidate.py` contract. Do not create a standalone project tree,
+> `__main__`, pytest function, or numpy-only harness. In that profile
+> `always_compile=True` is optional development instrumentation; it is not a
+> production requirement. The CANNBench skill still requires separate design,
+> implementation, review, and validation phases with recorded provenance.
+
 ## pyasc asc2 JIT kernel requirements
 
 > **This skill is for pyasc asc2 kernels**: the final product is a runnable Python script using `@asc2.jit`, not a C++ executable or `.so` library.
 
-**Phase 2 exit requirements**:
+**Standalone simulator Phase 2 exit requirements**:
 - There is a kernel function decorated with `@asc2.jit(always_compile=True)`
 - There is a launch function using `kernel[core_num](...)`
 - There is a host-side driver (`if __name__ == "__main__"`) AND a `test_*` function (for pytest)

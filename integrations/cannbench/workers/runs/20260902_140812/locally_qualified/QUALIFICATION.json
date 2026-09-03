@@ -1,0 +1,18 @@
+{
+  "status": "partial",
+  "evidence": "verified-local-compile",
+  "operators": [
+    "sigmoid",
+    "exp",
+    "mish",
+    "gelu",
+    "masked_scale",
+    "foreach_addcdiv_scalar"
+  ],
+  "cases_per_operator": 20,
+  "limitations": [
+    "generated kernels were not executed numerically",
+    "performance was not measured",
+    "canonical submission modules were not overwritten"
+  ]
+}

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import hashlib
 import json
 import os
 import shutil
@@ -31,12 +32,81 @@ import prompts
 from evalqueue import EvalQueue, RemoteError
 
 WORKERS_DIR = Path(__file__).resolve().parent
+REPO_ROOT = WORKERS_DIR.parent.parent.parent
 SUBMISSION_PKG = WORKERS_DIR.parent / "submission" / "cann_bench"
-EVIDENCE_DIR = WORKERS_DIR.parent.parent.parent / "evidence" / "cannbench"
+EVIDENCE_DIR = REPO_ROOT / "evidence" / "cannbench"
 RUNS_DIR = WORKERS_DIR / "runs"
+SCRATCH_ROOT = WORKERS_DIR / ".scratch"
+SKILLS_ROOT = REPO_ROOT / "skills"
 
-OPENCODE_MODEL = "dashscope/glm-5.2"
-WORKER_TIMEOUT_S = 1800
+DEFAULT_MODELS = ("dashscope/glm-5.2", "dashscope/qwen3.7-max")
+WORKER_TIMEOUT_S = 360
+REQUIRED_SKILLS = (
+    "pyasc-cannbench-kernel",
+    "pyasc-syntax-constraints",
+    "pyasc-code-review",
+    "pyasc-build-run-verify",
+)
+
+PHASE_SKILLS = {
+    "design": (
+        "pyasc-cannbench-kernel",
+        "pyasc-syntax-constraints",
+    ),
+    "implement": (
+        "pyasc-cannbench-kernel",
+        "pyasc-syntax-constraints",
+    ),
+    "review": (
+        "pyasc-cannbench-kernel",
+    ),
+    "repair": (
+        "pyasc-cannbench-kernel",
+    ),
+}
+
+PHASE_PROMPTS = {
+    "design": """\
+This is the DESIGN phase of a provenance-gated kernel workflow. Before doing
+anything else, invoke the OpenCode `skill` tool for each exact skill:
+{skills}. Read task.md, apply those skills, and write a concise design.md that
+covers the algorithm, pinned-v2 APIs, all 20 cases, tiling, tails, UB budget,
+numerical risks, anti-cheat constraints, and the local validation ladder. Do
+not write candidate.py yet. End with DESIGN_DONE.
+Use at most four tool calls. Do not inspect current submission modules, old run
+artifacts, or the full pyasc source; task.md and the loaded skill references
+are the allowed implementation context.
+""",
+    "implement": """\
+This is the IMPLEMENTATION phase of a provenance-gated kernel workflow.
+Before writing code, invoke the OpenCode `skill` tool for each exact skill:
+{skills}. Read task.md and design.md, apply those skills, and write the complete
+submission module to candidate.py. Perform only a Python syntax check; do not
+build or run pyasc locally. Create no other files. End with IMPLEMENT_DONE.
+Do not inspect current submission modules or old generated candidates.
+""",
+    "review": """\
+This is the independent REVIEW phase of a provenance-gated kernel workflow.
+Before reviewing, invoke the OpenCode `skill` tool for each exact skill:
+{skills}. Read candidate.py and only the target-operator section of task.md.
+Apply the skill, review the exact public contract, host/JIT boundary, tails,
+dtypes, special values, and UB budget; fix candidate.py in place if needed,
+then run only `python3 -m py_compile candidate.py`. Do not replace numerical
+work with torch operations and create no other files. End with REVIEW_DONE.
+Use at most five tool calls.
+Do not inspect current submission modules or old generated candidates.
+""",
+    "repair": """\
+This is a measured-feedback REPAIR phase. Before changing code, invoke the
+OpenCode `skill` tool for each exact skill: {skills}. Read task.md, design.md,
+candidate.py, and compile_feedback.md. Apply the skill to the measured local
+failure for this operator, repair candidate.py in place without copying an
+earlier repository implementation, and run only `python3 -m py_compile
+candidate.py`. Create no other files. End with REPAIR_DONE.
+Use at most five tool calls and stop as soon as the measured failure is fixed.
+    """,
+}
+WORKFLOW_PHASES = ("design", "implement", "review")
 
 GUIDANCE = {
     "rms_norm": """\
@@ -178,8 +248,8 @@ INIT_HEADER = '''"""pyasc asc2 submission package for CANN Bench.
 
 Each module exposes one public callable whose name and signature match the
 operator's ``proto.yaml`` schema. All numerical work happens in pyasc asc2
-kernels launched directly on torch_npu-owned device buffers (zero-copy via
-``Tensor.data_ptr()``).
+kernels launched directly with torch_npu-owned tensors. The pinned pyasc v2
+runtime resolves their device buffers without host-side pointer extraction.
 """
 
 '''
@@ -198,11 +268,38 @@ class WorkItem:
         return f"{self.op}-{self.kind}"
 
 
+@dataclass(frozen=True)
+class WorkerResult:
+    returncode: int
+    session_id: str | None
+    loaded_skills: tuple[str, ...]
+    skill_dirs: tuple[tuple[str, str], ...]
+    text_output: str
+
+    def missing_skills(self, required: tuple[str, ...]) -> tuple[str, ...]:
+        loaded = set(self.loaded_skills)
+        return tuple(name for name in required if name not in loaded)
+
+    def skill_gate_passed(self, required: tuple[str, ...]) -> bool:
+        return self.returncode == 0 and not self.missing_skills(required)
+
+
 # ---------------------------------------------------------------- static check
 
 ALLOWED_TORCH_CALLS = {"empty", "empty_like", "zeros", "zeros_like", "tensor"}
 BANNED_TORCH_SUBMODULES = {"nn", "ops", "functional", "linalg", "special",
                            "fft", "cuda", "npu"}
+EXPECTED_PARAMETERS = {
+    "sigmoid": ("x",),
+    "exp": ("x", "base", "scale", "shift"),
+    "mish": ("x",),
+    "gelu": ("x", "approximate"),
+    "masked_scale": ("x", "mask", "scale"),
+    "swi_glu": ("input", "dim"),
+    "foreach_addcdiv_scalar": ("x1", "x2", "x3", "scalar"),
+    "foreach_norm": ("x", "scalar"),
+    "rms_norm": ("x", "gamma", "epsilon"),
+}
 
 
 def _dotted(node: ast.AST) -> str | None:
@@ -224,12 +321,22 @@ def static_check(path: Path, callable_name: str) -> list[str]:
     except SyntaxError as exc:
         return [f"syntax error: {exc}"]
 
-    has_callable = any(
-        isinstance(n, ast.FunctionDef) and n.name == callable_name
-        for n in tree.body)
-    if not has_callable:
+    callable_node = next((
+        n for n in tree.body
+        if isinstance(n, ast.FunctionDef) and n.name == callable_name
+    ), None)
+    if callable_node is None:
         problems.append(
             f"missing top-level public callable def {callable_name}(...)")
+    else:
+        actual = tuple(arg.arg for arg in callable_node.args.args)
+        expected = EXPECTED_PARAMETERS[callable_name]
+        if actual != expected:
+            problems.append(
+                f"public signature parameters {actual!r} != {expected!r}"
+            )
+        if callable_node.args.vararg or callable_node.args.kwarg:
+            problems.append("public callable must not use *args or **kwargs")
 
     has_jit = any(
         isinstance(n, ast.FunctionDef) and any(
@@ -255,6 +362,11 @@ def static_check(path: Path, callable_name: str) -> list[str]:
                     problems.append(f"banned torch usage: {name}")
         if isinstance(node, ast.Call):
             name = _dotted(node.func)
+            if isinstance(node.func, ast.Attribute) and node.func.attr == "data_ptr":
+                problems.append(
+                    "banned Tensor.data_ptr(): pass the Tensor itself to the "
+                    "pyasc v2 JIT launch so dtype specialization is preserved"
+                )
             if name and name.startswith("torch.") and name.count(".") == 1:
                 fn = name.split(".")[1]
                 if fn not in ALLOWED_TORCH_CALLS:
@@ -267,29 +379,165 @@ def static_check(path: Path, callable_name: str) -> list[str]:
 
 # ------------------------------------------------------------------- workers
 
-def run_worker(scratch: Path, message: str, resume: bool,
-               log_path: Path) -> bool:
-    cmd = ["opencode", "run", "--pure", "-m", OPENCODE_MODEL]
-    if resume:
-        cmd.append("-c")
+def _parse_worker_trace(
+    stdout: str,
+) -> tuple[str | None, tuple[str, ...], tuple[tuple[str, str], ...], str]:
+    """Extract skill calls whose source resolves into this checkout."""
+    session_id = None
+    loaded = []
+    skill_dirs = []
+    text_parts = []
+    for raw in stdout.splitlines():
+        try:
+            event = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        session_id = event.get("sessionID") or session_id
+        part = event.get("part") or {}
+        state = part.get("state") or {}
+        if event.get("type") == "text" and isinstance(part.get("text"), str):
+            text_parts.append(part["text"])
+        if (
+            event.get("type") == "tool_use"
+            and part.get("tool") == "skill"
+            and state.get("status") == "completed"
+        ):
+            name = (state.get("input") or {}).get("name")
+            directory = str((state.get("metadata") or {}).get("dir") or "")
+            expected = (SKILLS_ROOT / str(name)).resolve()
+            source_matches = bool(directory) and Path(directory).resolve() == expected
+            if isinstance(name, str):
+                skill_dirs.append((name, directory))
+            if source_matches and name not in loaded:
+                loaded.append(name)
+    return session_id, tuple(loaded), tuple(skill_dirs), "\n".join(text_parts)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _skill_source_manifest(name: str) -> dict[str, str]:
+    root = SKILLS_ROOT / name
+    return {
+        str(path.relative_to(root)): _sha256(path)
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
+
+
+def run_worker(scratch: Path, message: str, log_path: Path,
+               model: str, *, session_id: str | None = None,
+               timeout_s: int = WORKER_TIMEOUT_S) -> WorkerResult:
+    cmd = [
+        "opencode", "run", "--pure", "--format", "json",
+        "--dir", str(scratch), "-m", model,
+    ]
+    if session_id:
+        cmd.extend(["--session", session_id])
     cmd.append(message)
-    # opencode resolves its project dir from $PWD, not the process cwd
-    env = {**os.environ, "PWD": str(scratch)}
+    # Pin skill discovery to this checkout. External skill catalogs are
+    # disabled so similarly named user skills cannot satisfy provenance.
+    config = {
+        "skills": {"paths": [str(SKILLS_ROOT)]},
+        "mcp": {"cann-bench-site": {"enabled": False}},
+    }
+    env = {
+        **os.environ,
+        "OPENCODE_CONFIG_CONTENT": json.dumps(config),
+        "OPENCODE_DISABLE_EXTERNAL_SKILLS": "1",
+        "OPENCODE_DISABLE_CLAUDE_CODE_SKILLS": "1",
+    }
     try:
         proc = subprocess.run(cmd, cwd=scratch, env=env, capture_output=True,
-                              text=True, timeout=WORKER_TIMEOUT_S)
+                              text=True, timeout=timeout_s)
         log_path.write_text(
             f"rc={proc.returncode}\n=== STDOUT ===\n{proc.stdout}\n"
             f"=== STDERR ===\n{proc.stderr}\n")
-        return proc.returncode == 0
+        session_id, loaded, skill_dirs, text_output = _parse_worker_trace(
+            proc.stdout
+        )
+        return WorkerResult(
+            proc.returncode, session_id, loaded, skill_dirs, text_output
+        )
     except subprocess.TimeoutExpired as exc:
         out = (exc.stdout or b"")
         if isinstance(out, bytes):
             out = out.decode(errors="replace")
         log_path.write_text(
-            f"worker timed out after {WORKER_TIMEOUT_S}s\n"
+            f"worker timed out after {timeout_s}s\n"
             f"=== PARTIAL STDOUT ===\n{out[-8000:]}\n")
-        return False
+        session_id, loaded, skill_dirs, text_output = _parse_worker_trace(out)
+        return WorkerResult(124, session_id, loaded, skill_dirs, text_output)
+
+
+def run_phase(scratch: Path, phase: str, iter_dir: Path,
+              models: tuple[str, ...], start_index: int,
+              attempts: int) -> tuple[WorkerResult, str] | None:
+    """Run one isolated workflow phase and enforce its native skill calls."""
+    required = PHASE_SKILLS[phase]
+    message = PHASE_PROMPTS[phase].format(skills=", ".join(required))
+    expected = {
+        "design": scratch / "design.md",
+        "implement": scratch / "candidate.py",
+        "review": scratch / "candidate.py",
+        "repair": scratch / "candidate.py",
+    }[phase]
+    marker = f"{phase.upper()}_DONE"
+
+    for attempt in range(1, attempts + 1):
+        model = models[(start_index + attempt - 1) % len(models)]
+        result = run_worker(
+            scratch,
+            message,
+            iter_dir / f"{phase}.attempt{attempt}.log",
+            model,
+        )
+        missing = result.missing_skills(required)
+        artifact_exists = expected.exists()
+        marker_seen = marker in result.text_output
+        gate_passed = (
+            result.skill_gate_passed(required)
+            and artifact_exists
+            and marker_seen
+        )
+        trace = {
+            "phase": phase,
+            "model": model,
+            "session_id": result.session_id,
+            "required_skills": list(required),
+            "loaded_skills": list(result.loaded_skills),
+            "observed_skill_dirs": dict(result.skill_dirs),
+            "missing_skills": list(missing),
+            "artifact": str(expected.relative_to(scratch)),
+            "artifact_exists": artifact_exists,
+            "completion_marker": marker,
+            "completion_marker_seen": marker_seen,
+            "skill_gate_passed": gate_passed,
+            "returncode": result.returncode,
+        }
+        (iter_dir / f"{phase}.skill-trace.attempt{attempt}.json").write_text(
+            json.dumps(trace, indent=2), encoding="utf-8"
+        )
+        if gate_passed:
+            return result, model
+        if phase in ("design", "implement") and expected.exists():
+            rejected = iter_dir / f"{phase}.rejected.attempt{attempt}{expected.suffix}"
+            shutil.copy2(expected, rejected)
+            expected.unlink()
+        if attempt < attempts:
+            print(
+                f"[{phase}] attempt {attempt} rejected before evaluation; "
+                f"artifact={artifact_exists}, missing_skills={list(missing)}; "
+                "retrying",
+                flush=True,
+            )
+            time.sleep(10)
+    return None
 
 
 # ------------------------------------------------------------------ package
@@ -329,13 +577,91 @@ def decide_accept(item: WorkItem, digest: dict) -> bool:
     return baseline is None or digest["score"] > baseline + 0.05
 
 
-def process_item(item: WorkItem, queue: EvalQueue, run_root: Path,
-                 iterations: int, dry_run: bool) -> WorkItem:
+def local_evaluate(op: str, candidate: Path, iter_dir: Path) -> dict:
+    try:
+        candidate_arg = candidate.resolve().relative_to(REPO_ROOT)
+    except ValueError as exc:
+        return {"hard_failure": True, "error": str(exc), "status": "failed"}
+    command = [
+        str(WORKERS_DIR / "run_local_compile_gate.sh"),
+        "--candidate", str(candidate_arg), "--op", op,
+    ]
+    proc = subprocess.run(command, capture_output=True, text=True)
+    try:
+        report = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        report = {
+            "status": "failed",
+            "fatal_error": "local compile gate emitted non-JSON output",
+            "stdout_tail": proc.stdout[-4000:],
+        }
+    report["returncode"] = proc.returncode
+    if proc.stderr:
+        report["stderr_tail"] = proc.stderr[-8000:]
+    (iter_dir / "local_compile.json").write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return {
+        "hard_failure": proc.returncode != 0 or report.get("status") != "passed",
+        "status": report.get("status", "failed"),
+        "passed": report.get("compile_passed", 0),
+        "total": report.get("cases", 20),
+        "dispatch_passed": report.get("dispatch_passed", 0),
+        "unique_specializations": report.get("unique_specializations", 0),
+        "unique_specializations_passed": report.get(
+            "unique_specializations_passed", 0
+        ),
+        "fatal_error": report.get("fatal_error"),
+        "failure_details": [
+            case for case in report.get("case_results", [])
+            if (
+                case.get("dispatch") != "passed"
+                or case.get("compile") != "passed"
+            )
+        ],
+        "evidence": "verified-local-compile",
+        "limitations": [
+            "does not execute numerical code",
+            "does not measure NPU performance",
+        ],
+    }
+
+
+def compact_local_feedback(digest: dict, limit: int = 6) -> dict:
+    """Deduplicate repeated per-case failures before the next model prompt."""
+    signatures = []
+    affected_cases = []
+    for case in digest.get("failure_details", []):
+        affected_cases.append(case.get("case_id"))
+        messages = list(case.get("compile_errors", []))
+        if case.get("error"):
+            messages.append(case["error"])
+        for message in messages:
+            first_line = str(message).splitlines()[0]
+            if first_line not in signatures:
+                signatures.append(first_line)
+    return {
+        "status": digest.get("status"),
+        "passed": digest.get("passed"),
+        "total": digest.get("total"),
+        "dispatch_passed": digest.get("dispatch_passed"),
+        "failure_signatures": signatures[:limit],
+        "affected_cases": affected_cases,
+        "instruction": (
+            "Repair the candidate against these measured pinned-v2 failures; "
+            "do not remove or shrink any CANNBench case."
+        ),
+    }
+
+
+def process_item(item: WorkItem, queue: EvalQueue | None, run_root: Path,
+                 iterations: int, dry_run: bool, evaluation: str,
+                 models: tuple[str, ...], phase_attempts: int) -> WorkItem:
     item_dir = run_root / item.name
     item_dir.mkdir(parents=True, exist_ok=True)
-    # scratch must live OUTSIDE the git repo: opencode resolves relative
-    # paths against the enclosing project root, not its cwd
-    scratch = Path("/tmp/cbworkers") / run_root.name / item.name
+    # Keep scratch inside the checkout so project permissions and skill paths
+    # are stable, while .gitignore prevents generated files from being staged.
+    scratch = SCRATCH_ROOT / run_root.name / item.name
     scratch.mkdir(parents=True, exist_ok=True)
     item.accepted_score = incumbent_score(item.op)
 
@@ -346,46 +672,119 @@ def process_item(item: WorkItem, queue: EvalQueue, run_root: Path,
     else:
         message = prompts.build_generation_prompt(
             item.op, item.op, item.op, guidance=GUIDANCE.get(item.op, "-"))
-    (item_dir / "prompt.md").write_text(message)
+    base_message = message
+    (item_dir / "prompt.md").write_text(base_message)
 
     if dry_run:
         item.status = "dry-run: prompt written"
         return item
 
     canonical_module = SUBMISSION_PKG / f"{item.op}.py"
-    resume = False
 
     for it in range(1, iterations + 1):
         iter_dir = item_dir / f"iter{it}"
         iter_dir.mkdir(parents=True, exist_ok=True)
-        (iter_dir / "message.md").write_text(message)
-        print(f"[{item.name}] iter {it}: worker running "
-              f"({'resume' if resume else 'fresh'})", flush=True)
+        task_message = (
+            base_message
+            if message == base_message
+            else base_message + "\n\n# Evaluator feedback from the previous iteration\n\n" + message
+        )
+        (iter_dir / "message.md").write_text(task_message)
+        print(f"[{item.name}] iter {it}: three-phase worker running",
+              flush=True)
 
         candidate = scratch / "candidate.py"
+        design = scratch / "design.md"
         candidate.unlink(missing_ok=True)  # never re-submit a stale file
-        # DashScope rate-limits under concurrency and opencode exits silently
-        # (rc=0, no output) when throttled — retry within the iteration
-        for attempt in range(3):
-            run_worker(scratch, message, resume,
-                       iter_dir / f"worker.attempt{attempt + 1}.log")
-            if candidate.exists():
+        design.unlink(missing_ok=True)
+        (scratch / "task.md").write_text(task_message, encoding="utf-8")
+
+        # Keep one coherent implementation model across an iteration and use
+        # the next model for independent review. A failed next iteration
+        # rotates roles, while per-phase attempts still fail over immediately.
+        primary_index = (it - 1) % len(models)
+        reviewer_index = (primary_index + 1) % len(models)
+        phase_model_indexes = {
+            "design": primary_index,
+            "implement": primary_index,
+            "review": reviewer_index,
+        }
+        phase_results = {}
+        actual_phase_models = {}
+        for phase in WORKFLOW_PHASES:
+            start_index = phase_model_indexes[phase]
+            if phase == "review" and "implement" in actual_phase_models:
+                implementation_index = models.index(
+                    actual_phase_models["implement"]
+                )
+                start_index = (implementation_index + 1) % len(models)
+            model = models[start_index]
+            print(
+                f"[{item.name}] iter {it}: {phase} phase with {model}",
+                flush=True,
+            )
+            phase_result = run_phase(
+                scratch, phase, iter_dir, models, start_index, phase_attempts
+            )
+            if phase_result is None:
                 break
-            if attempt < 2:
-                print(f"[{item.name}] iter {it}: no output from worker "
-                      f"(attempt {attempt + 1}), retrying", flush=True)
-                time.sleep(60)
-            else:
-                print(f"[{item.name}] iter {it}: no output from worker "
-                      "after 3 attempts", flush=True)
-        resume = True
-        if not candidate.exists():
-            message = ("You did not write candidate.py in the working "
-                       "directory. Write the complete module to candidate.py "
-                       "now, exactly as specified.")
-            item.history.append({"iter": it, "result": "no candidate"})
+            result, actual_model = phase_result
+            phase_results[phase] = result
+            actual_phase_models[phase] = actual_model
+
+        if len(phase_results) != len(WORKFLOW_PHASES) or not candidate.exists():
+            completed = list(phase_results)
+            message = (
+                "The previous three-phase workflow did not pass its mandatory "
+                "skill provenance gates. Start over from the full original "
+                "operator task and produce a fresh candidate."
+            )
+            item.history.append({
+                "iter": it,
+                "result": "skill-gate-fail",
+                "completed_phases": completed,
+            })
             continue
         shutil.copy(candidate, iter_dir / "candidate.py")
+        shutil.copy(design, iter_dir / "design.md")
+        loaded_skills = []
+        observed_dirs = {}
+        sessions = {}
+        phase_model_record = {}
+        for phase, result in phase_results.items():
+            sessions[phase] = result.session_id
+            phase_model_record[phase] = actual_phase_models[phase]
+            for name in result.loaded_skills:
+                if name not in loaded_skills:
+                    loaded_skills.append(name)
+            observed_dirs.update(dict(result.skill_dirs))
+        provenance = {
+            "generator": "opencode",
+            "opencode_version": subprocess.run(
+                ["opencode", "--version"], capture_output=True, text=True,
+                check=False,
+            ).stdout.strip(),
+            "models": phase_model_record,
+            "sessions": sessions,
+            "workflow_phases": list(WORKFLOW_PHASES),
+            "required_skills": list(REQUIRED_SKILLS),
+            "loaded_skills": loaded_skills,
+            "observed_skill_dirs": observed_dirs,
+            "skill_gate_passed": set(REQUIRED_SKILLS).issubset(loaded_skills),
+            "skill_sources": {
+                name: {
+                    "path": str(SKILLS_ROOT / name),
+                    "files": _skill_source_manifest(name),
+                } for name in REQUIRED_SKILLS
+            },
+            "prompt_sha256": _sha256(scratch / "task.md"),
+            "design_sha256": _sha256(design),
+            "candidate_sha256": _sha256(candidate),
+            "evaluation_mode": evaluation,
+        }
+        (iter_dir / "provenance.json").write_text(
+            json.dumps(provenance, indent=2), encoding="utf-8"
+        )
 
         problems = static_check(candidate, item.op)
         if problems:
@@ -398,6 +797,58 @@ def process_item(item: WorkItem, queue: EvalQueue, run_root: Path,
                 {"iter": it, "result": "static-fail", "problems": problems})
             continue
 
+        if evaluation == "local":
+            print(
+                f"[{item.name}] iter {it}: exact-v2 local compile gate",
+                flush=True,
+            )
+            digest = local_evaluate(item.op, candidate, iter_dir)
+            (iter_dir / "digest.json").write_text(
+                json.dumps(digest, indent=2) + "\n", encoding="utf-8"
+            )
+            provenance["validation"] = {
+                "label": "verified-local-compile",
+                "pyasc_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+                "report_sha256": _sha256(iter_dir / "local_compile.json"),
+                "passed": digest.get("passed"),
+                "total": digest.get("total"),
+                "limitations": digest.get("limitations", []),
+            }
+            (iter_dir / "provenance.json").write_text(
+                json.dumps(provenance, indent=2) + "\n", encoding="utf-8"
+            )
+            accepted = not digest["hard_failure"]
+            item.history.append({
+                "iter": it,
+                "result": "locally-qualified" if accepted else "local-fail",
+                "passed": f"{digest.get('passed')}/{digest.get('total')}",
+                "models": phase_model_record,
+            })
+            if accepted:
+                package_dir = run_root / "locally_qualified" / "cann_bench"
+                provenance_dir = run_root / "locally_qualified" / "provenance"
+                package_dir.mkdir(parents=True, exist_ok=True)
+                provenance_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(candidate, package_dir / f"{item.op}.py")
+                shutil.copy2(
+                    iter_dir / "provenance.json",
+                    provenance_dir / f"{item.op}.json",
+                )
+                item.status = (
+                    f"locally qualified {digest['passed']}/{digest['total']} "
+                    "(numerics/performance unverified)"
+                )
+                return item
+            message = json.dumps(compact_local_feedback(digest), indent=2)
+            (scratch / "compile_feedback.md").write_text(
+                "# Exact-v2 local compile feedback\n\n```json\n"
+                + message + "\n```\n",
+                encoding="utf-8",
+            )
+            continue
+
+        if queue is None:
+            raise RuntimeError("remote evaluation requested without EvalQueue")
         with queue.lock:
             print(f"[{item.name}] iter {it}: private evaluation on CANNBench",
                   flush=True)
@@ -446,21 +897,44 @@ def process_item(item: WorkItem, queue: EvalQueue, run_root: Path,
                 if accept else None)
             message = prompts.build_feedback(digest)
 
-    item.status = f"done, best score {item.accepted_score}"
+    if evaluation == "local":
+        item.status = "not locally qualified; see iteration evidence"
+    else:
+        item.status = f"done, best score {item.accepted_score}"
     return item
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--items", required=True,
-                        help="comma list of <op>:<tune|generate>")
+                        help="comma list of <op>:<tune|generate>, or all")
     parser.add_argument("--iterations", type=int, default=3)
     parser.add_argument("--workers", type=int, default=3)
+    parser.add_argument(
+        "--models", default=",".join(DEFAULT_MODELS),
+        help="comma-separated working OpenCode models; review uses the next model",
+    )
+    parser.add_argument(
+        "--evaluation", choices=("local", "remote"), default="local",
+        help="local is credit-free compile/lowering only; remote consumes credits",
+    )
+    parser.add_argument("--phase-attempts", type=int, default=2)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
+    models = tuple(model.strip() for model in args.models.split(",") if model.strip())
+    if not models:
+        parser.error("at least one --models entry is required")
+    if args.phase_attempts < 1:
+        parser.error("--phase-attempts must be at least 1")
+
     items = []
-    for spec in args.items.split(","):
+    item_specs = (
+        [f"{op}:generate" for op in ALL_OPS]
+        if args.items.strip() == "all"
+        else args.items.split(",")
+    )
+    for spec in item_specs:
         op, _, kind = spec.strip().partition(":")
         if op not in ALL_OPS or kind not in ("tune", "generate"):
             parser.error(f"bad item {spec!r}")
@@ -470,11 +944,14 @@ def main() -> int:
     run_root.mkdir(parents=True)
     print(f"run dir: {run_root}", flush=True)
 
-    queue = EvalQueue()
+    queue = EvalQueue() if args.evaluation == "remote" else None
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
-        futures = [pool.submit(process_item, item, queue, run_root,
-                               args.iterations, args.dry_run)
-                   for item in items]
+        futures = [
+            pool.submit(
+                process_item, item, queue, run_root, args.iterations,
+                args.dry_run, args.evaluation, models, args.phase_attempts,
+            ) for item in items
+        ]
         results = [f.result() for f in futures]
 
     print("\n=== campaign summary ===")
@@ -482,10 +959,48 @@ def main() -> int:
         print(f"{item.name}: {item.status}")
         for h in item.history:
             print(f"  {h}")
-    (run_root / "summary.json").write_text(json.dumps(
-        [{"item": i.name, "status": i.status, "history": i.history}
-         for i in results], indent=1))
-    return 0
+    summary = {
+        "evaluation": args.evaluation,
+        "models": list(models),
+        "requested_operators": [item.op for item in items],
+        "locally_qualified_operators": [
+            item.op for item in results
+            if item.status.startswith("locally qualified")
+        ],
+        "items": [
+            {"item": item.name, "status": item.status, "history": item.history}
+            for item in results
+        ],
+    }
+    (run_root / "summary.json").write_text(
+        json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+    )
+    if args.evaluation == "local" and summary["locally_qualified_operators"]:
+        package_dir = run_root / "locally_qualified" / "cann_bench"
+        shutil.copy2(SUBMISSION_PKG / "_pyasc_runtime.py", package_dir)
+        (package_dir / "__init__.py").write_text(
+            render_init(summary["locally_qualified_operators"]),
+            encoding="utf-8",
+        )
+        qualification = {
+            "status": (
+                "complete" if len(summary["locally_qualified_operators"])
+                == len(items) else "partial"
+            ),
+            "evidence": "verified-local-compile",
+            "operators": summary["locally_qualified_operators"],
+            "cases_per_operator": 20,
+            "limitations": [
+                "generated kernels were not executed numerically",
+                "performance was not measured",
+                "canonical submission modules were not overwritten",
+            ],
+        }
+        (run_root / "locally_qualified" / "QUALIFICATION.json").write_text(
+            json.dumps(qualification, indent=2) + "\n", encoding="utf-8"
+        )
+    complete = len(summary["locally_qualified_operators"]) == len(items)
+    return 0 if args.evaluation == "remote" or args.dry_run or complete else 1
 
 
 if __name__ == "__main__":

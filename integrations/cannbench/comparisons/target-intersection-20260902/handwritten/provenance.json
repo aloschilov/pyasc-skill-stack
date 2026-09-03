@@ -1,0 +1,22 @@
+{
+  "variant": "pyasc-v2-target-derived",
+  "label_requested": "handwritten target kernels",
+  "source_repository": "https://gitcode.com/compiler-team/pyasc",
+  "source_ref": "v2",
+  "source_commit": "4d1db41d61cabf565bca1cfb0b11ef5ec4f84c7f",
+  "source_files": {
+    "gelu": "python/test/asc2/target/test_gelu.py",
+    "foreach_addcdiv_scalar": [
+      "python/test/asc2/target/test_addcdiv.py",
+      "python/test/asc2/target/helpers.py"
+    ]
+  },
+  "adapter_changes": [
+    "CANNBench public signatures and platform initialization",
+    "safe real_shape tails",
+    "TensorList host iteration for ForeachAddcdivScalar",
+    "runtime scalar replacing the target test's fixed 0.5"
+  ],
+  "known_source_coverage_gap": "target GELU has no approximate=none implementation",
+  "runtime_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778"
+}

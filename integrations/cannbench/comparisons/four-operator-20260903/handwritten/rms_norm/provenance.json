@@ -1,0 +1,64 @@
+{
+  "arm": "handwritten_target",
+  "operator": "rms_norm",
+  "source_repository": "https://gitcode.com/compiler-team/pyasc",
+  "source_ref": "v2",
+  "source_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "source_path": "python/test/asctile/target/test_rms_norm.py",
+  "copied_definitions": [
+    "calculate_square_reduce_sum",
+    "compute_rstd_newton_raphson",
+    "compute_y",
+    "rms_norm_kernel"
+  ],
+  "source_definition_sha256": {
+    "calculate_square_reduce_sum": "ece036c117bbceaee2cbb63acd95195788f694b915e107f41677e34cb26a4ee0",
+    "compute_rstd_newton_raphson": "b583b1e0863fcc0741b92add5c8bf427e3d8c0344f2d34f6ab51ecd2d7bc3d24",
+    "compute_y": "bba708fd92363ddfc9d4b90259baf4c06d8a4df7c93a41ebe684fd3a6937fdf1",
+    "rms_norm_kernel": "9b7ce96795c88c56468bb9f2b1eb6a565721976d2c908eb999396bffc5dc6090"
+  },
+  "adapter": {
+    "attempt": 0,
+    "model": "deterministic-manual-transport",
+    "session_id": null,
+    "returncode": 0,
+    "timed_out": false,
+    "skill_call_count": 0,
+    "completion_marker_seen": true,
+    "wrapper_exists": true,
+    "accepted": true,
+    "attempts": [
+      {
+        "attempt": 1,
+        "model": "dashscope/qwen3.7-max",
+        "session_id": "ses_f9a1311b3ffeWxgs0W6ebwYR5x",
+        "returncode": 124,
+        "timed_out": true,
+        "skill_call_count": 0,
+        "completion_marker_seen": false,
+        "wrapper_exists": false,
+        "accepted": false
+      },
+      {
+        "attempt": 2,
+        "model": "dashscope/glm-5.2",
+        "session_id": "ses_f9a09e9f8ffeiexJEGIKPFnvU5",
+        "returncode": 0,
+        "timed_out": false,
+        "skill_call_count": 0,
+        "completion_marker_seen": false,
+        "wrapper_exists": false,
+        "accepted": false
+      }
+    ],
+    "reason": "model adapters failed; deterministic host transport does not alter upstream JIT bodies"
+  },
+  "candidate_sha256": "b9851cd0071030e455e48b063afab95723e8f006b985cc1332c7dc1e9daee748",
+  "adapter_scope": "host signature/allocation/launch transport only; upstream JIT definition text retained",
+  "adapter_correction": {
+    "reason": "match upstream target dispatch contract for unannotated static tiling parameters",
+    "change": "wrap num_col_align, block_factor and ub_factor with asctile.ConstExpr",
+    "jit_body_changed": false,
+    "local_gate": "20/20 compile and dispatch"
+  }
+}

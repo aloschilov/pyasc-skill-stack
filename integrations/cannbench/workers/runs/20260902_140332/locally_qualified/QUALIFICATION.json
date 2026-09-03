@@ -1,0 +1,13 @@
+{
+  "status": "complete",
+  "evidence": "verified-local-compile",
+  "operators": [
+    "sigmoid"
+  ],
+  "cases_per_operator": 20,
+  "limitations": [
+    "generated kernels were not executed numerically",
+    "performance was not measured",
+    "canonical submission modules were not overwritten"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "phase": "repair",
+  "model": "dashscope/glm-5.2",
+  "session_id": "ses_f9e6ccdeaffe98n959vQ772Yba",
+  "required_skills": [
+    "pyasc-api-patterns",
+    "pyasc-code-review"
+  ],
+  "loaded_skills": [
+    "pyasc-api-patterns",
+    "pyasc-code-review"
+  ],
+  "observed_skill_dirs": {
+    "pyasc-api-patterns": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-api-patterns",
+    "pyasc-code-review": "/home/aloschilov/.config/opencode/skills/pyasc-code-review"
+  },
+  "missing_skills": [],
+  "artifact": "candidate.py",
+  "artifact_exists": true,
+  "completion_marker": "REPAIR_DONE",
+  "completion_marker_seen": true,
+  "skill_gate_passed": true,
+  "returncode": 0
+}

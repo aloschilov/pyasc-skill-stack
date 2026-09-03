@@ -1,0 +1,338 @@
+{
+  "candidate": "integrations/cannbench/workers/.scratch/20260902_140812/rms_norm-generate/candidate.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float16\", \"x_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float32\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float32\", \"x_ptr\": \"PointerArgType:float32\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:bfloat16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:bfloat16\", \"x_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float16\", \"x_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float32\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float32\", \"x_ptr\": \"PointerArgType:float32\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:bfloat16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:bfloat16\", \"x_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float16\", \"x_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float32\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float32\", \"x_ptr\": \"PointerArgType:float32\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:bfloat16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:bfloat16\", \"x_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float16\", \"x_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float32\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float32\", \"x_ptr\": \"PointerArgType:float32\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:bfloat16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:bfloat16\", \"x_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float16\", \"x_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float32\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float32\", \"x_ptr\": \"PointerArgType:float32\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:bfloat16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:bfloat16\", \"x_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float16\", \"x_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float32\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float32\", \"x_ptr\": \"PointerArgType:float32\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:bfloat16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:bfloat16\", \"x_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float16\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float16\", \"x_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"D\": \"PlainArgType:int32\", \"S\": \"PlainArgType:int32\", \"epsilon\": \"PlainArgType:float32\", \"gamma_ptr\": \"PointerArgType:float32\", \"inv_D\": \"PlainArgType:float32\", \"num_d_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float32\", \"x_ptr\": \"PointerArgType:float32\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff7af03d80>\", \"max\": \"<function max at 0xffff7af03ba0>\", \"min\": \"<function min at 0xffff7af03c40>\", \"range\": \"<class 'asc2.language.range.range'>\", \"sum\": \"<function sum at 0xffff7af03ce0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"tile_d\": \"ConstExpr[int](1024)\"}, \"kernel\": \"_rms_norm_kernel\"}",
+      "kernels": [
+        "_rms_norm_kernel"
+      ]
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 0,
+  "dispatch_passed": 0,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "rms_norm",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "returncode": 1,
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [
+    {
+      "error": "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue",
+      "status": "failed"
+    },
+    {
+      "error": "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue",
+      "status": "failed"
+    },
+    {
+      "error": "CodegenError: at <source>:20:18:\n            x = asc2.copy_in(x_gm, [row + od], [tile_d], real_shape=[n])\n            xf = x.to(asc.float32)\n            acc = acc + asc2.reduce_sum(xf * xf)\n        inv_rms = asc2.rsqrt(acc * inv_D + epsilon)\n                  ^\n\n        for dt in asc2.range(num_d_tiles):\n            od = dt * tile_d\nTypeError: 'input' argument must be LocalTensor, got PlainValue",
+      "status": "failed"
+    }
+  ],
+  "status": "failed",
+  "unique_specializations": 3,
+  "unique_specializations_passed": 0
+}

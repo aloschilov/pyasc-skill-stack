@@ -1,0 +1,21 @@
+[
+  {
+    "operator": "gelu",
+    "candidate_sha256": "cc2e17fa65b8cef1c766217655f858cbf8b257f91926687db53a8325b0bc36d0",
+    "resumed": true
+  },
+  {
+    "operator": "rms_norm",
+    "candidate_sha256": "b9851cd0071030e455e48b063afab95723e8f006b985cc1332c7dc1e9daee748",
+    "resumed": true
+  },
+  {
+    "operator": "softmax",
+    "candidate_sha256": "cc3927175e5346fab073bc46d5d220a4ed66babc1613b5763e05fa1619bccc21",
+    "resumed": true
+  },
+  {
+    "operator": "transpose",
+    "candidate_sha256": "3c007dc11bd63653db34eb6f78ebb5dc66b240c13b343f3b9e087368af250cca"
+  }
+]

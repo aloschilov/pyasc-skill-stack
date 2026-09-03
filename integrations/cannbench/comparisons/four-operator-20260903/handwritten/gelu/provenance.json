@@ -1,0 +1,40 @@
+{
+  "arm": "handwritten_target",
+  "operator": "gelu",
+  "source_repository": "https://gitcode.com/compiler-team/pyasc",
+  "source_ref": "v2",
+  "source_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "source_path": "python/test/asctile/target/test_gelu.py",
+  "copied_definitions": [
+    "gelu"
+  ],
+  "source_definition_sha256": {
+    "gelu": "9331a273ca487df48f2a37668e1d35a1b7829ad1d4827fa01b744e918771276b"
+  },
+  "adapter": {
+    "attempt": 1,
+    "model": "dashscope/qwen3.7-max",
+    "session_id": "ses_f9a131186ffemKWU9UhfnhDj3w",
+    "returncode": 0,
+    "timed_out": false,
+    "skill_call_count": 0,
+    "completion_marker_seen": true,
+    "wrapper_exists": true,
+    "accepted": true,
+    "attempts": [
+      {
+        "attempt": 1,
+        "model": "dashscope/qwen3.7-max",
+        "session_id": "ses_f9a131186ffemKWU9UhfnhDj3w",
+        "returncode": 0,
+        "timed_out": false,
+        "skill_call_count": 0,
+        "completion_marker_seen": true,
+        "wrapper_exists": true,
+        "accepted": true
+      }
+    ]
+  },
+  "candidate_sha256": "cc2e17fa65b8cef1c766217655f858cbf8b257f91926687db53a8325b0bc36d0",
+  "adapter_scope": "host signature/allocation/launch transport only; upstream JIT definition text retained"
+}

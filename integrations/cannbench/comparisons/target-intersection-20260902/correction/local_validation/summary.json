@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "runtime_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+  "results": [
+    {
+      "variant": "target_corrected",
+      "operator": "gelu",
+      "returncode": 0,
+      "status": "passed",
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "cases": 20,
+      "unique_specializations_passed": 6,
+      "unique_specializations": 7
+    },
+    {
+      "variant": "target_corrected",
+      "operator": "foreach_addcdiv_scalar",
+      "returncode": 0,
+      "status": "passed",
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "cases": 20,
+      "unique_specializations_passed": 3,
+      "unique_specializations": 3
+    },
+    {
+      "variant": "with_skills_corrected",
+      "operator": "gelu",
+      "returncode": 0,
+      "status": "passed",
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "cases": 20,
+      "unique_specializations_passed": 6,
+      "unique_specializations": 6
+    },
+    {
+      "variant": "with_skills_corrected",
+      "operator": "foreach_addcdiv_scalar",
+      "returncode": 0,
+      "status": "passed",
+      "compile_passed": 20,
+      "dispatch_passed": 20,
+      "cases": 20,
+      "unique_specializations_passed": 3,
+      "unique_specializations": 3
+    }
+  ]
+}

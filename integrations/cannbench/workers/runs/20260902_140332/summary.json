@@ -1,0 +1,31 @@
+{
+  "evaluation": "local",
+  "models": [
+    "dashscope/qwen3.7-max",
+    "dashscope/glm-5.2"
+  ],
+  "requested_operators": [
+    "sigmoid"
+  ],
+  "locally_qualified_operators": [
+    "sigmoid"
+  ],
+  "items": [
+    {
+      "item": "sigmoid-generate",
+      "status": "locally qualified 20/20 (numerics/performance unverified)",
+      "history": [
+        {
+          "iter": 1,
+          "result": "locally-qualified",
+          "passed": "20/20",
+          "models": {
+            "design": "dashscope/qwen3.7-max",
+            "implement": "dashscope/qwen3.7-max",
+            "review": "dashscope/glm-5.2"
+          }
+        }
+      ]
+    }
+  ]
+}

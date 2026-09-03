@@ -94,7 +94,13 @@ def build_generation_prompt(op: str, callable_name: str, module_name: str,
         "PROTO": _strip_license_header((op_dir / "proto.yaml").read_text()),
         "GOLDEN": _strip_license_header((op_dir / "golden.py").read_text()),
         "CASES_SUMMARY": summary,
-        "REFERENCE_MODULE": (SUBMISSION_PKG / "sigmoid.py").read_text(),
+        # The canonical module was authored for the pre-rename asc2 snapshot.
+        # The current v2 API is source-compatible under the asctile package
+        # name, so translate this structural reference before showing it to a
+        # worker. Task files and the pinned source remain authoritative.
+        "REFERENCE_MODULE": (SUBMISSION_PKG / "sigmoid.py").read_text().replace(
+            "asc2", "asctile"
+        ),
         "CONSTRAINTS": (TEMPLATES / "constraints.md").read_text(),
         "GUIDANCE": guidance,
     })

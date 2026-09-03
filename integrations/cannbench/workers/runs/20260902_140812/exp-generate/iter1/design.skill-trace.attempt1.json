@@ -1,0 +1,21 @@
+{
+  "phase": "design",
+  "model": "dashscope/qwen3.7-max",
+  "session_id": null,
+  "required_skills": [
+    "pyasc-cannbench-kernel",
+    "pyasc-syntax-constraints"
+  ],
+  "loaded_skills": [],
+  "observed_skill_dirs": {},
+  "missing_skills": [
+    "pyasc-cannbench-kernel",
+    "pyasc-syntax-constraints"
+  ],
+  "artifact": "design.md",
+  "artifact_exists": false,
+  "completion_marker": "DESIGN_DONE",
+  "completion_marker_seen": false,
+  "skill_gate_passed": false,
+  "returncode": 1
+}

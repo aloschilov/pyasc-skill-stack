@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "benchmark": "official-tasks",
+  "benchmark_version": "1.1.1",
+  "operators": [
+    "gelu",
+    "rms_norm",
+    "softmax",
+    "transpose"
+  ],
+  "pyasc_ref": "v2",
+  "pyasc_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "arms": {
+    "handwritten": {
+      "arm": "handwritten",
+      "operators": [
+        "gelu",
+        "rms_norm",
+        "softmax",
+        "transpose"
+      ],
+      "runtime_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+      "runtime_wheel_sha256": "c86802f7cd33e96657ef3ba26573d40a54de3875dafe7995cb0dc960758e5479",
+      "candidates": {
+        "gelu": {
+          "sha256": "cc2e17fa65b8cef1c766217655f858cbf8b257f91926687db53a8325b0bc36d0",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/gelu.py"
+        },
+        "rms_norm": {
+          "sha256": "b9851cd0071030e455e48b063afab95723e8f006b985cc1332c7dc1e9daee748",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/rms_norm.py"
+        },
+        "softmax": {
+          "sha256": "cc3927175e5346fab073bc46d5d220a4ed66babc1613b5763e05fa1619bccc21",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/softmax.py"
+        },
+        "transpose": {
+          "sha256": "3c007dc11bd63653db34eb6f78ebb5dc66b240c13b343f3b9e087368af250cca",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/transpose.py"
+        }
+      },
+      "submission_zip": {
+        "path": "integrations/cannbench/comparisons/four-operator-20260903/submissions/handwritten.zip",
+        "sha256": "82407ab81bd10a6ae04237110e0a18f1ffb8a54139887221da0981d3b965d49c",
+        "size_bytes": 23358284
+      }
+    },
+    "no_skills": {
+      "arm": "no_skills",
+      "operators": [
+        "gelu",
+        "rms_norm",
+        "softmax",
+        "transpose"
+      ],
+      "runtime_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+      "runtime_wheel_sha256": "c86802f7cd33e96657ef3ba26573d40a54de3875dafe7995cb0dc960758e5479",
+      "candidates": {
+        "gelu": {
+          "sha256": "d74d059af15df90ebd5e386a0c2596c553423309a0e82ebf01ed866304c1608a",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/no_skills/candidates/gelu.py"
+        },
+        "rms_norm": {
+          "sha256": "d99df6e42d5a7959bf1bee2afba214666ade60f1ef6c3c4c7a9a45303edc55d9",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/no_skills/candidates/rms_norm.py"
+        },
+        "softmax": {
+          "sha256": "ce232b6d4b938667080a7f5c6fbe83d5186bea0b0d25aca4661876430db21f85",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/no_skills/candidates/softmax.py"
+        },
+        "transpose": {
+          "sha256": "887e9d7cca7134bbd9894ab597ec0f6718c2e60a091727ec5991180aab60aac5",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/no_skills/candidates/transpose.py"
+        }
+      },
+      "submission_zip": {
+        "path": "integrations/cannbench/comparisons/four-operator-20260903/submissions/no_skills.zip",
+        "sha256": "6390efc1dc57135334698291313bd0dfc28b02c34347b9139e082271fdf350ab",
+        "size_bytes": 23359245
+      }
+    },
+    "with_skills": {
+      "arm": "with_skills",
+      "operators": [
+        "gelu",
+        "rms_norm",
+        "softmax",
+        "transpose"
+      ],
+      "runtime_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+      "runtime_wheel_sha256": "c86802f7cd33e96657ef3ba26573d40a54de3875dafe7995cb0dc960758e5479",
+      "candidates": {
+        "gelu": {
+          "sha256": "9e962802b651f8363ac6a2c11ccffade50d3ce4fc2c555b45c7545292adc9fba",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/with_skills/candidates/gelu.py"
+        },
+        "rms_norm": {
+          "sha256": "8f976fc4c9c5d00ec1097fee59756b6247c92bb6ff412b590bcc9b53b8cee310",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/with_skills/candidates/rms_norm.py"
+        },
+        "softmax": {
+          "sha256": "ce232b6d4b938667080a7f5c6fbe83d5186bea0b0d25aca4661876430db21f85",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/with_skills/candidates/softmax.py"
+        },
+        "transpose": {
+          "sha256": "887e9d7cca7134bbd9894ab597ec0f6718c2e60a091727ec5991180aab60aac5",
+          "path": "integrations/cannbench/comparisons/four-operator-20260903/with_skills/candidates/transpose.py"
+        }
+      },
+      "submission_zip": {
+        "path": "integrations/cannbench/comparisons/four-operator-20260903/submissions/with_skills.zip",
+        "sha256": "6d976fe62400ea68e74d8b66f9409cb8991793fed93b822fee313b34e5857c0a",
+        "size_bytes": 23359976
+      }
+    }
+  }
+}

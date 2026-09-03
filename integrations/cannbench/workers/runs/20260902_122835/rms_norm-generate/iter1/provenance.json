@@ -1,0 +1,88 @@
+{
+  "generator": "opencode",
+  "opencode_version": "1.18.16",
+  "model": "dashscope/glm-5.2",
+  "sessions": {
+    "design": "ses_f9e8d1600ffeTOnADKxO6TVRTr",
+    "implement": "ses_f9e7ce64cffeAsGz5NPyXDv1o3",
+    "review": "ses_f9e7454b7ffe6faIfQKFrD24D3",
+    "repair": "ses_f9e6ccdeaffe98n959vQ772Yba"
+  },
+  "workflow_phases": [
+    "design",
+    "implement",
+    "review",
+    "repair"
+  ],
+  "required_skills": [
+    "pyasc-codegen-workflow",
+    "pyasc-env-check",
+    "pyasc-docs-search",
+    "pyasc-api-patterns",
+    "pyasc-syntax-constraints",
+    "pyasc-code-review",
+    "pyasc-build-run-verify"
+  ],
+  "loaded_skills": [
+    "pyasc-env-check",
+    "pyasc-codegen-workflow",
+    "pyasc-docs-search",
+    "pyasc-api-patterns",
+    "pyasc-syntax-constraints",
+    "pyasc-code-review",
+    "pyasc-build-run-verify"
+  ],
+  "observed_skill_dirs": {
+    "pyasc-env-check": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-env-check",
+    "pyasc-codegen-workflow": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-codegen-workflow",
+    "pyasc-docs-search": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-docs-search",
+    "pyasc-api-patterns": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-api-patterns",
+    "pyasc-syntax-constraints": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-syntax-constraints",
+    "pyasc-code-review": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-code-review",
+    "pyasc-build-run-verify": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-build-run-verify"
+  },
+  "skill_gate_passed": true,
+  "skill_sources": {
+    "pyasc-codegen-workflow": {
+      "path": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-codegen-workflow/SKILL.md",
+      "sha256": "db246c0aef47369797ad1aa28e81a173bfa2dffe7c821a9f13cd9328d470db4a"
+    },
+    "pyasc-env-check": {
+      "path": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-env-check/SKILL.md",
+      "sha256": "be792633fea1a54c0aaf9ed6697d866a75ba681d01eaaeb3aa8cdaed0b4ea7c9"
+    },
+    "pyasc-docs-search": {
+      "path": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-docs-search/SKILL.md",
+      "sha256": "5753820448adcb22481aeb38f05a7cd6b45426cf9b4f10029d97282d64866ca0"
+    },
+    "pyasc-api-patterns": {
+      "path": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-api-patterns/SKILL.md",
+      "sha256": "7d97589383eb6fdb6974f3ad6e91de8e728ac602b5131139ea17bec071fba3fb"
+    },
+    "pyasc-syntax-constraints": {
+      "path": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-syntax-constraints/SKILL.md",
+      "sha256": "04c8297f8e1b61fb1646d51a50609eebed4dc78d562ac9d865ff80e200c0f6e9"
+    },
+    "pyasc-code-review": {
+      "path": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-code-review/SKILL.md",
+      "sha256": "65b83a06c05ba309e22682f9515ffae9f4e7401b3b5225dc063763061ca4d250"
+    },
+    "pyasc-build-run-verify": {
+      "path": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-build-run-verify/SKILL.md",
+      "sha256": "419be104b99b3f4e9e531df6efcae41c7413aa74b2b42988f0791d8203d5856f"
+    }
+  },
+  "prompt_sha256": "4eca59075da6436af2967f296a524f68355a12b1b687f2e0922298c396fc0632",
+  "design_sha256": "ee704277622d279b7345d7e95780d71e05f279d625037e3a5801b045d5c706f7",
+  "candidate_sha256": "583e9d68064c47a7215208f6b3cf527ba67ff1face5e9d753b90d2964de42ed1",
+  "repair": {
+    "reason": "Local LLVM probe found split-D TILE=2048 UB overflow",
+    "feedback_file": "compile_feedback.md",
+    "required_skills": [
+      "pyasc-api-patterns",
+      "pyasc-code-review"
+    ],
+    "skill_gate_passed": true
+  },
+  "local_validation_file": "local_validation.json"
+}

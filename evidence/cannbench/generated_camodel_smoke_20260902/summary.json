@@ -1,0 +1,63 @@
+{
+  "schema_version": 2,
+  "status": "passed",
+  "evidence": "verified-camodel-smoke",
+  "platform": "Ascend950PR_9599",
+  "pyasc_source_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+  "native_wheel": {
+    "filename": "pyasc-1.1.1-cp310-cp310-linux_aarch64.whl",
+    "sha256": "f40f54fc7edd443a044c5db0c685b82e6feec0f2e5bc6b4dc0c84d819b314f57"
+  },
+  "operator_coverage": {
+    "passed": 9,
+    "total": 9
+  },
+  "suites": {
+    "basic": {
+      "status": "passed",
+      "routes_passed": 9,
+      "routes_total": 9,
+      "scope": "one small float32 route per operator",
+      "records": ["sigmoid.json", "remaining.json"],
+      "operators": [
+        {"operator": "sigmoid", "camodel_ticks": 8161},
+        {"operator": "exp", "camodel_ticks": 8106},
+        {"operator": "mish", "camodel_ticks": 4587},
+        {"operator": "gelu", "camodel_ticks": 4385},
+        {"operator": "masked_scale", "camodel_ticks": 3827},
+        {"operator": "swi_glu", "camodel_ticks": 8228},
+        {"operator": "foreach_addcdiv_scalar", "camodel_ticks": 4489},
+        {"operator": "foreach_norm", "camodel_ticks": 8053},
+        {"operator": "rms_norm", "camodel_ticks": 5788}
+      ]
+    },
+    "critical": {
+      "status": "passed",
+      "routes_passed": 11,
+      "routes_total": 11,
+      "scope": "selected dtype and control-flow routes for every operator",
+      "records": [
+        "critical-part1.json",
+        "critical-part2.json",
+        "critical-rms_norm.json"
+      ],
+      "operators": [
+        {"operator": "sigmoid", "routes": ["float16"]},
+        {"operator": "exp", "routes": ["bfloat16 natural-base"]},
+        {"operator": "mish", "routes": ["bfloat16"]},
+        {"operator": "gelu", "routes": ["float16 approximate=none"]},
+        {"operator": "masked_scale", "routes": ["float32/int8", "float32/uint8"]},
+        {"operator": "swi_glu", "routes": ["bfloat16 narrow-dimension"]},
+        {"operator": "foreach_addcdiv_scalar", "routes": ["bfloat16 negative-scalar"]},
+        {"operator": "foreach_norm", "routes": ["p=inf", "p=1.5"]},
+        {"operator": "rms_norm", "routes": ["bfloat16 odd-D=17"]}
+      ]
+    }
+  },
+  "limitations": [
+    "20 smoke routes do not replace the official 180-case dtype/shape/special-value matrix",
+    "ticks are not normalized against matching ACLNN reference kernels",
+    "camodel ticks are not real-NPU performance",
+    "vector exception diagnostics can occur on padded or mathematically singular lanes even when logical outputs match"
+  ]
+}

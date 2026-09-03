@@ -1,0 +1,21 @@
+{
+  "phase": "review",
+  "model": "dashscope/glm-5.2",
+  "session_id": "ses_f9dd039ddffeMv7fklzwEjK3To",
+  "required_skills": [
+    "pyasc-cannbench-kernel"
+  ],
+  "loaded_skills": [
+    "pyasc-cannbench-kernel"
+  ],
+  "observed_skill_dirs": {
+    "pyasc-cannbench-kernel": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-cannbench-kernel"
+  },
+  "missing_skills": [],
+  "artifact": "candidate.py",
+  "artifact_exists": true,
+  "completion_marker": "REVIEW_DONE",
+  "completion_marker_seen": true,
+  "skill_gate_passed": true,
+  "returncode": 0
+}

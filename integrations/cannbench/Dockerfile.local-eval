@@ -1,0 +1,15 @@
+FROM python:3.12.13-slim-bookworm
+
+RUN python -m pip install --no-cache-dir numpy pyyaml typing_extensions
+
+COPY submission/dist/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl /tmp/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl
+RUN python -m pip install --no-cache-dir --no-deps \
+        /tmp/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl \
+    && rm /tmp/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl
+
+ENV PYASC_COMPILER=/bin/true \
+    PYASC_LINKER=/bin/true \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /workspace
+ENTRYPOINT ["python", "integrations/cannbench/workers/local_compile_gate.py"]

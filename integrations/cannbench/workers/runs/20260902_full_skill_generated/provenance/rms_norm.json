@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "operator": "rms_norm",
+  "generator": "opencode",
+  "opencode_version": "1.18.16",
+  "seed": {
+    "path": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/workers/.scratch/staged_20260902_153337_rms_norm/candidate.py",
+    "sha256": "d219233b66050281263c71b6819cc43f7fb0b870ddf252417c77b2dd352848a6"
+  },
+  "phases": [
+    {
+      "phase": "review",
+      "cycle": 1,
+      "model": "dashscope/glm-5.2",
+      "session_id": "ses_f9dd039ddffeMv7fklzwEjK3To",
+      "loaded_skills": [
+        "pyasc-cannbench-kernel"
+      ],
+      "observed_skill_dirs": {
+        "pyasc-cannbench-kernel": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-cannbench-kernel"
+      },
+      "candidate_sha256": "d219233b66050281263c71b6819cc43f7fb0b870ddf252417c77b2dd352848a6"
+    }
+  ],
+  "required_skills": [
+    "pyasc-cannbench-kernel"
+  ],
+  "skill_sources": {
+    "pyasc-cannbench-kernel": {
+      "path": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-cannbench-kernel",
+      "files": {
+        "SKILL.md": "3db074e6c6e0afbb79af50eb89c5d27604f19f3c5ee321acdfb8d57a90b59f0a",
+        "references/local-validation.md": "e8f9f89ca4a28a2484ddc1070055f07e738a6c57b2a1e8941ded8627e8ffff16",
+        "references/operator-patterns.md": "189c68541c423c26c4f36cde94f67d85bad68aaff3adf5588fa8cb29e57c6d86",
+        "references/pyasc-v2-blockers.md": "5c5c919ff151183f07de61c199583e24c97e71db207e3f307596b0997df50fa8"
+      }
+    },
+    "pyasc-syntax-constraints": {
+      "path": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-syntax-constraints",
+      "files": {
+        "SKILL.md": "2db6e968f51559ba295ad3ea014a4b4e2f517ae34800da05c82aec0d555918d0",
+        "references/constexpr-guide.md": "5108c361990b32f1eeec89834d8617f5396882fbc743384ed9313ce268a7b8e7",
+        "references/supported-syntax.md": "747d48034bc40029fe9aa06259c92806d8234b05a5a463b8fee2a3a01631012b",
+        "references/type-constraints.md": "367f428f0ab5282669c14819ed5af774cb1dbf73c77923cc349363a8defd9ac4",
+        "references/unsupported-syntax.md": "66a329eecf10a62783653a2e240fca6bb2532e924bd39589eae6a57fd59716bd"
+      }
+    },
+    "pyasc-code-review": {
+      "path": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-code-review",
+      "files": {
+        "SKILL.md": "c692baed79006dd74534ccea9dbeb68894710230e4a65b04d0aa4f169ed89686",
+        "references/PythonSecureCoding.md": "e583dc901795d3a95b993a397d9bf1032eef6d6db5d8eda262ef647c20e5bde3",
+        "references/pyasc-review-checklist.md": "f4c455f7adde06e1480c84e8b67789b798ed503f8890acfdcb1dba693f9406c3"
+      }
+    },
+    "pyasc-build-run-verify": {
+      "path": "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-build-run-verify",
+      "files": {
+        "SKILL.md": "f885deb3c72fec9f4d231f2bbb8b645b6ec6f9f6c608dbd3ef55a8562c987882",
+        "references/jit-diagnostics.md": "efe594ab6a8ce368de9b3c4e9193cbdedd0c9cd1bb04dd3a2a01e59688bce696",
+        "references/verification-patterns.md": "7779e10c3bf72cb6294ffb9963d52e190702fdee6c11676a15bc0990cded3659",
+        "scripts/run_kernel.sh": "f92b12ddedb856fe51cc9e18af511f5324853acd7cc9681cfbabfbd91382cb08",
+        "scripts/verify_output.py": "3d3224e6b7241f5241845b5a96902f10e63cdc5025442e2d285928226ff07b97"
+      }
+    }
+  },
+  "candidate_sha256": "d219233b66050281263c71b6819cc43f7fb0b870ddf252417c77b2dd352848a6",
+  "validation": {
+    "label": "verified-local-compile",
+    "pyasc_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+    "passed": 20,
+    "total": 20,
+    "report_sha256": "eae702eae38d81d9286326e3fbbe6d0b81c45c800292ce40f7d096df31ae6ca9",
+    "limitations": [
+      "does not execute numerical code",
+      "does not measure NPU performance"
+    ]
+  }
+}

@@ -1,0 +1,405 @@
+{
+  "candidate": "integrations/cannbench/comparisons/four-operator-20260903/handwritten/candidates/softmax.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "passed",
+      "cores": [
+        69
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "passed",
+      "cores": [
+        71
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff94589c60>\", \"max\": \"<function max at 0xffff94589a80>\", \"min\": \"<function min at 0xffff94589b20>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff94589bc0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 2, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"input_num_cols\": \"ConstExpr[int](4096)\", \"input_num_rows\": \"ConstExpr[int](4096)\", \"rows_per_core\": \"ConstExpr[int](57)\", \"tile_shape\": \"ConstExpr[list]([1, 4096])\", \"unroll_factor\": \"ConstExpr[int](1)\"}, \"kernel\": \"softmax_fused\"}",
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff94589c60>\", \"max\": \"<function max at 0xffff94589a80>\", \"min\": \"<function min at 0xffff94589b20>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff94589bc0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 2, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"input_num_cols\": \"ConstExpr[int](257)\", \"input_num_rows\": \"ConstExpr[int](263779)\", \"rows_per_core\": \"ConstExpr[int](3664)\", \"tile_shape\": \"ConstExpr[list]([1, 272])\", \"unroll_factor\": \"ConstExpr[int](1)\"}, \"kernel\": \"softmax_fused\"}",
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "passed",
+      "cores": [
+        69
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "passed",
+      "cores": [
+        71
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff94589c60>\", \"max\": \"<function max at 0xffff94589a80>\", \"min\": \"<function min at 0xffff94589b20>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff94589bc0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 2, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"input_num_cols\": \"ConstExpr[int](1023)\", \"input_num_rows\": \"ConstExpr[int](32639)\", \"rows_per_core\": \"ConstExpr[int](454)\", \"tile_shape\": \"ConstExpr[list]([1, 1024])\", \"unroll_factor\": \"ConstExpr[int](1)\"}, \"kernel\": \"softmax_fused\"}",
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "passed",
+      "cores": [
+        68
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff94589c60>\", \"max\": \"<function max at 0xffff94589a80>\", \"min\": \"<function min at 0xffff94589b20>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff94589bc0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 2, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"input_num_cols\": \"ConstExpr[int](4001)\", \"input_num_rows\": \"ConstExpr[int](2431)\", \"rows_per_core\": \"ConstExpr[int](34)\", \"tile_shape\": \"ConstExpr[list]([1, 4016])\", \"unroll_factor\": \"ConstExpr[int](1)\"}, \"kernel\": \"softmax_fused\"}",
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff94589c60>\", \"max\": \"<function max at 0xffff94589a80>\", \"min\": \"<function min at 0xffff94589b20>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff94589bc0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 2, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"input_num_cols\": \"ConstExpr[int](1013)\", \"input_num_rows\": \"ConstExpr[int](3003)\", \"rows_per_core\": \"ConstExpr[int](42)\", \"tile_shape\": \"ConstExpr[list]([1, 1024])\", \"unroll_factor\": \"ConstExpr[int](1)\"}, \"kernel\": \"softmax_fused\"}",
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "passed",
+      "cores": [
+        64
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "passed",
+      "cores": [
+        64
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "failed",
+      "compile_errors": [
+        "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16"
+      ],
+      "cores": [
+        69
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"input_ptr\": \"PointerArgType:bfloat16\", \"output_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff94589c60>\", \"max\": \"<function max at 0xffff94589a80>\", \"min\": \"<function min at 0xffff94589b20>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff94589bc0>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 2, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": false, \"vf_vec_len\": null}, \"constexprs\": {\"input_num_cols\": \"ConstExpr[int](2049)\", \"input_num_rows\": \"ConstExpr[int](1022)\", \"rows_per_core\": \"ConstExpr[int](15)\", \"tile_shape\": \"ConstExpr[list]([1, 2064])\", \"unroll_factor\": \"ConstExpr[int](1)\"}, \"kernel\": \"softmax_fused\"}",
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "passed",
+      "cores": [
+        68
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "softmax_fused"
+      ]
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 14,
+  "dispatch_passed": 14,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "softmax",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [
+    {
+      "ascendc_bytes": 3284,
+      "memory_consumed": {
+        "UB": 8320
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3307,
+      "memory_consumed": {
+        "UB": 24640
+      },
+      "status": "passed"
+    },
+    {
+      "error": "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16",
+      "status": "failed"
+    },
+    {
+      "ascendc_bytes": 3296,
+      "memory_consumed": {
+        "UB": 65664
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3318,
+      "memory_consumed": {
+        "UB": 98368
+      },
+      "status": "passed"
+    },
+    {
+      "error": "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16",
+      "status": "failed"
+    },
+    {
+      "ascendc_bytes": 3360,
+      "memory_consumed": {
+        "UB": 16512
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3421,
+      "memory_consumed": {
+        "UB": 49312
+      },
+      "status": "passed"
+    },
+    {
+      "error": "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16",
+      "status": "failed"
+    },
+    {
+      "ascendc_bytes": 3392,
+      "memory_consumed": {
+        "UB": 8320
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3431,
+      "memory_consumed": {
+        "UB": 4672
+      },
+      "status": "passed"
+    },
+    {
+      "error": "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16",
+      "status": "failed"
+    },
+    {
+      "ascendc_bytes": 3395,
+      "memory_consumed": {
+        "UB": 256
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3413,
+      "memory_consumed": {
+        "UB": 928
+      },
+      "status": "passed"
+    },
+    {
+      "error": "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16",
+      "status": "failed"
+    },
+    {
+      "ascendc_bytes": 3381,
+      "memory_consumed": {
+        "UB": 16640
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3407,
+      "memory_consumed": {
+        "UB": 98464
+      },
+      "status": "passed"
+    },
+    {
+      "error": "CodegenError: at <source>:23:14:\n        real_rows = tail_rows if i == ub_loop - 1 and asctile.block_idx() == asctile.block_num() - 1 else tile_shape[0]\n        rows = asctile.copy_in(in_gm, [row_start_offset, 0], [tile_shape[0], tile_shape[1]],\n                               real_shape=[real_rows, input_num_cols], pad_value=float('-inf'))\n        out = asctile.softmax(rows)\n              ^\n        asctile.copy_out(out, out_gm, [row_start_offset, 0], real_shape=[real_rows, input_num_cols])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16",
+      "status": "failed"
+    },
+    {
+      "ascendc_bytes": 3361,
+      "memory_consumed": {
+        "UB": 16640
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 3424,
+      "memory_consumed": {
+        "UB": 1312
+      },
+      "status": "passed"
+    }
+  ],
+  "status": "failed",
+  "unique_specializations": 20,
+  "unique_specializations_passed": 14
+}
