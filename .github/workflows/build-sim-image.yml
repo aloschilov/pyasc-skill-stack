@@ -55,6 +55,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Add swap for the AMD64 native link
+        if: ${{ inputs.arch == 'amd64' && !inputs.merge_only }}
+        run: |
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
       - name: Build + push ${{ inputs.arch }} leg
         if: ${{ !inputs.merge_only }}
         env:
