@@ -62,6 +62,7 @@ LABEL org.opencontainers.image.source="https://github.com/aloschilov/pyasc-skill
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git ca-certificates curl build-essential ccache clang lld \
+        zlib1g-dev libxml2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LLVM_INSTALL_PREFIX=/opt/llvm

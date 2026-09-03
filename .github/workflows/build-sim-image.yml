@@ -24,6 +24,10 @@ on:
         description: "after push, also merge the multiarch manifest (needs both legs pushed)"
         type: boolean
         default: false
+      merge_only:
+        description: "publish the multiarch manifest without rebuilding a leg"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -48,6 +52,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build + push ${{ inputs.arch }} leg
+        if: ${{ !inputs.merge_only }}
         env:
           OWNER: ${{ github.repository_owner }}
           PYASC_GIT_REV: ${{ inputs.pyasc_rev }}
@@ -55,7 +60,7 @@ jobs:
         run: bash docker/build-sim-image.sh --arch ${{ inputs.arch }} --push
 
       - name: Merge multiarch manifest
-        if: ${{ inputs.merge }}
+        if: ${{ inputs.merge || inputs.merge_only }}
         env:
           OWNER: ${{ github.repository_owner }}
           PYASC_GIT_REV: ${{ inputs.pyasc_rev }}
