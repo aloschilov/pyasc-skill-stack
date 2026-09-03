@@ -61,7 +61,19 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           PYASC_GIT_REV: ${{ inputs.pyasc_rev }}
           PYASC_SETUP_JOBS: ${{ inputs.setup_jobs }}
-        run: bash docker/build-sim-image.sh --arch ${{ inputs.arch }} --push
+        run: |
+          bash docker/build-sim-image.sh --arch ${{ inputs.arch }} --push &
+          build_pid=$!
+          trap 'kill "$build_pid" 2>/dev/null || true' EXIT
+          while kill -0 "$build_pid" 2>/dev/null; do
+            sleep 45
+            if kill -0 "$build_pid" 2>/dev/null; then
+              echo "pyasc image build still active ($(date -u +%FT%TZ))"
+              free -h | sed -n '1,2p'
+            fi
+          done
+          wait "$build_pid"
+          trap - EXIT
 
       - name: Merge multiarch manifest
         if: ${{ inputs.merge || inputs.merge_only }}
