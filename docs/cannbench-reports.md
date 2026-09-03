@@ -31,3 +31,14 @@ submissions.
 
 The four-operator jobs are waiting for daily submission credits. Its report
 generator adds direct run links automatically as each `job_id` is recorded.
+
+## Handwritten GeLU deep dive
+
+- [Live deep-dive report](../integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/REPORT.md)
+- [Iteration 01 — `job_24726123eebe`](https://cannbench.com/workspace/jobs/job_24726123eebe)
+- [Iteration 02 — `job_bcf486ff6371`](https://cannbench.com/workspace/jobs/job_bcf486ff6371)
+
+Iteration 02 repaired the low-level C310 launch ABI and proved exact cases
+1–3 correct on 950PR. Its large VF/reuse tanh route then hit vector-core
+timeout 507034. A safe low-level tanh iteration is prepared for the next credit
+reset and remains ahead of the other operator submissions.

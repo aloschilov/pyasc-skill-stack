@@ -1,6 +1,6 @@
 # CANNBench operator patterns
 
-These patterns describe the nine vendored operators. Task files remain the
+These patterns describe the eleven vendored operators. Task files remain the
 normative source.
 
 At the host/JIT boundary pass torch tensors directly. Do not call
@@ -51,6 +51,18 @@ tile. Supply neutral padding explicitly: `pad_value=0` for additive operands,
 `pad_value=1` for divisors, and a finite safe input for logarithm/reciprocal
 chains. This prevents invalid arithmetic in inactive lanes without changing
 the logical output.
+
+For performance investigations, current v2 also exposes low-level
+`asc.adv.erfc`, which forms exact GeLU without the Horner chain. Do not launch a
+plain `@asc.jit` C310 kernel: the base compiler adds a hidden FFTS argument and
+CANNBench fails in `c2c_ctrl_addr()`. The GeLU deep-dive adapter changes only
+kernel-argument legalization and verifies `has_ffts_arg=false`. Its FP32 and
+BF16 exact routes passed the official cases that ran, but measured only 0.2968x
+and 0.1462x respectively; it is not yet a >=1x performance pattern.
+
+Avoid large `vf_fusion=True, reuse_alloc=1` tanh loops merely because they fit
+the static UB budget. A 72-core, tile-13,824 GeLU route compiled at 221,184
+bytes and then hit vector-core timeout 507034 on the 67M-element official case.
 
 Pinned-v2 scalar rule: both data branches of `asctile.where(condition, a, b)`
 must be LocalTensor values. A Python scalar branch such as

@@ -9,9 +9,9 @@ integrations/cannbench/workers/run_local_compile_gate.sh \
   --candidate path/inside/repository/candidate.py --op <operator>
 ```
 
-The current four-operator campaign installs the self-contained CPython 3.12
+The current integration installs the self-contained CPython 3.12
 x86_64 wheel built from `compiler-team/pyasc` branch `v2`, commit
-`030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`. It replays all 20 case shapes,
+`0a631f70968c3cb7c33ce45330a85768dd5a6f06`. It replays all 20 case shapes,
 dtypes, and attrs, captures host-selected JIT launches, and runs codegen,
 compiler passes, AscendC translation, and the 950PR UB check for every unique
 specialization.
@@ -19,16 +19,23 @@ specialization.
 The gate does not execute the generated kernel. It cannot detect wrong math,
 NaN/Inf-position differences, NPU runtime failures, or bad performance.
 
+The report also records legalized kernel argument kinds. A low-level C310
+kernel is not submission-ready unless every specialization has
+`has_ffts_arg=false`; the base compiler at this commit otherwise adds an FFTS
+argument that fails through `c2c_ctrl_addr()` on CANNBench 950PR.
+
 ## Full matrix
 
 ```bash
 python3 integrations/cannbench/workers/run_local_matrix.py \
-  --candidate-root <directory-containing-nine-modules> \
+  --candidate-root <directory-containing-current-modules> \
   --output-dir <evidence-directory>
 ```
 
-Pass criteria are 9/9 operators, 180/180 host dispatches, and 180/180
-compile/lowering routes. A controlled host fallback may leave a rejected
+For the current 11-task checkout, pass criteria are 11/11 operators, 220/220
+host dispatches, and 220/220 compile/lowering routes. Derive this count from
+the task directories rather than embedding it in tooling. A controlled host
+fallback may leave a rejected
 specialization in the report while all case routes still pass; retain that
 failure as evidence rather than hiding it.
 

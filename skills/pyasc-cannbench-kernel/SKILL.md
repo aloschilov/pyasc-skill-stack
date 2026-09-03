@@ -12,10 +12,10 @@ standalone-kernel workflow.
 ## Current v2 snapshot
 
 The current CANNBench campaign is pinned to
-`compiler-team/pyasc@030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`. In this
+`compiler-team/pyasc@0a631f70968c3cb7c33ce45330a85768dd5a6f06`. In this
 snapshot the tile API package was renamed from `asc2` to `asctile`. New
 candidates must use `import asctile`, `@asctile.jit`, and the `asctile.*`
-symbols. Treat `asc2` examples in generic/legacy skills as historical and do
+symbols. Treat `asc2` examples in historical artifacts as obsolete and do
 not emit them for this campaign.
 
 ## Non-negotiable contract
@@ -24,7 +24,8 @@ not emit them for this campaign.
   `cases.yaml` as one indivisible specification.
 - Produce one `candidate.py` with the exact top-level callable and defaults.
 - Use `torch` only for allocation, metadata views, and launches. Numerical work
-  belongs in one or more `@asctile.jit` kernels.
+  belongs in JIT kernels. Prefer `@asctile.jit`; a low-level `@asc.jit` route
+  must also prove that its C310 ABI contains no hidden FFTS argument.
 - Import and call `ensure_npu_platform` from `._pyasc_runtime`.
 - Target `Ascend950PR_9599`, at most 72 vector cores, and UB capacity 253952 B.
 - For the pinned runtime use `asctile.global_tensor`, `asctile.copy_in`, and
@@ -33,9 +34,11 @@ not emit them for this campaign.
 - Treat padded lanes as executed lanes: choose an explicit, operation-neutral
   `pad_value` for `real_shape` loads (especially `1` for divisors) so tail
   arithmetic does not create avoidable Inf/NaN exceptions.
-- A production candidate normally uses bare `@asc2.jit` or an evidenced
-  allocation option. `always_compile=True` is a development aid, not a
-  submission requirement.
+- A production candidate normally uses bare `@asctile.jit` or an evidenced
+  allocation option. At the pinned commit, direct AscTile option discovery is
+  broken; use the integration's concrete-options adapter before relying on
+  `reuse_alloc`, `static_alloc`, or `vf_fusion`. `always_compile=True` is a
+  development aid, not a submission requirement.
 
 ## Required workflow
 
@@ -51,7 +54,8 @@ not emit them for this campaign.
    the worker static contract check.
 5. Run the exact-v2 local compile gate for that operator as described in
    [local validation](references/local-validation.md). A compile failure is
-   measured feedback; repair it and re-run all 20 cases.
+   measured feedback; repair it and re-run all 20 cases. For low-level kernels,
+   record `has_ffts_arg=false` on C310.
 6. For numerically sensitive formulas, run the adversarial camodel smoke when
    the native runtime is available. It must exercise both ordinary and
    special-value routes using the task's dtype-specific tolerances. Treat a
@@ -62,7 +66,9 @@ not emit them for this campaign.
 
 Never claim numerical correctness or performance from the local compile gate.
 Only camodel execution can provide local numerical evidence; only CANNBench on
-the real NPU is the acceptance/performance oracle.
+the real NPU is the acceptance/performance oracle. In particular, a VF/reuse
+kernel that fits the static UB budget can still trigger a vector-core timeout
+on a large case.
 
 ## Evidence labels
 

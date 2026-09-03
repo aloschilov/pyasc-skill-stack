@@ -1,0 +1,307 @@
+{
+  "candidate": "integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/candidates/gelu.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_native"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_native"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_bf16"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_tanh_native"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_tanh_native"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_tanh_bf16"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_native"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_tanh_native"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_bf16"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_tanh_native"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_native"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_tanh_bf16"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_native"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_tanh_native"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_native"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_bf16"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_tanh_native"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_native"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_tanh_bf16"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_native"
+      ]
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 20,
+  "dispatch_passed": 20,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "gelu",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [
+    {
+      "ascendc_bytes": 13612,
+      "memory_consumed": {
+        "UB": 65536
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 13825,
+      "memory_consumed": {
+        "UB": 131072
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 15206,
+      "memory_consumed": {
+        "UB": 131072
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 18142,
+      "memory_consumed": {
+        "UB": 65536
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 18438,
+      "memory_consumed": {
+        "UB": 131072
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 20145,
+      "memory_consumed": {
+        "UB": 131072
+      },
+      "status": "passed"
+    }
+  ],
+  "status": "passed",
+  "unique_specializations": 6,
+  "unique_specializations_passed": 6
+}

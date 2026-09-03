@@ -1,0 +1,100 @@
+{
+  "job_id": "job_bcf486ff6371",
+  "stage_summary": {
+    "current_stage": "correctness",
+    "last_stage": "archive",
+    "last_stage_status": "archiving",
+    "failed_stage": "correctness",
+    "failed_status": "correctness_failed",
+    "failed_message": "correctness check failed: 3/20 cases passed",
+    "event_count": 8
+  },
+  "stages": [
+    {
+      "stage": "prepare",
+      "status": "preparing",
+      "message": "downloading benchmark/submission",
+      "payload": {
+        "workspace": "/data0/pd/benchsite-dev-runner-jobs-0/job_bcf486ff6371"
+      },
+      "created_at": "2026-09-03T19:25:54.838595"
+    },
+    {
+      "stage": "compile",
+      "status": "compiling",
+      "message": "running cann-bench staged evaluation",
+      "payload": {
+        "stage": "staged",
+        "timeout_sec": 1400,
+        "operator_count": 1,
+        "case_count": 20,
+        "op_timeout_sec": 240,
+        "case_timeout_sec": 40
+      },
+      "created_at": "2026-09-03T19:25:56.400308"
+    },
+    {
+      "stage": "correctness",
+      "status": "correctness",
+      "message": "staged eval: correctness",
+      "payload": {
+        "stage": "staged",
+        "substage": "correctness"
+      },
+      "created_at": "2026-09-03T19:26:36.628675"
+    },
+    {
+      "stage": "correctness",
+      "status": "correctness",
+      "message": "staged eval: correctness (in progress)",
+      "payload": {
+        "stage": "staged",
+        "substage": "correctness",
+        "heartbeat": true,
+        "log_tail": "[runner] sandbox command enabled: /data0/pd/benchsite-dev-release-0/scripts/runner_sandbox.sh\n[sandbox] SANDBOX_UID=1001 SANDBOX_GID=1001 KEEP_CAPS=1 PRESERVE_ROOT_UID=1\n[sandbox] SANDBOX_UID=1001 SANDBOX_GID=1001 KEEP_CAPS=1 PRESERVE_ROOT_UID=1\n[sandbox] MAX_JOBS=32 CMAKE_BUILD_PARALLEL_LEVEL=32 sitecustomize_dir=/data0/pd/benchsite-dev-runner-jobs-0/job_bcf486ff6371/work/tmp/_sitecustomize PYTHONPATH=/data0/pd/benchsite-dev-runner-jobs-0/job_bcf486ff6371/work/tmp/_sitecustomize:/data0/pd/benchsite-dev-release-0:/usr/local/Ascend/cann-9.1.0/python/site-packages:/usr/local/Ascend/cann-9.1.0/opp/built-in/op_impl/ai_core/tbe:/usr/local/Ascend/ascend-toolkit/latest/python/site-packages:/usr/local/Ascend/ascend-toolkit/latest/opp/built-in/op_impl/ai_core/tbe:\n[run_eval] sourced /usr/local/Ascend/cann-9.1.0/set_env.sh\n[run_eval:staged] build_soc=ascend950\nget env ASCEND_HOME_PATH = /usr/local/Ascend/cann-9.1.0\nget env PATH = /usr/local/Ascend/cann-9.1.0/bin:/usr/local/Ascend/cann-9.1.0/tools/ccec_compiler/bin:/usr/local/Ascend/cann-9.1.0/tools/profiler/bin:/usr/local/Ascend/cann-9.1.0/tools/ascend_system_advisor/asys:/usr/local/Ascend/cann-9.1.0/tools/show_kernel_debug_data:/usr/local/Ascend/cann-9.1.0/tools/msobjdump:/data0/pd/benchsite-dev-runner-jobs-0/job_bcf486ff6371/work/bin:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/bin:/usr/local/Ascend/ascend-toolkit/latest/bin:/usr/local/Ascend/ascend-toolkit/latest/compiler/ccec_compiler/bin:/usr/local/Ascend/ascend-toolkit/latest/tools/ccec_compiler/bin:/usr/local/python3.12.13/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\nget env ASCEND_RT_VISIBLE_DEVICES = 0\n[staged_eval] stage 1/3: compile\n[INFO] \u7f16\u8bd1: bash build.sh \u2192 _compile.log\n[INFO] \u7f16\u8bd1\u6210\u529f\n[staged_eval] compile: built cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl\n[staged_eval] stage 2/3: correctness\n[INFO] \u5b89\u88c5whl\u5305: cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl\n[INFO] \u5b89\u88c5: pip install --force-reinstall --no-deps /data0/pd/benchsite-dev-runner-jobs-0/job_bcf486ff6371/input/submission/dist/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl\n[pip] Processing ./input/submission/dist/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl\n[pip] Installing collected packages: cann-bench\n[pip]   Attempting uninstall: cann-bench\n[pip]     Found existing installation: cann_bench 1.1.0\n[pip]     Uninstalling cann_bench-1.1.0:\n[pip]       Successfully uninstalled cann_bench-1.1.0\n[pip] Successfully installed cann-bench-1.1.0\n[pip-warn] WARNING: The directory '/data0/pd/benchsite-dev-runner-jobs-0/job_bcf486ff6371/work/home/.cache/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.\n[pip-warn] WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\n[INFO] cann_bench \u5b89\u88c5\u4f4d\u7f6e: /usr/local/python3.12.13/lib/python3.12/site-packages/cann_bench/__init__.py\n[INFO] whl\u5305\u5b89\u88c5\u6210\u529f\n[INFO] \u8df3\u8fc7\u7f16\u8bd1\u5b89\u88c5\uff0c\u626b\u63cf\u5df2\u5b89\u88c5\u7684cann_bench\n\n============================================================\n\u626b\u63cf\u5230\u7684 cann_bench \u63a5\u53e3:\n============================================================\n  1. gelu(x: torch.Tensor, approximate: str = 'none') -> torch.Tensor\n\n\u5171 1 \u4e2a\u7b97\u5b50\u63a5\u53e3\n============================================================\n\n[INFO] \u5339\u914d\u5230 1 \u4e2atasks \u7b97\u5b50:\n       - Gelu\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[INFO] \u914d\u7f6e: 1 \u5361 \u00d7 1 \u5e76\u53d1/\u5361\n[INFO] TaskUnit \u6570: 1, \u7528\u4f8b\u6570: 20\n[INFO] \u5355\u7b97\u5b50\u8d85\u65f6: 240s\n[INFO] \u6700\u5927\u5e76\u53d1: 1\n[INFO] \u91cd\u8bd5\u7b56\u7565: \u6700\u5927\u91cd\u8bd5 1 \u6b21 (timeout=True, oom=True, failure=True)\n[INFO] oom_score_adj=1000 \u8bbe\u7f6e\u6210\u529f: PID=150\n[INFO] oom_score_adj=1000 \u8bbe\u7f6e\u6210\u529f: PID=150\n[eval-child] \u5730\u5740\u7a7a\u95f4\u4e0a\u9650: \u5f53\u524d VmSize 2307.0 GiB + \u9884\u7b97 47104 MB \u2192 RLIMIT_AS 2353.0 GiB\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[INFO] \u4f7f\u7528NPU\u8bbe\u5907: npu:0\n[eval-child] Card 0: 20 \u7528\u4f8b\u5f00\u59cb\u8bc4\u6d4b\n[INFO] \u8bc4\u6d4b\u7b97\u5b50 Gelu (level1/gelu), \u7528\u4f8b\u6570: 20\n[1/20] level1/gelu_1: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float16[y]: \u2705 MERE=2.357924e-04, MARE=0.001537)\n[2/20] level1/gelu_2: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, float32[y]: \u2705 MERE=5.557438e-08, MARE=6.167122e-07)\n[3/20] level1/gelu_3: \u2705 (\u8017\u65f6: N/A, \u52a0\u901f\u6bd4: N/A, bfloat16[y]: \u2705 MERE=0.000000, MARE=0.000000)\n",
+        "log_bytes_total": 4645,
+        "truncated": false
+      },
+      "created_at": "2026-09-03T19:35:42.201473"
+    },
+    {
+      "stage": "performance",
+      "status": "performance",
+      "message": "staged eval: performance",
+      "payload": {
+        "stage": "staged",
+        "substage": "performance"
+      },
+      "created_at": "2026-09-03T19:36:42.488572"
+    },
+    {
+      "stage": "correctness",
+      "status": "correctness",
+      "message": "cann-bench staged evaluation completed",
+      "payload": {
+        "stage": "staged",
+        "result_stage": "final"
+      },
+      "created_at": "2026-09-03T19:37:06.786914"
+    },
+    {
+      "stage": "performance",
+      "status": "performance",
+      "message": "cann-bench staged evaluation completed",
+      "payload": {
+        "stage": "staged",
+        "result_stage": "final"
+      },
+      "created_at": "2026-09-03T19:37:06.946119"
+    },
+    {
+      "stage": "archive",
+      "status": "archiving",
+      "message": "archiving outputs",
+      "payload": {
+        "workspace": "/data0/pd/benchsite-dev-runner-jobs-0/job_bcf486ff6371"
+      },
+      "created_at": "2026-09-03T19:37:07.103430"
+    }
+  ]
+}

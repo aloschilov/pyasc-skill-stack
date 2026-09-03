@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "iteration": "iteration-03-lowlevel-tanh-safe-tile13824",
+  "operator": "gelu",
+  "source_class": "upstream-handwritten-derived-contract-corrected-and-tuned",
+  "pyasc_ref": "v2",
+  "pyasc_commit": "0a631f70968c3cb7c33ce45330a85768dd5a6f06",
+  "candidate_sha256": "be63945b6ecbbd394c885023b04003b07462f1c16bb808b7958b604e418465c4",
+  "runtime_wheel_sha256": "77e1563eff38b98b696a08e81751fde308a1600a2fc7f5a5aef9f05bb5509d05",
+  "integration_overlays": {
+    "c310_lowlevel_compiler": "base asc pipeline with set_ffts_addr disabled on C310",
+    "asctile_jit_options": "concrete compiler option discovery and extraction"
+  },
+  "launch": {
+    "exact_fp16_tile": 13824,
+    "lowlevel_tile": 13824,
+    "tanh_tile": 13824,
+    "max_ai_cores": 72,
+    "tail_strategy": "real-shape-asctile; overlap-final-lowlevel",
+    "exact_fp32_bf16": "asc.adv.erfc",
+    "exact_fp16": "asctile.erf-vf-fused-reuse-alloc",
+    "tanh": "single-exp-cancellation-free-lowlevel"
+  },
+  "submission_zip": {
+    "path": "integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/submissions/iteration-03-lowlevel-tanh-safe-tile13824.zip",
+    "sha256": "dc385abe5d804a6088fb09e605935b668383c8be67eafa1fc829dba573cc9869",
+    "size_bytes": 23357491
+  }
+}

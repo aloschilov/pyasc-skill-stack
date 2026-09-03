@@ -3,7 +3,8 @@
 Scope: `compiler-team/pyasc` branch `v2`. The original nine-operator campaign
 used `ac1222a48c8914d3f81297c7570d1a84f0f26778`; the four-operator comparison
 uses the then-current `030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`, target
-`Ascend950PR_9599`. “Confirmed” means reproduced by pinned-v2 lowering or an
+`Ascend950PR_9599`. The GeLU deep dive uses the newer
+`0a631f70968c3cb7c33ce45330a85768dd5a6f06`. “Confirmed” means reproduced by pinned-v2 lowering or an
 official NPU report. “Suspected” means the observed symptom is real but its
 root cause has not been isolated.
 
@@ -68,6 +69,22 @@ root cause has not been isolated.
 
 ## Confirmed integration and skill-stack defects
 
+- **Base `asc.Compiler` emits an invalid FFTS launch argument on C310.** At
+  `0a631f70`, `_schedule_postprocessing` hard-codes
+  `set_ffts_addr=True`. Eighteen GeLU routes then failed on 950PR in
+  `GetC2cCtrlAddrWrapper` with 207000. An adapter preserving the base pipeline
+  but using `set_ffts_addr=(arch != C310)` removed the hidden argument; the
+  next official run launched and passed its low-level exact routes. Evidence:
+  [`job_24726123eebe`](https://cannbench.com/workspace/jobs/job_24726123eebe),
+  [`job_bcf486ff6371`](https://cannbench.com/workspace/jobs/job_bcf486ff6371).
+- **AscTile JIT extracts options from the wrong dataclass.** The AscTile
+  compiler defines `reuse_alloc`, `static_alloc`, and `vf_fusion`, but inherited
+  `JITFunction.get_config_keywords()` and `__call__()` use base
+  `asc.CompileOptions`. Documented decorators can therefore reject an option
+  at import or leak it into the bound kernel arguments. The CANNBench adapter
+  consistently selects `self.compiler.options_cls`; upstream v2 remains
+  unfixed at the evaluated commit.
+
 - **Raw pointers at launch.** A worker used `Tensor.data_ptr()` and host-side
   slice assignment. The pinned JIT contract needs the tensor itself to retain
   pointer dtype specialization; final dtype conversion must occur in a JIT
@@ -87,6 +104,13 @@ root cause has not been isolated.
   implementation.
 
 ## Official NPU symptoms with suspected roots
+
+- **GeLU case 4:** an AscTile tanh kernel with 72 cores, tile 13,824,
+  `vf_fusion=True`, and `reuse_alloc=1` compiled at 221,184/253,952 bytes UB but
+  timed out on the vector core (507034) for the 67M-element FP16 case. The
+  device then cascade-skipped cases 7–20. The hardware symptom is confirmed;
+  the responsible compiler/runtime mechanism is still suspected. Evidence:
+  [`job_bcf486ff6371`](https://cannbench.com/workspace/jobs/job_bcf486ff6371).
 
 - **SwiGLU case 9:** confirmed runtime failure around
   `narrow(...).contiguous()` with `aclnnInplaceCopy`; the asynchronous trace is

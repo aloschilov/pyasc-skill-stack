@@ -1,0 +1,45 @@
+{
+  "iteration": "iteration-01-erfc-stable-tile12288",
+  "job_id": "job_24726123eebe",
+  "operator": "gelu",
+  "runtime_commit": "0a631f70968c3cb7c33ce45330a85768dd5a6f06",
+  "archive_sha256": "3151e2b09f85b5f4c9708cf38f3e8fb56908213946241c5e615ed122f2a92f33",
+  "response": {
+    "ok": true,
+    "submission": {
+      "id": "sub_43091742ad9d",
+      "status": "validated",
+      "content_hash": "3151e2b09f85b5f4c9708cf38f3e8fb56908213946241c5e615ed122f2a92f33",
+      "target_hardware": "950pr",
+      "submission_tag": "pyasc-v2-current-gelu-handwritten-erfc-i01-20260903",
+      "is_private": true,
+      "workload_class": "standard"
+    },
+    "job": {
+      "id": "job_24726123eebe",
+      "status": "queued",
+      "device_id": 0,
+      "job_tag": "pyasc-v2-current-gelu-handwritten-erfc-i01-20260903"
+    },
+    "credits": {
+      "quota_day": "2026-09-04",
+      "timezone": "Asia/Shanghai",
+      "resets_at": "2026-09-04T16:00:00Z",
+      "unlimited": false,
+      "bypass_active_job_limit": false,
+      "base_credits": 10,
+      "base_remaining": 1,
+      "daily_max": 30,
+      "bonus_cap": 30,
+      "bonus_earned": 0,
+      "bonus_balance": 0,
+      "bonus_counted": 0,
+      "max_active_jobs_per_user": 3,
+      "charges": 9,
+      "refunds": 0,
+      "used": 9,
+      "effective_limit": 10,
+      "remaining": 1
+    }
+  }
+}

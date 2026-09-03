@@ -1,10 +1,16 @@
-# pyasc asc2 JIT Compile Options
+# pyasc v2 AscTile JIT compile options
+
+At evaluated commit `0a631f70968c3cb7c33ce45330a85768dd5a6f06`, these options
+exist on `asctile.runtime.compiler.CompileOptions`, but inherited JIT option
+discovery/extraction still uses the base `asc` option class. The plain
+decorator forms below are therefore API intent, not a working CANNBench path,
+until an upstream fix or the repository's concrete-options adapter is loaded.
 
 ## Decorator syntax
 
 ```python
-@asc2.jit(always_compile=True)        # standard for development
-@asc2.jit                              # defaults (uses cache)
+@asctile.jit(always_compile=True)        # standard for development
+@asctile.jit                              # defaults (uses cache)
 ```
 
 ## Compile parameters
@@ -16,25 +22,26 @@
 | `matmul_cube_only` | `bool` | `False` | Pure cube mode (matrix compute only) |
 | `reuse_alloc` | `int` (0-2) | `0` | Which UB-reuse pass runs. `0` none, `1` `ReuseUBAllocation`, `2` `ReuseTensorAllocation`. `2` packs buffers differently rather than strictly tighter — see the hazard below |
 
-Note: `insert_sync=True` and `run_asc2_passes=True` are defaults for `@asc2.jit`.
-Do not disable them unless debugging a specific issue.
+`insert_sync=True` is the current AscTile default. There is no
+`run_asc2_passes` or `run_asctile_passes` option in current v2; do not copy it
+from older snapshots.
 
 <!-- BEGIN: temporary, delete once pyasc issue #2 is fixed -->
-### `asc2.where` writes past its destination tile (open compiler defect)
+### `asctile.where` writes past its destination tile (open compiler defect)
 
 **This is a current compiler defect, not a property of the model.** Delete this
 section once [pyasc issue #2](https://gitcode.com/compiler-team/pyasc/issues/2)
 is fixed.
 
 A loop whose body produces a mask with a comparison and consumes it with
-`asc2.where` is miscompiled at `reuse_alloc=2`:
+`asctile.where` is miscompiled at `reuse_alloc=2`:
 
 ```python
-for i in asc2.range(n):
-    idx_scalar = asc2.copy_in(idx_gm, [i])
-    mask = asc2.equal(ref_tile, idx_scalar)
-    result = asc2.where(mask, asc2.cast(ON, out_ptr.dtype), asc2.cast(OFF, out_ptr.dtype))
-    asc2.copy_out(result, out_gm, [i * depth])
+for i in asctile.range(n):
+    idx_scalar = asctile.copy_in(idx_gm, [i])
+    mask = asctile.equal(ref_tile, idx_scalar)
+    result = asctile.where(mask, asctile.cast(ON, out_ptr.dtype), asctile.cast(OFF, out_ptr.dtype))
+    asctile.copy_out(result, out_gm, [i * depth])
 ```
 
 The compare/select pair lowers to `CompareScalar` and `Select` with
@@ -89,14 +96,14 @@ Only three lowerings use the full-mask form, all in the compare/select family:
 
 | Emitted | Reached from |
 |---|---|
-| `Select` | `asc2.where` |
+| `Select` | `asctile.where` |
 | `Compare` | comparison of two tiles |
 | `CompareScalar` | comparison of a tile against a scalar |
 
 Everything else lowers to the *counted* form, which is given the exact element
 count and is unaffected: `add`, `sub`, `mul`, `div`, `maximum`, `minimum`,
 `abs`, `exp`, `log`, `sqrt`, `relu`, `leaky_relu`, `cast`, `duplicate`, the
-reductions, the shifts and the bitwise ops. So `asc2.maximum(x, eps)` is a safe
+reductions, the shifts and the bitwise ops. So `asctile.maximum(x, eps)` is a safe
 way to express a clamp, and a plain elementwise loop is never affected.
 
 Three rewrites also fold `where`-shaped code into a counted op before it can
@@ -104,9 +111,9 @@ reach `Select`, which makes those spellings safe at any tile size:
 
 | Source | Folded to |
 |---|---|
-| `asc2.where(x >= 0, x, 0)` | `relu` |
-| `asc2.where(x >= 0, x, x * alpha)` | `leaky_relu` |
-| `asc2.maximum(x, 0)` | `relu` |
+| `asctile.where(x >= 0, x, 0)` | `relu` |
+| `asctile.where(x >= 0, x, x * alpha)` | `leaky_relu` |
+| `asctile.maximum(x, 0)` | `relu` |
 
 The folds require `float16`/`float32`, so the same spelling on an integer tile
 does **not** fold and is exposed.
@@ -117,7 +124,7 @@ does **not** fold and is exposed.
   launch therefore passes and hides the bug);
 - the output holds values neither `where` operand can produce — the clobbered
   input tile verbatim, or `0x3F800000` / `0x40000000`, which are floats `1.0`
-  and `2.0` from the `float32` cast that `asc2.equal` inserts before comparing;
+  and `2.0` from the `float32` cast that `asctile.equal` inserts before comparing;
 - `reuse_alloc=1` on the same source is correct;
 - there is **no diagnostic**: it fails silently, as wrong numbers only.
 
@@ -130,7 +137,7 @@ manifest. Note that single-element inputs are **not** safe — `depth=1` corrupt
 **What to do when writing a kernel.** Prefer, in order:
 
 1. size the `where` destination so `align_to(bytes, 32) % 256 == 0`;
-2. use one of the folded spellings above, or `asc2.maximum`/`asc2.minimum`,
+2. use one of the folded spellings above, or `asctile.maximum`/`asctile.minimum`,
    when the intent is a clamp or a relu;
 3. keep no loop-invariant tile live across the `where` — copy inputs in inside
    the loop;
@@ -153,14 +160,14 @@ whose numbers only look good at `reuse_alloc=2` is not a kernel that works.
 
 ### `int64` and the comparison ops
 
-Comparisons (`asc2.equal` and friends) accept `int8, int16, int32, float16,
+Comparisons (`asctile.equal` and friends) accept `int8, int16, int32, float16,
 bfloat16, float32` — there is no `int64` form, so an `int64` index tile fails at
 codegen ([pyasc issue #3](https://gitcode.com/compiler-team/pyasc/issues/3)).
 Narrow to `int32` for the compare only, and record the precondition that makes
 it exact — the values must fit in `int32`. See Common Mistakes in the main
 skill for the full pattern.
 
-## Launch syntax (asc2)
+## Launch syntax (asctile)
 
 ```python
 kernel[core_num](arg1, arg2, ...)
@@ -170,7 +177,7 @@ kernel[core_num](arg1, arg2, ...)
 |-----------|------|----------|-------------|
 | `core_num` | `int` | Yes | Number of cores to use |
 
-**asc2 does NOT use a stream argument.** The v1 syntax `kernel[core_num, stream](...)` must not be used.
+**asctile does NOT use a stream argument.** The v1 syntax `kernel[core_num, stream](...)` must not be used.
 
 ## JIT cache behavior
 
@@ -190,6 +197,6 @@ kernel[core_num](arg1, arg2, ...)
 
 | Aspect | Kernel function | Device function |
 |--------|----------------|-----------------|
-| Called from | Host: `kernel[cores](...)` | Other `@asc2.jit` functions |
+| Called from | Host: `kernel[cores](...)` | Other `@asctile.jit` functions |
 | Compile options | Effective | Ignored |
 | `return` | Not allowed | Allowed (top-level only) |

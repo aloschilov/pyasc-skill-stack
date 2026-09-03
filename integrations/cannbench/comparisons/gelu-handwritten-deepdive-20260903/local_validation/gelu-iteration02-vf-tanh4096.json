@@ -1,0 +1,342 @@
+{
+  "candidate": "integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/candidates/gelu.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_native"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_erfc_f32"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_erfc_bf16"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "failed",
+      "compile_errors": [
+        "RuntimeError: UB overflow: 253952 bytes are available, 491520 bytes are used."
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"num_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float16\", \"size\": \"PlainArgType:int32\", \"x_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff6b4aa020>\", \"max\": \"<function max at 0xffff6b4a9e40>\", \"min\": \"<function min at 0xffff6b4a9ee0>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff6b4a9f80>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": true, \"vf_vec_len\": null}, \"constexprs\": {\"tile_size\": \"ConstExpr[int](4096)\"}, \"kernel\": \"_gelu_tanh_vf\"}",
+      "kernels": [
+        "_gelu_tanh_vf"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "failed",
+      "compile_errors": [
+        "RuntimeError: UB overflow: 253952 bytes are available, 442368 bytes are used."
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"num_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float32\", \"size\": \"PlainArgType:int32\", \"x_ptr\": \"PointerArgType:float32\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff6b4aa020>\", \"max\": \"<function max at 0xffff6b4a9e40>\", \"min\": \"<function min at 0xffff6b4a9ee0>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff6b4a9f80>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": true, \"vf_vec_len\": null}, \"constexprs\": {\"tile_size\": \"ConstExpr[int](4096)\"}, \"kernel\": \"_gelu_tanh_vf\"}",
+      "kernels": [
+        "_gelu_tanh_vf"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "failed",
+      "compile_errors": [
+        "RuntimeError: UB overflow: 253952 bytes are available, 491520 bytes are used."
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"num_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:bfloat16\", \"size\": \"PlainArgType:int32\", \"x_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff6b4aa020>\", \"max\": \"<function max at 0xffff6b4a9e40>\", \"min\": \"<function min at 0xffff6b4a9ee0>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff6b4a9f80>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": true, \"vf_vec_len\": null}, \"constexprs\": {\"tile_size\": \"ConstExpr[int](4096)\"}, \"kernel\": \"_gelu_tanh_vf\"}",
+      "kernels": [
+        "_gelu_tanh_vf"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_native"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "failed",
+      "compile_errors": [
+        "RuntimeError: UB overflow: 253952 bytes are available, 442368 bytes are used."
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"num_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float32\", \"size\": \"PlainArgType:int32\", \"x_ptr\": \"PointerArgType:float32\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff6b4aa020>\", \"max\": \"<function max at 0xffff6b4a9e40>\", \"min\": \"<function min at 0xffff6b4a9ee0>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff6b4a9f80>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": true, \"vf_vec_len\": null}, \"constexprs\": {\"tile_size\": \"ConstExpr[int](4096)\"}, \"kernel\": \"_gelu_tanh_vf\"}",
+      "kernels": [
+        "_gelu_tanh_vf"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_erfc_bf16"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "failed",
+      "compile_errors": [
+        "RuntimeError: UB overflow: 253952 bytes are available, 491520 bytes are used."
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"num_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float16\", \"size\": \"PlainArgType:int32\", \"x_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff6b4aa020>\", \"max\": \"<function max at 0xffff6b4a9e40>\", \"min\": \"<function min at 0xffff6b4a9ee0>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff6b4a9f80>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": true, \"vf_vec_len\": null}, \"constexprs\": {\"tile_size\": \"ConstExpr[int](4096)\"}, \"kernel\": \"_gelu_tanh_vf\"}",
+      "kernels": [
+        "_gelu_tanh_vf"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_erfc_f32"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "failed",
+      "compile_errors": [
+        "RuntimeError: UB overflow: 253952 bytes are available, 491520 bytes are used."
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"num_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:bfloat16\", \"size\": \"PlainArgType:int32\", \"x_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff6b4aa020>\", \"max\": \"<function max at 0xffff6b4a9e40>\", \"min\": \"<function min at 0xffff6b4a9ee0>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff6b4a9f80>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": true, \"vf_vec_len\": null}, \"constexprs\": {\"tile_size\": \"ConstExpr[int](4096)\"}, \"kernel\": \"_gelu_tanh_vf\"}",
+      "kernels": [
+        "_gelu_tanh_vf"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_erfc_f32"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "failed",
+      "compile_errors": [
+        "RuntimeError: UB overflow: 253952 bytes are available, 491520 bytes are used."
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"num_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float16\", \"size\": \"PlainArgType:int32\", \"x_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff6b4aa020>\", \"max\": \"<function max at 0xffff6b4a9e40>\", \"min\": \"<function min at 0xffff6b4a9ee0>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff6b4a9f80>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": true, \"vf_vec_len\": null}, \"constexprs\": {\"tile_size\": \"ConstExpr[int](4096)\"}, \"kernel\": \"_gelu_tanh_vf\"}",
+      "kernels": [
+        "_gelu_tanh_vf"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_erfc_f32"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_erfc_bf16"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "failed",
+      "compile_errors": [
+        "RuntimeError: UB overflow: 253952 bytes are available, 491520 bytes are used."
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"num_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:float16\", \"size\": \"PlainArgType:int32\", \"x_ptr\": \"PointerArgType:float16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff6b4aa020>\", \"max\": \"<function max at 0xffff6b4a9e40>\", \"min\": \"<function min at 0xffff6b4a9ee0>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff6b4a9f80>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": true, \"vf_vec_len\": null}, \"constexprs\": {\"tile_size\": \"ConstExpr[int](4096)\"}, \"kernel\": \"_gelu_tanh_vf\"}",
+      "kernels": [
+        "_gelu_tanh_vf"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_erfc_f32"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "failed",
+      "compile_errors": [
+        "RuntimeError: UB overflow: 253952 bytes are available, 491520 bytes are used."
+      ],
+      "cores": [
+        72
+      ],
+      "dispatch": "failed",
+      "error": "RuntimeError: local compile gate rejected {\"arg_types\": {\"num_tiles\": \"PlainArgType:int32\", \"out_ptr\": \"PointerArgType:bfloat16\", \"size\": \"PlainArgType:int32\", \"x_ptr\": \"PointerArgType:bfloat16\"}, \"codegen\": {\"capture_exceptions\": true, \"custom_builtins\": {\"assert\": \"<function custom_assert at 0xffff6b4aa020>\", \"max\": \"<function max at 0xffff6b4a9e40>\", \"min\": \"<function min at 0xffff6b4a9ee0>\", \"range\": \"<class 'asctile.language.range.range'>\", \"sum\": \"<function sum at 0xffff6b4a9f80>\"}, \"ir_multithreading\": true}, \"compile\": {\"always_compile\": false, \"auto_sync\": true, \"auto_sync_log\": \"\", \"bisheng_options\": null, \"debug\": false, \"insert_sync\": true, \"kernel_type\": null, \"matmul_cube_only\": false, \"opt_level\": 3, \"print_ir_before_all\": false, \"reuse_alloc\": 0, \"run_passes\": true, \"static_alloc\": null, \"strip_loc\": false, \"verify_sync\": false, \"vf_fusion\": true, \"vf_vec_len\": null}, \"constexprs\": {\"tile_size\": \"ConstExpr[int](4096)\"}, \"kernel\": \"_gelu_tanh_vf\"}",
+      "kernels": [
+        "_gelu_tanh_vf"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_exact_erfc_f32"
+      ]
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 11,
+  "dispatch_passed": 11,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "gelu",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "0a631f70968c3cb7c33ce45330a85768dd5a6f06",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [
+    {
+      "ascendc_bytes": 15980,
+      "has_ffts_arg": false,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "memory_consumed": {
+        "UB": 248832
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2224,
+      "has_ffts_arg": false,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "memory_consumed": {},
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 2740,
+      "has_ffts_arg": false,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "memory_consumed": {},
+      "status": "passed"
+    },
+    {
+      "error": "RuntimeError: UB overflow: 253952 bytes are available, 491520 bytes are used.",
+      "status": "failed"
+    },
+    {
+      "error": "RuntimeError: UB overflow: 253952 bytes are available, 442368 bytes are used.",
+      "status": "failed"
+    },
+    {
+      "error": "RuntimeError: UB overflow: 253952 bytes are available, 491520 bytes are used.",
+      "status": "failed"
+    }
+  ],
+  "status": "failed",
+  "unique_specializations": 6,
+  "unique_specializations_passed": 3
+}

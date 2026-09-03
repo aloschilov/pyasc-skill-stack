@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "iteration": "iteration-01-erfc-stable-tile12288",
+  "operator": "gelu",
+  "source_class": "upstream-handwritten-derived-and-contract-corrected",
+  "pyasc_ref": "v2",
+  "pyasc_commit": "0a631f70968c3cb7c33ce45330a85768dd5a6f06",
+  "candidate_sha256": "499a95fa43338bd628250be94f4b58383db5bd9286c450dc1d196d5a26f04968",
+  "runtime_wheel_sha256": "77e1563eff38b98b696a08e81751fde308a1600a2fc7f5a5aef9f05bb5509d05",
+  "launch": {
+    "exact_fp16_tile": 4096,
+    "lowlevel_tile": 12288,
+    "max_ai_cores": 72,
+    "tail_strategy": "overlap-final-full-tile",
+    "exact_fp32_bf16": "asc.adv.erfc",
+    "tanh": "stable-sigmoid-two-exp"
+  },
+  "submission_zip": {
+    "path": "integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/submissions/iteration-01-erfc-stable-tile12288.zip",
+    "sha256": "3151e2b09f85b5f4c9708cf38f3e8fb56908213946241c5e615ed122f2a92f33",
+    "size_bytes": 23355878
+  }
+}

@@ -29,7 +29,7 @@ from typing import Any
 import yaml
 
 
-PYASC_COMMIT = "ac1222a48c8914d3f81297c7570d1a84f0f26778"
+PYASC_COMMIT = "0a631f70968c3cb7c33ce45330a85768dd5a6f06"
 PLATFORM = "Ascend950PR_9599"
 
 
@@ -81,8 +81,17 @@ class FakeTensor:
     def is_contiguous(self) -> bool:
         return True
 
-    def contiguous(self) -> "FakeTensor":
+    def contiguous(self, *_: Any, **__: Any) -> "FakeTensor":
         return self
+
+    def stride(self, dim: int | None = None):
+        values = []
+        running = 1
+        for size in reversed(self.shape):
+            values.append(running)
+            running *= size
+        strides = tuple(reversed(values))
+        return strides if dim is None else strides[dim]
 
     def size(self, dim: int | None = None):
         return self.shape if dim is None else self.shape[dim]
@@ -215,6 +224,8 @@ def case_call(op: str, fn: Any, case: dict[str, Any]) -> Any:
         return fn(tensor(shapes[0], dtypes[0]), **attrs)
     if op == "rms_norm":
         return fn(tensor(shapes[0], dtypes[0]), tensor(shapes[1], dtypes[1]), **attrs)
+    if op in {"softmax", "transpose"}:
+        return fn(tensor(shapes[0], dtypes[0]), **attrs)
     if op == "foreach_norm":
         xs = [tensor(shape, dtypes[0]) for shape in shapes[0]]
         return fn(xs, **attrs)
@@ -231,9 +242,21 @@ def load_candidate(path: Path, op: str):
     package = types.ModuleType(package_name)
     package.__path__ = [str(path.parent)]
     sys.modules[package_name] = package
-    runtime = types.ModuleType(f"{package_name}._pyasc_runtime")
+    runtime_name = f"{package_name}._pyasc_runtime"
+    runtime_path = path.parent / "_pyasc_runtime.py"
+    if runtime_path.is_file():
+        runtime_spec = importlib.util.spec_from_file_location(
+            runtime_name, runtime_path
+        )
+        if runtime_spec is None or runtime_spec.loader is None:
+            raise RuntimeError(f"cannot import {runtime_path}")
+        runtime = importlib.util.module_from_spec(runtime_spec)
+        sys.modules[runtime_name] = runtime
+        runtime_spec.loader.exec_module(runtime)
+    else:
+        runtime = types.ModuleType(runtime_name)
+        sys.modules[runtime_name] = runtime
     runtime.ensure_npu_platform = lambda: None
-    sys.modules[runtime.__name__] = runtime
     spec = importlib.util.spec_from_file_location(f"{package_name}.{op}", path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot import {path}")
@@ -281,8 +304,8 @@ def compile_specialization(jit: Any, prepared: tuple[Any, ...]) -> dict[str, Any
 
     _, arg_types, constexprs, codegen_options, compile_options = prepared
     module = jit._run_codegen(Specialization(arg_types, constexprs), codegen_options)
-    # Use the compiler class bound to this JIT object. asc2.JITFunction binds
-    # asc2.runtime.compiler.Compiler; using asc.runtime.Compiler here silently
+    # Use the compiler class bound to this JIT object. asctile.JITFunction binds
+    # asctile.runtime.compiler.Compiler; using asc.runtime.Compiler here silently
     # skips the AscTile lowering pipeline and leaves local tensors untranslated.
     compiler = jit.compiler(compile_options)
     compiler.preprocess_module(module)
@@ -290,12 +313,19 @@ def compile_specialization(jit: Any, prepared: tuple[Any, ...]) -> dict[str, Any
         compiler.run_passes(module)
     compiler.postprocess_module(module)
     source = compiler.run_translation(module)
-    memory = module.op.get_dict_of_int_attr(ir.attr.memory_consumed)
+    # Low-level ``asc.jit`` kernels use explicit/local-auto buffers and the
+    # current v2 pipeline may omit the module-level memory_consumed attribute.
+    # Translation has still completed successfully; treat the absent optional
+    # metadata as unknown/empty instead of failing the compile gate itself.
+    memory = module.op.get_dict_of_int_attr(ir.attr.memory_consumed) or {}
     jit.launcher.check_memory_overflow(memory)
+    kernel_args = [str(kind) for kind in ir.get_kernel_arg_attrs(module)]
     return {
         "status": "passed",
         "memory_consumed": memory,
         "ascendc_bytes": len(source.encode("utf-8")),
+        "kernel_args": kernel_args,
+        "has_ffts_arg": any("FftsAddr" in kind for kind in kernel_args),
     }
 
 

@@ -4,7 +4,8 @@ RUN python -m pip install --no-cache-dir \
     "numpy<2" packaging pybind11==2.13.6 pyyaml typing_extensions
 
 COPY comparisons/gelu-handwritten-deepdive-20260903/runtime-dist/pyasc-1.1.1-cp312-cp312-linux_x86_64.whl /tmp/pyasc-1.1.1-cp312-cp312-linux_x86_64.whl
-RUN python -m pip install --no-cache-dir --no-deps /tmp/pyasc-1.1.1-cp312-cp312-linux_x86_64.whl \
+RUN python -m pip install --no-cache-dir --no-deps \
+    /tmp/pyasc-1.1.1-cp312-cp312-linux_x86_64.whl \
     && rm /tmp/pyasc-1.1.1-cp312-cp312-linux_x86_64.whl
 
 ENV PYASC_COMPILER=/bin/true \
@@ -12,4 +13,4 @@ ENV PYASC_COMPILER=/bin/true \
     PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /workspace
-ENTRYPOINT ["python", "integrations/cannbench/workers/local_compile_gate.py"]
+ENTRYPOINT ["python", "integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/current_v2_compile_gate.py"]

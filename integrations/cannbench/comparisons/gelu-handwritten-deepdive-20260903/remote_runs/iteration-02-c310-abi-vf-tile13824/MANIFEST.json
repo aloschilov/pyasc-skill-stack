@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "iteration": "iteration-02-c310-abi-vf-tile13824",
+  "operator": "gelu",
+  "source_class": "upstream-handwritten-derived-contract-corrected-and-tuned",
+  "pyasc_ref": "v2",
+  "pyasc_commit": "0a631f70968c3cb7c33ce45330a85768dd5a6f06",
+  "candidate_sha256": "e954d7a2f5ba4a7c3e794327e94e0463351403d708a7a1b505b926b260472805",
+  "runtime_wheel_sha256": "77e1563eff38b98b696a08e81751fde308a1600a2fc7f5a5aef9f05bb5509d05",
+  "integration_overlays": {
+    "c310_lowlevel_compiler": "base asc pipeline with set_ffts_addr disabled on C310",
+    "asctile_jit_options": "concrete compiler option discovery and extraction"
+  },
+  "launch": {
+    "exact_fp16_tile": 13824,
+    "lowlevel_tile": 13824,
+    "tanh_tile": 13824,
+    "max_ai_cores": 72,
+    "tail_strategy": "real-shape-asctile; overlap-final-lowlevel",
+    "exact_fp32_bf16": "asc.adv.erfc",
+    "exact_fp16": "asctile.erf-vf-fused-reuse-alloc",
+    "tanh": "single-exp-cancellation-free-vf-fused-reuse-alloc"
+  },
+  "submission_zip": {
+    "path": "integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/submissions/iteration-02-c310-abi-vf-tile13824.zip",
+    "sha256": "441ac4931ea24139fab009da69c4c77bba294d508b4007369be3f0cbf87723e1",
+    "size_bytes": 23357615
+  }
+}

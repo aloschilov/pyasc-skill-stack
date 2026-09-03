@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 repo_root="$(cd "${script_dir}/../../.." && pwd)"
-image="pyasc-cannbench-local-eval:ac1222a-v2"
+image="pyasc-cannbench-local-eval:0a631f70-v2"
 
 if ! docker image inspect "${image}" >/dev/null 2>&1; then
     docker build \

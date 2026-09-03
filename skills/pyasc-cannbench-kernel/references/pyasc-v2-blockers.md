@@ -27,12 +27,28 @@ This is a routing summary. Detailed evidence and confidence labels live in
   pass the tensor to the JIT so pointer dtype specialization remains available.
 - Local QEMU compilation cannot establish NPU runtime behavior, numerical
   correctness, or performance.
+- The base low-level `asc.Compiler` unconditionally legalizes an FFTS argument,
+  including for C310. On CANNBench 950PR this fails in `c2c_ctrl_addr()` before
+  the kernel launches. Use a narrowly evidenced C310 compiler repair and verify
+  `has_ffts_arg=false`, or stay on AscTile.
+- AscTile defines `reuse_alloc`, `static_alloc`, and `vf_fusion` in its compiler
+  options, but inherited JIT option discovery/extraction uses the base option
+  type at commit `0a631f70`. Direct decorators with those options need the
+  integration's concrete-options adapter.
+- Static UB success does not prove a large VF-fused loop is runnable. A
+  72-core, tile-13,824 GeLU tanh route with VF+reuse fit 221,184 bytes but timed
+  out on the vector core in official case 4. Treat the combination as unsafe
+  until separately reproduced and bounded.
 - Target-derived kernels may rely on launch-time `asctile.ConstExpr` wrappers
   even when their JIT signatures are unannotated. Preserve the upstream test's
   dispatch contract; this is required by current-v2 RMSNorm.
 - Current-v2 `asctile.softmax` accepts f16/f32 local tensors but rejects BF16.
   A complete CANNBench Softmax implementation needs an explicit supported-dtype
   compute path rather than copying the target kernel unchanged.
+- Current-v2 `asctile.rms_norm` likewise accepts f16/f32, not BF16. Converting
+  BF16 through f16 changes the reference accumulation semantics and may expose
+  mixed-half generated declarations; route BF16 through an explicit f32
+  reduction/normalization path.
 - Current-v2 local transpose rejects int64 and the store lowering does not
   support tensors with rank greater than four. Use a word-preserving supported
   dtype view for int64 movement and collapse/tile high-rank layouts before the
