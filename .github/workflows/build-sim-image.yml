@@ -4,7 +4,7 @@ name: Build pyasc-sim image
 # runner — the RTX 4090 amd64 box is retired + QEMU emulation of the
 # CANN+pyasc+LLVM toolchain is impractical) + optional multiarch manifest
 # merge. After both the arm64 leg (built on the Mac) + the amd64 leg (this)
-# are pushed, set merge=true to publish ghcr.io/<owner>/pyasc-sim:py3.11.
+# are pushed, set merge=true to publish the version-coupled manifest.
 #
 # Requires the GITCODE_CREDENTIALS repo secret: a git-credentials line
 # `https://<user>:<token>@gitcode.com` (gitcode.com needs auth on clone).
@@ -17,9 +17,9 @@ on:
         options: [amd64, arm64]
         default: amd64
       pyasc_rev:
-        description: "pyasc git rev (SHA on origin/v2; defaults to 4d1db41d)"
+        description: "pyasc git rev (SHA on origin/v2; current skills pin 030e9b2c)"
         type: string
-        default: 4d1db41d61cabf565bca1cfb0b11ef5ec4f84c7f
+        default: 030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d
       merge:
         description: "after push, also merge the multiarch manifest (needs both legs pushed)"
         type: boolean
@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   build:
-    name: Build + push pyasc-sim:py3.11-${{ inputs.arch }}
+    name: Build + push pyasc-sim (${{ inputs.arch }}, ${{ inputs.pyasc_rev }})
     runs-on: ${{ inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 120
     steps:
@@ -71,4 +71,5 @@ jobs:
         if: ${{ inputs.merge }}
         env:
           OWNER: ${{ github.repository_owner }}
+          PYASC_GIT_REV: ${{ inputs.pyasc_rev }}
         run: bash docker/build-sim-image.sh --merge

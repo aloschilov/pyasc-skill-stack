@@ -1,4 +1,4 @@
-# pyasc-sim (self-contained): CANN 9.0 + Python 3.11 + pyasc (with asc2)
+# pyasc-sim (self-contained): CANN 9.0 + Python 3.11 + current pyasc/asctile
 # built from the pyasc v2 source inside the image.
 #
 # This is the default image for running pyasc-skill-stack on a clean machine:
@@ -7,21 +7,22 @@
 # a prebuilt CANN image), see docker/Dockerfile.overlay.
 #
 # Build:
-#   docker build -f docker/Dockerfile -t pyasc-sim:latest docker/
+#   docker build -f docker/Dockerfile \
+#     -t pyasc-sim:py3.11-pyasc-030e9b2c docker/
 #
 # Usage (mount the skill-stack repo as /workspace and drop into a shell):
 #   docker run --rm -it \
 #     -v "$(pwd)":/workspace -w /workspace \
-#     pyasc-sim:latest
+#     pyasc-sim:py3.11-pyasc-030e9b2c
 #
 # Inside the container:
 #   source "$CANN_HOME/set_env.sh"
 #   export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
-#   python3.11 -c "import asc, asc2, torch; print('pyasc OK')"
+#   python3.11 -c "import asc, asctile, torch; print('pyasc OK')"
 #   opencode
 #
 # The Ascend950PR_9599 simulator is required for matmul (cube unit). torch is
-# installed (CPU-only) because asc2.matmul requires torch.Tensor inputs on the
+# installed (CPU-only) because asctile.matmul requires torch.Tensor inputs on the
 # simulator -- numpy arrays produce zeros for matmul.
 #
 # Architecture support:
@@ -33,8 +34,8 @@
 # Build args:
 #   PYASC_GIT_URL         pyasc source repository
 #                         (default: https://gitcode.com/compiler-team/pyasc.git)
-#   PYASC_GIT_REV         SHA on origin/v2 to pin (default: 7095b6f, the v2-HEAD
-#                         baseline bumped 2026-06-26 from the Q1 7b85554a pin).
+#   PYASC_GIT_REV         SHA on origin/v2 to pin (default: 030e9b2c, the
+#                         2026-09-03 asctile snapshot used by the skills).
 #                         Bump in lock-step with the host-side pyasc-v2-eval
 #                         checkout used by the harness so docker and host runs stay
 #                         apples-to-apples.
@@ -56,11 +57,15 @@ ARG PYASC_GIT_URL=https://gitcode.com/compiler-team/pyasc.git
 # Bump this together with the host-side pyasc-v2-eval checkout when the
 # evaluation owner is ready to refresh the baseline. Leaving PYASC_GIT_REF
 # as a legacy override hook for callers that still need a non-SHA ref.
-ARG PYASC_GIT_REV=4d1db41d61cabf565bca1cfb0b11ef5ec4f84c7f
+ARG PYASC_GIT_REV=030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d
 ARG PYASC_GIT_REF=
 ARG LLVM_ARCHIVE_X86_64=https://oaitriton.blob.core.windows.net/public/llvm-builds/llvm-86b69c31-ubuntu-x64.tar.gz
 ARG LLVM_ARCHIVE_AARCH64=https://oaitriton.blob.core.windows.net/public/llvm-builds/llvm-86b69c31-ubuntu-arm64.tar.gz
 ARG LLVM_ARCHIVE=
+
+LABEL org.opencontainers.image.source="https://github.com/aloschilov/pyasc-skill-stack" \
+      org.opencontainers.image.revision="${PYASC_GIT_REV}" \
+      io.pyasc.api="asctile"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git ca-certificates curl build-essential ccache clang lld \
@@ -137,15 +142,6 @@ RUN cd "${PYASC_SRC}" \
  && pip install --no-cache-dir -r requirements-build.txt \
  && pip install --no-cache-dir --no-build-isolation .
 
-# Patch upstream casing bug: asc.language.tile.unary_ops.rms_norm calls
-# `create_asctile_RmsnormOp` (lowercase n) but the IR builder exposes
-# `create_asctile_RmsNormOp` (capital N). Fix in-place so asc2.rms_norm works.
-RUN PYASC_SITE=$(python3 -c "import asc, os; print(os.path.dirname(asc.__file__))") \
- && sed -i 's/create_asctile_RmsnormOp/create_asctile_RmsNormOp/g' \
-        "${PYASC_SITE}/language/tile/unary_ops.py" \
- && grep -q "create_asctile_RmsNormOp" "${PYASC_SITE}/language/tile/unary_ops.py" \
- && echo "rms_norm casing patched"
-
 # OpenCode agent runtime. The generative-evidence harness runs `opencode run`
 # INSIDE this image (docker-out-of-docker), so no host/runner needs Node or
 # opencode on PATH -- generation joins the verification step that already runs
@@ -169,10 +165,10 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -c "import numpy; print(f'numpy: {numpy.__version__}')" && \
-    python3 -c "import torch; print(f'torch: {torch.__version__}')" && \
-    python3 -c "import asc, asc2; print('asc, asc2: OK')" || \
-    echo "WARN: import failed during build (expected if CANN runtime not fully initialized). Will work at container runtime."
+RUN python3 -c "import numpy; print(f'numpy: {numpy.__version__}')" \
+ && python3 -c "import torch; print(f'torch: {torch.__version__}')" \
+ && python3 -c "import asc, asctile; print('asc, asctile: OK')" \
+ && test "$(git -C "${PYASC_SRC}" rev-parse HEAD)" = "${PYASC_GIT_REV}"
 
 WORKDIR /workspace
 CMD ["/bin/bash"]

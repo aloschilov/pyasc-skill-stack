@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build (and push) the base `pyasc-sim` image and publish an honest multiarch
-# manifest under a single tag (default `py3.11`).
+# manifest under a version-coupled tag (default
+# `py3.11-pyasc-030e9b2c`).
 #
 # docker/Dockerfile is already arch-agnostic (multi-arch CANN base + LLVM
 # archive auto-selected by `uname -m`), so the only thing missing is a
@@ -25,13 +26,13 @@
 # (apt + npm only -- no native compile -- so emulation is tolerable), or in a
 # GitHub Actions amd64 build. The amd64 leg is still needed: the GitHub-hosted
 # (amd64) merge-gate pulls it. After --merge, `docker buildx imagetools inspect
-# ghcr.io/<owner>/pyasc-sim:py3.11` lists both linux/amd64 and linux/arm64, and
+# ghcr.io/<owner>/pyasc-sim:py3.11-pyasc-030e9b2c` lists both linux/amd64 and linux/arm64, and
 # PYASC_SIM_IMAGE resolves to the right arch on the hosted merge-gate (amd64)
 # and the arm64 Mac nightly/cloud/local-stability gates.
 #
 # Env overrides:
 #   OWNER       ghcr owner used to derive the image (default: aloschilov)
-#   IMAGE       multiarch manifest tag (default: ghcr.io/${OWNER}/pyasc-sim:py3.11)
+#   IMAGE       multiarch manifest tag (default derives from PYASC_GIT_REV)
 #   PYASC_GIT_URL / PYASC_GIT_REV / PYASC_GIT_REF   forwarded to Dockerfile build args
 #   GIT_CREDENTIALS_FILE  optional path to a git-credentials file (e.g. a line
 #                         https://user:token@gitcode.com); passed as a BuildKit
@@ -43,7 +44,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 OWNER="${OWNER:-aloschilov}"
-IMAGE="${IMAGE:-ghcr.io/${OWNER}/pyasc-sim:py3.11}"
+PYASC_GIT_REV="${PYASC_GIT_REV:-030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d}"
+PYASC_REV_SHORT="${PYASC_GIT_REV:0:8}"
+IMAGE="${IMAGE:-ghcr.io/${OWNER}/pyasc-sim:py3.11-pyasc-${PYASC_REV_SHORT}}"
 
 ARCH=""
 PUSH=0
@@ -87,7 +90,7 @@ build_arch() {
     echo "  tag : $tag"
     local build_args=()
     [ -n "${PYASC_GIT_URL:-}" ] && build_args+=(--build-arg "PYASC_GIT_URL=${PYASC_GIT_URL}")
-    [ -n "${PYASC_GIT_REV:-}" ] && build_args+=(--build-arg "PYASC_GIT_REV=${PYASC_GIT_REV}")
+    build_args+=(--build-arg "PYASC_GIT_REV=${PYASC_GIT_REV}")
     [ -n "${PYASC_GIT_REF:-}" ] && build_args+=(--build-arg "PYASC_GIT_REF=${PYASC_GIT_REF}")
     [ -n "${PYASC_SETUP_JOBS:-}" ] && build_args+=(--build-arg "PYASC_SETUP_JOBS=${PYASC_SETUP_JOBS}")
 
