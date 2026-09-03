@@ -55,8 +55,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Add swap for the AMD64 native link
-        if: ${{ inputs.arch == 'amd64' && !inputs.merge_only }}
+      - name: Add swap for the native pyasc link
+        if: ${{ !inputs.merge_only }}
         run: |
           pyasc_swap_path=/mnt/pyasc-swapfile
           sudo fallocate -l 8G "$pyasc_swap_path"
