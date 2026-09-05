@@ -1,0 +1,46 @@
+{
+  "iteration": "iteration-03-lowlevel-tanh-safe-tile13824",
+  "job_id": "job_a375a6e244ca",
+  "operator": "gelu",
+  "runtime_commit": "0a631f70968c3cb7c33ce45330a85768dd5a6f06",
+  "archive_sha256": "dc385abe5d804a6088fb09e605935b668383c8be67eafa1fc829dba573cc9869",
+  "response": {
+    "ok": true,
+    "submission": {
+      "id": "sub_dcb876bc6ed1",
+      "status": "validated",
+      "content_hash": "dc385abe5d804a6088fb09e605935b668383c8be67eafa1fc829dba573cc9869",
+      "target_hardware": "950pr",
+      "submission_tag": "pyasc-v2-current-gelu-lowlevel-safe-i03-20260903",
+      "is_private": true,
+      "workload_class": "standard"
+    },
+    "job": {
+      "id": "job_a375a6e244ca",
+      "status": "queued",
+      "device_id": 0,
+      "job_tag": "pyasc-v2-current-gelu-lowlevel-safe-i03-20260903",
+      "requested_pool_id": null
+    },
+    "credits": {
+      "quota_day": "2026-09-05",
+      "timezone": "Asia/Shanghai",
+      "resets_at": "2026-09-05T16:00:00Z",
+      "unlimited": false,
+      "bypass_active_job_limit": false,
+      "base_credits": 10,
+      "base_remaining": 9,
+      "daily_max": 30,
+      "bonus_cap": 30,
+      "bonus_earned": 0,
+      "bonus_balance": 0,
+      "bonus_counted": 0,
+      "max_active_jobs_per_user": 3,
+      "charges": 1,
+      "refunds": 0,
+      "used": 1,
+      "effective_limit": 10,
+      "remaining": 9
+    }
+  }
+}

@@ -1,8 +1,8 @@
 # Handwritten GeLU deep dive on CANNBench
 
-Status: iteration 03 is prepared and waiting for the daily credit reset at
-2026-09-04 16:00 UTC (19:00 Moscow). It must run before the remaining operator
-queue.
+Status: iteration 03 completed successfully on CANNBench: 20/20 cases passed,
+with no anti-cheat failures. Correctness and launch coverage are complete; the
+measured 0.4748x geometric-mean speedup remains below the >=1x target.
 
 ## Scope and provenance
 
@@ -26,11 +26,47 @@ to repair the operator contract before performance tuning was meaningful.
 |---|---|---:|---|
 | 01: native FP16 exact plus low-level erfc/tanh | [`job_24726123eebe`](https://cannbench.com/workspace/jobs/job_24726123eebe) | 2/20, score 6.2844, passed-case geomean 0.4269x | FP16 exact cases 1 and 7 are numerically correct. The other 18 routes never launched because the base `asc.Compiler` emitted an FFTS argument and the launcher failed in `GetC2cCtrlAddrWrapper` with 207000. |
 | 02: C310 ABI repair plus VF/reuse tanh | [`job_bcf486ff6371`](https://cannbench.com/workspace/jobs/job_bcf486ff6371) | 3/20, score 8.5228, passed-case geomean 0.2897x | The ABI repair worked: exact cases 1–3 launched and passed. Tanh case 4 caused vector-core timeout 507034; cases 7–20 were cascade-skipped after the device became unrecoverable. |
-| 03: safe low-level tanh | waiting for credits | local 20/20 compile/ABI | Removes the `asctile` VF+reuse tanh path and uses a compact low-level, single-exp, cancellation-free implementation. It retains the C310 ABI repair and 72-core/13,824-element tiling. |
+| 03: safe low-level tanh | [`job_a375a6e244ca`](https://cannbench.com/workspace/jobs/job_a375a6e244ca) | 20/20, score 62.0711, geomean 0.4748x | The cancellation-free low-level tanh path eliminates the hardware timeout and the C310 ABI repair launches every specialization. All 20 cases pass, but none reaches the CANN baseline. |
 
 The reported geomeans for failed jobs cover only cases that reached a valid
 performance measurement. They are not full 20-case GeLU performance scores.
-Both official jobs reported zero anti-cheat failures.
+All three official jobs reported zero anti-cheat failures.
+
+## Complete case-level result from iteration 03
+
+All candidate times and speedups below are the official CANNBench hardware
+measurements. `vs HW` compares against CANNBench's hardware-limit time rather
+than its operator baseline.
+
+| Case | Route | Candidate us | Baseline us | Speedup | vs HW |
+|---:|---|---:|---:|---:|---:|
+| 1 | `_gelu_exact_native` | 10.85 | 4.490 | 0.4138x | 0.1207x |
+| 2 | `_gelu_exact_erfc_f32` | 51.03 | 15.370 | 0.3012x | 0.2056x |
+| 3 | `_gelu_exact_erfc_bf16` | 206.00 | 30.140 | 0.1463x | 0.1018x |
+| 4 | `_gelu_tanh_promoted_lowlevel` | 253.08 | 172.930 | 0.6833x | 0.3315x |
+| 5 | `_gelu_tanh_f32` | 456.39 | 387.265 | 0.8485x | 0.3676x |
+| 6 | `_gelu_tanh_promoted_lowlevel` | 6.30 | 4.460 | 0.7079x | 0.2079x |
+| 7 | `_gelu_exact_native` | 10.98 | 4.450 | 0.4053x | 0.1175x |
+| 8 | `_gelu_tanh_f32` | 9.04 | 6.110 | 0.6759x | 0.3263x |
+| 9 | `_gelu_exact_erfc_bf16` | 602.00 | 117.530 | 0.1952x | 0.1032x |
+| 10 | `_gelu_tanh_promoted_lowlevel` | 6.44 | 4.560 | 0.7081x | 0.2034x |
+| 11 | `_gelu_exact_erfc_f32` | 15.98 | 6.050 | 0.3786x | 0.1708x |
+| 12 | `_gelu_tanh_promoted_lowlevel` | 6.44 | 4.380 | 0.6801x | 0.1941x |
+| 13 | `_gelu_exact_erfc_f32` | 131.86 | 37.455 | 0.2841x | 0.2069x |
+| 14 | `_gelu_tanh_promoted_lowlevel` | 13.02 | 7.780 | 0.5975x | 0.2911x |
+| 15 | `_gelu_exact_erfc_f32` | 15.73 | 5.980 | 0.3802x | 0.1666x |
+| 16 | `_gelu_exact_erfc_bf16` | 27.54 | 6.230 | 0.2262x | 0.0948x |
+| 17 | `_gelu_tanh_promoted_lowlevel` | 9.84 | 6.310 | 0.6413x | 0.2663x |
+| 18 | `_gelu_exact_erfc_f32` | 27.87 | 8.860 | 0.3179x | 0.1880x |
+| 19 | `_gelu_tanh_promoted_lowlevel` | 9.98 | 6.260 | 0.6273x | 0.2615x |
+| 20 | `_gelu_exact_erfc_f32` | 130.29 | 36.195 | 0.2778x | 0.2024x |
+
+The official aggregate is score `62.0711356991`, 20/20 accuracy, zero
+anti-cheat failures, geometric-mean speedup `0.4748251724x`, and
+geometric-mean speedup versus the hardware limit `0.1912868786x`. Per-route
+geomeans are 0.4095x for native FP16 exact, 0.3207x for FP32 erfc exact,
+0.1863x for promoted BF16 erfc exact, 0.6625x for promoted low-level tanh,
+and 0.7573x for native FP32 tanh.
 
 ## Case-level result from iteration 02
 
@@ -92,9 +128,17 @@ that compile/UB success was insufficient for this long fused loop. Iteration
   AscTile approximation (for FP32 case 2, 51.79 us versus the earlier
   136.06 us), but still only 0.2968x of the CANNBench baseline. BF16 promotion
   and conversion are more expensive still.
-- The current evidence does **not** support a claim of performance >=1x.
-  Achieving it needs compiler/runtime work or a faster exact primitive, not
-  another unevidenced tile increase.
+- Iteration 03 confirms these conclusions over the full hardware matrix. Tanh
+  is the strongest route (0.5975x--0.8485x), while exact FP32 is
+  0.2778x--0.3802x and promoted exact BF16 is 0.1463x--0.2262x. The best
+  individual case is still below 1x, so the >=1x expectation was not met.
+- The remaining gap is not a coverage, tail, or under-subscription failure:
+  every case launches 72 cores with the 13,824-element tiling and passes.
+  Current pyasc v2 must compose GeLU from several vector operations and must
+  promote BF16 for unsupported arithmetic/transcendentals. It cannot bind the
+  fused `AscendC::Gelu` primitive exposed by the installed CANN headers. This
+  fused-GeLU binding gap and BF16 promotion are therefore the measured
+  performance limitations to address next.
 
 ## Offline native-primitive probe
 
@@ -123,9 +167,8 @@ performance blocker, not yet a measured causal proof.
 
 ## Next run
 
-Iteration 03 is immutable at the hash recorded in `MANIFEST.json` and its
-staged source passes all 20 dispatch/lowering routes with no FFTS arguments.
-The idempotent submission script has recorded `remaining=0`; the active
-GeLU-first automation retries after the reset, then writes the official job,
-logs, results, and credit snapshots here. Only after the GeLU conclusion is
-updated from that run should the remaining CANNBench operator queue resume.
+Iteration 03 is immutable at the hash recorded in `MANIFEST.json`; its local
+20/20 compile/ABI evidence and official 20/20 CANNBench result now agree. The
+GeLU-first gate is complete. The queue can proceed to the missing four-operator
+`with_skills` arm, followed by the full-current-v2 six-operator campaign and
+the five-operator remainder.
