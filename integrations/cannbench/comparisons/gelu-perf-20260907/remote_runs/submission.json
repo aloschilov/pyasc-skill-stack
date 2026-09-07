@@ -1,0 +1,44 @@
+{
+  "job_id": "job_7b4caccdc21f",
+  "response": {
+    "ok": true,
+    "submission": {
+      "id": "sub_ac0e7c3c9274",
+      "status": "validated",
+      "content_hash": "0a91d42927e4ce3d8ed26dca33349a022d4486c4aabc073dec82553942ee3168",
+      "target_hardware": "950pr",
+      "submission_tag": "pyasc-v2-gelu-register-fma-db8192-i04-20260907",
+      "is_private": true,
+      "workload_class": "standard"
+    },
+    "job": {
+      "id": "job_7b4caccdc21f",
+      "status": "queued",
+      "device_id": 0,
+      "job_tag": "pyasc-v2-gelu-register-fma-db8192-i04-20260907",
+      "requested_pool_id": null
+    },
+    "credits": {
+      "quota_day": "2026-09-07",
+      "timezone": "Asia/Shanghai",
+      "resets_at": "2026-09-07T16:00:00Z",
+      "unlimited": false,
+      "bypass_active_job_limit": false,
+      "base_credits": 10,
+      "base_remaining": 5,
+      "daily_max": 30,
+      "bonus_cap": 30,
+      "bonus_earned": 0,
+      "bonus_balance": 0,
+      "bonus_counted": 0,
+      "max_active_jobs_per_user": 3,
+      "charges": 5,
+      "refunds": 0,
+      "used": 5,
+      "effective_limit": 10,
+      "remaining": 5
+    }
+  },
+  "tag": "pyasc-v2-gelu-register-fma-db8192-i04-20260907",
+  "archive_sha256": "0a91d42927e4ce3d8ed26dca33349a022d4486c4aabc073dec82553942ee3168"
+}

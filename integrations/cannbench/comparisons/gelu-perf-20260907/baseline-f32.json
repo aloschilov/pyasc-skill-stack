@@ -1,0 +1,18 @@
+{
+  "package": "baseline",
+  "size": 13824,
+  "dtype": "float32",
+  "mode": "none",
+  "tile": null,
+  "cores": 1,
+  "low": -8.0,
+  "high": 8.0,
+  "ticks": 16587,
+  "seconds": 63.18790032202378,
+  "max_abs": 4.76837158203125e-07,
+  "max_rel": 4.498637424069305e-06,
+  "mean_rel": 3.1936314406685906e-07,
+  "nan_match": true,
+  "checker_passed": true,
+  "checker_error": null
+}

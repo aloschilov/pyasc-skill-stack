@@ -1,0 +1,21 @@
+{
+  "package": "candidate",
+  "size": 32771,
+  "dtype": "float32",
+  "mode": "none",
+  "tile": null,
+  "cores": 4,
+  "low": -8.0,
+  "high": 8.0,
+  "ticks": 12570,
+  "seconds": 128.9113429361023,
+  "max_abs": 2.384185791015625e-07,
+  "max_rel": 5.9436022588330184e-06,
+  "mean_rel": 3.327499180636313e-07,
+  "nan_match": true,
+  "special": false,
+  "repeat": 1,
+  "source_sha256": "62cbcd7f9c20266f94eb497caa591e5ce0f7b0852949041bcf5548e952be01d9",
+  "checker_passed": true,
+  "checker_error": null
+}

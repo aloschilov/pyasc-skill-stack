@@ -1,0 +1,142 @@
+#include "kernel_operator.h"
+extern "C"  __global__ __aicore__ void _gelu_register(__gm__ half* v1_x_ptr, __gm__ half* v2_y_ptr, int32_t v3_size) {
+  constexpr int64_t c13824_i64 = 13824;
+  constexpr int32_t c27648_i32 = 27648;
+  constexpr int32_t c32_i32 = 32;
+  constexpr int32_t c2_i32 = 2;
+  constexpr int32_t c1_i32 = 1;
+  constexpr int32_t c0_i32 = 0;
+  constexpr int32_t c13823_i32 = 13823;
+  half c0_f16 = 0.0e+00;
+  constexpr int32_t c13824_i32 = 13824;
+  AscendC::TPipe v4;
+  int32_t v5 = AscendC::GetBlockIdx();
+  int32_t v6 = v3_size + c13823_i32;
+  int32_t v7 = v6 / c13824_i32;
+  int32_t v8 = AscendC::GetBlockNum();
+  AscendC::LocalTensor<half> v9{AscendC::TPosition::VECCALC, 0, 13824};
+  AscendC::LocalTensor<half> v10{AscendC::TPosition::VECCALC, 27648, 13824};
+  for (int32_t v11 = v5; v11 < v7; v11 += v8) {
+    AscendC::GlobalTensor<half> v12;
+    v12.SetGlobalBuffer(v1_x_ptr);
+    AscendC::GlobalTensor<half> v13;
+    v13.SetGlobalBuffer(v2_y_ptr);
+    int32_t v14 = v11 * c13824_i32;
+    int32_t v15 = v14 + c13824_i32;
+    bool v16 = v15 <= v3_size;
+    int32_t v17;
+    if (v16) {
+      v17 = c13824_i32;
+    } else {
+      int32_t v18 = v3_size - v14;
+      v17 = v18;
+    }
+    AscendC::GlobalTensor<half> v19 = v12[v14];
+    int32_t v20 = v3_size - v14;
+    bool v21 = v20 < c0_i32;
+    int32_t v22 = v21 ? c0_i32 : v20;
+    int32_t v23 = ((v17 < v22) ? (v17) : (v22));
+    int32_t v24 = v23 * c2_i32;
+    int32_t v25 = v3_size - v23;
+    int32_t v26 = v24 % c32_i32;
+    bool v27 = v26 == c0_i32;
+    int32_t v28 = c32_i32 - v26;
+    int32_t v29 = v27 ? c0_i32 : v28;
+    int32_t v30 = v24 + v29;
+    bool v31 = v30 < c27648_i32;
+    if (v31) {
+      get_buf(PIPE_V, 0, 0);
+      AscendC::Duplicate(v10, c0_f16, c13824_i64);
+      rls_buf(PIPE_V, 0, 0);
+    }
+    int32_t v32 = v25 * c2_i32;
+    int32_t v33 = v29 / c2_i32;
+    int32_t v34 = c27648_i32 - v30;
+    int32_t v35 = v34 / c32_i32;
+    AscendC::DataCopyExtParams v36{static_cast<uint16_t>(c1_i32), static_cast<uint32_t>(v24), static_cast<uint32_t>(v32), static_cast<uint32_t>(v35), static_cast<uint32_t>(c0_i32)};
+    AscendC::DataCopyPadExtParams<half> v37{c1_i32, c0_i32, static_cast<uint8_t>(v33), c0_f16};
+    get_buf(PIPE_MTE2, 0, 0);
+    AscendC::DataCopyPad(v10, v19, v36, v37);
+    rls_buf(PIPE_MTE2, 0, 0);
+    get_buf(PIPE_V, 1, 0);
+    get_buf(PIPE_V, 0, 0);
+    {
+      __VEC_SCOPE__
+      {
+
+        static constexpr AscendC::Reg::CastTrait up = {AscendC::Reg::RegLayout::ZERO,
+            AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+            AscendC::RoundMode::UNKNOWN};
+        static constexpr AscendC::Reg::CastTrait down = {AscendC::Reg::RegLayout::ZERO,
+            AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+            AscendC::RoundMode::CAST_RINT};
+        AscendC::Reg::RegTensor<half> low;
+
+        auto* in = reinterpret_cast<__ubuf__ half*>(v10.GetPhyAddr());
+        auto* out = reinterpret_cast<__ubuf__ half*>(v9.GetPhyAddr());
+        AscendC::Reg::RegTensor<float> x, a, z, u, p, tmp, e, y, one;
+        uint32_t count = v10.GetSize();
+        uint16_t loops = (count + 63) / 64;
+        AscendC::Reg::MaskReg all = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::Duplicate(one, 1.0f, all);
+        AscendC::Reg::RegTensor<float> c0,c1,c2,c3,c4,c5,c6,c7,c8;
+        AscendC::Reg::Duplicate(c0, -0.82215223f, all);
+        AscendC::Reg::Duplicate(c1, 1.48851587f, all);
+        AscendC::Reg::Duplicate(c2, -1.13520398f, all);
+        AscendC::Reg::Duplicate(c3, 0.27886807f, all);
+        AscendC::Reg::Duplicate(c4, -0.18628806f, all);
+        AscendC::Reg::Duplicate(c5, 0.09678418f, all);
+        AscendC::Reg::Duplicate(c6, 0.37409196f, all);
+        AscendC::Reg::Duplicate(c7, 1.00002368f, all);
+        AscendC::Reg::Duplicate(c8, -1.26551223f, all);
+        for (uint16_t i=0; i<loops; ++i) {
+            auto mask = AscendC::Reg::UpdateMask<float>(count);
+
+        AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(low, in+i*64);
+        AscendC::Reg::Cast<float, half, up>(x, low, mask);
+
+            AscendC::Reg::Abs(a, x, mask);
+            AscendC::Reg::Muls(z, a, 0.7071067811865476f, mask);
+            AscendC::Reg::Muls(u, z, 0.5f, mask);
+            AscendC::Reg::Adds(u, u, 1.0f, mask);
+            AscendC::Reg::Div(u, one, u, mask);
+            AscendC::Reg::Duplicate(p, 0.17087277f, mask);
+            AscendC::Reg::FusedMulDstAdd(p, u, c0, mask);
+            AscendC::Reg::FusedMulDstAdd(p, u, c1, mask);
+            AscendC::Reg::FusedMulDstAdd(p, u, c2, mask);
+            AscendC::Reg::FusedMulDstAdd(p, u, c3, mask);
+            AscendC::Reg::FusedMulDstAdd(p, u, c4, mask);
+            AscendC::Reg::FusedMulDstAdd(p, u, c5, mask);
+            AscendC::Reg::FusedMulDstAdd(p, u, c6, mask);
+            AscendC::Reg::FusedMulDstAdd(p, u, c7, mask);
+            AscendC::Reg::FusedMulDstAdd(p, u, c8, mask);
+            AscendC::Reg::Mul(tmp, z, z, mask);
+            AscendC::Reg::Sub(p, p, tmp, mask);
+            AscendC::Reg::Exp(e, p, mask);
+            AscendC::Reg::Mul(e, e, u, mask);
+            AscendC::Reg::Muls(a, a, 0.5f, mask);
+            AscendC::Reg::Mul(e, e, a, mask);
+            AscendC::Reg::Muls(y, x, 0.5f, mask);
+            AscendC::Reg::Add(y, y, a, mask);
+            AscendC::Reg::Sub(y, y, e, mask);
+
+        AscendC::Reg::Cast<half, float, down>(low, y, mask);
+        AscendC::Reg::StoreAlign<half, AscendC::Reg::StoreDist::DIST_PACK_B32>(out+i*64, low, mask);
+
+        }
+        ;
+      }
+    }
+    rls_buf(PIPE_V, 0, 0);
+    rls_buf(PIPE_V, 1, 0);
+    AscendC::GlobalTensor<half> v38 = v13[v14];
+    int32_t v39 = c13824_i32 - v23;
+    int32_t v40 = v39 * c2_i32;
+    int32_t v41 = v40 / c32_i32;
+    AscendC::DataCopyExtParams v42{static_cast<uint16_t>(c1_i32), static_cast<uint32_t>(v24), static_cast<uint32_t>(v41), static_cast<uint32_t>(v32), static_cast<uint32_t>(c0_i32)};
+    get_buf(PIPE_MTE3, 1, 0);
+    AscendC::DataCopyPad(v38, v9, v42);
+    rls_buf(PIPE_MTE3, 1, 0);
+  }
+  return;
+}

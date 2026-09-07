@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "method": "Build merged wheel and install/import its native runtime under linux/amd64 QEMU",
+  "python": "CPython 3.12",
+  "runtime_imports": ["asc", "asctile", "asc._C.libpyasc"],
+  "pyasc_commit": "0a631f70968c3cb7c33ce45330a85768dd5a6f06",
+  "candidate_sha256": "62cbcd7f9c20266f94eb497caa591e5ce0f7b0852949041bcf5548e952be01d9",
+  "archive_sha256": "0a91d42927e4ce3d8ed26dca33349a022d4486c4aabc073dec82553942ee3168",
+  "wheel_sha256": "68eecea3fd7b8ce1233da0880c84d054b1970d3f6f715a1e46be52d7ae179bcb",
+  "note": "The minimal local gate image lacked setuptools/wheel; installed only in an ephemeral build container. This is not a remote kernel compile result."
+}

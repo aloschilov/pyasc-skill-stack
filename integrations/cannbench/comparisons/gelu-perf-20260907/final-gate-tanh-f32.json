@@ -1,0 +1,38 @@
+{
+  "package": "candidate",
+  "size": 4113,
+  "dtype": "float32",
+  "mode": "tanh",
+  "tile": null,
+  "cores": 2,
+  "low": -8.0,
+  "high": 8.0,
+  "ticks": 9438,
+  "seconds": 80.86223145597614,
+  "max_abs": 4.76837158203125e-07,
+  "max_rel": 5.046179941730542e-06,
+  "mean_rel": 6.269367762436907e-08,
+  "nan_match": true,
+  "special": false,
+  "repeat": 2,
+  "source_sha256": "62cbcd7f9c20266f94eb497caa591e5ce0f7b0852949041bcf5548e952be01d9",
+  "checker_passed": true,
+  "checker_error": null,
+  "coverage": "Reduced-size samples of all official value ranges; not full CANNBench shapes",
+  "cases": [
+    {
+      "case_id": 5,
+      "passed": true,
+      "mere": 7.251378182017452e-09,
+      "mare": 1.1737505032939835e-06,
+      "error": null
+    },
+    {
+      "case_id": 8,
+      "passed": true,
+      "mere": 8.095804437170963e-08,
+      "mare": 1.3886949567720416e-06,
+      "error": null
+    }
+  ]
+}

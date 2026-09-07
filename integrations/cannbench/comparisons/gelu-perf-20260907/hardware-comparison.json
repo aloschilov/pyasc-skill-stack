@@ -1,0 +1,35 @@
+{
+  "reference_job": "job_a375a6e244ca",
+  "candidate_job": "job_7b4caccdc21f",
+  "old_summary": {
+    "total_operators": 1,
+    "total_cases": 20,
+    "passed_cases": 20,
+    "failed_cases": 0,
+    "cascade_cases": 0,
+    "pass_rate": 1.0,
+    "genuine_pass_rate": 1.0,
+    "overall_score": 62.07113569911637,
+    "accuracy_passed_cases": 20,
+    "anti_cheat_failed_cases": 0,
+    "geometric_mean_speedup": 0.47482517243638256,
+    "geometric_mean_speedup_vs_hw": 0.1912868786200472
+  },
+  "new_summary": {
+    "total_operators": 1,
+    "total_cases": 20,
+    "passed_cases": 20,
+    "failed_cases": 0,
+    "cascade_cases": 0,
+    "pass_rate": 1.0,
+    "genuine_pass_rate": 1.0,
+    "overall_score": 64.47546617650443,
+    "accuracy_passed_cases": 20,
+    "anti_cheat_failed_cases": 0,
+    "geometric_mean_speedup": 0.5826463760615128,
+    "geometric_mean_speedup_vs_hw": 0.2325628749623614
+  },
+  "cases_at_least_1x": 1,
+  "cases_faster_than_iteration03": 18,
+  "baseline_anchors_changed": false
+}

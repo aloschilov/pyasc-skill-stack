@@ -1,0 +1,18 @@
+{
+  "package": "fused",
+  "size": 13824,
+  "dtype": "float32",
+  "mode": "none",
+  "tile": null,
+  "cores": 1,
+  "low": -8.0,
+  "high": 8.0,
+  "ticks": 57875,
+  "seconds": 199.882323345053,
+  "max_abs": 4.76837158203125e-07,
+  "max_rel": 4.849352079933735e-06,
+  "mean_rel": 3.396077564444122e-07,
+  "nan_match": true,
+  "checker_passed": true,
+  "checker_error": null
+}

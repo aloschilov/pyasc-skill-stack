@@ -1,0 +1,22 @@
+{
+  "credits": {
+    "quota_day": "2026-09-07",
+    "timezone": "Asia/Shanghai",
+    "resets_at": "2026-09-07T16:00:00Z",
+    "unlimited": false,
+    "bypass_active_job_limit": false,
+    "base_credits": 10,
+    "base_remaining": 5,
+    "daily_max": 30,
+    "bonus_cap": 30,
+    "bonus_earned": 0,
+    "bonus_balance": 0,
+    "bonus_counted": 0,
+    "max_active_jobs_per_user": 3,
+    "charges": 5,
+    "refunds": 0,
+    "used": 5,
+    "effective_limit": 10,
+    "remaining": 5
+  }
+}

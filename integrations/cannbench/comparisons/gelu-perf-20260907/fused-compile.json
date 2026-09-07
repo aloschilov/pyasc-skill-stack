@@ -1,0 +1,343 @@
+{
+  "candidate": "integrations/cannbench/comparisons/gelu-perf-20260907/fused/gelu.py",
+  "case_results": [
+    {
+      "case_id": 1,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 2,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 3,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 4,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 5,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 6,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 7,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 8,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 9,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 10,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 11,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 12,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 13,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 14,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 15,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 16,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 17,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 18,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 19,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    },
+    {
+      "case_id": 20,
+      "compile": "passed",
+      "cores": [
+        72
+      ],
+      "dispatch": "passed",
+      "handled_compile_failures": [],
+      "kernels": [
+        "_gelu_fused"
+      ]
+    }
+  ],
+  "cases": 20,
+  "compile_passed": 20,
+  "dispatch_passed": 20,
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "operator": "gelu",
+  "platform": "Ascend950PR_9599",
+  "pyasc_commit": "0a631f70968c3cb7c33ce45330a85768dd5a6f06",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "schema_version": 1,
+  "specializations": [
+    {
+      "ascendc_bytes": 19878,
+      "has_ffts_arg": false,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "memory_consumed": {
+        "UB": 139392
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 19320,
+      "has_ffts_arg": false,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "memory_consumed": {
+        "UB": 135296
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 19953,
+      "has_ffts_arg": false,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "memory_consumed": {
+        "UB": 139392
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 7840,
+      "has_ffts_arg": false,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "memory_consumed": {
+        "UB": 40960
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 7325,
+      "has_ffts_arg": false,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "memory_consumed": {
+        "UB": 36864
+      },
+      "status": "passed"
+    },
+    {
+      "ascendc_bytes": 7915,
+      "has_ffts_arg": false,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "memory_consumed": {
+        "UB": 40960
+      },
+      "status": "passed"
+    }
+  ],
+  "status": "passed",
+  "unique_specializations": 6,
+  "unique_specializations_passed": 6
+}

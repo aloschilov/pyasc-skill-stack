@@ -1,0 +1,21 @@
+{
+  "package": "register",
+  "size": 1027,
+  "dtype": "float32",
+  "mode": "none",
+  "tile": null,
+  "cores": 1,
+  "low": -8.0,
+  "high": 8.0,
+  "ticks": 10192,
+  "seconds": 37.61917856009677,
+  "max_abs": 5.960464477539063e-08,
+  "max_rel": 7.084449399780652e-08,
+  "mean_rel": 1.1807415666301083e-08,
+  "nan_match": false,
+  "special": true,
+  "repeat": 1,
+  "source_sha256": "38174f5983f7b39a55066220c0e2578db3679a23bb7673f7ba4d921db6c4fb19",
+  "checker_passed": false,
+  "checker_error": null
+}

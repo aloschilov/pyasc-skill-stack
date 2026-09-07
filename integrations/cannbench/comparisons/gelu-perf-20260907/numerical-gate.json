@@ -1,0 +1,896 @@
+[
+  {
+    "method": "nr",
+    "coefficients": null,
+    "passed": true,
+    "tests": [
+      {
+        "dtype": "float16",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 2.3772621831110824e-09,
+        "mare": 0.0006430854615675623,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 2.1310508245809213e-07,
+        "mare": 0.0009074194306207603,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 2.2621781525071974e-08,
+        "mare": 0.0009074194306207603,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 1.548999497573873e-08,
+        "mare": 0.0009074194306207603,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 1.0910989769551946e-09,
+        "mare": 0.0005455527617745282,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 4.0498258051744456e-11,
+        "mare": 2.3071822230491534e-09,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 0.0,
+        "mare": 0.0,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 0.0,
+        "mare": 0.0,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 0.0,
+        "mare": 0.0,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 8.095852138662115e-12,
+        "mare": 2.3071822230491534e-09,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 6.341235531212018e-08,
+        "mare": 2.148879225185166e-06,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 8.631498848251526e-08,
+        "mare": 4.745895363274104e-07,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 7.0504961388311e-08,
+        "mare": 5.713143557502071e-07,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 8.123665841290012e-08,
+        "mare": 1.3218690114277865e-06,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 1.266388410005882e-08,
+        "mare": 2.004224181011536e-06,
+        "error": null
+      }
+    ]
+  },
+  {
+    "method": "fit5",
+    "coefficients": [
+      -1.2656507074126888,
+      1.0062502868124297,
+      0.3080372749445702,
+      0.36539449030846216,
+      -0.6073936541442961,
+      0.19331690660960532
+    ],
+    "passed": true,
+    "tests": [
+      {
+        "dtype": "float16",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 4.092730419094525e-06,
+        "mare": 0.0009759166017960588,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 1.806791635030866e-05,
+        "mare": 0.0009765500001599981,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 1.0955385674972506e-05,
+        "mare": 0.0009765500001599981,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 1.2109732904826875e-05,
+        "mare": 0.0009765500001599981,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 7.991114089330125e-07,
+        "mare": 0.0009759166017960588,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 8.42894071624402e-06,
+        "mare": 0.007633540050412143,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 3.189786041344708e-05,
+        "mare": 0.007633540050412143,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 5.104553589961403e-06,
+        "mare": 0.007633540050412143,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 3.4071312052672465e-06,
+        "mare": 0.007633540050412143,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 1.6803964343824176e-06,
+        "mare": 0.007633540050412143,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 4.041999651987784e-06,
+        "mare": 4.5402058695769284e-05,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 1.543351252277168e-05,
+        "mare": 4.565424880180575e-05,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 1.1886035484177284e-05,
+        "mare": 4.558861099387843e-05,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 1.1247391991578524e-05,
+        "mare": 4.559094369741662e-05,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 8.083350342622877e-07,
+        "mare": 4.5428093098380357e-05,
+        "error": null
+      }
+    ]
+  },
+  {
+    "method": "fit6",
+    "coefficients": [
+      -1.2655546140276912,
+      1.002212430539161,
+      0.3484216119328,
+      0.20384761268269502,
+      -0.3044855662069811,
+      -0.07324450270624837,
+      0.08885371425152741
+    ],
+    "passed": true,
+    "tests": [
+      {
+        "dtype": "float16",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 1.947261710823101e-06,
+        "mare": 0.17612698727602283,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 1.8849586657001117e-05,
+        "mare": 0.13024697326873638,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 7.466604145122276e-06,
+        "mare": 0.5960464477539062,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 6.941470896264339e-06,
+        "mare": 0.5960464477539062,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 3.1878293780113357e-07,
+        "mare": 0.0009759166017960588,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 4.8133493488798385e-06,
+        "mare": 0.006992686522584655,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 5.242310875497067e-06,
+        "mare": 0.006992686522584655,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 5.332077324980652e-07,
+        "mare": 0.006992686522584655,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 3.7658942605261816e-07,
+        "mare": 0.006992686522584655,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 9.94335970335726e-07,
+        "mare": 0.006896240033112545,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 2.3352164755572713e-06,
+        "mare": 5.04999257626917e-05,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 1.6457450966539304e-05,
+        "mare": 5.06350834071511e-05,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 7.951432279056716e-06,
+        "mare": 5.0613900748493844e-05,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 6.461143698867432e-06,
+        "mare": 5.0569881164300444e-05,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 4.670304434812526e-07,
+        "mare": 5.048735703543826e-05,
+        "error": null
+      }
+    ]
+  },
+  {
+    "method": "fit7",
+    "coefficients": [
+      -1.2655046421346006,
+      0.9994121928456371,
+      0.3862323437374803,
+      -0.006230280707228586,
+      0.2732530143283679,
+      -0.9052045264599938,
+      0.6897179360211144,
+      -0.1716753202584005
+    ],
+    "passed": true,
+    "tests": [
+      {
+        "dtype": "float16",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 4.639930708395879e-07,
+        "mare": 0.17612698727602283,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 7.434556136355128e-07,
+        "mare": 0.13024697326873638,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 1.6545916376633264e-06,
+        "mare": 0.5960464477539062,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 1.4992200885493273e-06,
+        "mare": 0.5960464477539062,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 2.214267020391199e-08,
+        "mare": 0.0009233603357185716,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 4.0498258051744456e-11,
+        "mare": 2.3071822230491534e-09,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 0.0,
+        "mare": 0.0,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 0.0,
+        "mare": 0.0,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 0.0,
+        "mare": 0.0,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 8.095852138662115e-12,
+        "mare": 2.3071822230491534e-09,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 1.840888029050252e-07,
+        "mare": 3.0642382049696193e-06,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 3.950894802928318e-07,
+        "mare": 1.1237506406696946e-06,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 4.4776968451594726e-07,
+        "mare": 1.7227077083215342e-06,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 4.2659562428486256e-07,
+        "mare": 2.670894470524239e-06,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 3.6700452446096985e-08,
+        "mare": 2.9333991610952014e-06,
+        "error": null
+      }
+    ]
+  },
+  {
+    "method": "fit8",
+    "coefficients": [
+      -1.265508795072208,
+      0.9997114554173143,
+      0.38099387136959534,
+      0.0321897537569481,
+      0.12916904172336569,
+      -0.6055000971026194,
+      0.3400571263845865,
+      0.04240397973613595,
+      -0.05351977147909281
+    ],
+    "passed": true,
+    "tests": [
+      {
+        "dtype": "float16",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 9.288212727339873e-08,
+        "mare": 0.0008022981474856187,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 5.493628809243706e-07,
+        "mare": 0.0009615263433479928,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 3.330452380418159e-07,
+        "mare": 0.0009615263433479928,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 2.1730888634999977e-07,
+        "mare": 0.0009615263433479928,
+        "error": null
+      },
+      {
+        "dtype": "float16",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 1.778775926665694e-08,
+        "mare": 0.0008022981474856187,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 4.0498258051744456e-11,
+        "mare": 2.3071822230491534e-09,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 0.0,
+        "mare": 0.0,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 0.0,
+        "mare": 0.0,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 0.0,
+        "mare": 0.0,
+        "error": null
+      },
+      {
+        "dtype": "bfloat16",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 8.095852138662115e-12,
+        "mare": 2.3071822230491534e-09,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -15,
+          15
+        ],
+        "passed": true,
+        "mere": 1.6877743417951756e-07,
+        "mare": 3.513640235097434e-06,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -0.2,
+          0.2
+        ],
+        "passed": true,
+        "mere": 1.119438850811111e-06,
+        "mare": 3.7270145389850507e-06,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -2,
+          2
+        ],
+        "passed": true,
+        "mere": 4.731717912884453e-07,
+        "mare": 3.6379683707470305e-06,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -3,
+          3
+        ],
+        "passed": true,
+        "mere": 4.030302574974487e-07,
+        "mare": 3.6375752950066454e-06,
+        "error": null
+      },
+      {
+        "dtype": "float32",
+        "range": [
+          -50,
+          100
+        ],
+        "passed": true,
+        "mere": 3.369543702606852e-08,
+        "mare": 3.5826571844148544e-06,
+        "error": null
+      }
+    ]
+  }
+]

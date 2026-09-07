@@ -1,0 +1,45 @@
+{
+  "package": "candidate",
+  "size": 6166,
+  "dtype": "bfloat16",
+  "mode": "tanh",
+  "tile": null,
+  "cores": 2,
+  "low": -8.0,
+  "high": 8.0,
+  "ticks": 9307,
+  "seconds": 58.795695027918555,
+  "max_abs": 0.0,
+  "max_rel": 0.0,
+  "mean_rel": 0.0,
+  "nan_match": true,
+  "special": false,
+  "repeat": 2,
+  "source_sha256": "62cbcd7f9c20266f94eb497caa591e5ce0f7b0852949041bcf5548e952be01d9",
+  "checker_passed": true,
+  "checker_error": null,
+  "coverage": "Reduced-size samples of all official value ranges; not full CANNBench shapes",
+  "cases": [
+    {
+      "case_id": 6,
+      "passed": true,
+      "mere": 0.0,
+      "mare": 0.0,
+      "error": null
+    },
+    {
+      "case_id": 12,
+      "passed": true,
+      "mere": 0.0,
+      "mare": 0.0,
+      "error": null
+    },
+    {
+      "case_id": 19,
+      "passed": true,
+      "mere": 0.0,
+      "mare": 0.0,
+      "error": null
+    }
+  ]
+}

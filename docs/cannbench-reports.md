@@ -34,11 +34,18 @@ generator adds direct run links automatically as each `job_id` is recorded.
 
 ## Handwritten GeLU deep dive
 
+- [Performance tuning report with shapes, dtypes and implementation navigation](../integrations/cannbench/comparisons/gelu-perf-20260907/README.md)
+- [Per-case hardware comparison CSV](../integrations/cannbench/comparisons/gelu-perf-20260907/hardware-comparison.csv)
 - [Live deep-dive report](../integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/REPORT.md)
 - [Iteration 01 — `job_24726123eebe`](https://cannbench.com/workspace/jobs/job_24726123eebe)
 - [Iteration 02 — `job_bcf486ff6371`](https://cannbench.com/workspace/jobs/job_bcf486ff6371)
+- [Iteration 03 — `job_a375a6e244ca`](https://cannbench.com/workspace/jobs/job_a375a6e244ca)
+- [Iteration 04 — `job_7b4caccdc21f`](https://cannbench.com/workspace/jobs/job_7b4caccdc21f)
 
 Iteration 02 repaired the low-level C310 launch ABI and proved exact cases
 1–3 correct on 950PR. Its large VF/reuse tanh route then hit vector-core
-timeout 507034. A safe low-level tanh iteration is prepared for the next credit
-reset and remains ahead of the other operator submissions.
+timeout 507034. Iterations 03 and 04 subsequently passed all 20 cases.
+Iteration 04 improved the official aggregate speedup from 0.474825× to 0.582646×,
+with no anti-cheat failures; its large FP32 tanh case reached 1.103256×.
+The report distinguishes measured implementations from the locally validated,
+unsubmitted FP16-exact hybrid follow-up.

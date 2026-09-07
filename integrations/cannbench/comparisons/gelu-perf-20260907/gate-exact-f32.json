@@ -1,0 +1,66 @@
+{
+  "package": "register",
+  "size": 12325,
+  "dtype": "float32",
+  "mode": "none",
+  "tile": null,
+  "cores": 2,
+  "low": -8.0,
+  "high": 8.0,
+  "ticks": 26246,
+  "seconds": 192.39453713409603,
+  "max_abs": 2.384185791015625e-07,
+  "max_rel": 1.2905332228938332e-05,
+  "mean_rel": 1.1115774596572824e-07,
+  "nan_match": true,
+  "special": false,
+  "repeat": 2,
+  "source_sha256": "074fc2954f01db9285ed16b74794409dd34d9f3a1d0bfbddca9244e9c2a88df5",
+  "checker_passed": true,
+  "checker_error": null,
+  "coverage": "Reduced-size samples of all official value ranges; not full CANNBench shapes",
+  "cases": [
+    {
+      "case_id": 2,
+      "passed": true,
+      "mere": 7.204732436216704e-08,
+      "mare": 4.4088803732053013e-07,
+      "error": null
+    },
+    {
+      "case_id": 11,
+      "passed": true,
+      "mere": 1.2222775818721236e-08,
+      "mare": 1.4712642466857633e-06,
+      "error": null
+    },
+    {
+      "case_id": 13,
+      "passed": true,
+      "mere": 7.440585760148102e-08,
+      "mare": 5.925529137808675e-07,
+      "error": null
+    },
+    {
+      "case_id": 15,
+      "passed": true,
+      "mere": 7.646446436598642e-08,
+      "mare": 3.6281986268809404e-07,
+      "error": null
+    },
+    {
+      "case_id": 18,
+      "passed": true,
+      "mere": 8.606806014115287e-08,
+      "mare": 3.2786053905323504e-07,
+      "error": null
+    },
+    {
+      "case_id": 20,
+      "passed": true,
+      "mere": 3.028047555737532e-08,
+      "mare": 1.7954142448013863e-06,
+      "error": null
+    }
+  ]
+}

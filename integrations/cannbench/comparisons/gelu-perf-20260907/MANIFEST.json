@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "tag": "pyasc-v2-gelu-register-fma-db8192-i04-20260907",
+  "operator": "gelu",
+  "pyasc_commit": "0a631f70968c3cb7c33ce45330a85768dd5a6f06",
+  "source_class": "handwritten-pyasc-inline-AscendC-register-math",
+  "candidate_sha256": "62cbcd7f9c20266f94eb497caa591e5ce0f7b0852949041bcf5548e952be01d9",
+  "runtime_from_archive_sha256": "dc385abe5d804a6088fb09e605935b668383c8be67eafa1fc829dba573cc9869",
+  "launch": {
+    "tile": 8192,
+    "max_vector_blocks": 72,
+    "unroll": 2,
+    "reuse_alloc": 0,
+    "tail": "disjoint-real-shape-no-overlapping-writes"
+  },
+  "math": {
+    "exact": "stable erfc Numerical Recipes polynomial with FMA",
+    "tanh": "single exponential cancellation-free",
+    "casts": "register FP32 compute"
+  },
+  "local_evidence": [
+    {
+      "path": "final-gate-exact-f16.json",
+      "sha256": "834cffbbac958104c5e9e2c1cada58f6b8662b910bddfb62ff3d0ea2c7ccee76"
+    },
+    {
+      "path": "final-gate-exact-bf16.json",
+      "sha256": "9fd85e4eda7b41d4c4b6b15653bd40c05e898380de51f5bc9f01f17bf606b3ae"
+    },
+    {
+      "path": "final-gate-exact-f32.json",
+      "sha256": "f66237d600626cdeb80299aaf0c8e03f89886bee62395388a7349a26d4cc6404"
+    },
+    {
+      "path": "final-gate-tanh-f16.json",
+      "sha256": "1c6556e36bc3103c3961a78f44c34e0b743578828d6065a2aeed05a9f565122a"
+    },
+    {
+      "path": "final-gate-tanh-bf16.json",
+      "sha256": "687525e1afc8acc059d5886ef9d901b85bb5de5fbaa45d1611a732b2d820ec88"
+    },
+    {
+      "path": "final-gate-tanh-f32.json",
+      "sha256": "786b3c4248df72b6fe50bbbcb3b8c435c3eefe393df44e0ed50fc89dafae0b8a"
+    },
+    {
+      "path": "final-compile-x86.json",
+      "sha256": "fe2cddd101d2da04fda3d1283c0e0015e64505607ce0cd869430f16a06f1da04"
+    }
+  ],
+  "limitations": [
+    "CaModel 9599/CANN9.0 is not remote 9589/CANN9.1",
+    "Numerical checks use reduced sizes, not full benchmark shapes"
+  ],
+  "archive": {
+    "path": "pyasc-v2-gelu-register-fma-db8192-i04-20260907.zip",
+    "sha256": "0a91d42927e4ce3d8ed26dca33349a022d4486c4aabc073dec82553942ee3168",
+    "size_bytes": 23357578
+  }
+}
