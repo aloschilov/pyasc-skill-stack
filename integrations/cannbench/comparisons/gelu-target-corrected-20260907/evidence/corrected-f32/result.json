@@ -1,0 +1,20 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "args": {
+    "phase": "numerical",
+    "variant": "corrected",
+    "dtype": "float32",
+    "tile": 15872,
+    "unroll": 2,
+    "cores": 1,
+    "size": 31744,
+    "reuse": 1,
+    "vf": 0,
+    "static": "default",
+    "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/corrected-f32/result.json"
+  },
+  "completed": false,
+  "observations": [],
+  "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+  "error": "Traceback (most recent call last):\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/check.py\", line 58, in main\n    assert kernel_ast(source)==kernel_ast(upstream),'Authored target was changed'\n                               ^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/check.py\", line 57, in kernel_ast\n    return ast.dump(next(n for n in ast.parse(path.read_text()).body if isinstance(n,ast.FunctionDef) and n.name=='gelu'))\n                                              ^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/pathlib.py\", line 1058, in read_text\n    with self.open(mode='r', encoding=encoding, errors=errors) as f:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/pathlib.py\", line 1044, in open\n    return io.open(self, mode, buffering, encoding, errors, newline)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/test/asctile/target/test_gelu.py'\n"
+}

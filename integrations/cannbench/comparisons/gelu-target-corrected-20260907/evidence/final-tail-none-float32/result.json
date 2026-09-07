@@ -1,0 +1,138 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "args": {
+    "phase": "tail",
+    "variant": "submission",
+    "mode": "none",
+    "dtype": "float32",
+    "tile": 15872,
+    "unroll": 2,
+    "cores": 8,
+    "size": 9217,
+    "reuse": 1,
+    "vf": 0,
+    "static": "default",
+    "compact_stress": false,
+    "repeat": 2,
+    "perf_range": [
+      -2.0,
+      2.0
+    ],
+    "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-tail-none-float32/result.json"
+  },
+  "completed": true,
+  "observations": [
+    {
+      "effective_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": null,
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": true,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": null,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": true
+      }
+    }
+  ],
+  "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+  "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+  "target_function_ast_unchanged": false,
+  "source_sha256": "3d74f4af7a0a0aa9bdc6c9a542d3206ba748e8e25c93fa6d21b324a7ee27bb5f",
+  "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+  "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+  "requested_options": {
+    "reuse_alloc": 1,
+    "static_alloc": null,
+    "vf_fusion": true,
+    "insert_sync": true,
+    "opt_level": 3,
+    "debug": false
+  },
+  "coefficients": {
+    "TANH_APPROX_FACTOR": 0.044715,
+    "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+  },
+  "selected_geometry": {
+    "tile": 1024,
+    "unroll": 1,
+    "vf_fusion": true
+  },
+  "approximate": "none",
+  "guard_allocation_elements": 16640,
+  "elements": 9217,
+  "segments": [
+    {
+      "name": "tail_valid_region",
+      "start": 0,
+      "end": 9217
+    }
+  ],
+  "memory_consumed": {
+    "UB": 49152
+  },
+  "binary_sha256": "b675bf539c9291d2d4952ee47fd92f074cd16020dbbdfafeddd1aacaa90f401b",
+  "ub_fit": true,
+  "compile_passed": true,
+  "phase": "complete",
+  "diagnostic_wall_seconds": 27.67282201303169,
+  "checks": [
+    {
+      "segment": "tail_valid_region",
+      "passed": true,
+      "details": {
+        "passed": true,
+        "dtype": "float32",
+        "threshold": 0.0001220703125,
+        "mere": 1.2435036752638905e-07,
+        "mare": 2.942671163972244e-06,
+        "max_diff": 2.384185791015625e-07,
+        "mean_diff": 2.2726804498990083e-08,
+        "mismatch_count": 0,
+        "total_count": 9217,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "float32",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0001220703125,
+            "mere": 1.2435036752638905e-07,
+            "mare": 2.942671163972244e-06,
+            "mismatch_count": 0,
+            "total_count": 9217,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      }
+    }
+  ],
+  "numerical_passed": true,
+  "cached_repeats": [
+    {
+      "same_output_including_nan": true,
+      "accuracy_passed": true
+    }
+  ],
+  "writes_outside_logical_size": 0,
+  "outer_guard_untouched": true
+}

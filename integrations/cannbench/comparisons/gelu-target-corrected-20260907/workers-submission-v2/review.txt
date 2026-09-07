@@ -1,0 +1,13 @@
+## Review: Combined GeLU Module & Erf API Issue
+
+**Tail partitioning fix — correct.** `local_tiles = min(block_loop_num, ceildiv(max(0, input_length - block_offset), tile_length))` properly computes the actual tile count per core. Verified algebraically: `ceildiv(0, t) = 0` (since `(0+t-1)//t = 0` for positive t), so idle end cores get zero iterations, eliminating zero-length DMA. Coverage remains contiguous: each core's `block_offset = block_length * block_idx()` and the `min` cap prevents overshooting into a neighbor's partition while `ceildiv` of the remainder ensures no gaps. The loop bound is runtime-valued, matching the old code where `block_loop_num` also depended on runtime `input_length`; `unroll_factor` (ConstExpr) still controls static unrolling. No coverage gap found across representative partitions tested algebraically.
+
+**Six dtype/mode routes — correct.** Geometry dispatches three configs covering all six routes. `stable_tail` is a compile-time constant, so the CF tail compiles away for FP16/BF16 exact and all tanh routes, matching the EXACT_REMEDY recommendation.
+
+**Special values — correct.** `GeLU(-Inf) = NaN` in all paths: exact direct yields `(-Inf)*(0) = NaN`; stable_tail yields `(-Inf)/Inf * 0 * c = NaN`; tanh yields `-Inf/Inf = NaN`. `+Inf` and `NaN` propagate correctly. `pad_value=0` on idle lanes is safe: `maximum(0, 3)=3` gives finite CF, and `real_shape=[valid]` prevents writing padded lanes.
+
+**Tanh coefficients — verified.** `-1.5957691216057308 = -2*sqrt(2/π)` to full FP64 precision; `0.044715` is the standard cubic correction. Identity `x*sigmoid(2*sqrt(2/π)*(x+0.044715*x³))` is correctly implemented.
+
+**Erf issue — well-scoped, not blocking.** Evidence is concrete (specific ops-nn/CANN file references, measured 18/20 CANNBench result). Subsection algorithm is explicitly unmeasured. The CF workaround is the current path.
+
+**No concrete blockers found.** Optional: Erf algorithm selector (unmeasured), full-package numerical qualification (pending), NPU performance characterization (pending).

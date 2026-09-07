@@ -1,0 +1,130 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "args": {
+    "phase": "tail",
+    "variant": "exact_stable",
+    "dtype": "float32",
+    "tile": 1024,
+    "unroll": 1,
+    "cores": 8,
+    "size": 2049,
+    "reuse": 1,
+    "vf": 1,
+    "static": "default",
+    "compact_stress": false,
+    "repeat": 2,
+    "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-tail-repeat/result.json"
+  },
+  "completed": true,
+  "observations": [
+    {
+      "effective_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": null,
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": true,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": null,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": true
+      }
+    }
+  ],
+  "harness_sha256": "7101b23ceeec887cdcfc0f561633fb9962e9c3a735f677490cbfbbf6c14588c4",
+  "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+  "target_function_ast_unchanged": false,
+  "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+  "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+  "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+  "requested_options": {
+    "reuse_alloc": 1,
+    "static_alloc": null,
+    "vf_fusion": true,
+    "insert_sync": true,
+    "opt_level": 3,
+    "debug": false
+  },
+  "coefficients": {
+    "inverse_sqrt_two": 0.7071067811865476,
+    "tail_cutoff": -2.0,
+    "continued_fraction_depth": 12
+  },
+  "approximate": "none",
+  "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+  "guard_allocation_elements": 8448,
+  "elements": 2049,
+  "segments": [
+    {
+      "name": "tail_valid_region",
+      "start": 0,
+      "end": 2049
+    }
+  ],
+  "memory_consumed": {
+    "UB": 73728
+  },
+  "binary_sha256": "eb11ad7eb0b7444fdafe37955b173c89a4b3997d8b988f8a7bfb08ed05a09e97",
+  "ub_fit": true,
+  "compile_passed": true,
+  "phase": "complete",
+  "diagnostic_wall_seconds": 24.623431304004043,
+  "checks": [
+    {
+      "segment": "tail_valid_region",
+      "passed": true,
+      "details": {
+        "passed": true,
+        "dtype": "float32",
+        "threshold": 0.0001220703125,
+        "mere": 1.2213892846188578e-07,
+        "mare": 2.14722453047824e-06,
+        "max_diff": 2.384185791015625e-07,
+        "mean_diff": 2.2370377332772086e-08,
+        "mismatch_count": 0,
+        "total_count": 2049,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "float32",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0001220703125,
+            "mere": 1.2213892846188578e-07,
+            "mare": 2.14722453047824e-06,
+            "mismatch_count": 0,
+            "total_count": 2049,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      }
+    }
+  ],
+  "numerical_passed": true,
+  "cached_repeats": [
+    {
+      "same_output_including_nan": true,
+      "accuracy_passed": true
+    }
+  ],
+  "writes_outside_logical_size": 0,
+  "outer_guard_untouched": true
+}

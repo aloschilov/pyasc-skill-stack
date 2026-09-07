@@ -1,0 +1,74 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "args": {
+    "phase": "numerical",
+    "variant": "corrected",
+    "dtype": "bfloat16",
+    "tile": 15872,
+    "unroll": 2,
+    "cores": 1,
+    "size": 31744,
+    "reuse": 1,
+    "vf": 0,
+    "static": "default",
+    "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/corrected-bf16/result.json"
+  },
+  "completed": false,
+  "observations": [],
+  "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+  "target_function_ast_unchanged": true,
+  "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+  "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+  "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+  "requested_options": {
+    "reuse_alloc": 1,
+    "static_alloc": null,
+    "vf_fusion": false,
+    "insert_sync": true,
+    "opt_level": 3,
+    "debug": false
+  },
+  "coefficients": {
+    "TANH_APPROX_FACTOR": 0.044715,
+    "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+  },
+  "elements": 15872,
+  "segments": [
+    {
+      "name": "normal_seed_20260907",
+      "start": 0,
+      "end": 4096
+    },
+    {
+      "name": "dense_negative_tails",
+      "start": 4096,
+      "end": 12289
+    },
+    {
+      "name": "official_range_6",
+      "start": 12289,
+      "end": 12802
+    },
+    {
+      "name": "official_range_12",
+      "start": 12802,
+      "end": 12805
+    },
+    {
+      "name": "official_range_19",
+      "start": 12805,
+      "end": 13318
+    },
+    {
+      "name": "special_values",
+      "start": 13318,
+      "end": 13325
+    },
+    {
+      "name": "finite_limits",
+      "start": 13325,
+      "end": 13333
+    }
+  ],
+  "error": "Traceback (most recent call last):\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 356, in visit\n    return super().visit(node)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/ast.py\", line 418, in visit\n    return visitor(node)\n           ^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 507, in visit_Call\n    return fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/language/core/utils.py\", line 216, in wrapper\n    return fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/language/unary_ops.py\", line 149, in exp\n    return op_unary_impl(input,\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/language/unary_ops.py\", line 34, in op_unary_impl\n    check_dtype(\"input\", input, support_dtypes)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/language/validation.py\", line 40, in check_dtype\n    raise exc_type(f\"'{name}' dtype must be {dtypes_str}, got {dtype}\")\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/check.py\", line 127, in main\n    compiled=compile_preflight()\n             ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/check.py\", line 125, in compile_preflight\n    return kernel._compile_kernel(prereqs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/runtime/jit.py\", line 173, in _compile_kernel\n    mod = self._run_codegen(Specialization(prereqs.arg_types, prereqs.constexprs), prereqs.codegen_options)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/runtime/jit.py\", line 205, in _run_codegen\n    visitor.visit(self.node)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 356, in visit\n    return super().visit(node)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/ast.py\", line 418, in visit\n    return visitor(node)\n           ^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 608, in visit_FunctionDef\n    self.visit_statements(node.body)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 394, in visit_statements\n    self.visit(stmt)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 356, in visit\n    return super().visit(node)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/ast.py\", line 418, in visit\n    return visitor(node)\n           ^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 566, in visit_For\n    block_inout = self.compute_inout(node, node.body, (target, start.to_ir().get_type()), make_args=True)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 262, in compute_inout\n    self.visit_statements(stmts)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 394, in visit_statements\n    self.visit(stmt)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 356, in visit\n    return super().visit(node)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/ast.py\", line 418, in visit\n    return visitor(node)\n           ^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 414, in visit_Assign\n    rhs = self.visit(node.value)\n          ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 361, in visit\n    raise CodegenError(node, self.src, f\"{e.__class__.__name__}: {e}\") from e\nasc.codegen.errors.CodegenError: at <source>:19:20:\n        input_cub = input_sq * row\n        input_cub = row + input_cub * TANH_APPROX_FACTOR\n        input_cub = input_cub * NEG_SQRT_EIGHT_OVER_PI\n        input_cub = asctile.exp(input_cub)\n                    ^\n        input_cub = input_cub + 1\n        out = row / input_cub\n        asctile.copy_out(out, out_gm, [current_offset])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16\n"
+}

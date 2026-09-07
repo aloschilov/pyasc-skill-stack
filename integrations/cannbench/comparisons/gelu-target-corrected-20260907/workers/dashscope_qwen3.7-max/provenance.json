@@ -1,0 +1,24 @@
+{
+  "model": "dashscope/qwen3.7-max",
+  "exit_code": 0,
+  "input_delivery": "full_inline_text; no tool execution",
+  "author": "Codex main agent; model identifier unavailable to this harness",
+  "prompt_sha256": "01d560ecebf3ae1c79c6c222051dfdf846d4f27263f8de9f35a342fca3c8134d",
+  "inputs": {
+    "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-cannbench-kernel/SKILL.md": "3081886b23406652027692478569b874e29c3f743163b9c5f94b84c3331518ab",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/target_kernel.py": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/promoted_kernel.py": "a27ab753f297e649195b1f12ae5f0474e001b0f650489d2d1940b3781e02a7a9",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/check.py": "3295efe4e611cb1caee73ffa9c6f210521b868199888d87c7ddf72483aa9f0b1",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/summary.json": "180cd68253b93df18a2b2692d638093ebcf5165ac2b90a9ee4122ad23d07db76",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/README.md": "f2f11169dc8b0b16539e85ba0978b5688dd1e2aad121c6f4fdb8ddad2e32db08"
+  },
+  "session_ids": [
+    "ses_f839c3606ffeiVFhuR8bpaDMnl"
+  ],
+  "read_events": [],
+  "mutation_events": [],
+  "errors": [],
+  "finish_reasons": [
+    "stop"
+  ]
+}

@@ -1,0 +1,1476 @@
+{
+  "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+  "label": "verified-camodel-smoke",
+  "scope": "18 reduced local jobs, six dtype/mode routes; not full official-shape numerical coverage",
+  "runtime_pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "platform": "CaModel Ascend950PR_9599 / CANN9.0 / native AArch64 CPython3.11",
+  "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+  "checks": [
+    {
+      "name": "final-v2-numerical-none-float32",
+      "dtype": "float32",
+      "mode": "none",
+      "elements": 6144,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 1024,
+        "unroll": 1,
+        "vf_fusion": true
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": true,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": true
+          }
+        }
+      ],
+      "UB": 49152,
+      "passed": true,
+      "segments": [
+        {
+          "name": "normal_seed_20260907",
+          "passed": true
+        },
+        {
+          "name": "dense_negative_tails",
+          "passed": true
+        },
+        {
+          "name": "random_negative_tail",
+          "passed": true
+        },
+        {
+          "name": "switch_boundary",
+          "passed": true
+        },
+        {
+          "name": "adjacent_representable_switch",
+          "passed": true
+        },
+        {
+          "name": "official_range_2",
+          "passed": true
+        },
+        {
+          "name": "official_range_11",
+          "passed": true
+        },
+        {
+          "name": "official_range_13",
+          "passed": true
+        },
+        {
+          "name": "official_range_15",
+          "passed": true
+        },
+        {
+          "name": "official_range_18",
+          "passed": true
+        },
+        {
+          "name": "official_range_20",
+          "passed": true
+        },
+        {
+          "name": "special_values",
+          "passed": true
+        },
+        {
+          "name": "finite_limits",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 35.272217600024305,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 102
+    },
+    {
+      "name": "final-v2-tail-none-float32",
+      "dtype": "float32",
+      "mode": "none",
+      "elements": 9217,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 1024,
+        "unroll": 1,
+        "vf_fusion": true
+      },
+      "cores": 8,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": true,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": true
+          }
+        }
+      ],
+      "UB": 49152,
+      "passed": true,
+      "segments": [
+        {
+          "name": "tail_valid_region",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 24.954790469957516,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": 0,
+      "outer_guard_untouched": true,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-perf-none-float32",
+      "dtype": "float32",
+      "mode": "none",
+      "elements": 2048,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 1024,
+        "unroll": 1,
+        "vf_fusion": true
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": true,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": true
+          }
+        }
+      ],
+      "UB": 49152,
+      "passed": true,
+      "segments": [
+        {
+          "name": "finite_perf_input",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 16.811338257975876,
+      "warm_ticks": [
+        4924,
+        4966,
+        4994
+      ],
+      "median_ticks": 4966,
+      "cached_repeats": null,
+      "repeat_accuracy": [
+        true,
+        true,
+        true
+      ],
+      "repeated_outputs_equal": true,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-numerical-none-float16",
+      "dtype": "float16",
+      "mode": "none",
+      "elements": 8192,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 98304,
+      "passed": true,
+      "segments": [
+        {
+          "name": "normal_seed_20260907",
+          "passed": true
+        },
+        {
+          "name": "dense_negative_tails",
+          "passed": true
+        },
+        {
+          "name": "random_negative_tail",
+          "passed": true
+        },
+        {
+          "name": "switch_boundary",
+          "passed": true
+        },
+        {
+          "name": "adjacent_representable_switch",
+          "passed": true
+        },
+        {
+          "name": "official_range_1",
+          "passed": true
+        },
+        {
+          "name": "official_range_7",
+          "passed": true
+        },
+        {
+          "name": "special_values",
+          "passed": true
+        },
+        {
+          "name": "finite_limits",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 22.204237260040827,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-tail-none-float16",
+      "dtype": "float16",
+      "mode": "none",
+      "elements": 73729,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 8,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 98304,
+      "passed": true,
+      "segments": [
+        {
+          "name": "tail_valid_region",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 63.282076196046546,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": 0,
+      "outer_guard_untouched": true,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-perf-none-float16",
+      "dtype": "float16",
+      "mode": "none",
+      "elements": 16384,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 98304,
+      "passed": true,
+      "segments": [
+        {
+          "name": "finite_perf_input",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 34.124661516048945,
+      "warm_ticks": [
+        10370,
+        10348,
+        10363
+      ],
+      "median_ticks": 10363,
+      "cached_repeats": null,
+      "repeat_accuracy": [
+        true,
+        true,
+        true
+      ],
+      "repeated_outputs_equal": true,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-numerical-none-bfloat16",
+      "dtype": "bfloat16",
+      "mode": "none",
+      "elements": 8192,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 98304,
+      "passed": true,
+      "segments": [
+        {
+          "name": "normal_seed_20260907",
+          "passed": true
+        },
+        {
+          "name": "dense_negative_tails",
+          "passed": true
+        },
+        {
+          "name": "random_negative_tail",
+          "passed": true
+        },
+        {
+          "name": "switch_boundary",
+          "passed": true
+        },
+        {
+          "name": "adjacent_representable_switch",
+          "passed": true
+        },
+        {
+          "name": "official_range_3",
+          "passed": true
+        },
+        {
+          "name": "official_range_9",
+          "passed": true
+        },
+        {
+          "name": "official_range_16",
+          "passed": true
+        },
+        {
+          "name": "special_values",
+          "passed": true
+        },
+        {
+          "name": "finite_limits",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 23.364795260946266,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-tail-none-bfloat16",
+      "dtype": "bfloat16",
+      "mode": "none",
+      "elements": 73729,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 8,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 98304,
+      "passed": true,
+      "segments": [
+        {
+          "name": "tail_valid_region",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 65.72340340702794,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": 0,
+      "outer_guard_untouched": true,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-perf-none-bfloat16",
+      "dtype": "bfloat16",
+      "mode": "none",
+      "elements": 16384,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 98304,
+      "passed": true,
+      "segments": [
+        {
+          "name": "finite_perf_input",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 33.4599365160102,
+      "warm_ticks": [
+        10370,
+        10353,
+        10369
+      ],
+      "median_ticks": 10369,
+      "cached_repeats": null,
+      "repeat_accuracy": [
+        true,
+        true,
+        true
+      ],
+      "repeated_outputs_equal": true,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-numerical-tanh-float32",
+      "dtype": "float32",
+      "mode": "tanh",
+      "elements": 15872,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 15872,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 253952,
+      "passed": true,
+      "segments": [
+        {
+          "name": "normal_seed_20260907",
+          "passed": true
+        },
+        {
+          "name": "dense_negative_tails",
+          "passed": true
+        },
+        {
+          "name": "random_negative_tail",
+          "passed": true
+        },
+        {
+          "name": "switch_boundary",
+          "passed": true
+        },
+        {
+          "name": "adjacent_representable_switch",
+          "passed": true
+        },
+        {
+          "name": "official_range_5",
+          "passed": true
+        },
+        {
+          "name": "official_range_8",
+          "passed": true
+        },
+        {
+          "name": "special_values",
+          "passed": true
+        },
+        {
+          "name": "finite_limits",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 22.94529571896419,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 2
+    },
+    {
+      "name": "final-v2-tail-tanh-float32",
+      "dtype": "float32",
+      "mode": "tanh",
+      "elements": 142849,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 15872,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 8,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 253952,
+      "passed": true,
+      "segments": [
+        {
+          "name": "tail_valid_region",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 59.29231702792458,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": 0,
+      "outer_guard_untouched": true,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-perf-tanh-float32",
+      "dtype": "float32",
+      "mode": "tanh",
+      "elements": 31744,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 15872,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 253952,
+      "passed": true,
+      "segments": [
+        {
+          "name": "finite_perf_input",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 27.054867137921974,
+      "warm_ticks": [
+        9347,
+        9358,
+        9433
+      ],
+      "median_ticks": 9358,
+      "cached_repeats": null,
+      "repeat_accuracy": [
+        true,
+        true,
+        true
+      ],
+      "repeated_outputs_equal": true,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-numerical-tanh-float16",
+      "dtype": "float16",
+      "mode": "tanh",
+      "elements": 8192,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 131072,
+      "passed": true,
+      "segments": [
+        {
+          "name": "normal_seed_20260907",
+          "passed": true
+        },
+        {
+          "name": "dense_negative_tails",
+          "passed": true
+        },
+        {
+          "name": "random_negative_tail",
+          "passed": true
+        },
+        {
+          "name": "switch_boundary",
+          "passed": true
+        },
+        {
+          "name": "adjacent_representable_switch",
+          "passed": true
+        },
+        {
+          "name": "official_range_4",
+          "passed": true
+        },
+        {
+          "name": "official_range_10",
+          "passed": true
+        },
+        {
+          "name": "official_range_14",
+          "passed": true
+        },
+        {
+          "name": "official_range_17",
+          "passed": true
+        },
+        {
+          "name": "special_values",
+          "passed": true
+        },
+        {
+          "name": "finite_limits",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 14.855422216001898,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 2
+    },
+    {
+      "name": "final-v2-tail-tanh-float16",
+      "dtype": "float16",
+      "mode": "tanh",
+      "elements": 73729,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 8,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 131072,
+      "passed": true,
+      "segments": [
+        {
+          "name": "tail_valid_region",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 31.312193890102208,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": 0,
+      "outer_guard_untouched": true,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-perf-tanh-float16",
+      "dtype": "float16",
+      "mode": "tanh",
+      "elements": 16384,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 131072,
+      "passed": true,
+      "segments": [
+        {
+          "name": "finite_perf_input",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 16.518015175010078,
+      "warm_ticks": [
+        5558,
+        5134,
+        5144
+      ],
+      "median_ticks": 5144,
+      "cached_repeats": null,
+      "repeat_accuracy": [
+        true,
+        true,
+        true
+      ],
+      "repeated_outputs_equal": true,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-numerical-tanh-bfloat16",
+      "dtype": "bfloat16",
+      "mode": "tanh",
+      "elements": 8192,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 131072,
+      "passed": true,
+      "segments": [
+        {
+          "name": "normal_seed_20260907",
+          "passed": true
+        },
+        {
+          "name": "dense_negative_tails",
+          "passed": true
+        },
+        {
+          "name": "random_negative_tail",
+          "passed": true
+        },
+        {
+          "name": "switch_boundary",
+          "passed": true
+        },
+        {
+          "name": "adjacent_representable_switch",
+          "passed": true
+        },
+        {
+          "name": "official_range_6",
+          "passed": true
+        },
+        {
+          "name": "official_range_12",
+          "passed": true
+        },
+        {
+          "name": "official_range_19",
+          "passed": true
+        },
+        {
+          "name": "special_values",
+          "passed": true
+        },
+        {
+          "name": "finite_limits",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 16.85709275805857,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 4
+    },
+    {
+      "name": "final-v2-tail-tanh-bfloat16",
+      "dtype": "bfloat16",
+      "mode": "tanh",
+      "elements": 73729,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 8,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 131072,
+      "passed": true,
+      "segments": [
+        {
+          "name": "tail_valid_region",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 30.8112105979817,
+      "warm_ticks": null,
+      "median_ticks": null,
+      "cached_repeats": [
+        {
+          "same_output_including_nan": true,
+          "accuracy_passed": true
+        }
+      ],
+      "repeat_accuracy": null,
+      "repeated_outputs_equal": null,
+      "writes_outside_logical_size": 0,
+      "outer_guard_untouched": true,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    },
+    {
+      "name": "final-v2-perf-tanh-bfloat16",
+      "dtype": "bfloat16",
+      "mode": "tanh",
+      "elements": 16384,
+      "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+      "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+      "geometry": {
+        "tile": 8192,
+        "unroll": 2,
+        "vf_fusion": false
+      },
+      "cores": 1,
+      "requested_options": {
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false,
+        "insert_sync": true,
+        "opt_level": 3,
+        "debug": false
+      },
+      "compile_observations": [
+        {
+          "effective_options": {
+            "debug": false,
+            "strip_loc": false,
+            "verify_sync": true,
+            "print_ir_before_all": false,
+            "run_passes": true,
+            "kernel_type": null,
+            "auto_sync": true,
+            "auto_sync_log": "",
+            "matmul_cube_only": false,
+            "always_compile": true,
+            "bisheng_options": null,
+            "opt_level": 3,
+            "insert_sync": true,
+            "vf_vec_len": null,
+            "reuse_alloc": 1,
+            "static_alloc": null,
+            "vf_fusion": false
+          }
+        }
+      ],
+      "UB": 131072,
+      "passed": true,
+      "segments": [
+        {
+          "name": "finite_perf_input",
+          "passed": true
+        }
+      ],
+      "diagnostic_wall_seconds": 17.611638300004415,
+      "warm_ticks": [
+        5558,
+        5129,
+        5144
+      ],
+      "median_ticks": 5144,
+      "cached_repeats": null,
+      "repeat_accuracy": [
+        true,
+        true,
+        true
+      ],
+      "repeated_outputs_equal": true,
+      "writes_outside_logical_size": null,
+      "outer_guard_untouched": null,
+      "unexpected_simulator_error_count": 0,
+      "expected_special_value_diagnostics": 0
+    }
+  ]
+}

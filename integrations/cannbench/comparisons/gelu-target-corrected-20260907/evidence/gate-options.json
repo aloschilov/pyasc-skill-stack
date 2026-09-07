@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "checks": [
+    "override propagation",
+    "different specialization keys",
+    "kernel keyword arguments",
+    "unknown option rejected",
+    "capture/replay retains flags"
+  ],
+  "scope": "integration gate only; runtime cache behavior covered by separate Model repeats"
+}

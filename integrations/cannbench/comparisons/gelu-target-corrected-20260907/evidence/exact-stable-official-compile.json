@@ -1,0 +1,827 @@
+{
+  "exact-stable-compile-case-1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "exact_stable",
+      "dtype": "float16",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 72,
+      "size": 1048576,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 1048576,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "df8bc1a333f2a8b5c190e08849d9e04945d3530d6af8f1dffd3768eb1c953002",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "exact-stable-compile-case-2": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "exact_stable",
+      "dtype": "float32",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 72,
+      "size": 4194304,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-2/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 4194304,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "27fd7469043bed298c4a43aba7f617bbf88b10733e054975d4563525d0be37d5",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "exact-stable-compile-case-3": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "exact_stable",
+      "dtype": "bfloat16",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 72,
+      "size": 16777216,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-3/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 16777216,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "dd4c4a3d896112c39716de2e37876f3d249690ec8a293e9407193ccbaa67b3e5",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "exact-stable-compile-case-7": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "exact_stable",
+      "dtype": "float16",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 72,
+      "size": 1030189,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-7/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 1030189,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "29e222174672d967fc6cba41a551b6a96025832594a3c725a07e9099a3a2c29d",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "exact-stable-compile-case-9": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "exact_stable",
+      "dtype": "bfloat16",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 72,
+      "size": 49691433,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-9/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 49691433,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "0d1ef73e75caaf46144d626741b04649555bea2e6a063f54d1abbdcf86685e08",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "exact-stable-compile-case-11": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "exact_stable",
+      "dtype": "float32",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 72,
+      "size": 1092273,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-11/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 1092273,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "43dfdd9058137dc5cbc0dd32f647b33dd27d50c4ce312f2c0ace5fe9c74d571b",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "exact-stable-compile-case-13": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "exact_stable",
+      "dtype": "float32",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 72,
+      "size": 10912759,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-13/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 10912759,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "5f90c0f62ea3fef03d782892c04a9d8793103615eef8b92885dd867463d05a15",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "exact-stable-compile-case-15": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "exact_stable",
+      "dtype": "float32",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 72,
+      "size": 1049088,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-15/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 1049088,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "e51bc909036fa1bb3752c2584834dc936103f16ce3a1d634a20e887835e09676",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "exact-stable-compile-case-16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "exact_stable",
+      "dtype": "bfloat16",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 72,
+      "size": 2089215,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 2089215,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "31e520f18c2eb63f592fd27964c42c059f8b1ab7a1408462273caee83b5e4070",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "exact-stable-compile-case-18": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "exact_stable",
+      "dtype": "float32",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 72,
+      "size": 2094078,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-18/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 2094078,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "3fc7c98621a01d27a66af314d39749ea85ac9644f6574d12212db53fe8f08a99",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "exact-stable-compile-case-20": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "exact_stable",
+      "dtype": "float32",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 72,
+      "size": 10549248,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-20/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 10549248,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "6d32c9fb6c48b9171744fa9d4e3694ec45df256ae232b90fac43e052233ef5b8",
+    "ub_fit": true,
+    "compile_passed": true
+  }
+}

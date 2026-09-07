@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "candidate_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+  "checks": [
+    "final-v2-numerical-none-float32",
+    "final-v2-tail-none-float32",
+    "final-v2-perf-none-float32",
+    "final-v2-numerical-none-float16",
+    "final-v2-tail-none-float16",
+    "final-v2-perf-none-float16",
+    "final-v2-numerical-none-bfloat16",
+    "final-v2-tail-none-bfloat16",
+    "final-v2-perf-none-bfloat16",
+    "final-v2-numerical-tanh-float32",
+    "final-v2-tail-tanh-float32",
+    "final-v2-perf-tanh-float32",
+    "final-v2-numerical-tanh-float16",
+    "final-v2-tail-tanh-float16",
+    "final-v2-perf-tanh-float16",
+    "final-v2-numerical-tanh-bfloat16",
+    "final-v2-tail-tanh-bfloat16",
+    "final-v2-perf-tanh-bfloat16"
+  ],
+  "review_session_ids": [
+    "ses_f8329847bffee0yi5gbyJuEoSu"
+  ],
+  "scope": "sampled Model; all20 compile; hardware pending"
+}

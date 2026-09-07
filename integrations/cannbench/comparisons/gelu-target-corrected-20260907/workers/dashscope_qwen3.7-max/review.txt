@@ -1,0 +1,21 @@
+## Critical Review
+
+The experiment demonstrates coefficient correction improves tanh-GeLU accuracy but conflates distinct variants and overstates coverage.
+
+**Formula accuracy claims are overstated.** The "correction" fixes coefficient placement (multiplying vs dividing by 0.044715), but the tanh approximation itself remains an approximation—it does NOT implement exact GeLU. The README acknowledges "only tanh routes are in scope" for cases 4,5,6,8,10,12,14,17,19, yet frames this as solving the GeLU problem. The 11 exact/Erf cases are explicitly excluded, making claims of "passing representative checks" misleading when 55% of official cases are unimplemented.
+
+**Oracle and sampling are insufficient.** Using `torch.nn.functional.gelu(approximate="tanh")` as oracle is circular—both target and reference use the same approximation. The 4096+8193+513×9 samples are not the 20 official case shapes. The harness pads to complete tiles but explicitly states "not full official shapes." Passing sampled ranges ≠ passing official cases. No evidence exists for 9/9 or 20/20 case coverage.
+
+**FP16 overflow inference is speculative.** The claim that "FP16 exponent/denominator overflow explains the negative-tail zero" is `suspected` (correctly labeled) but presented with unwarranted confidence. The FP32-cast control "supports this explanation" only by eliminating it when intermediates are promoted—actual intermediate values were "not instrumented." This is hypothesis, not evidence.
+
+**BF16 limitation is a runtime blocker, not a kernel defect.** The runtime rejects BF16 before execution (`asctile.exp` accepts only FP16/FP32). This is correctly reported but conflated with kernel accuracy. No BF16 numerical evidence exists for the target kernel.
+
+**UB accounting is inconsistent.** Reuse 0 reports 1,714,176 B (clearly over budget). Reuse 1/2 report exactly 253,952 B—the platform limit—in multiple configurations. Static=False has no UB metadata, requiring manual TPipe parsing. The precision of 253,952 B in six configurations suggests either the compiler targets this budget or accounting is coarse-grained.
+
+**Performance comparability is invalid.** CaModel ticks on N=31,744 elements (one core) are NOT NPU latency or CANNBench speedup. The "1.44× faster" claim compares tile sizes within CaModel, not against reference implementations. The 72-core, 150M-element official shapes were compile-checked only—no simulation or timing evidence exists.
+
+**Mandatory corrections vs optional work:**
+- **Mandatory:** Fix coefficient placement (0.044715 not 1/0.044715, -sqrt(8/pi) not -1.595769121×0.044715) for tanh branch accuracy.
+- **Optional:** FP32 intermediate casts are a DIFFERENT variant (promoted_kernel.py), not the "corrected target." This variant is unmeasured for performance and only tested at tile 8192, not official shapes.
+
+The experiment correctly separates coefficient correction from FP32 promotion but then conflates them in scope claims. The 18 compile configurations demonstrate JIT option coverage, not the 20 official case passes required for submission.

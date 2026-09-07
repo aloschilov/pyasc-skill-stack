@@ -1,0 +1,1160 @@
+{
+  "matrix-r0-sdefault-vf0": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 0,
+      "vf": 0,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r0-sdefault-vf0/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 0,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 0,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 1714176
+    },
+    "binary_sha256": "68b2e311e68acfb2e2617daf374c6146b9f324c72205c2a0bcef48b16a883c66",
+    "ub_fit": false,
+    "compile_passed": true
+  },
+  "matrix-r0-sdefault-vf1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 0,
+      "vf": 1,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r0-sdefault-vf1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 0,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 0,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 1714176
+    },
+    "binary_sha256": "829959dfd821850e9d318956b5e2204db940a5034b0c3cceb02332f9065a1b18",
+    "ub_fit": false,
+    "compile_passed": true
+  },
+  "matrix-r0-sfalse-vf0": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 0,
+      "vf": 0,
+      "static": "false",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r0-sfalse-vf0/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 0,
+          "static_alloc": false,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 0,
+      "static_alloc": false,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {},
+    "binary_sha256": "74789ffc02bc08d069e880b4313092bea94342d8971930531e979f3c65e721f1",
+    "ub_fit": "unknown",
+    "compile_passed": true
+  },
+  "matrix-r0-sfalse-vf1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 0,
+      "vf": 1,
+      "static": "false",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r0-sfalse-vf1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 0,
+          "static_alloc": false,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 0,
+      "static_alloc": false,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {},
+    "binary_sha256": "284f3ef933d40fa0dab6a358fd91d0058a87e8393a11875a2582dfa954a65d5d",
+    "ub_fit": "unknown",
+    "compile_passed": true
+  },
+  "matrix-r0-strue-vf0": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 0,
+      "vf": 0,
+      "static": "true",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r0-strue-vf0/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 0,
+          "static_alloc": true,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 0,
+      "static_alloc": true,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 1714176
+    },
+    "binary_sha256": "68b2e311e68acfb2e2617daf374c6146b9f324c72205c2a0bcef48b16a883c66",
+    "ub_fit": false,
+    "compile_passed": true
+  },
+  "matrix-r0-strue-vf1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 0,
+      "vf": 1,
+      "static": "true",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r0-strue-vf1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 0,
+          "static_alloc": true,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 0,
+      "static_alloc": true,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 1714176
+    },
+    "binary_sha256": "829959dfd821850e9d318956b5e2204db940a5034b0c3cceb02332f9065a1b18",
+    "ub_fit": false,
+    "compile_passed": true
+  },
+  "matrix-r1-sdefault-vf0": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r1-sdefault-vf0/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "b120fc31455eb4b0b725d9aa90cfdf05c96c98b44610dd32fa8e8d04629eafdc",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "matrix-r1-sdefault-vf1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r1-sdefault-vf1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "acbfec302e77d3bb37a02f6dc2eeb5b513c50862f2e528e47528538ce72956cb",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "matrix-r1-sfalse-vf0": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 1,
+      "vf": 0,
+      "static": "false",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r1-sfalse-vf0/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": false,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": false,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {},
+    "binary_sha256": "2ab869ff1372584f857c092b68122d3bb2869253f3ec676a6f0fb2b53e16df1a",
+    "ub_fit": "unknown",
+    "compile_passed": true
+  },
+  "matrix-r1-sfalse-vf1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 1,
+      "vf": 1,
+      "static": "false",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r1-sfalse-vf1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": false,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": false,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {},
+    "binary_sha256": "f4b886054c1aba9df520762e09b8b40d10eb645e483eb9ecd0cb5a6a3a09a0ca",
+    "ub_fit": "unknown",
+    "compile_passed": true
+  },
+  "matrix-r1-strue-vf0": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 1,
+      "vf": 0,
+      "static": "true",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r1-strue-vf0/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": true,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": true,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "b120fc31455eb4b0b725d9aa90cfdf05c96c98b44610dd32fa8e8d04629eafdc",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "matrix-r1-strue-vf1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 1,
+      "vf": 1,
+      "static": "true",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r1-strue-vf1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": true,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": true,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "acbfec302e77d3bb37a02f6dc2eeb5b513c50862f2e528e47528538ce72956cb",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "matrix-r2-sdefault-vf0": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 2,
+      "vf": 0,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r2-sdefault-vf0/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 2,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "08abbb87e70b7da3b5c1853706c39473693e113ed7f552d75118d523929b8da4",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "matrix-r2-sdefault-vf1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 2,
+      "vf": 1,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r2-sdefault-vf1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 2,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "9171e080690324ca992088570f00e431983db80e27cedfd5bbbf3236306bd893",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "matrix-r2-sfalse-vf0": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 2,
+      "vf": 0,
+      "static": "false",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r2-sfalse-vf0/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 2,
+          "static_alloc": false,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 2,
+      "static_alloc": false,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {},
+    "binary_sha256": "e6c33fdb933b472f7656e34c3c0e87b71f1299a8b3719a7c7d7a80eac4c78adc",
+    "ub_fit": "unknown",
+    "compile_passed": true
+  },
+  "matrix-r2-sfalse-vf1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 2,
+      "vf": 1,
+      "static": "false",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r2-sfalse-vf1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 2,
+          "static_alloc": false,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 2,
+      "static_alloc": false,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {},
+    "binary_sha256": "6c705f42202484e6205895d073b893677515decbb55c4d03d5050c62b043e4a8",
+    "ub_fit": "unknown",
+    "compile_passed": true
+  },
+  "matrix-r2-strue-vf0": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 2,
+      "vf": 0,
+      "static": "true",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r2-strue-vf0/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 2,
+          "static_alloc": true,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 2,
+      "static_alloc": true,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "08abbb87e70b7da3b5c1853706c39473693e113ed7f552d75118d523929b8da4",
+    "ub_fit": true,
+    "compile_passed": true
+  },
+  "matrix-r2-strue-vf1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "compile",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 72,
+      "size": 150994944,
+      "reuse": 2,
+      "vf": 1,
+      "static": "true",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/matrix-r2-strue-vf1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 2,
+          "static_alloc": true,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 2,
+      "static_alloc": true,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 150994944,
+    "segments": [],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "9171e080690324ca992088570f00e431983db80e27cedfd5bbbf3236306bd893",
+    "ub_fit": true,
+    "compile_passed": true
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "candidate_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+  "runtime_sha256": "feb82abc15a09607dfb5b403af530867242809d91f26b400ba43258e303b2af8",
+  "wheel_sha256": "b7d5ea54d497a50e79f5bb1de2c463e4e2f3a56046a069d3fb7f8e4ed50cff27",
+  "diagnostic_only": true,
+  "source_gate": "passed",
+  "routes": {
+    "fp32-exact": {
+      "tile": 1024,
+      "unroll": 1,
+      "vf_fusion": true
+    },
+    "fp32-tanh": {
+      "tile": 15872,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "fp16-bf16-both": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    }
+  },
+  "common_requested_flags": {
+    "reuse_alloc": 1,
+    "static_alloc": null,
+    "insert_sync": true,
+    "opt_level": 3,
+    "debug": false
+  },
+  "expected_static_alloc": true,
+  "source_files": {
+    "__init__.py": "d48f0c2ad96843d1917a598f134378fadb17daba8d095114bf08de2dc3334a3c",
+    "_pyasc_runtime.py": "af4d0eb015bcba32068dd4a1f592d2aa9c31142efb83e54b34873e7fda033475",
+    "gelu.py": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52"
+  },
+  "task_files": {
+    "cases.yaml": "bba64e6f3e332a3d6ee7004f21e609eb5a32bb4a9b6880907c38e4fa54bbe7fe",
+    "golden.py": "e07d2064d717a1159adf1481fafbc774a805a8fb198cd78e0cec0e69b91e6b95",
+    "proto.yaml": "71f94a2728af6e87fe137b3802854675212e656d5bd723d58668b0cda0abe8a2"
+  },
+  "archive_sha256": "f49f8d94476f59ed18572eb58d5043ee267824f9e825f3a5c3ae514bff6eb406"
+}

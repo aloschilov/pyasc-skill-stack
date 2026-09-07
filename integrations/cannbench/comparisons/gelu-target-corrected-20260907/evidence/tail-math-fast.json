@@ -1,0 +1,11 @@
+{
+  "scope": "CPU double formula only; not compiled execution",
+  "range": [
+    3,
+    14
+  ],
+  "depth": 6,
+  "samples": 100001,
+  "maximum_relative_error": 2.430293858046717e-05,
+  "script_sha256": "d4d27397944078bdfa63c39970f6f2d601f5684a0b93432b8c1d9f47b1e703aa"
+}

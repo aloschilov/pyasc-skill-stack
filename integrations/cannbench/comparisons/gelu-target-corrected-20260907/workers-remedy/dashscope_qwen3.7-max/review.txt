@@ -1,0 +1,25 @@
+## Independent Review: Public-AscTile Exact GeLU Remedy
+
+**Recurrence.** The loop `for order in asctile.static_range(12, 0, -1): remainder = order / (a + remainder)` evaluates inside-out from 12 to 1. After the loop, `1/(a + remainder)` equals the 12-level Mills-ratio continued fraction `1/(a + 1/(a + 2/(a + ... + 12/a)))`. The DLMF 7.9.1 erfc CF with `z = a/sqrt(2)` yields exactly `R(a) = 1/(a + 1/(a + 2/(a + ...)))`, so `tail = x * R(a) * phi(a) = x * Phi(x) = GeLU(x)`. The recurrence is correct.
+
+**FP32 arithmetic.** `raw.to(asctile.float32)` promotes, `remainder` is FP32, `central` and `tail` are FP32; the `.to(raw.dtype)` cast-back is the final step. Consistent FP32 intermediates throughout.
+
+**NaN/Inf.** NaN and +Inf pass through `central` (NaN→NaN, Inf→Inf). For `-Inf`: `a = Inf`, remainder collapses to 0, `x/(a+remainder) = -Inf/Inf = NaN`, times `exp(-Inf) = 0`, yielding NaN. PyTorch's `gelu(-inf)` also returns NaN (since `-inf * 0` is NaN), so the checker accepts NaN-matches-NaN. This is oracle-consistent but not the true limit of 0. **Not a blocker** since the oracle and checker agree.
+
+**Finite limits.** `[±finfo.max, ±finfo.max*0.75]` all pass across fp32/fp16/bf16. For large positive x: central = `x*0.5*(erf(large)+1) ≈ x`. For large negative x: tail formula with large `a` gives Mills ratio → 0 via `exp(-a²/2)`, correctly producing ~0.
+
+**Switch boundary.** At `x = -2`: central gives `-1*(1-erf(sqrt(2))) ≈ -0.0455`. Tail: `a=2`, `R(2)≈0.4216`, `phi(2)≈0.0540`, `tail ≈ -2*0.4216*0.0540 ≈ -0.0455`. The `switch_boundary` segment (257 points in [-2.001,-1.999]) shows `max_diff = 6.97e-7` in fp32; `adjacent_representable_switch` at ±ulp(-2) passes at `max_diff = 6.85e-7`. No discontinuity.
+
+**Tile/where alignment.** `pad_value=0` on `copy_in` forces padded lanes to `x=0`, which selects `central` (since `0 >= -2`), yielding `0.5*(0)*(erf(0)+1) = 0`. Safe. Both branches are full `tile_length` tensors, so `where` is element-wise compatible.
+
+**Repeat evidence.** One cached repeat in the tail run shows `same_output_including_nan: true`, `accuracy_passed: true`, `writes_outside_logical_size: 0`, `outer_guard_untouched: true`. Deterministic and guarded.
+
+**Oracle correctness.** PyTorch `gelu(approximate="none")` in double with the official precision checker is the appropriate independent oracle. Thresholds (fp32: `1.22e-4`, fp16: `9.77e-4`, bf16: `7.81e-3`) are dtype-standard.
+
+**Limitations of sampled validation.** Probed sizes (512–8193 elements/segment) are representative, not full CANNBench shapes. FP16/BF16 cover fewer official ranges (2 each). Only 1-core and one 8-core tail-run were tested. No `static_alloc`/`reuse_alloc` full matrix. The continued-fraction convergence is sampled (200001 CPU points on `a ∈ [2,14]`), not a global error proof. Multi-core full-case behavior and vector-core timeout risk at large case sizes are unmeasured.
+
+**Source API limitation vs compiler defect.** The `asctile.erf` defaulting to PADE while ops-nn selects `SUBSECTION_POLYNOMIAL_APPROXIMATION` is a documented API/configuration gap, not a proven compiler defect. The remedy works around it numerically rather than patching the compiler.
+
+**Concrete blockers:** None identified in kernel correctness. **Optional further tests:** full 20-case execution, performance timing, `reuse_alloc={0,2}` × `static_alloc` × `vf_fusion` matrix, multi-core full-shape stress, deeper tail-depth sensitivity sweep.
+
+**Label:** `verified-camodel-smoke` — sampled numerical routes pass; full suite and hardware remain unverified.

@@ -1,0 +1,9 @@
+{
+  "error_code": "WEB-ZIP-007",
+  "reason": "Explicit HTTP archive-layout rejection: tilelang_cann/triton_ascend_cann missing setup.py",
+  "rejected_archive_sha256": "fb0f1a9d834180b5a343f578ea1de27755f147a4088df162591dbbdda63bcc68",
+  "job_created": false,
+  "remaining_after": 10,
+  "charges_after": 0,
+  "verification": "After the explicit rejection, fresh API job listing has no matching tag and credits report remaining=10, charges=0. Add the documented setup.py layout metadata; preserve the exact qualified wheel and kernel."
+}

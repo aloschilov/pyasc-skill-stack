@@ -1,0 +1,75 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "args": {
+    "phase": "compile",
+    "variant": "exact_stable",
+    "dtype": "bfloat16",
+    "tile": 1024,
+    "unroll": 1,
+    "cores": 72,
+    "size": 16777216,
+    "reuse": 1,
+    "vf": 1,
+    "static": "default",
+    "compact_stress": false,
+    "repeat": 1,
+    "perf_range": [
+      -2.0,
+      2.0
+    ],
+    "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-compile-case-3/result.json"
+  },
+  "completed": true,
+  "observations": [
+    {
+      "effective_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": null,
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": true,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": null,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": true
+      }
+    }
+  ],
+  "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+  "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+  "target_function_ast_unchanged": false,
+  "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+  "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+  "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+  "requested_options": {
+    "reuse_alloc": 1,
+    "static_alloc": null,
+    "vf_fusion": true,
+    "insert_sync": true,
+    "opt_level": 3,
+    "debug": false
+  },
+  "coefficients": {
+    "inverse_sqrt_two": 0.7071067811865476,
+    "tail_cutoff": -2.0,
+    "continued_fraction_depth": 12
+  },
+  "approximate": "none",
+  "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+  "elements": 16777216,
+  "segments": [],
+  "memory_consumed": {
+    "UB": 73728
+  },
+  "binary_sha256": "dd4c4a3d896112c39716de2e37876f3d249690ec8a293e9407193ccbaa67b3e5",
+  "ub_fit": true,
+  "compile_passed": true
+}

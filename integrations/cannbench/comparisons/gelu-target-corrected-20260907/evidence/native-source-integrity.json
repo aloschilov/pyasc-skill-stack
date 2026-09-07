@@ -1,0 +1,7 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "method": "byte comparison against git archive of compiler and Python runtime tracked sources",
+  "checked_files": 467,
+  "different_files": [],
+  "status": "passed"
+}

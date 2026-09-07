@@ -1,0 +1,276 @@
+{
+  "perf-exact-remedy-exact": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "perf",
+      "variant": "exact",
+      "dtype": "float32",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 1,
+      "size": 2048,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/perf-exact-remedy-exact/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "6c405f870b889096d6ea4d45dbe1742325b0fbb716f362eaa1921a1e54630df7",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476
+    },
+    "approximate": "none",
+    "change_scope": "New exact target-style template; FP32 intermediates, scale x first, explicit tails",
+    "elements": 2048,
+    "segments": [
+      {
+        "name": "finite_perf_input",
+        "start": 0,
+        "end": 2048
+      }
+    ],
+    "memory_consumed": {
+      "UB": 12288
+    },
+    "binary_sha256": "55d0363fefa86200ef4dd4a961d9804e655964ffaa0a7522d4d03de677face54",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 12.769719797070138,
+    "checks": [
+      {
+        "segment": "finite_perf_input",
+        "passed": false,
+        "details": {
+          "passed": false,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.05171772716369948,
+          "mare": 2.8653017029349725,
+          "max_diff": 5.665328899340238e-07,
+          "mean_diff": 6.789686429991941e-08,
+          "mismatch_count": 482,
+          "total_count": 2048,
+          "mismatch_ratio": 0.2353515625,
+          "small_value_error_count": 466,
+          "small_value_cpu_error_count": 465,
+          "small_value_total_count": 466,
+          "cancel_error_count": 34,
+          "cancel_cpu_error_count": 2,
+          "cancel_total_count": 303,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": false,
+              "threshold": 0.0001220703125,
+              "mere": 0.05171772716369948,
+              "mare": 2.8653017029349725,
+              "mismatch_count": 482,
+              "total_count": 2048,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": false,
+    "warm_ticks": [
+      3521,
+      3507,
+      3563
+    ],
+    "median_ticks": 3521,
+    "repeat_accuracy": [
+      false,
+      false,
+      false
+    ],
+    "repeated_outputs_equal": true,
+    "performance_scope": "CaModel ticks on aligned finite input; no NPU latency or CANNBench speedup"
+  },
+  "perf-exact-remedy-exact_stable": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "perf",
+      "variant": "exact_stable",
+      "dtype": "float32",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 1,
+      "size": 2048,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/perf-exact-remedy-exact_stable/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "inverse_sqrt_two": 0.7071067811865476,
+      "tail_cutoff": -2.0,
+      "continued_fraction_depth": 12
+    },
+    "approximate": "none",
+    "change_scope": "Public Erf central route plus cancellation-free normal tail continued fraction",
+    "elements": 2048,
+    "segments": [
+      {
+        "name": "finite_perf_input",
+        "start": 0,
+        "end": 2048
+      }
+    ],
+    "memory_consumed": {
+      "UB": 73728
+    },
+    "binary_sha256": "d3346c03aae0691455ef30e00bb7c6ec7e3f09c18e60617cd65e8ba6fc9d8334",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 19.3818635919597,
+    "checks": [
+      {
+        "segment": "finite_perf_input",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 4.928366790767447e-07,
+          "mare": 1.5037891982802269e-05,
+          "max_diff": 6.817281246185303e-07,
+          "mean_diff": 2.3346254477384087e-08,
+          "mismatch_count": 0,
+          "total_count": 2048,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 4.928366790767447e-07,
+              "mare": 1.5037891982802269e-05,
+              "mismatch_count": 0,
+              "total_count": 2048,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "warm_ticks": [
+      6917,
+      6933,
+      6881
+    ],
+    "median_ticks": 6917,
+    "repeat_accuracy": [
+      true,
+      true,
+      true
+    ],
+    "repeated_outputs_equal": true,
+    "performance_scope": "CaModel ticks on aligned finite input; no NPU latency or CANNBench speedup"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "model": "dashscope/qwen3.7-max",
+  "exit_code": 0,
+  "input_delivery": "full_inline_text; no tool execution",
+  "author": "Codex main agent; model identifier unavailable to this harness",
+  "prompt_sha256": "bd9370ae48a4e51814b9db34da1311ed6b6a9db5bc3acdb32069d2c6524ba81e",
+  "inputs": {
+    "/home/aloschilov/workspace/pyasc-skill-stack/skills/pyasc-cannbench-kernel/SKILL.md": "3081886b23406652027692478569b874e29c3f743163b9c5f94b84c3331518ab",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/exact_stable_kernel.py": "25f6ffce7cff30f5d811a52979d5b4a1eea7eb17be650e6c96bb84e649744eeb",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/check.py": "2f00b6b3d177abde229e20de6020fb2a80b5cd1741602a84679a83f2c346156f",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-qualification.json": "a740164a06ea772dbe11cedc7c3b83cf00d8ec7f0fbb16d03e22c5afe1ecac9c",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-stable-f32-initial/result.json": "b9b505718c938ecd23ad64ef568e929cb5b14f73a87a7aea4a452220a23bf00c",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/tail-math.json": "2e095ba1a4ecde9c13d5065864d100b28a0c91690e2bd6ee947b584723e1b2f1",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/EXACT_REMEDY.md": "04ea49f8cbc4dff871b872df1e37c98c595d2de81fda5c34f3c022282562cf29",
+    "/home/aloschilov/workspace/ops-nn/activation/gelu_v2/op_kernel/arch35/gelu_v2_dag.h": "053fc765623b4b8377c191b98f071fbbf9ebf3c5521f752f58be250a35989da5"
+  },
+  "session_ids": [
+    "ses_f835606b9ffe38u4urGXRY5Q7U"
+  ],
+  "read_events": [],
+  "mutation_events": [],
+  "errors": [],
+  "finish_reasons": [
+    "stop"
+  ]
+}

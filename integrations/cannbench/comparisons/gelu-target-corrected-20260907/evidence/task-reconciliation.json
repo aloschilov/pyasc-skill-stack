@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "official_case_count": 20,
+  "shape_dtype_mode_notes_all_match": true,
+  "golden_source_identical": true,
+  "nonfinite_json_encoding_differences": [
+    {
+      "case_id": 12,
+      "field": "value_range",
+      "api": [
+        null,
+        null
+      ],
+      "local": "[-inf, inf]"
+    },
+    {
+      "case_id": 13,
+      "field": "value_range",
+      "api": [
+        null,
+        null
+      ],
+      "local": "[nan, nan]"
+    }
+  ],
+  "note": "API represents nonfinite bounds as null; local YAML retains Inf/NaN and API notes still identify those special-value cases."
+}

@@ -1,0 +1,5086 @@
+{
+  "final-v2-numerical-none-float32": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "numerical",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": true,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-numerical-none-float32/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 1024,
+      "unroll": 1,
+      "vf_fusion": true
+    },
+    "approximate": "none",
+    "elements": 6144,
+    "segments": [
+      {
+        "name": "normal_seed_20260907",
+        "start": 0,
+        "end": 512
+      },
+      {
+        "name": "dense_negative_tails",
+        "start": 512,
+        "end": 2561
+      },
+      {
+        "name": "random_negative_tail",
+        "start": 2561,
+        "end": 4609
+      },
+      {
+        "name": "switch_boundary",
+        "start": 4609,
+        "end": 4866
+      },
+      {
+        "name": "adjacent_representable_switch",
+        "start": 4866,
+        "end": 4869
+      },
+      {
+        "name": "official_range_2",
+        "start": 4869,
+        "end": 4934
+      },
+      {
+        "name": "official_range_11",
+        "start": 4934,
+        "end": 4999
+      },
+      {
+        "name": "official_range_13",
+        "start": 4999,
+        "end": 5064
+      },
+      {
+        "name": "official_range_15",
+        "start": 5064,
+        "end": 5129
+      },
+      {
+        "name": "official_range_18",
+        "start": 5129,
+        "end": 5194
+      },
+      {
+        "name": "official_range_20",
+        "start": 5194,
+        "end": 5259
+      },
+      {
+        "name": "special_values",
+        "start": 5259,
+        "end": 5266
+      },
+      {
+        "name": "finite_limits",
+        "start": 5266,
+        "end": 5274
+      }
+    ],
+    "memory_consumed": {
+      "UB": 49152
+    },
+    "binary_sha256": "d62cc28f0f96896428374c024000824f862dceaaaff000421d8a80cfb2652abb",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 35.272217600024305,
+    "checks": [
+      {
+        "segment": "normal_seed_20260907",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 1.9475618448610205e-07,
+          "mare": 3.8407414818667555e-05,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 1.5549858289887197e-08,
+          "mismatch_count": 0,
+          "total_count": 512,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 1.9475618448610205e-07,
+              "mare": 3.8407414818667555e-05,
+              "mismatch_count": 0,
+              "total_count": 512,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "dense_negative_tails",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 7.738696691025105e-07,
+          "mare": 7.373874381597914e-05,
+          "max_diff": 4.76837158203125e-07,
+          "mean_diff": 3.403549900043695e-08,
+          "mismatch_count": 0,
+          "total_count": 2049,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 7.738696691025105e-07,
+              "mare": 7.373874381597914e-05,
+              "mismatch_count": 0,
+              "total_count": 2049,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "random_negative_tail",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 2.591263924760986e-06,
+          "mare": 7.668125765694791e-05,
+          "max_diff": 4.130415618419647e-07,
+          "mean_diff": 1.402212684985533e-08,
+          "mismatch_count": 0,
+          "total_count": 2048,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 2.591263924760986e-06,
+              "mare": 7.668125765694791e-05,
+              "mismatch_count": 0,
+              "total_count": 2048,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "switch_boundary",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 2.3947912765960267e-05,
+          "mare": 7.541229045558053e-05,
+          "max_diff": 3.059394657611847e-07,
+          "mean_diff": 9.698619348529712e-08,
+          "mismatch_count": 0,
+          "total_count": 257,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 2.3947912765960267e-05,
+              "mare": 7.541229045558053e-05,
+              "mismatch_count": 0,
+              "total_count": 257,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "adjacent_representable_switch",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 2.3916659362320273e-05,
+          "mare": 2.4261594495523986e-05,
+          "max_diff": 9.825453162193298e-08,
+          "mean_diff": 9.685754776000977e-08,
+          "mismatch_count": 0,
+          "total_count": 3,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 2.3916659362320273e-05,
+              "mare": 2.4261594495523986e-05,
+              "mismatch_count": 0,
+              "total_count": 3,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_2",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 8.726253153254776e-08,
+          "mare": 9.565157908082502e-07,
+          "max_diff": 1.1920928955078125e-07,
+          "mean_diff": 1.5818155728853666e-08,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 8.726253153254776e-08,
+              "mare": 9.565157908082502e-07,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_11",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 1.1555143185746585e-07,
+          "mare": 7.387436179453267e-06,
+          "max_diff": 4.76837158203125e-07,
+          "mean_diff": 8.267278966984138e-09,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 1.1555143185746585e-07,
+              "mare": 7.387436179453267e-06,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_13",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_15",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 2.636963007727039e-08,
+          "mare": 1.1702188173596912e-07,
+          "max_diff": 2.9802322387695312e-08,
+          "mean_diff": 3.5533538231482875e-09,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 2.636963007727039e-08,
+              "mare": 1.1702188173596912e-07,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_18",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 2.203479096480098e-08,
+          "mare": 1.1464615627479879e-07,
+          "max_diff": 7.450580596923828e-09,
+          "mean_diff": 1.4041478817279522e-09,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 2.203479096480098e-08,
+              "mare": 1.1464615627479879e-07,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_20",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 3.0683641338777065e-07,
+          "mare": 1.6844433407530246e-05,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 5.70827211095026e-09,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 3.0683641338777065e-07,
+              "mare": 1.6844433407530246e-05,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "special_values",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 7,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 7,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "finite_limits",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 4.0936928916934356e-08,
+          "mare": 3.2749543133547485e-07,
+          "max_diff": 1.4901161193847656e-08,
+          "mean_diff": 1.862645149230957e-09,
+          "mismatch_count": 0,
+          "total_count": 8,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 4.0936928916934356e-08,
+              "mare": 3.2749543133547485e-07,
+              "mismatch_count": 0,
+              "total_count": 8,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "simulator_error_count": 102,
+    "simulator_error_sample": [
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0dc20) RVECEX   : (Binary: 0x862007c0) (ID: 011028) RV_VMUL Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0dc24) RVECEX   : (Binary: 0x842027c0) (ID: 011030) RV_VMUL Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0dc44) RVECEX   : (Binary: 0x800207aa) (ID: 011666) RV_VMINS Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0dc48) RVECEX   : (Binary: 0x800247a9) (ID: 011667) RV_VMAXS Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0dc4c) RVECEX   : (Binary: 0x820007c0) (ID: 011669) RV_VMUL Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0dc50) RVECEX   : (Binary: 0x841287c8) (ID: 011671) RV_VMULS Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0dc54) RVECEX   : (Binary: 0x8422c7a8) (ID: 011672) RV_VADDS Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0dc58) RVECEX   : (Binary: 0x842027c0) (ID: 011675) RV_VMUL Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0dc5c) RVECEX   : (Binary: 0x861407a8) (ID: 011677) RV_VADDS Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0dc60) RVECEX   : (Binary: 0x842307a8) (ID: 011679) RV_VADDS Dtype: F32 "
+    ],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 102,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-tail-none-float32": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "tail",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 8,
+      "size": 9217,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-tail-none-float32/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 1024,
+      "unroll": 1,
+      "vf_fusion": true
+    },
+    "approximate": "none",
+    "guard_allocation_elements": 16640,
+    "elements": 9217,
+    "segments": [
+      {
+        "name": "tail_valid_region",
+        "start": 0,
+        "end": 9217
+      }
+    ],
+    "memory_consumed": {
+      "UB": 49152
+    },
+    "binary_sha256": "e4d0c90c8fba993bf35f51ac33df63f71cb4b7b95b8188e4ac8208106f5545f9",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 24.954790469957516,
+    "checks": [
+      {
+        "segment": "tail_valid_region",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 1.2435036752638905e-07,
+          "mare": 2.942671163972244e-06,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 2.2726804498990083e-08,
+          "mismatch_count": 0,
+          "total_count": 9217,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 1.2435036752638905e-07,
+              "mare": 2.942671163972244e-06,
+              "mismatch_count": 0,
+              "total_count": 9217,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "writes_outside_logical_size": 0,
+    "outer_guard_untouched": true,
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-perf-none-float32": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 2048,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-perf-none-float32/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 1024,
+      "unroll": 1,
+      "vf_fusion": true
+    },
+    "approximate": "none",
+    "elements": 2048,
+    "segments": [
+      {
+        "name": "finite_perf_input",
+        "start": 0,
+        "end": 2048
+      }
+    ],
+    "memory_consumed": {
+      "UB": 49152
+    },
+    "binary_sha256": "8b944f262f31ffeb0c3f5739a6195ef834a500acdf5bf116a4128d3974ad6c7a",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 16.811338257975876,
+    "checks": [
+      {
+        "segment": "finite_perf_input",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 1.9988196830371066e-06,
+          "mare": 6.34185332282187e-05,
+          "max_diff": 3.310851752758026e-07,
+          "mean_diff": 2.179386227995489e-08,
+          "mismatch_count": 0,
+          "total_count": 2048,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 1.9988196830371066e-06,
+              "mare": 6.34185332282187e-05,
+              "mismatch_count": 0,
+              "total_count": 2048,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "warm_ticks": [
+      4924,
+      4966,
+      4994
+    ],
+    "median_ticks": 4966,
+    "repeat_accuracy": [
+      true,
+      true,
+      true
+    ],
+    "repeated_outputs_equal": true,
+    "performance_scope": "CaModel ticks on aligned finite input; no NPU latency or CANNBench speedup",
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-numerical-none-float16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "numerical",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": true,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-numerical-none-float16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "none",
+    "elements": 8192,
+    "segments": [
+      {
+        "name": "normal_seed_20260907",
+        "start": 0,
+        "end": 512
+      },
+      {
+        "name": "dense_negative_tails",
+        "start": 512,
+        "end": 2561
+      },
+      {
+        "name": "random_negative_tail",
+        "start": 2561,
+        "end": 4609
+      },
+      {
+        "name": "switch_boundary",
+        "start": 4609,
+        "end": 4866
+      },
+      {
+        "name": "adjacent_representable_switch",
+        "start": 4866,
+        "end": 4869
+      },
+      {
+        "name": "official_range_1",
+        "start": 4869,
+        "end": 4934
+      },
+      {
+        "name": "official_range_7",
+        "start": 4934,
+        "end": 4999
+      },
+      {
+        "name": "special_values",
+        "start": 4999,
+        "end": 5006
+      },
+      {
+        "name": "finite_limits",
+        "start": 5006,
+        "end": 5014
+      }
+    ],
+    "memory_consumed": {
+      "UB": 98304
+    },
+    "binary_sha256": "22df7cb788c0db5c662f01974f50a1498fb97991a7c9517a91ae41fabb79d723",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 22.204237260040827,
+    "checks": [
+      {
+        "segment": "normal_seed_20260907",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 1.1857927508306317e-06,
+          "mare": 0.0006071258884252835,
+          "max_diff": 9.5367431640625e-07,
+          "mean_diff": 1.862645149230957e-09,
+          "mismatch_count": 0,
+          "total_count": 512,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 1.1857927508306317e-06,
+              "mare": 0.0006071258884252835,
+              "mismatch_count": 0,
+              "total_count": 512,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "dense_negative_tails",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.021544523071595306,
+          "mare": 2.447167289661077,
+          "max_diff": 7.62939453125e-06,
+          "mean_diff": 2.6675187534911274e-08,
+          "mismatch_count": 120,
+          "total_count": 2049,
+          "mismatch_ratio": 0.05856515373352855,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 652,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 161,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.021544523071595306,
+              "mare": 2.447167289661077,
+              "mismatch_count": 120,
+              "total_count": 2049,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "random_negative_tail",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.07138188321513914,
+          "mare": 2.6141627269989534,
+          "max_diff": 3.814697265625e-06,
+          "mean_diff": 7.738708518445492e-08,
+          "mismatch_count": 383,
+          "total_count": 2048,
+          "mismatch_ratio": 0.18701171875,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 1507,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 506,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.07138188321513914,
+              "mare": 2.6141627269989534,
+              "mismatch_count": 383,
+              "total_count": 2048,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "switch_boundary",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 1.1053846572932918e-05,
+          "mare": 0.0009469461897479199,
+          "max_diff": 3.814697265625e-06,
+          "mean_diff": 4.452954006566148e-08,
+          "mismatch_count": 0,
+          "total_count": 257,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 1.1053846572932918e-05,
+              "mare": 0.0009469461897479199,
+              "mismatch_count": 0,
+              "total_count": 257,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "adjacent_representable_switch",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0003156487299159733,
+          "mare": 0.0009469461897479199,
+          "max_diff": 3.814697265625e-06,
+          "mean_diff": 1.2715657552083333e-06,
+          "mismatch_count": 0,
+          "total_count": 3,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0003156487299159733,
+              "mare": 0.0009469461897479199,
+              "mismatch_count": 0,
+              "total_count": 3,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_1",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_7",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "special_values",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 7,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 7,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "finite_limits",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 8,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 8,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-tail-none-float16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "tail",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 8,
+      "size": 73729,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-tail-none-float16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "none",
+    "guard_allocation_elements": 131328,
+    "elements": 73729,
+    "segments": [
+      {
+        "name": "tail_valid_region",
+        "start": 0,
+        "end": 73729
+      }
+    ],
+    "memory_consumed": {
+      "UB": 98304
+    },
+    "binary_sha256": "22df7cb788c0db5c662f01974f50a1498fb97991a7c9517a91ae41fabb79d723",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 63.282076196046546,
+    "checks": [
+      {
+        "segment": "tail_valid_region",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 1.3782062389560707e-07,
+          "mare": 0.0005977280458352479,
+          "max_diff": 6.103515625e-05,
+          "mean_diff": 1.4073128026285451e-08,
+          "mismatch_count": 0,
+          "total_count": 73729,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 1.3782062389560707e-07,
+              "mare": 0.0005977280458352479,
+              "mismatch_count": 0,
+              "total_count": 73729,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "writes_outside_logical_size": 0,
+    "outer_guard_untouched": true,
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-perf-none-float16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 16384,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-perf-none-float16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "none",
+    "elements": 16384,
+    "segments": [
+      {
+        "name": "finite_perf_input",
+        "start": 0,
+        "end": 16384
+      }
+    ],
+    "memory_consumed": {
+      "UB": 98304
+    },
+    "binary_sha256": "22df7cb788c0db5c662f01974f50a1498fb97991a7c9517a91ae41fabb79d723",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 34.124661516048945,
+    "checks": [
+      {
+        "segment": "finite_perf_input",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.052119279316851924,
+          "mare": 2.6141627269989534,
+          "max_diff": 6.103515625e-05,
+          "mean_diff": 7.158087100833654e-08,
+          "mismatch_count": 2256,
+          "total_count": 16384,
+          "mismatch_ratio": 0.1376953125,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 4830,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 3229,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.052119279316851924,
+              "mare": 2.6141627269989534,
+              "mismatch_count": 2256,
+              "total_count": 16384,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "warm_ticks": [
+      10370,
+      10348,
+      10363
+    ],
+    "median_ticks": 10363,
+    "repeat_accuracy": [
+      true,
+      true,
+      true
+    ],
+    "repeated_outputs_equal": true,
+    "performance_scope": "CaModel ticks on aligned finite input; no NPU latency or CANNBench speedup",
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-numerical-none-bfloat16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "numerical",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "bfloat16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": true,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-numerical-none-bfloat16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "none",
+    "elements": 8192,
+    "segments": [
+      {
+        "name": "normal_seed_20260907",
+        "start": 0,
+        "end": 512
+      },
+      {
+        "name": "dense_negative_tails",
+        "start": 512,
+        "end": 2561
+      },
+      {
+        "name": "random_negative_tail",
+        "start": 2561,
+        "end": 4609
+      },
+      {
+        "name": "switch_boundary",
+        "start": 4609,
+        "end": 4866
+      },
+      {
+        "name": "adjacent_representable_switch",
+        "start": 4866,
+        "end": 4869
+      },
+      {
+        "name": "official_range_3",
+        "start": 4869,
+        "end": 4934
+      },
+      {
+        "name": "official_range_9",
+        "start": 4934,
+        "end": 4999
+      },
+      {
+        "name": "official_range_16",
+        "start": 4999,
+        "end": 5064
+      },
+      {
+        "name": "special_values",
+        "start": 5064,
+        "end": 5071
+      },
+      {
+        "name": "finite_limits",
+        "start": 5071,
+        "end": 5079
+      }
+    ],
+    "memory_consumed": {
+      "UB": 98304
+    },
+    "binary_sha256": "6884db3d0c057a1877a6b53c4968dfd331c71c0deca7af8cea8830641a705cca",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 23.364795260946266,
+    "checks": [
+      {
+        "segment": "normal_seed_20260907",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 512,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 512,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "dense_negative_tails",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.021442904129359806,
+          "mare": 2.358822375759436,
+          "max_diff": 3.814697265625e-06,
+          "mean_diff": 1.8190313726958678e-08,
+          "mismatch_count": 93,
+          "total_count": 2049,
+          "mismatch_ratio": 0.04538799414348463,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 717,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 230,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.021442904129359806,
+              "mare": 2.358822375759436,
+              "mismatch_count": 93,
+              "total_count": 2049,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "random_negative_tail",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.07320089048668621,
+          "mare": 2.358822375759436,
+          "max_diff": 3.814697265625e-06,
+          "mean_diff": 7.07764100863872e-08,
+          "mismatch_count": 308,
+          "total_count": 2048,
+          "mismatch_ratio": 0.150390625,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 1715,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 333,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.07320089048668621,
+              "mare": 2.358822375759436,
+              "mismatch_count": 308,
+              "total_count": 2048,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "switch_boundary",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 257,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 257,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "adjacent_representable_switch",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 3,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 3,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_3",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_9",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.03628957834235198,
+          "mare": 2.358822375759436,
+          "max_diff": 5.280598998069763e-07,
+          "mean_diff": 8.123998791635773e-09,
+          "mismatch_count": 1,
+          "total_count": 65,
+          "mismatch_ratio": 0.015384615384615385,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 21,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.03628957834235198,
+              "mare": 2.358822375759436,
+              "mismatch_count": 1,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_16",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "special_values",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 7,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 7,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "finite_limits",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 8,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 8,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-tail-none-bfloat16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "tail",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "bfloat16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 8,
+      "size": 73729,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-tail-none-bfloat16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "none",
+    "guard_allocation_elements": 131328,
+    "elements": 73729,
+    "segments": [
+      {
+        "name": "tail_valid_region",
+        "start": 0,
+        "end": 73729
+      }
+    ],
+    "memory_consumed": {
+      "UB": 98304
+    },
+    "binary_sha256": "6884db3d0c057a1877a6b53c4968dfd331c71c0deca7af8cea8830641a705cca",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 65.72340340702794,
+    "checks": [
+      {
+        "segment": "tail_valid_region",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 73729,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 73729,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "writes_outside_logical_size": 0,
+    "outer_guard_untouched": true,
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-perf-none-bfloat16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "bfloat16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 16384,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-perf-none-bfloat16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "none",
+    "elements": 16384,
+    "segments": [
+      {
+        "name": "finite_perf_input",
+        "start": 0,
+        "end": 16384
+      }
+    ],
+    "memory_consumed": {
+      "UB": 98304
+    },
+    "binary_sha256": "6884db3d0c057a1877a6b53c4968dfd331c71c0deca7af8cea8830641a705cca",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 33.4599365160102,
+    "checks": [
+      {
+        "segment": "finite_perf_input",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.05398938741642257,
+          "mare": 2.358822375759436,
+          "max_diff": 3.814697265625e-06,
+          "mean_diff": 4.9767606924433494e-08,
+          "mismatch_count": 1856,
+          "total_count": 16384,
+          "mismatch_ratio": 0.11328125,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 6160,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 4583,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.05398938741642257,
+              "mare": 2.358822375759436,
+              "mismatch_count": 1856,
+              "total_count": 16384,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "warm_ticks": [
+      10370,
+      10353,
+      10369
+    ],
+    "median_ticks": 10369,
+    "repeat_accuracy": [
+      true,
+      true,
+      true
+    ],
+    "repeated_outputs_equal": true,
+    "performance_scope": "CaModel ticks on aligned finite input; no NPU latency or CANNBench speedup",
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-numerical-tanh-float32": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "numerical",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": true,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-numerical-tanh-float32/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 15872,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "tanh",
+    "elements": 15872,
+    "segments": [
+      {
+        "name": "normal_seed_20260907",
+        "start": 0,
+        "end": 512
+      },
+      {
+        "name": "dense_negative_tails",
+        "start": 512,
+        "end": 2561
+      },
+      {
+        "name": "random_negative_tail",
+        "start": 2561,
+        "end": 4609
+      },
+      {
+        "name": "switch_boundary",
+        "start": 4609,
+        "end": 4866
+      },
+      {
+        "name": "adjacent_representable_switch",
+        "start": 4866,
+        "end": 4869
+      },
+      {
+        "name": "official_range_5",
+        "start": 4869,
+        "end": 4934
+      },
+      {
+        "name": "official_range_8",
+        "start": 4934,
+        "end": 4999
+      },
+      {
+        "name": "special_values",
+        "start": 4999,
+        "end": 5006
+      },
+      {
+        "name": "finite_limits",
+        "start": 5006,
+        "end": 5014
+      }
+    ],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "249602769ebee7a63ea79758c5b78ed156ee0fc7c9e137aae07400841808716d",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 22.94529571896419,
+    "checks": [
+      {
+        "segment": "normal_seed_20260907",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 3.5920269961949606e-08,
+          "mare": 2.707943917552867e-07,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 1.2037162377964705e-08,
+          "mismatch_count": 0,
+          "total_count": 512,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 3.5920269961949606e-08,
+              "mare": 2.707943917552867e-07,
+              "mismatch_count": 0,
+              "total_count": 512,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "dense_negative_tails",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 6.579414755538782e-08,
+          "mare": 1.203117738453434e-06,
+          "max_diff": 4.76837158203125e-07,
+          "mean_diff": 2.105171764614909e-08,
+          "mismatch_count": 0,
+          "total_count": 2049,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 6.579414755538782e-08,
+              "mare": 1.203117738453434e-06,
+              "mismatch_count": 0,
+              "total_count": 2049,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "random_negative_tail",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 1.8671254312496173e-07,
+          "mare": 1.8944444344960833e-06,
+          "max_diff": 1.862645149230957e-08,
+          "mean_diff": 5.128839731228745e-10,
+          "mismatch_count": 0,
+          "total_count": 2048,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 1.8671254312496173e-07,
+              "mare": 1.8944444344960833e-06,
+              "mismatch_count": 0,
+              "total_count": 2048,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "switch_boundary",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 2.515572669151769e-07,
+          "mare": 8.959640756119546e-07,
+          "max_diff": 3.259629011154175e-09,
+          "mean_diff": 9.150153700015888e-10,
+          "mismatch_count": 0,
+          "total_count": 257,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 2.515572669151769e-07,
+              "mare": 8.959640756119546e-07,
+              "mismatch_count": 0,
+              "total_count": 257,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "adjacent_representable_switch",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 1.9202567515319275e-07,
+          "mare": 2.560342553886864e-07,
+          "max_diff": 9.313225746154785e-10,
+          "mean_diff": 6.984919309616089e-10,
+          "mismatch_count": 0,
+          "total_count": 3,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 1.9202567515319275e-07,
+              "mare": 2.560342553886864e-07,
+              "mismatch_count": 0,
+              "total_count": 3,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_5",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 1.4901074143034123e-09,
+          "mare": 9.637129782457433e-08,
+          "max_diff": 2.3283064365386963e-10,
+          "mean_diff": 3.5820106496327225e-12,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 1.4901074143034123e-09,
+              "mare": 9.637129782457433e-08,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_8",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 5.8640038041877765e-08,
+          "mare": 7.726037369577256e-07,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 1.7978645963432007e-08,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 5.8640038041877765e-08,
+              "mare": 7.726037369577256e-07,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "special_values",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 7,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 7,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "finite_limits",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 1.96963157786238e-08,
+          "mare": 9.658136065970716e-08,
+          "max_diff": 1.1920928955078125e-07,
+          "mean_diff": 1.6763806343078613e-08,
+          "mismatch_count": 0,
+          "total_count": 8,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 1.96963157786238e-08,
+              "mare": 9.658136065970716e-08,
+              "mismatch_count": 0,
+              "total_count": 8,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "simulator_error_count": 2,
+    "simulator_error_sample": [
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0db28) RVECEX   : (Binary: 0x821407da) (ID: 001679) RV_VEXP Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0fb28) RVECEX   : (Binary: 0x821407da) (ID: 006216) RV_VEXP Dtype: F32 "
+    ],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 2,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-tail-tanh-float32": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "tail",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 8,
+      "size": 142849,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-tail-tanh-float32/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 15872,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "tanh",
+    "guard_allocation_elements": 254208,
+    "elements": 142849,
+    "segments": [
+      {
+        "name": "tail_valid_region",
+        "start": 0,
+        "end": 142849
+      }
+    ],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "249602769ebee7a63ea79758c5b78ed156ee0fc7c9e137aae07400841808716d",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 59.29231702792458,
+    "checks": [
+      {
+        "segment": "tail_valid_region",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 4.5459221011550444e-08,
+          "mare": 4.7457511877423616e-07,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 1.6111508057343284e-08,
+          "mismatch_count": 0,
+          "total_count": 142849,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 4.5459221011550444e-08,
+              "mare": 4.7457511877423616e-07,
+              "mismatch_count": 0,
+              "total_count": 142849,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "writes_outside_logical_size": 0,
+    "outer_guard_untouched": true,
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-perf-tanh-float32": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-perf-tanh-float32/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 15872,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "tanh",
+    "elements": 31744,
+    "segments": [
+      {
+        "name": "finite_perf_input",
+        "start": 0,
+        "end": 31744
+      }
+    ],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "249602769ebee7a63ea79758c5b78ed156ee0fc7c9e137aae07400841808716d",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 27.054867137921974,
+    "checks": [
+      {
+        "segment": "finite_perf_input",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 1.6143709458289066e-07,
+          "mare": 2.0108510998504497e-06,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 8.152899168186638e-09,
+          "mismatch_count": 0,
+          "total_count": 31744,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 1.6143709458289066e-07,
+              "mare": 2.0108510998504497e-06,
+              "mismatch_count": 0,
+              "total_count": 31744,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "warm_ticks": [
+      9347,
+      9358,
+      9433
+    ],
+    "median_ticks": 9358,
+    "repeat_accuracy": [
+      true,
+      true,
+      true
+    ],
+    "repeated_outputs_equal": true,
+    "performance_scope": "CaModel ticks on aligned finite input; no NPU latency or CANNBench speedup",
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-numerical-tanh-float16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "numerical",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "float16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": true,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-numerical-tanh-float16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "tanh",
+    "elements": 8192,
+    "segments": [
+      {
+        "name": "normal_seed_20260907",
+        "start": 0,
+        "end": 512
+      },
+      {
+        "name": "dense_negative_tails",
+        "start": 512,
+        "end": 2561
+      },
+      {
+        "name": "random_negative_tail",
+        "start": 2561,
+        "end": 4609
+      },
+      {
+        "name": "switch_boundary",
+        "start": 4609,
+        "end": 4866
+      },
+      {
+        "name": "adjacent_representable_switch",
+        "start": 4866,
+        "end": 4869
+      },
+      {
+        "name": "official_range_4",
+        "start": 4869,
+        "end": 4934
+      },
+      {
+        "name": "official_range_10",
+        "start": 4934,
+        "end": 4999
+      },
+      {
+        "name": "official_range_14",
+        "start": 4999,
+        "end": 5064
+      },
+      {
+        "name": "official_range_17",
+        "start": 5064,
+        "end": 5129
+      },
+      {
+        "name": "special_values",
+        "start": 5129,
+        "end": 5136
+      },
+      {
+        "name": "finite_limits",
+        "start": 5136,
+        "end": 5144
+      }
+    ],
+    "memory_consumed": {
+      "UB": 131072
+    },
+    "binary_sha256": "80d35e48b920fb21ba03842e5efb5857e26380458118f778552210d898c57831",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 14.855422216001898,
+    "checks": [
+      {
+        "segment": "normal_seed_20260907",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 512,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 512,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "dense_negative_tails",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 2049,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 2049,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "random_negative_tail",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 2048,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 2048,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "switch_boundary",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 257,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 257,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "adjacent_representable_switch",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 3,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 3,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_4",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_10",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_14",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_17",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "special_values",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 7,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 7,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "finite_limits",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 8,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 8,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "simulator_error_count": 2,
+    "simulator_error_sample": [
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0db48) RVECEX   : (Binary: 0x821407da) (ID: 002429) RV_VEXP Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0fb48) RVECEX   : (Binary: 0x821407da) (ID: 006382) RV_VEXP Dtype: F32 "
+    ],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 2,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-tail-tanh-float16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "tail",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "float16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 8,
+      "size": 73729,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-tail-tanh-float16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "tanh",
+    "guard_allocation_elements": 131328,
+    "elements": 73729,
+    "segments": [
+      {
+        "name": "tail_valid_region",
+        "start": 0,
+        "end": 73729
+      }
+    ],
+    "memory_consumed": {
+      "UB": 131072
+    },
+    "binary_sha256": "80d35e48b920fb21ba03842e5efb5857e26380458118f778552210d898c57831",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 31.312193890102208,
+    "checks": [
+      {
+        "segment": "tail_valid_region",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 73729,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 73729,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "writes_outside_logical_size": 0,
+    "outer_guard_untouched": true,
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-perf-tanh-float16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "float16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 16384,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-perf-tanh-float16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "tanh",
+    "elements": 16384,
+    "segments": [
+      {
+        "name": "finite_perf_input",
+        "start": 0,
+        "end": 16384
+      }
+    ],
+    "memory_consumed": {
+      "UB": 131072
+    },
+    "binary_sha256": "80d35e48b920fb21ba03842e5efb5857e26380458118f778552210d898c57831",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 16.518015175010078,
+    "checks": [
+      {
+        "segment": "finite_perf_input",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 16384,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 16384,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "warm_ticks": [
+      5558,
+      5134,
+      5144
+    ],
+    "median_ticks": 5144,
+    "repeat_accuracy": [
+      true,
+      true,
+      true
+    ],
+    "repeated_outputs_equal": true,
+    "performance_scope": "CaModel ticks on aligned finite input; no NPU latency or CANNBench speedup",
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-numerical-tanh-bfloat16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "numerical",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "bfloat16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": true,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-numerical-tanh-bfloat16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "tanh",
+    "elements": 8192,
+    "segments": [
+      {
+        "name": "normal_seed_20260907",
+        "start": 0,
+        "end": 512
+      },
+      {
+        "name": "dense_negative_tails",
+        "start": 512,
+        "end": 2561
+      },
+      {
+        "name": "random_negative_tail",
+        "start": 2561,
+        "end": 4609
+      },
+      {
+        "name": "switch_boundary",
+        "start": 4609,
+        "end": 4866
+      },
+      {
+        "name": "adjacent_representable_switch",
+        "start": 4866,
+        "end": 4869
+      },
+      {
+        "name": "official_range_6",
+        "start": 4869,
+        "end": 4934
+      },
+      {
+        "name": "official_range_12",
+        "start": 4934,
+        "end": 4937
+      },
+      {
+        "name": "official_range_19",
+        "start": 4937,
+        "end": 5002
+      },
+      {
+        "name": "special_values",
+        "start": 5002,
+        "end": 5009
+      },
+      {
+        "name": "finite_limits",
+        "start": 5009,
+        "end": 5017
+      }
+    ],
+    "memory_consumed": {
+      "UB": 131072
+    },
+    "binary_sha256": "b6157325639b0b06fe08db151857b399bc0fe2c0ca6227e47bbeb039bf91a17e",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 16.85709275805857,
+    "checks": [
+      {
+        "segment": "normal_seed_20260907",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 512,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 512,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "dense_negative_tails",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 4.0055622851515395e-11,
+          "mare": 4.440889455818166e-09,
+          "max_diff": 4.440892098500626e-16,
+          "mean_diff": 4.005562900546718e-18,
+          "mismatch_count": 0,
+          "total_count": 2049,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 4.0055622851515395e-11,
+              "mare": 4.440889455818166e-09,
+              "mismatch_count": 0,
+              "total_count": 2049,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "random_negative_tail",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 1.3909280864430421e-10,
+          "mare": 4.440889455818166e-09,
+          "max_diff": 4.440892098500626e-16,
+          "mean_diff": 1.3909283052141886e-17,
+          "mismatch_count": 0,
+          "total_count": 2048,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 1.3909280864430421e-10,
+              "mare": 4.440889455818166e-09,
+              "mismatch_count": 0,
+              "total_count": 2048,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "switch_boundary",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 257,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 257,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "adjacent_representable_switch",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 3,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 3,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_6",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_12",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 3,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 3,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_19",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 65,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 65,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "special_values",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 7,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 7,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "finite_limits",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 8,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 8,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "simulator_error_count": 4,
+    "simulator_error_sample": [
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0db48) RVECEX   : (Binary: 0x821407da) (ID: 002377) RV_VEXP Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0db48) RVECEX   : (Binary: 0x821407da) (ID: 002395) RV_VEXP Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0fb48) RVECEX   : (Binary: 0x821407da) (ID: 006330) RV_VEXP Dtype: F32 ",
+      "[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] (PC: 0x10d0fb48) RVECEX   : (Binary: 0x821407da) (ID: 006348) RV_VEXP Dtype: F32 "
+    ],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 4,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-tail-tanh-bfloat16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "tail",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "bfloat16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 8,
+      "size": 73729,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 2,
+      "perf_range": [
+        -2.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-tail-tanh-bfloat16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "tanh",
+    "guard_allocation_elements": 131328,
+    "elements": 73729,
+    "segments": [
+      {
+        "name": "tail_valid_region",
+        "start": 0,
+        "end": 73729
+      }
+    ],
+    "memory_consumed": {
+      "UB": 131072
+    },
+    "binary_sha256": "b6157325639b0b06fe08db151857b399bc0fe2c0ca6227e47bbeb039bf91a17e",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 30.8112105979817,
+    "checks": [
+      {
+        "segment": "tail_valid_region",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 73729,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 73729,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "cached_repeats": [
+      {
+        "same_output_including_nan": true,
+        "accuracy_passed": true
+      }
+    ],
+    "writes_outside_logical_size": 0,
+    "outer_guard_untouched": true,
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  },
+  "final-v2-perf-tanh-bfloat16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "bfloat16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 16384,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-v2-perf-tanh-bfloat16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": false,
+    "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "selected_geometry": {
+      "tile": 8192,
+      "unroll": 2,
+      "vf_fusion": false
+    },
+    "approximate": "tanh",
+    "elements": 16384,
+    "segments": [
+      {
+        "name": "finite_perf_input",
+        "start": 0,
+        "end": 16384
+      }
+    ],
+    "memory_consumed": {
+      "UB": 131072
+    },
+    "binary_sha256": "b6157325639b0b06fe08db151857b399bc0fe2c0ca6227e47bbeb039bf91a17e",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 17.611638300004415,
+    "checks": [
+      {
+        "segment": "finite_perf_input",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "bfloat16",
+          "threshold": 0.0078125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 16384,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "bfloat16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0078125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 16384,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "warm_ticks": [
+      5558,
+      5129,
+      5144
+    ],
+    "median_ticks": 5144,
+    "repeat_accuracy": [
+      true,
+      true,
+      true
+    ],
+    "repeated_outputs_equal": true,
+    "performance_scope": "CaModel ticks on aligned finite input; no NPU latency or CANNBench speedup",
+    "simulator_error_count": 0,
+    "simulator_error_sample": [],
+    "clean_model_run": true,
+    "expected_special_value_diagnostics": 0,
+    "unexpected_simulator_error_count": 0,
+    "unexpected_simulator_error_sample": []
+  }
+}

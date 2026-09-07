@@ -1,0 +1,75 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "args": {
+    "phase": "compile",
+    "variant": "exact_fast",
+    "dtype": "float32",
+    "tile": 1024,
+    "unroll": 1,
+    "cores": 72,
+    "size": 1049088,
+    "reuse": 1,
+    "vf": 1,
+    "static": "default",
+    "compact_stress": false,
+    "repeat": 1,
+    "perf_range": [
+      -2.0,
+      2.0
+    ],
+    "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/selected-exact-compile-case-15/result.json"
+  },
+  "completed": true,
+  "observations": [
+    {
+      "effective_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": null,
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": true,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": null,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": true
+      }
+    }
+  ],
+  "harness_sha256": "b9654d62f62a422ca23aa131d47af72114519a34d82d74ed4bb2ddf23745e155",
+  "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+  "target_function_ast_unchanged": false,
+  "source_sha256": "a9779265f28440e138d19c2db40bc5465fe5d5d4b9c89e33195733005eae6f33",
+  "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+  "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+  "requested_options": {
+    "reuse_alloc": 1,
+    "static_alloc": null,
+    "vf_fusion": true,
+    "insert_sync": true,
+    "opt_level": 3,
+    "debug": false
+  },
+  "coefficients": {
+    "inverse_sqrt_two": 0.7071067811865476,
+    "tail_cutoff": -3.0,
+    "continued_fraction_depth": 6
+  },
+  "approximate": "none",
+  "change_scope": "Public Erf central route plus six-level normal tail for x < -3",
+  "elements": 1049088,
+  "segments": [],
+  "memory_consumed": {
+    "UB": 49152
+  },
+  "binary_sha256": "b660116182877804a89bdad77bef2928222aa91e7e7d8af46b422b49f9906e62",
+  "ub_fit": true,
+  "compile_passed": true
+}

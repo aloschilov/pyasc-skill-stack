@@ -1,0 +1,65 @@
+{
+  "job_id": "job_6589259af036",
+  "job_url": "https://cannbench.com/workspace/jobs/job_6589259af036",
+  "status": "succeeded",
+  "passed": 20,
+  "total": 20,
+  "score": 61.881401574113255,
+  "environment": {
+    "npu": "Ascend950PR_9589 \u00d7 1",
+    "cpu": "x86_64",
+    "cann": "9.1.0",
+    "driver": "cann-9.1.0",
+    "pytorch": "2.10.0+cpu",
+    "pytorch_npu": "2.10.0",
+    "torchvision": null,
+    "python": "3.12.13",
+    "os": "Linux-5.4.0-144-generic-x86_64-with-glibc2.35",
+    "docker": "cake-ci / CANN 9.0.0"
+  },
+  "api_summary": {
+    "total_operators": 1,
+    "total_cases": 20,
+    "passed_cases": 20,
+    "failed_cases": 0,
+    "cascade_cases": 0,
+    "pass_rate": 1.0,
+    "genuine_pass_rate": 1.0,
+    "overall_score": 61.881401574113255,
+    "accuracy_passed_cases": 20,
+    "anti_cheat_failed_cases": 0,
+    "geometric_mean_speedup": 0.46356864733930675,
+    "geometric_mean_speedup_vs_hw": 0.15883058972402203
+  },
+  "independent_geometric_mean": 0.35330525623436876,
+  "independent_arithmetic_mean": 0.46356864733930675,
+  "previous_high_level_job": "job_cdee9a024da2",
+  "previous_high_level_passed": 18,
+  "matched_passing_cases": 18,
+  "faster_than_previous_high_level": 14,
+  "matched_latency_geomean_improvement": 2.444684070278003,
+  "historical_low_level_job": "job_7b4caccdc21f",
+  "hardware_success_for_publication": true,
+  "raw_job_sha256": "af356ceecf48fec61c9cc976434cb71612cc533941b5182e6ef188c7ffa9bc66",
+  "metric_note": "Independent means use positive passing-case speedup ratios. Compare API field names to those actual means; do not assume its geometric_mean_speedup name is accurate. Cross-run timing is observational, not a controlled A/B rerun.",
+  "by_mode": {
+    "none": {
+      "cases": 11,
+      "passed": 11,
+      "independent_geometric_mean": 0.18785699845756335
+    },
+    "tanh": {
+      "cases": 9,
+      "passed": 9,
+      "independent_geometric_mean": 0.7645984664447205
+    }
+  },
+  "historical_low_level_comparison": {
+    "matched_cases": 20,
+    "faster_cases": 6,
+    "geomean_old_over_new_latency": 0.6829576291991042
+  },
+  "at_least_reference_speed_cases": [
+    "level1/gelu_5"
+  ]
+}

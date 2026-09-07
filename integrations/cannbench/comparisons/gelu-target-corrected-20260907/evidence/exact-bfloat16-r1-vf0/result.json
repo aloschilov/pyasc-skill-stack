@@ -1,0 +1,381 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "args": {
+    "phase": "numerical",
+    "variant": "exact",
+    "dtype": "bfloat16",
+    "tile": 8192,
+    "unroll": 2,
+    "cores": 1,
+    "size": 31744,
+    "reuse": 1,
+    "vf": 0,
+    "static": "default",
+    "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/exact-bfloat16-r1-vf0/result.json"
+  },
+  "completed": true,
+  "observations": [
+    {
+      "effective_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": null,
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": true,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": null,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false
+      }
+    }
+  ],
+  "harness_sha256": "8e4bdac691294a0fd25278f7f4635e69ec09e8f17967963c35ad6e4b7882502d",
+  "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+  "target_function_ast_unchanged": false,
+  "source_sha256": "6c405f870b889096d6ea4d45dbe1742325b0fbb716f362eaa1921a1e54630df7",
+  "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+  "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+  "requested_options": {
+    "reuse_alloc": 1,
+    "static_alloc": null,
+    "vf_fusion": false,
+    "insert_sync": true,
+    "opt_level": 3,
+    "debug": false
+  },
+  "coefficients": {
+    "inverse_sqrt_two": 0.7071067811865476
+  },
+  "approximate": "none",
+  "change_scope": "New exact target-style template; FP32 intermediates, scale x first, explicit tails",
+  "elements": 16384,
+  "segments": [
+    {
+      "name": "normal_seed_20260907",
+      "start": 0,
+      "end": 4096
+    },
+    {
+      "name": "dense_negative_tails",
+      "start": 4096,
+      "end": 12289
+    },
+    {
+      "name": "official_range_3",
+      "start": 12289,
+      "end": 12802
+    },
+    {
+      "name": "official_range_9",
+      "start": 12802,
+      "end": 13315
+    },
+    {
+      "name": "official_range_16",
+      "start": 13315,
+      "end": 13828
+    },
+    {
+      "name": "special_values",
+      "start": 13828,
+      "end": 13835
+    },
+    {
+      "name": "finite_limits",
+      "start": 13835,
+      "end": 13843
+    }
+  ],
+  "memory_consumed": {
+    "UB": 98304
+  },
+  "binary_sha256": "5b440d357cc4aac1affdb031d5c5901a30a64592254b375ea624253ba5b82fe0",
+  "ub_fit": true,
+  "compile_passed": true,
+  "phase": "complete",
+  "diagnostic_wall_seconds": 29.53818038897589,
+  "checks": [
+    {
+      "segment": "normal_seed_20260907",
+      "passed": true,
+      "details": {
+        "passed": true,
+        "dtype": "bfloat16",
+        "threshold": 0.0078125,
+        "mere": 0.0,
+        "mare": 0.0,
+        "max_diff": 0.0,
+        "mean_diff": 0.0,
+        "mismatch_count": 0,
+        "total_count": 4096,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "bfloat16",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "mismatch_count": 0,
+            "total_count": 4096,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "segment": "dense_negative_tails",
+      "passed": true,
+      "details": {
+        "passed": true,
+        "dtype": "bfloat16",
+        "threshold": 0.0078125,
+        "mere": 0.02207982509739768,
+        "mare": 2.358822375759436,
+        "max_diff": 3.814697265625e-06,
+        "mean_diff": 2.022596555124856e-08,
+        "mismatch_count": 372,
+        "total_count": 8193,
+        "mismatch_ratio": 0.04540461369461735,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 2871,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 917,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "bfloat16",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0078125,
+            "mere": 0.02207982509739768,
+            "mare": 2.358822375759436,
+            "mismatch_count": 372,
+            "total_count": 8193,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "segment": "official_range_3",
+      "passed": true,
+      "details": {
+        "passed": true,
+        "dtype": "bfloat16",
+        "threshold": 0.0078125,
+        "mere": 0.0,
+        "mare": 0.0,
+        "max_diff": 0.0,
+        "mean_diff": 0.0,
+        "mismatch_count": 0,
+        "total_count": 513,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "bfloat16",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "mismatch_count": 0,
+            "total_count": 513,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "segment": "official_range_9",
+      "passed": true,
+      "details": {
+        "passed": true,
+        "dtype": "bfloat16",
+        "threshold": 0.0078125,
+        "mere": 0.006514250764693762,
+        "mare": 2.358822375759436,
+        "max_diff": 5.280598998069763e-07,
+        "mean_diff": 3.285555925062148e-09,
+        "mismatch_count": 4,
+        "total_count": 513,
+        "mismatch_ratio": 0.007797270955165692,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 161,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 8,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "bfloat16",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0078125,
+            "mere": 0.006514250764693762,
+            "mare": 2.358822375759436,
+            "mismatch_count": 4,
+            "total_count": 513,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "segment": "official_range_16",
+      "passed": true,
+      "details": {
+        "passed": true,
+        "dtype": "bfloat16",
+        "threshold": 0.0078125,
+        "mere": 0.0,
+        "mare": 0.0,
+        "max_diff": 0.0,
+        "mean_diff": 0.0,
+        "mismatch_count": 0,
+        "total_count": 513,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "bfloat16",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "mismatch_count": 0,
+            "total_count": 513,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "segment": "special_values",
+      "passed": true,
+      "details": {
+        "passed": true,
+        "dtype": "bfloat16",
+        "threshold": 0.0078125,
+        "mere": 0.0,
+        "mare": 0.0,
+        "max_diff": 0.0,
+        "mean_diff": 0.0,
+        "mismatch_count": 0,
+        "total_count": 7,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "bfloat16",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "mismatch_count": 0,
+            "total_count": 7,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "segment": "finite_limits",
+      "passed": true,
+      "details": {
+        "passed": true,
+        "dtype": "bfloat16",
+        "threshold": 0.0078125,
+        "mere": 0.0,
+        "mare": 0.0,
+        "max_diff": 0.0,
+        "mean_diff": 0.0,
+        "mismatch_count": 0,
+        "total_count": 8,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "bfloat16",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "mismatch_count": 0,
+            "total_count": 8,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      }
+    }
+  ],
+  "numerical_passed": true
+}

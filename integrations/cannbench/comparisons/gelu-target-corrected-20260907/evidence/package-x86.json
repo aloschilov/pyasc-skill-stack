@@ -1,0 +1,570 @@
+{
+  "schema_version": 1,
+  "operator": "gelu",
+  "candidate": "/usr/local/lib/python3.12/site-packages/cann_bench/gelu.py",
+  "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+  "pyasc_commit": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "runtime": "self-contained CANNBench wheel with repository overlays",
+  "platform": "Ascend950PR_9599",
+  "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+  "limitations": [
+    "does not execute numerical code",
+    "does not estimate camodel ticks or NPU performance",
+    "CANNBench remains the acceptance oracle when submissions are available"
+  ],
+  "cases": 20,
+  "dispatch_passed": 20,
+  "compile_passed": 20,
+  "unique_specializations": 6,
+  "unique_specializations_passed": 6,
+  "status": "passed",
+  "case_results": [
+    {
+      "case_id": 1,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 2,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 3,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 4,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 5,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 6,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 7,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 8,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 9,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 10,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 11,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 12,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 13,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 14,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 15,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 16,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 17,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 18,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 19,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    },
+    {
+      "case_id": 20,
+      "dispatch": "passed",
+      "compile": "passed",
+      "kernels": [
+        "gelu_kernel"
+      ],
+      "cores": [
+        72
+      ],
+      "handled_compile_failures": []
+    }
+  ],
+  "specializations": [
+    {
+      "status": "passed",
+      "compile_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": false,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": 256,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false
+      },
+      "codegen_options": {
+        "capture_exceptions": true,
+        "ir_multithreading": true,
+        "custom_builtins": {
+          "assert": "<function custom_assert at 0xffff6ea965c0>",
+          "max": "<function max at 0xffff6ea963e0>",
+          "min": "<function min at 0xffff6ea96480>",
+          "print": "<function print at 0xffff6ea96660>",
+          "range": "<class 'asctile.language.range.range'>",
+          "sum": "<function sum at 0xffff6ea96520>"
+        }
+      },
+      "constexprs": {
+        "tile_length": "ConstExpr[int](8192)",
+        "unroll_factor": "ConstExpr[int](2)",
+        "approximate": "ConstExpr[bool](False)",
+        "stable_tail": "ConstExpr[bool](False)"
+      },
+      "memory_consumed": {
+        "UB": 98304
+      },
+      "ascendc_bytes": 10661,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "has_ffts_arg": false
+    },
+    {
+      "status": "passed",
+      "compile_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": false,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": 256,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": true
+      },
+      "codegen_options": {
+        "capture_exceptions": true,
+        "ir_multithreading": true,
+        "custom_builtins": {
+          "assert": "<function custom_assert at 0xffff6ea965c0>",
+          "max": "<function max at 0xffff6ea963e0>",
+          "min": "<function min at 0xffff6ea96480>",
+          "print": "<function print at 0xffff6ea96660>",
+          "range": "<class 'asctile.language.range.range'>",
+          "sum": "<function sum at 0xffff6ea96520>"
+        }
+      },
+      "constexprs": {
+        "tile_length": "ConstExpr[int](1024)",
+        "unroll_factor": "ConstExpr[int](1)",
+        "approximate": "ConstExpr[bool](False)",
+        "stable_tail": "ConstExpr[bool](True)"
+      },
+      "memory_consumed": {
+        "UB": 49152
+      },
+      "ascendc_bytes": 14302,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "has_ffts_arg": false
+    },
+    {
+      "status": "passed",
+      "compile_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": false,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": 256,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false
+      },
+      "codegen_options": {
+        "capture_exceptions": true,
+        "ir_multithreading": true,
+        "custom_builtins": {
+          "assert": "<function custom_assert at 0xffff6ea965c0>",
+          "max": "<function max at 0xffff6ea963e0>",
+          "min": "<function min at 0xffff6ea96480>",
+          "print": "<function print at 0xffff6ea96660>",
+          "range": "<class 'asctile.language.range.range'>",
+          "sum": "<function sum at 0xffff6ea96520>"
+        }
+      },
+      "constexprs": {
+        "tile_length": "ConstExpr[int](8192)",
+        "unroll_factor": "ConstExpr[int](2)",
+        "approximate": "ConstExpr[bool](False)",
+        "stable_tail": "ConstExpr[bool](False)"
+      },
+      "memory_consumed": {
+        "UB": 98304
+      },
+      "ascendc_bytes": 10848,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "has_ffts_arg": false
+    },
+    {
+      "status": "passed",
+      "compile_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": false,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": 256,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false
+      },
+      "codegen_options": {
+        "capture_exceptions": true,
+        "ir_multithreading": true,
+        "custom_builtins": {
+          "assert": "<function custom_assert at 0xffff6ea965c0>",
+          "max": "<function max at 0xffff6ea963e0>",
+          "min": "<function min at 0xffff6ea96480>",
+          "print": "<function print at 0xffff6ea96660>",
+          "range": "<class 'asctile.language.range.range'>",
+          "sum": "<function sum at 0xffff6ea96520>"
+        }
+      },
+      "constexprs": {
+        "tile_length": "ConstExpr[int](8192)",
+        "unroll_factor": "ConstExpr[int](2)",
+        "approximate": "ConstExpr[bool](True)",
+        "stable_tail": "ConstExpr[bool](False)"
+      },
+      "memory_consumed": {
+        "UB": 131072
+      },
+      "ascendc_bytes": 10813,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "has_ffts_arg": false
+    },
+    {
+      "status": "passed",
+      "compile_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": false,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": 256,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false
+      },
+      "codegen_options": {
+        "capture_exceptions": true,
+        "ir_multithreading": true,
+        "custom_builtins": {
+          "assert": "<function custom_assert at 0xffff6ea965c0>",
+          "max": "<function max at 0xffff6ea963e0>",
+          "min": "<function min at 0xffff6ea96480>",
+          "print": "<function print at 0xffff6ea96660>",
+          "range": "<class 'asctile.language.range.range'>",
+          "sum": "<function sum at 0xffff6ea96520>"
+        }
+      },
+      "constexprs": {
+        "tile_length": "ConstExpr[int](15872)",
+        "unroll_factor": "ConstExpr[int](2)",
+        "approximate": "ConstExpr[bool](True)",
+        "stable_tail": "ConstExpr[bool](False)"
+      },
+      "memory_consumed": {
+        "UB": 253952
+      },
+      "ascendc_bytes": 10029,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "has_ffts_arg": false
+    },
+    {
+      "status": "passed",
+      "compile_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": false,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": 256,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false
+      },
+      "codegen_options": {
+        "capture_exceptions": true,
+        "ir_multithreading": true,
+        "custom_builtins": {
+          "assert": "<function custom_assert at 0xffff6ea965c0>",
+          "max": "<function max at 0xffff6ea963e0>",
+          "min": "<function min at 0xffff6ea96480>",
+          "print": "<function print at 0xffff6ea96660>",
+          "range": "<class 'asctile.language.range.range'>",
+          "sum": "<function sum at 0xffff6ea96520>"
+        }
+      },
+      "constexprs": {
+        "tile_length": "ConstExpr[int](8192)",
+        "unroll_factor": "ConstExpr[int](2)",
+        "approximate": "ConstExpr[bool](True)",
+        "stable_tail": "ConstExpr[bool](False)"
+      },
+      "memory_consumed": {
+        "UB": 131072
+      },
+      "ascendc_bytes": 11036,
+      "kernel_args": [
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit",
+        "KernelArgument.Explicit"
+      ],
+      "has_ffts_arg": false
+    }
+  ],
+  "installed_files_match_wheel": true,
+  "wheel_sha256": "b7d5ea54d497a50e79f5bb1de2c463e4e2f3a56046a069d3fb7f8e4ed50cff27",
+  "library_sha256": "8321a60c1b0f99d9a668d06a015f1e3ac5bfb049813eaa941938a53a09c90ca7",
+  "gate_sha256": "c172acc199053bc022342483818bd5e81cfe520dc6fa75d6a0eb0b2a9bc064a8",
+  "scope": "20 official host dispatch/codegen/pass/translation checks with invocation JIT overrides; no NPU execution"
+}

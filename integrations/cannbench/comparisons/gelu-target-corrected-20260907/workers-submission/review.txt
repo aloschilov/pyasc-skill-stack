@@ -1,0 +1,30 @@
+## Review: Combined GeLU Module + Erf Issue
+
+### Six dtype/mode routes
+
+`geometry()` exposes **3 of 6** routes, not individually tuned:
+- FP32 exact: tile=1024, unroll=1, vf=True — matches selected 6-level refinement.
+- FP32 tanh: tile=15872, unroll=2, vf=False — **unexplained, non-power-of-2 tile; no validation evidence for 268M-element case (case 5).**
+- Default (FP16/BF16 × both modes): tile=8192, unroll=2, vf=False — applied uniformly; FP16/BF16 exact get no tail correction (intentional per remedy).
+
+### Tanh coefficients
+
+**Correct.** `-1.5957691216057308 = 2·√(2/π)` combined with `x / (exp(arg) + 1)` implements `2·sigmoid(2·√(2/π)·(x + 0.044715x³))`, which equals `(x/2)(1 + tanh(√(2/π)(x + 0.044715x³)))` exactly. Spot-checked at x=1,2,0.5 against SciPy reference values — matches to 7 digits.
+
+### Concrete blocker
+
+**Stable-tail -inf/NaN indeterminate form.** `a = asctile.maximum(-x, 3.0)` allows `a = +inf` when x = -inf, producing `-inf/+inf = NaN` in the continued fraction. Central erf path also gives NaN (`-inf × 0`). No current FP32 exact case has -inf in value_range, so this is **latent for CANNBench but breaks mathematical robustness**. Fix: clamp `a` to a large finite ceiling (e.g., `asctile.minimum(asctile.maximum(-x, 3.0), 26.5)`) so the exp underflows cleanly for all |x| ≥ 3. The finite truncation depth already guarantees convergence for any finite a; only the inf case needs clamping.
+
+### Optional improvements (non-blocking)
+
+1. **FP16/BF16 exact erf accuracy unverified.** `stable_tail=False` for these modes. No sampled checker evidence is recorded for FP16/BF16 exact negative tails. The wider tolerance may absorb default-Pade Erf error, but this is assumed, not measured.
+
+2. **Tanh tile 15872 needs justification.** UB consumption and cache behavior at this geometry are unknown. A quick sweep with tile ∈ {8192, 10240, 15872} × {vf_fusion: False, True} on case 5 would confirm or invalidate this choice.
+
+3. **Erf issue evidence is honest.** "ops-nn Erf NOT measured" is stated repeatedly. The issue correctly frames the subsection-polynomial algorithm as an available but untested alternative, not a proven fix. No concrete blocker; the high-level workaround is the current path.
+
+4. **`where` lane cost.** Both erf and 6-level CF execute on all lanes before select (eager tile evaluation). This is a known performance cost, not a correctness issue, and is correctly documented in the remedy.
+
+### Combined validation status
+
+The module is **not yet promotion-ready**: whole-package host wrapper, all-20-route dispatch, and official-shape numerical execution remain unvalidated. The 6-level CF and sigmoid-tanh identities are mathematically sound for finite inputs and pass all reported sampled probes. The -inf robustness gap is the only concrete correctness repair needed before full qualification.

@@ -1,0 +1,21 @@
+## Critical Review: Six-Level Exact-Fast GeLU Variant
+
+**Mathematical scope**: The Mills-ratio CF form and the `a = max(-x, 3)` substitution from DLMF 7.9.1 are sound. The claim that six levels give ≤2.43e-5 relative tail error at a=3 is plausible from known asymptotic convergence (truncation ~O(1/a²ⁿ)).
+
+**Concrete corrections**:
+
+1. **CPU convergence not inline-verified**: The specific "100 001 points of [3,14], rel-err 2.430 293 858e-5" number is referenced in `tail-math.json` (cited in EXACT_REMEDY) but that file is not inline. The qualification JSON's `adjacent_representable_switch` segment yields a model `mare ≈ 2.426e-5`, a different measurement. Either inline the CPU sweep or drop the extra digits to avoid false precision.
+
+2. **Switch discontinuity at -3 not explicitly bounded**: The fine-grid segment (257 points over [−3.001, −2.999]) passes with `max_diff ≈ 3.06e-7`, and the three adjacent-representable FP32 values pass at `≈ 9.83e-8`. These *empirically* bound the finite-depth jump, but EXACT_REMEDY never states the bound explicitly. Add: "At x = −3, the six-level truncation jump is ≤ 3.1e-7, well within the 1.22e-4 threshold."
+
+3. **11-case compile sweep not performed for six-level**: The document correctly states the six-level "has not yet received whole-package official-shape qualification." Record this as a remaining gate, not a suggestion.
+
+4. **Perf probe composition bias**: The timing input is `[-6, 2]` so ~37.5% falls in the tail region for the six-level variant (x<−3) vs ~50% for the 12-level (x<−2). The 28.2% tick reduction partly reflects fewer divisions in non-tail lanes. State the tail-lane fraction per variant.
+
+5. **Multicore tail repeat is single-sample**: `exact-fast-tail-repeat` runs repeat=2 (one cached replay) on 8 cores, not a fresh-process reproducibility check. This matches the harness's contract but should not be labelled "repeated multicore stability."
+
+6. **Timing comparability**: Median ticks (4966 vs 6917 vs 3521) are CaModel ticks, confirmed in JSON. Tick counts are comparable across variants (same input, same options). No correction needed here.
+
+7. **FP16/BF16 dispatch scope**: Correctly retained; no claim made for those dtypes in this variant.
+
+**Overall**: No mathematical or numerical blocker for FP32 exact. Tighten items 1–5 before promotion.

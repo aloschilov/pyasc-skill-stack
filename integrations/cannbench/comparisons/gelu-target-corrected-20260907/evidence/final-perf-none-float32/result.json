@@ -1,0 +1,142 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "args": {
+    "phase": "perf",
+    "variant": "submission",
+    "mode": "none",
+    "dtype": "float32",
+    "tile": 15872,
+    "unroll": 2,
+    "cores": 1,
+    "size": 2048,
+    "reuse": 1,
+    "vf": 0,
+    "static": "default",
+    "compact_stress": false,
+    "repeat": 1,
+    "perf_range": [
+      -6.0,
+      2.0
+    ],
+    "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/final-perf-none-float32/result.json"
+  },
+  "completed": true,
+  "observations": [
+    {
+      "effective_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": null,
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": true,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": null,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": true
+      }
+    }
+  ],
+  "harness_sha256": "582f3cf8917eb199fbd0c8ec795ca3ab609d378be0fec211bef79bef27a4e671",
+  "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+  "target_function_ast_unchanged": false,
+  "source_sha256": "3d74f4af7a0a0aa9bdc6c9a542d3206ba748e8e25c93fa6d21b324a7ee27bb5f",
+  "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+  "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+  "requested_options": {
+    "reuse_alloc": 1,
+    "static_alloc": null,
+    "vf_fusion": true,
+    "insert_sync": true,
+    "opt_level": 3,
+    "debug": false
+  },
+  "coefficients": {
+    "TANH_APPROX_FACTOR": 0.044715,
+    "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+  },
+  "selected_geometry": {
+    "tile": 1024,
+    "unroll": 1,
+    "vf_fusion": true
+  },
+  "approximate": "none",
+  "elements": 2048,
+  "segments": [
+    {
+      "name": "finite_perf_input",
+      "start": 0,
+      "end": 2048
+    }
+  ],
+  "memory_consumed": {
+    "UB": 49152
+  },
+  "binary_sha256": "10fe0fafaec8a5807a4e8150ba73ced3de352a7e3368d0f491914530d1090dc7",
+  "ub_fit": true,
+  "compile_passed": true,
+  "phase": "complete",
+  "diagnostic_wall_seconds": 14.892512716003694,
+  "checks": [
+    {
+      "segment": "finite_perf_input",
+      "passed": true,
+      "details": {
+        "passed": true,
+        "dtype": "float32",
+        "threshold": 0.0001220703125,
+        "mere": 1.9988196830371066e-06,
+        "mare": 6.34185332282187e-05,
+        "max_diff": 3.310851752758026e-07,
+        "mean_diff": 2.179386227995489e-08,
+        "mismatch_count": 0,
+        "total_count": 2048,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "float32",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0001220703125,
+            "mere": 1.9988196830371066e-06,
+            "mare": 6.34185332282187e-05,
+            "mismatch_count": 0,
+            "total_count": 2048,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      }
+    }
+  ],
+  "numerical_passed": true,
+  "warm_ticks": [
+    4924,
+    4966,
+    4994
+  ],
+  "median_ticks": 4966,
+  "repeat_accuracy": [
+    true,
+    true,
+    true
+  ],
+  "repeated_outputs_equal": true,
+  "performance_scope": "CaModel ticks on aligned finite input; no NPU latency or CANNBench speedup"
+}

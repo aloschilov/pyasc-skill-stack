@@ -1,0 +1,1622 @@
+{
+  "original-f32": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "numerical",
+      "variant": "original",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/original-f32/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 22.363860002236386,
+      "NEG_SQRT_EIGHT_OVER_PI": -0.071354816245515
+    },
+    "elements": 15872,
+    "segments": [
+      {
+        "name": "normal_seed_20260907",
+        "start": 0,
+        "end": 4096
+      },
+      {
+        "name": "dense_negative_tails",
+        "start": 4096,
+        "end": 12289
+      },
+      {
+        "name": "official_range_5",
+        "start": 12289,
+        "end": 12802
+      },
+      {
+        "name": "official_range_8",
+        "start": 12802,
+        "end": 13315
+      },
+      {
+        "name": "special_values",
+        "start": 13315,
+        "end": 13322
+      },
+      {
+        "name": "finite_limits",
+        "start": 13322,
+        "end": 13330
+      }
+    ],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "19dfd89c35f61dacbe09f732cd304f1d17ffd996e764ba12906f0a0ab28f9529",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 18.500944341998547,
+    "checks": [
+      {
+        "segment": "normal_seed_20260907",
+        "passed": false,
+        "details": {
+          "passed": false,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.2674039974259073,
+          "mare": 0.9999956104096648,
+          "max_diff": 0.09760665893554688,
+          "mean_diff": 0.048381727212223655,
+          "mismatch_count": 4085,
+          "total_count": 4096,
+          "mismatch_ratio": 0.997314453125,
+          "small_value_error_count": 1,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 1,
+          "cancel_error_count": 35,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 36,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": false,
+              "threshold": 0.0001220703125,
+              "mere": 0.2674039974259073,
+              "mare": 0.9999956104096648,
+              "mismatch_count": 4085,
+              "total_count": 4096,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "dense_negative_tails",
+        "passed": false,
+        "details": {
+          "passed": false,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.17208816675894908,
+          "mare": 0.999995610383723,
+          "max_diff": 0.09760623425245285,
+          "mean_diff": 0.013239679688222442,
+          "mismatch_count": 3666,
+          "total_count": 8193,
+          "mismatch_ratio": 0.4474551446356646,
+          "small_value_error_count": 695,
+          "small_value_cpu_error_count": 690,
+          "small_value_total_count": 2447,
+          "cancel_error_count": 437,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 437,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": false,
+              "threshold": 0.0001220703125,
+              "mere": 0.17208816675894908,
+              "mare": 0.999995610383723,
+              "mismatch_count": 3666,
+              "total_count": 8193,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_5",
+        "passed": false,
+        "details": {
+          "passed": false,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.021446405682116622,
+          "mare": 0.999995348154343,
+          "max_diff": 0.08935129642486572,
+          "mean_diff": 0.0013776874994132664,
+          "mismatch_count": 22,
+          "total_count": 513,
+          "mismatch_ratio": 0.042884990253411304,
+          "small_value_error_count": 4,
+          "small_value_cpu_error_count": 4,
+          "small_value_total_count": 247,
+          "cancel_error_count": 3,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 3,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": false,
+              "threshold": 0.0001220703125,
+              "mere": 0.021446405682116622,
+              "mare": 0.999995348154343,
+              "mismatch_count": 22,
+              "total_count": 513,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_8",
+        "passed": false,
+        "details": {
+          "passed": false,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.17084775338211516,
+          "mare": 0.9999955954252505,
+          "max_diff": 0.09757184982299805,
+          "mean_diff": 0.017622374892509608,
+          "mismatch_count": 274,
+          "total_count": 513,
+          "mismatch_ratio": 0.5341130604288499,
+          "small_value_error_count": 34,
+          "small_value_cpu_error_count": 34,
+          "small_value_total_count": 34,
+          "cancel_error_count": 36,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 36,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": false,
+              "threshold": 0.0001220703125,
+              "mere": 0.17084775338211516,
+              "mare": 0.9999955954252505,
+              "mismatch_count": 274,
+              "total_count": 513,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "special_values",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 7,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 7,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "finite_limits",
+        "passed": false,
+        "details": {
+          "passed": false,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.2743444982354802,
+          "mare": 0.9998887281878036,
+          "max_diff": 0.06645514070987701,
+          "mean_diff": 0.02796311290256881,
+          "mismatch_count": 4,
+          "total_count": 8,
+          "mismatch_ratio": 0.5,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 2,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": false,
+              "threshold": 0.0001220703125,
+              "mere": 0.2743444982354802,
+              "mare": 0.9998887281878036,
+              "mismatch_count": 4,
+              "total_count": 8,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": false
+  },
+  "corrected-f16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "numerical",
+      "variant": "corrected",
+      "dtype": "float16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/corrected-f16/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 15872,
+    "segments": [
+      {
+        "name": "normal_seed_20260907",
+        "start": 0,
+        "end": 4096
+      },
+      {
+        "name": "dense_negative_tails",
+        "start": 4096,
+        "end": 12289
+      },
+      {
+        "name": "official_range_4",
+        "start": 12289,
+        "end": 12802
+      },
+      {
+        "name": "official_range_10",
+        "start": 12802,
+        "end": 13315
+      },
+      {
+        "name": "official_range_14",
+        "start": 13315,
+        "end": 13828
+      },
+      {
+        "name": "official_range_17",
+        "start": 13828,
+        "end": 14341
+      },
+      {
+        "name": "special_values",
+        "start": 14341,
+        "end": 14348
+      },
+      {
+        "name": "finite_limits",
+        "start": 14348,
+        "end": 14356
+      }
+    ],
+    "memory_consumed": {
+      "UB": 126976
+    },
+    "binary_sha256": "17b6b296c68b32d8f104416852e0713fc4d62dec3a1b4eab864203be0c60860c",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 12.755720298038796,
+    "checks": [
+      {
+        "segment": "normal_seed_20260907",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.00031934157641385247,
+          "mare": 0.005361804685886722,
+          "max_diff": 0.001953125,
+          "mean_diff": 0.00010098479106090963,
+          "mismatch_count": 0,
+          "total_count": 4096,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.00031934157641385247,
+              "mare": 0.005361804685886722,
+              "mismatch_count": 0,
+              "total_count": 4096,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "dense_negative_tails",
+        "passed": false,
+        "details": {
+          "passed": false,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.052862908921353986,
+          "mare": 0.9983481752485847,
+          "max_diff": 0.001953125,
+          "mean_diff": 0.00010005208172234193,
+          "mismatch_count": 516,
+          "total_count": 8193,
+          "mismatch_ratio": 0.06298059318930795,
+          "small_value_error_count": 112,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 2640,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 613,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": false,
+              "threshold": 0.0009765625,
+              "mere": 0.052862908921353986,
+              "mare": 0.9983481752485847,
+              "mismatch_count": 516,
+              "total_count": 8193,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_4",
+        "passed": false,
+        "details": {
+          "passed": false,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.05220308950785934,
+          "mare": 0.9980797019787484,
+          "max_diff": 0.001953125,
+          "mean_diff": 9.849708215070281e-05,
+          "mismatch_count": 32,
+          "total_count": 513,
+          "mismatch_ratio": 0.06237816764132553,
+          "small_value_error_count": 7,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 166,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 38,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": false,
+              "threshold": 0.0009765625,
+              "mere": 0.05220308950785934,
+              "mare": 0.9980797019787484,
+              "mismatch_count": 32,
+              "total_count": 513,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_10",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 513,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 513,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_14",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 513,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 513,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_17",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 4.259226440113626e-06,
+          "mare": 0.00218498316377829,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 4.647535655001218e-10,
+          "mismatch_count": 0,
+          "total_count": 513,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 4.259226440113626e-06,
+              "mare": 0.00218498316377829,
+              "mismatch_count": 0,
+              "total_count": 513,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "special_values",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 7,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 7,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "finite_limits",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float16",
+          "threshold": 0.0009765625,
+          "mere": 6.243755924395301e-05,
+          "mare": 0.0004995004739516241,
+          "max_diff": 0.0009765625,
+          "mean_diff": 0.0001220703125,
+          "mismatch_count": 0,
+          "total_count": 8,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float16",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0009765625,
+              "mere": 6.243755924395301e-05,
+              "mare": 0.0004995004739516241,
+              "mismatch_count": 0,
+              "total_count": 8,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": false
+  },
+  "corrected-bf16": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "numerical",
+      "variant": "corrected",
+      "dtype": "bfloat16",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/corrected-bf16/result.json"
+    },
+    "completed": false,
+    "observations": [],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 15872,
+    "segments": [
+      {
+        "name": "normal_seed_20260907",
+        "start": 0,
+        "end": 4096
+      },
+      {
+        "name": "dense_negative_tails",
+        "start": 4096,
+        "end": 12289
+      },
+      {
+        "name": "official_range_6",
+        "start": 12289,
+        "end": 12802
+      },
+      {
+        "name": "official_range_12",
+        "start": 12802,
+        "end": 12805
+      },
+      {
+        "name": "official_range_19",
+        "start": 12805,
+        "end": 13318
+      },
+      {
+        "name": "special_values",
+        "start": 13318,
+        "end": 13325
+      },
+      {
+        "name": "finite_limits",
+        "start": 13325,
+        "end": 13333
+      }
+    ],
+    "error": "Traceback (most recent call last):\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 356, in visit\n    return super().visit(node)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/ast.py\", line 418, in visit\n    return visitor(node)\n           ^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 507, in visit_Call\n    return fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/language/core/utils.py\", line 216, in wrapper\n    return fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/language/unary_ops.py\", line 149, in exp\n    return op_unary_impl(input,\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/language/unary_ops.py\", line 34, in op_unary_impl\n    check_dtype(\"input\", input, support_dtypes)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/language/validation.py\", line 40, in check_dtype\n    raise exc_type(f\"'{name}' dtype must be {dtypes_str}, got {dtype}\")\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/check.py\", line 127, in main\n    compiled=compile_preflight()\n             ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/check.py\", line 125, in compile_preflight\n    return kernel._compile_kernel(prereqs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/runtime/jit.py\", line 173, in _compile_kernel\n    mod = self._run_codegen(Specialization(prereqs.arg_types, prereqs.constexprs), prereqs.codegen_options)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/runtime/jit.py\", line 205, in _run_codegen\n    visitor.visit(self.node)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 356, in visit\n    return super().visit(node)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/ast.py\", line 418, in visit\n    return visitor(node)\n           ^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 608, in visit_FunctionDef\n    self.visit_statements(node.body)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 394, in visit_statements\n    self.visit(stmt)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 356, in visit\n    return super().visit(node)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/ast.py\", line 418, in visit\n    return visitor(node)\n           ^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 566, in visit_For\n    block_inout = self.compute_inout(node, node.body, (target, start.to_ir().get_type()), make_args=True)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 262, in compute_inout\n    self.visit_statements(stmts)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 394, in visit_statements\n    self.visit(stmt)\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 356, in visit\n    return super().visit(node)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/ast.py\", line 418, in visit\n    return visitor(node)\n           ^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 414, in visit_Assign\n    rhs = self.visit(node.value)\n          ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/codegen/function_visitor.py\", line 361, in visit\n    raise CodegenError(node, self.src, f\"{e.__class__.__name__}: {e}\") from e\nasc.codegen.errors.CodegenError: at <source>:19:20:\n        input_cub = input_sq * row\n        input_cub = row + input_cub * TANH_APPROX_FACTOR\n        input_cub = input_cub * NEG_SQRT_EIGHT_OVER_PI\n        input_cub = asctile.exp(input_cub)\n                    ^\n        input_cub = input_cub + 1\n        out = row / input_cub\n        asctile.copy_out(out, out_gm, [current_offset])\nRuntimeError: 'input' dtype must be one of float16, float32, got bfloat16\n"
+  },
+  "corrected-f32-vf1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "numerical",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/corrected-f32-vf1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 15872,
+    "segments": [
+      {
+        "name": "normal_seed_20260907",
+        "start": 0,
+        "end": 4096
+      },
+      {
+        "name": "dense_negative_tails",
+        "start": 4096,
+        "end": 12289
+      },
+      {
+        "name": "official_range_5",
+        "start": 12289,
+        "end": 12802
+      },
+      {
+        "name": "official_range_8",
+        "start": 12802,
+        "end": 13315
+      },
+      {
+        "name": "special_values",
+        "start": 13315,
+        "end": 13322
+      },
+      {
+        "name": "finite_limits",
+        "start": 13322,
+        "end": 13330
+      }
+    ],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "acbfec302e77d3bb37a02f6dc2eeb5b513c50862f2e528e47528538ce72956cb",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 18.599900175002404,
+    "checks": [
+      {
+        "segment": "normal_seed_20260907",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 4.0428019626378203e-08,
+          "mare": 6.411488363545937e-07,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 1.1811795985749995e-08,
+          "mismatch_count": 0,
+          "total_count": 4096,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 4.0428019626378203e-08,
+              "mare": 6.411488363545937e-07,
+              "mismatch_count": 0,
+              "total_count": 4096,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "dense_negative_tails",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 6.642100876750513e-08,
+          "mare": 1.735588356301823e-06,
+          "max_diff": 4.76837158203125e-07,
+          "mean_diff": 2.108884401388214e-08,
+          "mismatch_count": 0,
+          "total_count": 8193,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 6.642100876750513e-08,
+              "mare": 1.735588356301823e-06,
+              "mismatch_count": 0,
+              "total_count": 8193,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_5",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 4.834329778938431e-09,
+          "mare": 6.667999424006532e-07,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 1.253370439703519e-09,
+          "mismatch_count": 0,
+          "total_count": 513,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 4.834329778938431e-09,
+              "mare": 6.667999424006532e-07,
+              "mismatch_count": 0,
+              "total_count": 513,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_8",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 8.544653376710243e-08,
+          "mare": 1.199828135818452e-06,
+          "max_diff": 4.76837158203125e-07,
+          "mean_diff": 2.7443800793079092e-08,
+          "mismatch_count": 0,
+          "total_count": 513,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 8.544653376710243e-08,
+              "mare": 1.199828135818452e-06,
+              "mismatch_count": 0,
+              "total_count": 513,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "special_values",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 7,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 7,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "finite_limits",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 1.96963157786238e-08,
+          "mare": 9.658136065970716e-08,
+          "max_diff": 1.1920928955078125e-07,
+          "mean_diff": 1.6763806343078613e-08,
+          "mismatch_count": 0,
+          "total_count": 8,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 1.96963157786238e-08,
+              "mare": 9.658136065970716e-08,
+              "mismatch_count": 0,
+              "total_count": 8,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true
+  },
+  "corrected-f32-r2-vf1": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "numerical",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 15872,
+      "unroll": 2,
+      "cores": 1,
+      "size": 31744,
+      "reuse": 2,
+      "vf": 1,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/corrected-f32-r2-vf1/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 2,
+          "static_alloc": null,
+          "vf_fusion": true
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "elements": 15872,
+    "segments": [
+      {
+        "name": "normal_seed_20260907",
+        "start": 0,
+        "end": 4096
+      },
+      {
+        "name": "dense_negative_tails",
+        "start": 4096,
+        "end": 12289
+      },
+      {
+        "name": "official_range_5",
+        "start": 12289,
+        "end": 12802
+      },
+      {
+        "name": "official_range_8",
+        "start": 12802,
+        "end": 13315
+      },
+      {
+        "name": "special_values",
+        "start": 13315,
+        "end": 13322
+      },
+      {
+        "name": "finite_limits",
+        "start": 13322,
+        "end": 13330
+      }
+    ],
+    "memory_consumed": {
+      "UB": 253952
+    },
+    "binary_sha256": "9171e080690324ca992088570f00e431983db80e27cedfd5bbbf3236306bd893",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 18.81708380091004,
+    "checks": [
+      {
+        "segment": "normal_seed_20260907",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 4.0428019626378203e-08,
+          "mare": 6.411488363545937e-07,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 1.1811795985749995e-08,
+          "mismatch_count": 0,
+          "total_count": 4096,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 4.0428019626378203e-08,
+              "mare": 6.411488363545937e-07,
+              "mismatch_count": 0,
+              "total_count": 4096,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "dense_negative_tails",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 6.642100876750513e-08,
+          "mare": 1.735588356301823e-06,
+          "max_diff": 4.76837158203125e-07,
+          "mean_diff": 2.108884401388214e-08,
+          "mismatch_count": 0,
+          "total_count": 8193,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 6.642100876750513e-08,
+              "mare": 1.735588356301823e-06,
+              "mismatch_count": 0,
+              "total_count": 8193,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_5",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 4.834329778938431e-09,
+          "mare": 6.667999424006532e-07,
+          "max_diff": 2.384185791015625e-07,
+          "mean_diff": 1.253370439703519e-09,
+          "mismatch_count": 0,
+          "total_count": 513,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 4.834329778938431e-09,
+              "mare": 6.667999424006532e-07,
+              "mismatch_count": 0,
+              "total_count": 513,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "official_range_8",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 8.544653376710243e-08,
+          "mare": 1.199828135818452e-06,
+          "max_diff": 4.76837158203125e-07,
+          "mean_diff": 2.7443800793079092e-08,
+          "mismatch_count": 0,
+          "total_count": 513,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 8.544653376710243e-08,
+              "mare": 1.199828135818452e-06,
+              "mismatch_count": 0,
+              "total_count": 513,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "special_values",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 0.0,
+          "mare": 0.0,
+          "max_diff": 0.0,
+          "mean_diff": 0.0,
+          "mismatch_count": 0,
+          "total_count": 7,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 0.0,
+              "mare": 0.0,
+              "mismatch_count": 0,
+              "total_count": 7,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      },
+      {
+        "segment": "finite_limits",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 1.96963157786238e-08,
+          "mare": 9.658136065970716e-08,
+          "max_diff": 1.1920928955078125e-07,
+          "mean_diff": 1.6763806343078613e-08,
+          "mismatch_count": 0,
+          "total_count": 8,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 1.96963157786238e-08,
+              "mare": 9.658136065970716e-08,
+              "mismatch_count": 0,
+              "total_count": 8,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true
+  },
+  "tail-cores8": {
+    "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+    "args": {
+      "phase": "tail",
+      "variant": "corrected",
+      "dtype": "float32",
+      "tile": 1024,
+      "unroll": 1,
+      "cores": 8,
+      "size": 2049,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/tail-cores8/result.json"
+    },
+    "completed": true,
+    "observations": [
+      {
+        "effective_options": {
+          "debug": false,
+          "strip_loc": false,
+          "verify_sync": true,
+          "print_ir_before_all": false,
+          "run_passes": true,
+          "kernel_type": null,
+          "auto_sync": true,
+          "auto_sync_log": "",
+          "matmul_cube_only": false,
+          "always_compile": true,
+          "bisheng_options": null,
+          "opt_level": 3,
+          "insert_sync": true,
+          "vf_vec_len": null,
+          "reuse_alloc": 1,
+          "static_alloc": null,
+          "vf_fusion": false
+        }
+      }
+    ],
+    "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+    "target_function_ast_unchanged": true,
+    "source_sha256": "857ff411e71c065089316c790f5ba6aa9d1fdfaddd7b6f97cdc785bfaf5ec951",
+    "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+    "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+    "requested_options": {
+      "reuse_alloc": 1,
+      "static_alloc": null,
+      "vf_fusion": false,
+      "insert_sync": true,
+      "opt_level": 3,
+      "debug": false
+    },
+    "coefficients": {
+      "TANH_APPROX_FACTOR": 0.044715,
+      "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+    },
+    "guard_allocation_elements": 8448,
+    "elements": 2049,
+    "segments": [
+      {
+        "name": "tail_valid_region",
+        "start": 0,
+        "end": 2049
+      }
+    ],
+    "memory_consumed": {
+      "UB": 8192
+    },
+    "binary_sha256": "e7a19efc54fcf98c5294f2a882d013e905a78edfff660dd87a7e278c15434fa6",
+    "ub_fit": true,
+    "compile_passed": true,
+    "phase": "complete",
+    "diagnostic_wall_seconds": 9.883014837978408,
+    "checks": [
+      {
+        "segment": "tail_valid_region",
+        "passed": true,
+        "details": {
+          "passed": true,
+          "dtype": "float32",
+          "threshold": 0.0001220703125,
+          "mere": 4.437326902545667e-08,
+          "mare": 4.298269182247478e-07,
+          "max_diff": 1.1920928955078125e-07,
+          "mean_diff": 1.6173889170541247e-08,
+          "mismatch_count": 0,
+          "total_count": 2049,
+          "mismatch_ratio": 0.0,
+          "small_value_error_count": 0,
+          "small_value_cpu_error_count": 0,
+          "small_value_total_count": 0,
+          "cancel_error_count": 0,
+          "cancel_cpu_error_count": 0,
+          "cancel_total_count": 0,
+          "error_msg": null,
+          "output_results": [
+            {
+              "index": 0,
+              "name": "",
+              "dtype": "float32",
+              "dtype_category": "float",
+              "passed": true,
+              "threshold": 0.0001220703125,
+              "mere": 4.437326902545667e-08,
+              "mare": 4.298269182247478e-07,
+              "mismatch_count": 0,
+              "total_count": 2049,
+              "max_abs_diff": 0,
+              "error_msg": ""
+            }
+          ]
+        }
+      }
+    ],
+    "numerical_passed": true,
+    "writes_outside_logical_size": 0,
+    "outer_guard_untouched": true
+  }
+}

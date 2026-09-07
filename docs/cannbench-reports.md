@@ -4,6 +4,22 @@ This index collects the CANNBench evaluation reports and their corresponding
 remote runs. CANNBench job pages may require the account used for the private
 submissions.
 
+## Corrected high-level AscTile GeLU (2026-09-07)
+
+- [Report and implementation](../integrations/cannbench/comparisons/gelu-target-corrected-20260907/README.md)
+- [All 20 shapes/dtypes/modes and hardware timings](../integrations/cannbench/comparisons/gelu-target-corrected-20260907/RESULTS.md)
+- [Comparison CSV](../integrations/cannbench/comparisons/gelu-target-corrected-20260907/case-results.csv)
+- [CANNBench job `job_6589259af036`](https://cannbench.com/workspace/jobs/job_6589259af036)
+- [Erf algorithm-selection API request, with Russian comment](https://gitcode.com/compiler-team/pyasc/issues/8)
+
+Pinned pyasc v2 `adadd7d66ed0ee16d33d79487bf584899a26ef1e`; public AscTile,
+no authored inline/register code. **20/20 correct**, zero anti-cheat failures.
+Large FP32 tanh reaches **1.1411×** reference. Fourteen of eighteen common
+passing cases improve versus the earlier high-level diagnostic; exact FP32
+accuracy is fixed, but it remains slow. Independent geometric mean over all
+20 reference/candidate ratios is **0.3533×** (API arithmetic-equivalent field:
+0.4636×). The historical low-level iteration04 remains faster overall.
+
 ## Full pilot run
 
 - [HTML report](cannbench-pyasc-skill-stack-report-2026-09-02.html)

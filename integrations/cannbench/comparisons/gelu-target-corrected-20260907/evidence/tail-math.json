@@ -1,0 +1,38 @@
+{
+  "scope": "CPU formula convergence only",
+  "reference": "https://dlmf.nist.gov/7.9.E1",
+  "range": [
+    2,
+    14
+  ],
+  "samples": 200001,
+  "convergence": [
+    {
+      "depth": 4,
+      "maximum_relative_error": 0.0027671265448621085
+    },
+    {
+      "depth": 6,
+      "maximum_relative_error": 0.0005989814063869225
+    },
+    {
+      "depth": 8,
+      "maximum_relative_error": 0.0001559327664268917
+    },
+    {
+      "depth": 12,
+      "maximum_relative_error": 1.5145527742177478e-05
+    },
+    {
+      "depth": 16,
+      "maximum_relative_error": 2.022435877213624e-06
+    }
+  ],
+  "ops_nn_revision": "f7a6b3e2c4f4c1bb4a2890dfb1e589170f21b307",
+  "sources": {
+    "/home/aloschilov/workspace/ops-nn/activation/gelu_v2/op_kernel/arch35/gelu_v2_dag.h": "053fc765623b4b8377c191b98f071fbbf9ebf3c5521f752f58be250a35989da5",
+    "/usr/local/Ascend/cann-9.0.0/aarch64-linux/pkg_inc/op_common/atvoss/util/vec.h": "3f249fdf22ea334b368e51000071a6fd1e8eb53087e5cb73833ea2aedc090be9",
+    "/usr/local/Ascend/cann-9.0.0/aarch64-linux/asc/include/adv_api/math/erf_utils.h": "352b71564861fde11643dbcae4957ddebe84ee405aab32ee1b17f1e6bebdf556",
+    "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/language/unary_ops.py": "e54c747a79abe3013cce55db580f0aa713ad2dd85ff4c2ac3ccb51123ffe706a"
+  }
+}

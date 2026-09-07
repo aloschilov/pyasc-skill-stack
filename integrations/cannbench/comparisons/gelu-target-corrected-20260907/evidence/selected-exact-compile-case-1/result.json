@@ -1,0 +1,73 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "args": {
+    "phase": "compile",
+    "variant": "exact",
+    "dtype": "float16",
+    "tile": 8192,
+    "unroll": 2,
+    "cores": 72,
+    "size": 1048576,
+    "reuse": 1,
+    "vf": 0,
+    "static": "default",
+    "compact_stress": false,
+    "repeat": 1,
+    "perf_range": [
+      -2.0,
+      2.0
+    ],
+    "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-target-corrected-20260907/evidence/selected-exact-compile-case-1/result.json"
+  },
+  "completed": true,
+  "observations": [
+    {
+      "effective_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": null,
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": true,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": null,
+        "reuse_alloc": 1,
+        "static_alloc": null,
+        "vf_fusion": false
+      }
+    }
+  ],
+  "harness_sha256": "b9654d62f62a422ca23aa131d47af72114519a34d82d74ed4bb2ddf23745e155",
+  "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+  "target_function_ast_unchanged": false,
+  "source_sha256": "6c405f870b889096d6ea4d45dbe1742325b0fbb716f362eaa1921a1e54630df7",
+  "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+  "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+  "requested_options": {
+    "reuse_alloc": 1,
+    "static_alloc": null,
+    "vf_fusion": false,
+    "insert_sync": true,
+    "opt_level": 3,
+    "debug": false
+  },
+  "coefficients": {
+    "inverse_sqrt_two": 0.7071067811865476
+  },
+  "approximate": "none",
+  "change_scope": "New exact target-style template; FP32 intermediates, scale x first, explicit tails",
+  "elements": 1048576,
+  "segments": [],
+  "memory_consumed": {
+    "UB": 98304
+  },
+  "binary_sha256": "d5f4db6bd252ecf9899356af923f4c256f656c5e14b4272f2c7333424e02bf89",
+  "ub_fit": true,
+  "compile_passed": true
+}

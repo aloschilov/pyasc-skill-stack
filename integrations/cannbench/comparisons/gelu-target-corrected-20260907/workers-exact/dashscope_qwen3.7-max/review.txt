@@ -1,0 +1,23 @@
+## Challenge of the Local Exact GeLU Qualification
+
+**Oracle and approximate mode.** Confirmed: `check.py` sets `mode='none'` for exact, and the oracle is `torch.nn.functional.gelu(values.double(), approximate="none")` evaluated through the official CANNBench `precision.compare_tensors`. This is correct.
+
+**Dtype promotion.** Partially supported. `exact_kernel.py` promotes to FP32 (`raw.to(asctile.float32)`) and casts back (`out.to(raw.dtype)`). However, the claim "scale x first" is misleading: `(x * 0.5) * (erf(x * 1/√2) + 1.0)` multiplies by 0.5 in the **leading** factor, not at the cancellation site. The `+1` cancellation inside `erf(negative_large) + 1 ≈ 0` is structurally identical to the standard formula. Pre-scaling the outside does nothing for the inner catastrophic cancellation, and the document never acknowledges that `asctile.erfc` (if available) or a sign-conditional `erfc(-x/√2)` branch for negative x would eliminate the cancellation entirely—this is a concrete, high-level remediation that is not discussed.
+
+**Sampled vs. full-shape distinction.** Correctly stated: the report explicitly labels results as "sampled probes, **not full official shapes**." The `dense_negative_tails` segment (8193 linspace points) is an adversarial probe, not an official case. The 513-point official-range samples pass; the dense grid fails. This separation is maintained throughout.
+
+**Compile vs. accuracy.** Correctly separated: `compile_passed: true` and `numerical_passed: false` for FP32, with UB tracked independently. The report does not conflate them.
+
+**API limitation vs. compiler defect.** The cancellation count gap (51 compiled vs. 5 CPU for 484 cancellation-range elements at x=−4.11) shows the compiled `erf` implementation loses precision beyond standard FP32 arithmetic—CPU FP32 stays close to the double-precision reference while the compiled kernel diverges (0.303% relative error). The report correctly says this does "not newly prove a particular pass defect" but should be more precise: this is strong evidence of a **compiled-path `erf` accuracy deficit**, not merely an API limitation or formula choice.
+
+**Concrete unsupported claims requiring correction:**
+
+1. The report omits any discussion of `erfc`-based formulations as a potential high-level fix. Before permanently blocking the exact route, this alternative should be evaluated—it's a public-API change, not a low-level fallback.
+
+2. The claim "low expected value without a new accuracy remedy" implicitly assumes no high-level remedy exists. The `erfc` sign-branch approach contradicts this.
+
+3. No `tail` phase, no `static_alloc={True,False}`, no `reuse_alloc={0,2}`, and no multi-core runs are included. These JIT matrix cells are untested yet the decision frames the candidate as fully evaluated.
+
+4. The concrete-point analysis correctly shows compiled divergence but does not compare against a compiled `asctile.erf` unit test in isolation to confirm the primitive itself (not operator fusion or reorder) is the source.
+
+**Decision rationale** (not to spend a submission credit) is sound given the FP32 gate failure, but should be re-opened if `erfc` availability is confirmed.
