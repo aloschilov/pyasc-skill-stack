@@ -1,0 +1,47 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "x": -4.111328125,
+  "actual": -8.111295755952597e-05,
+  "golden": -8.086769955458579e-05,
+  "cpu": -8.086790330708027e-05,
+  "z": -2.9071478843688965,
+  "erf_actual": -0.9999605417251587,
+  "erf_double": -0.9999606610064533,
+  "erf_correctly_rounded_f32": -0.9999606609344482,
+  "ideal_rounded_erf_path": -8.086790330708027e-05,
+  "checker": {
+    "passed": false,
+    "dtype": "float32",
+    "threshold": 0.0001220703125,
+    "mere": 0.0030290841969118705,
+    "mare": 0.003029084196911871,
+    "max_diff": 2.452579792588949e-07,
+    "mean_diff": 2.452579792588949e-07,
+    "mismatch_count": 64,
+    "total_count": 64,
+    "mismatch_ratio": 1.0,
+    "small_value_error_count": 0,
+    "small_value_cpu_error_count": 0,
+    "small_value_total_count": 0,
+    "cancel_error_count": 64,
+    "cancel_cpu_error_count": 0,
+    "cancel_total_count": 64,
+    "error_msg": null,
+    "output_results": [
+      {
+        "index": 0,
+        "name": "",
+        "dtype": "float32",
+        "dtype_category": "float",
+        "passed": false,
+        "threshold": 0.0001220703125,
+        "mere": 0.0030290841969118705,
+        "mare": 0.003029084196911871,
+        "mismatch_count": 64,
+        "total_count": 64,
+        "max_abs_diff": 0,
+        "error_msg": ""
+      }
+    ]
+  }
+}
