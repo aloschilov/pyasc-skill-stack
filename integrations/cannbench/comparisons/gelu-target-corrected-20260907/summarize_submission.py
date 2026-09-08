@@ -2,6 +2,7 @@
 import csv
 import hashlib
 import json
+import math
 from pathlib import Path
 import statistics
 import yaml
@@ -16,6 +17,8 @@ historic=json.loads((ROOT.parent/'gelu-perf-20260907/remote_runs/job.json').read
 historic=historic.get('job',historic)
 historic_cases={c['case_id']:c for c in historic.get('results',{}).get('operators',[{'cases':[]}])[0]['cases']}
 rows=[]
+package=json.loads((ROOT/'evidence/package-x86.json').read_text())
+dispatch={c['case_id']:c for c in package['case_results']}
 source_lines=(ROOT/'candidate/gelu.py').read_text().splitlines()
 source_lines_by_mode={'tanh':next(i for i,s in enumerate(source_lines,1) if 'if approximate:' in s),
                      'none':next(i for i,s in enumerate(source_lines,1) if 'out = (x * 0.5)' in s)}
@@ -34,6 +37,18 @@ for c in job['results']['operators'][0]['cases']:
         unroll=1 if route=='fp32-exact-tail' else 2,vf_fusion=route=='fp32-exact-tail',
         implementation=f'candidate/gelu.py#L{source_lines_by_mode[mode]}',
         job_url=f"https://cannbench.com/workspace/jobs/{job['id']}"))
+    r=rows[-1]
+    r['vector_blocks']=dispatch[definition['case_id']]['cores'][0]
+    assert r['vector_blocks']==min(72, math.ceil(math.prod(definition['input_shape'][0])/r['tile']))
+    specs=[s for s in package['specializations']
+           if s['constexprs']['tile_length']==f"ConstExpr[int]({r['tile']})"
+           and s['constexprs']['approximate']==f"ConstExpr[bool]({mode=='tanh'})"]
+    assert specs and len({s['memory_consumed']['UB'] for s in specs})==1
+    assert all(s['compile_options']['vf_fusion']==r['vf_fusion'] for s in specs)
+    r['ub_bytes']=specs[0]['memory_consumed']['UB']
+    r['reuse_alloc']=specs[0]['compile_options']['reuse_alloc']
+    r['static_alloc_requested']='None'
+    r['static_alloc_effective']=True
 positive=[r['speedup'] for r in rows if r['status']=='success' and r['speedup'] and r['speedup']>0]
 matched=[r for r in rows if r['accuracy_passed'] and r['previous_high_level_passed'] and r['elapsed_us'] and r['previous_high_level_us']]
 summary=dict(job_id=job['id'],job_url=f"https://cannbench.com/workspace/jobs/{job['id']}",status=job['status'],
@@ -62,10 +77,46 @@ with (ROOT/'case-results.csv').open('w',newline='') as stream:
 def fmt(v): return '—' if v is None else f'{v:.4f}' if isinstance(v,float) else str(v)
 lines=['# GeLU hardware results','',f"[CANNBench job {job['id']}]({summary['job_url']}) — {job['passed_cases']}/{job['total_cases']} correct; status `{job['status']}`.",'',
     'All times below are hardware microseconds. Speedup = official reference / candidate; ≥1 means at least as fast as the reference. Links may require CANNBench sign-in.', '',
-    '| Case | Shape | dtype | Mode | Candidate µs | Reference µs | Speedup | Accuracy | Implementation |',
-    '|---|---|---|---|---:|---:|---:|---|---|']
+    '| Case | Shape | dtype | Mode | Tile (elements) | Unroll | Vector blocks | VF fusion | UB (KiB) | Previous high-level µs | Candidate µs | Reference µs | Speedup | Accuracy | Implementation |',
+    '|---|---|---|---|---:|---:|---:|---|---:|---:|---:|---:|---:|---|---|']
 for r in rows:
-    lines.append(f"| [{r['case_id']}]({r['job_url']}) | {r['shape']} | {r['dtype']} | {r['approximate']} | {fmt(r['elapsed_us'])} | {fmt(r['reference_us'])} | {fmt(r['speedup'])}× | {r['accuracy_passed']} | [{r['route']}]({r['implementation']}) |")
+    previous=fmt(r['previous_high_level_us']) if r['previous_high_level_passed'] else 'FAIL'
+    lines.append(f"| [{r['case_id']}]({r['job_url']}) | {r['shape']} | {r['dtype']} | {r['approximate']} | {r['tile']} | {r['unroll']} | {r['vector_blocks']} | {r['vf_fusion']} | {r['ub_bytes']//1024} | {previous} | {fmt(r['elapsed_us'])} | {fmt(r['reference_us'])} | {fmt(r['speedup'])}× | {r['accuracy_passed']} | [{r['route']}]({r['implementation']}) |")
+table='\n'.join(lines[6:])
+navigation='''## Case navigation: shapes, implementations and submitted tiling
+
+All 20 cases below belong to [job_6589259af036](https://cannbench.com/workspace/jobs/job_6589259af036).
+Case links open the job (sign-in may be required); implementation links open the
+actual submitted kernel branch. This is one authored kernel with six dtype/mode
+specializations, not 20 separate kernels. `none` means exact GeLU.
+
+Tile is the number of **flattened tensor elements**, not a row dimension.
+[Geometry selection](candidate/gelu.py#L12), [partition/tail loop](candidate/gelu.py#L27)
+and [launch/JIT options](candidate/gelu.py#L62) define the submitted configuration.
+Vector blocks are the launched AIV block count, verified for each official shape
+in [dispatch/compilation evidence](evidence/package-x86.json); some end blocks can
+have no useful tiles. This is not a measurement of simultaneous core occupancy.
+UB is static compiler-reported storage per specialization, not device telemetry.
+All rows use `reuse_alloc=1`, `static_alloc=None` (effective enabled),
+`insert_sync=True`, `opt_level=3`, `debug=False`; VF and unrolling vary as shown.
+
+Times are hardware µs; speedup is reference/candidate. Previous high-level is
+[job_cdee9a024da2](https://cannbench.com/workspace/jobs/job_cdee9a024da2);
+`FAIL` means accuracy failed, not zero time. Cross-run differences are observational.
+The [CSV](case-results.csv) also retains historical low-level timings and common flags.
+
+'''+table+'\n'
+readme=ROOT/'README.md'
+text=readme.read_text()
+start='<!-- case-navigation:start -->'
+end='<!-- case-navigation:end -->'
+section=start+'\n'+navigation+end+'\n\n'
+if start in text:
+    first=text.index(start);last=text.index(end,first)+len(end)
+    text=text[:first]+section.rstrip()+text[last:]
+else:
+    text=text.replace('## Implementation and configuration\n',section+'## Implementation and configuration\n')
+readme.write_text(text)
 lines+=['','See [CSV](case-results.csv) for previous high-level and historical low-level latencies and geometry, and [sanitized summary](hardware-summary.json) for environment and exact aggregates.',
     '',f"Previous high-level job: [{old['id']}](https://cannbench.com/workspace/jobs/{old['id']}); {len(matched)} common passing cases, {summary['faster_than_previous_high_level']} faster, geometric mean of old/new latency ratios {fmt(summary['matched_latency_geomean_improvement'])}×.",
     '',f"Historical low-level comparison: [{historic['id']}](https://cannbench.com/workspace/jobs/{historic['id']}). This is not the same authored API/style or a controlled matched rerun.",
