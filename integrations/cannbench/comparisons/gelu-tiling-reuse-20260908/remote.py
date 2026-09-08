@@ -3,6 +3,7 @@ import argparse
 import ast
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
 import time
@@ -48,11 +49,23 @@ def qualify():
         if name.startswith('tail-'):assert r['writes_outside_logical_size']==0 and r['outer_guard_untouched']
     audit=json.loads((ROOT/'evidence/dispatch.json').read_text())
     assert audit['source_sha256']==m['candidate_sha256'] and audit['source_gate']=='passed'
+    for case in audit['cases']:
+        route=('float16' if case['dtype']=='bfloat16' else case['dtype'])+'-'+case['mode']
+        c=selected[route]
+        assert json.loads(case['tile_shape'])==[c['tile']] and case['unroll']==c['unroll']
+        assert case['reuse_alloc']==c['reuse'] and case['vf_fusion']==bool(c['vf'])
+        emitted=next(r for r in e['case_results'] if r['case_id']==case['case_id'])
+        assert emitted['cores']==[case['launched_AIV_blocks']]
+    for spec in e['specializations']:
+        options=spec['compile_options']
+        assert options['reuse_alloc']==1 and options['insert_sync'] and options['opt_level']==3
+        assert options['static_alloc'] is None and options['debug'] is False
     save('local-gates.json',{'passed':True,'candidate_sha256':m['candidate_sha256'],'checks':list(q)})
     return m
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--submit',action='store_true');p.add_argument('--retry-incomplete',action='store_true');a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--submit',action='store_true');p.add_argument('--retry-incomplete',action='store_true');p.add_argument('--retry-http1',action='store_true');a=p.parse_args()
+    assert not (a.retry_incomplete and a.retry_http1)
     q=EvalQueue()
     if not (OUT/'submission.json').exists():
         credits=q._client.get_credits();jobs=q._client.list_jobs(limit=100)
@@ -63,15 +76,18 @@ def main():
             save('submission.json',{'job_id':matches[0]['id'],'tag':TAG,'reconciled':True})
         elif a.submit:
             attempt='attempt.json'
-            if a.retry_incomplete:
-                incomplete=json.loads((OUT/'incomplete-transport.json').read_text())
-                previous=json.loads((OUT/'attempt.json').read_text())
+            if a.retry_incomplete or a.retry_http1:
+                incomplete=json.loads((OUT/('incomplete-direct-transport.json' if a.retry_http1 else 'incomplete-transport.json')).read_text())
+                previous=json.loads((OUT/('attempt-direct-route.json' if a.retry_http1 else 'attempt.json')).read_text())
                 assert incomplete['curl_exit_code']==-15 and not Path(f"/proc/{incomplete['curl_pid']}").exists()
                 assert incomplete['archive_fd_position_before_abort']<incomplete['archive_size_bytes']==(ROOT/'diagnostic.zip').stat().st_size
                 assert incomplete['archive_sha256']==previous['archive_sha256']==sha(ROOT/'diagnostic.zip')
                 assert incomplete['reconciled_job_created_after_abort'] is False
                 assert incomplete['reconciled_remaining_after_abort']==credits['credits']['remaining']
-                attempt='attempt-direct-route.json'
+                attempt='attempt-http1.json' if a.retry_http1 else 'attempt-direct-route.json'
+                if a.retry_http1:
+                    assert (ROOT/'transport/http1/.curlrc').read_text().strip()=='http1.1'
+                    os.environ['CURL_HOME']=str(ROOT/'transport/http1')
             assert not (OUT/attempt).exists(),'Ambiguous previous attempt; reconcile without retry'
             m=qualify()
             assert credits['credits'].get('unlimited') or credits['credits']['remaining']>0

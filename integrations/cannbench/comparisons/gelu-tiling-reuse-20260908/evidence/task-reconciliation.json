@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "official_case_count": 20,
+  "shape_dtype_mode_notes_all_match": true,
+  "golden_source_identical": true,
+  "golden_sha256": "e07d2064d717a1159adf1481fafbc774a805a8fb198cd78e0cec0e69b91e6b95",
+  "api_null_nonfinite_range_cases": [
+    12,
+    13
+  ],
+  "note": "API serializes Inf/NaN bounds as null; local YAML preserves them. Task API name is case-sensitive Gelu."
+}
