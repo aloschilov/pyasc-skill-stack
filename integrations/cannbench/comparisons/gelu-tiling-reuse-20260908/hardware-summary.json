@@ -1,0 +1,84 @@
+{
+  "job_id": "job_7389707a7850",
+  "job_url": "https://cannbench.com/workspace/jobs/job_7389707a7850",
+  "status": "succeeded",
+  "passed": 20,
+  "total": 20,
+  "api_summary": {
+    "total_operators": 1,
+    "total_cases": 20,
+    "passed_cases": 20,
+    "failed_cases": 0,
+    "cascade_cases": 0,
+    "pass_rate": 1.0,
+    "genuine_pass_rate": 1.0,
+    "overall_score": 62.39218057573159,
+    "accuracy_passed_cases": 20,
+    "anti_cheat_failed_cases": 0,
+    "geometric_mean_speedup": 0.48733884995429033,
+    "geometric_mean_speedup_vs_hw": 0.1814183485323686
+  },
+  "environment": {
+    "npu": "Ascend950PR_9589 \u00d7 1",
+    "cpu": "x86_64",
+    "cann": "9.1.0",
+    "driver": "cann-9.1.0",
+    "pytorch": "2.10.0+cpu",
+    "pytorch_npu": "2.10.0",
+    "torchvision": null,
+    "python": "3.12.13",
+    "os": "Linux-5.4.0-144-generic-x86_64-with-glibc2.35",
+    "docker": "cake-ci / CANN 9.0.0"
+  },
+  "independent_geometric_mean": 0.40354982138651846,
+  "faster_than_previous": 16,
+  "source_sha256": "1d5220eee6e26f3f377eb7ec75be5fcec8c2bfebda4d347b728686b6434dca86",
+  "arithmetic_mean_speedup": 0.48733884995429033,
+  "previous_independent_geometric_mean": 0.35330525623436876,
+  "reference_timings_unchanged": true,
+  "at_least_reference_cases": [
+    5
+  ],
+  "by_route": {
+    "float16-none": {
+      "cases": 2,
+      "geomean_reference_over_new": 0.3775312167066652,
+      "geomean_previous_over_new": 1.0042247758883687
+    },
+    "float16-tanh": {
+      "cases": 4,
+      "geomean_reference_over_new": 0.7404190445335536,
+      "geomean_previous_over_new": 1.009070118493912
+    },
+    "bfloat16-none": {
+      "cases": 3,
+      "geomean_reference_over_new": 0.24996983995566893,
+      "geomean_previous_over_new": 1.0061368090616611
+    },
+    "bfloat16-tanh": {
+      "cases": 3,
+      "geomean_reference_over_new": 0.730631876212335,
+      "geomean_previous_over_new": 1.002891882554539
+    },
+    "float32-none": {
+      "cases": 6,
+      "geomean_reference_over_new": 0.19895499389866625,
+      "geomean_previous_over_new": 1.5348310706517119
+    },
+    "float32-tanh": {
+      "cases": 2,
+      "geomean_reference_over_new": 0.9003672484916874,
+      "geomean_previous_over_new": 1.0086686129730962
+    }
+  },
+  "by_geometry_change": {
+    "changed_fp32_exact": {
+      "cases": 6,
+      "geomean_previous_over_new_latency": 1.5348310706517119
+    },
+    "unchanged_routes": {
+      "cases": 14,
+      "geomean_previous_over_new_latency": 1.0063650634445038
+    }
+  }
+}

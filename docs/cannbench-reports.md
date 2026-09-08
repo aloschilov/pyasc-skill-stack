@@ -9,9 +9,12 @@ Local qualification passed: 14/14 perf configurations, 12/12 numerical/tail chec
 20/20 official compile/dispatch cases. FP32 exact selects tile5120/reuse1;
 other routes retain their measured baseline. Hardware evaluation
 [job_7389707a7850](https://cannbench.com/workspace/jobs/job_7389707a7850)
-has started correctness checking; hardware results are pending. One submission
-credit was charged. The report also includes an aligned local unrolling control,
-explicitly separated from the submitted configuration.
+succeeded: 20/20 correct, zero anti-cheat failures, score 62.3922.
+The six changed FP32 exact cases improved 1.5348× against the previous run;
+the fourteen unchanged cases averaged 1.0064×. Independent geometric mean
+reference/new improved from 0.3533× to 0.4035×; only case5 exceeds reference
+(1.1450×). One submission credit was charged. The report also includes an
+aligned local unrolling control, explicitly separated from hardware results.
 
 This index collects the CANNBench evaluation reports and their corresponding
 remote runs. CANNBench job pages may require the account used for the private

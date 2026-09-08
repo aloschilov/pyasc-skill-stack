@@ -2,7 +2,7 @@
 
 Pinned pyasc v2: `adadd7d66ed0ee16d33d79487bf584899a26ef1e`. Mathematics is unchanged from the [20/20 corrected target run](../gelu-target-corrected-20260907/README.md); only high-level launch/tiling/JIT configuration is tuned. No compiler or low-level-kernel changes.
 
-Hardware: [job_7389707a7850](https://cannbench.com/workspace/jobs/job_7389707a7850) — correctness; hardware results pending.
+Hardware: [job_7389707a7850](https://cannbench.com/workspace/jobs/job_7389707a7850), succeeded, 20/20 correct.
 
 ## Per-case navigation and actual launch configuration
 
@@ -10,26 +10,26 @@ Hardware: [job_7389707a7850](https://cannbench.com/workspace/jobs/job_7389707a78
 
 | Case | Shape | dtype | Mode | tile_shape | Unroll | AIV launched/useful | reuse_alloc | VF fusion | UB KiB / budget % | Previous µs | New µs | Reference µs | Speedup | Accuracy | Kernel |
 |---|---|---|---|---|---:|---|---:|---|---|---:|---:|---:|---:|---|---|
-| [1](https://cannbench.com/workspace/jobs/job_7389707a7850) | [1024, 1024] | float16 | none | [8192] | 2 | 72/64 | 1 | False | 96 / 38.7% | 11.8700 | pending | pending | pending | pending | [source](candidate/gelu.py#L43) |
-| [2](https://cannbench.com/workspace/jobs/job_7389707a7850) | [2048, 2048] | float32 | none | [5120] | 1 | 72/69 | 1 | True | 240 / 96.8% | 132.8100 | pending | pending | pending | pending | [source](candidate/gelu.py#L43) |
-| [3](https://cannbench.com/workspace/jobs/job_7389707a7850) | [4096, 4096] | bfloat16 | none | [8192] | 2 | 72/71 | 1 | False | 96 / 38.7% | 147.8100 | pending | pending | pending | pending | [source](candidate/gelu.py#L43) |
-| [4](https://cannbench.com/workspace/jobs/job_7389707a7850) | [8192, 8192] | float16 | tanh | [8192] | 2 | 72/72 | 1 | False | 128 / 51.6% | 206.0800 | pending | pending | pending | pending | [source](candidate/gelu.py#L37) |
-| [5](https://cannbench.com/workspace/jobs/job_7389707a7850) | [8192, 8192] | float32 | tanh | [15872] | 2 | 72/72 | 1 | False | 248 / 100.0% | 339.3900 | pending | pending | pending | pending | [source](candidate/gelu.py#L37) |
-| [6](https://cannbench.com/workspace/jobs/job_7389707a7850) | [1023, 1023] | bfloat16 | tanh | [8192] | 2 | 72/64 | 1 | False | 128 / 51.6% | 5.8400 | pending | pending | pending | pending | [source](candidate/gelu.py#L37) |
-| [7](https://cannbench.com/workspace/jobs/job_7389707a7850) | [1009, 1021] | float16 | none | [8192] | 2 | 72/63 | 1 | False | 96 / 38.7% | 11.9100 | pending | pending | pending | pending | [source](candidate/gelu.py#L43) |
-| [8](https://cannbench.com/workspace/jobs/job_7389707a7850) | [1537, 769] | float32 | tanh | [15872] | 2 | 72/38 | 1 | False | 248 / 100.0% | 8.7500 | pending | pending | pending | pending | [source](candidate/gelu.py#L37) |
-| [9](https://cannbench.com/workspace/jobs/job_7389707a7850) | [363, 367, 373] | bfloat16 | none | [8192] | 2 | 72/72 | 1 | False | 96 / 38.7% | 433.1000 | pending | pending | pending | pending | [source](candidate/gelu.py#L43) |
-| [10](https://cannbench.com/workspace/jobs/job_7389707a7850) | [2049, 513] | float16 | tanh | [8192] | 2 | 72/65 | 1 | False | 128 / 51.6% | 5.8800 | pending | pending | pending | pending | [source](candidate/gelu.py#L37) |
-| [11](https://cannbench.com/workspace/jobs/job_7389707a7850) | [3, 7, 13, 4001] | float32 | none | [5120] | 1 | 72/72 | 1 | True | 240 / 96.8% | 37.2700 | pending | pending | pending | pending | [source](candidate/gelu.py#L43) |
-| [12](https://cannbench.com/workspace/jobs/job_7389707a7850) | [1000003] | bfloat16 | tanh | [8192] | 2 | 72/62 | 1 | False | 128 / 51.6% | 5.8800 | pending | pending | pending | pending | [source](candidate/gelu.py#L37) |
-| [13](https://cannbench.com/workspace/jobs/job_7389707a7850) | [11, 13, 17, 67, 67] | float32 | none | [5120] | 1 | 72/72 | 1 | True | 240 / 96.8% | 342.5200 | pending | pending | pending | pending | [source](candidate/gelu.py#L43) |
-| [14](https://cannbench.com/workspace/jobs/job_7389707a7850) | [3, 7, 11, 13, 1009] | float16 | tanh | [8192] | 2 | 72/62 | 1 | False | 128 / 51.6% | 11.9400 | pending | pending | pending | pending | [source](candidate/gelu.py#L37) |
-| [15](https://cannbench.com/workspace/jobs/job_7389707a7850) | [512, 2049] | float32 | none | [5120] | 1 | 72/69 | 1 | True | 240 / 96.8% | 36.4700 | pending | pending | pending | pending | [source](candidate/gelu.py#L43) |
-| [16](https://cannbench.com/workspace/jobs/job_7389707a7850) | [255, 8193] | bfloat16 | none | [8192] | 2 | 72/64 | 1 | False | 96 / 38.7% | 22.4800 | pending | pending | pending | pending | [source](candidate/gelu.py#L43) |
-| [17](https://cannbench.com/workspace/jobs/job_7389707a7850) | [4097, 511] | float16 | tanh | [8192] | 2 | 72/64 | 1 | False | 128 / 51.6% | 9.2300 | pending | pending | pending | pending | [source](candidate/gelu.py#L37) |
-| [18](https://cannbench.com/workspace/jobs/job_7389707a7850) | [2, 511, 2049] | float32 | none | [5120] | 1 | 72/69 | 1 | True | 240 / 96.8% | 68.7700 | pending | pending | pending | pending | [source](candidate/gelu.py#L43) |
-| [19](https://cannbench.com/workspace/jobs/job_7389707a7850) | [4, 255, 2049] | bfloat16 | tanh | [8192] | 2 | 72/64 | 1 | False | 128 / 51.6% | 9.2100 | pending | pending | pending | pending | [source](candidate/gelu.py#L37) |
-| [20](https://cannbench.com/workspace/jobs/job_7389707a7850) | [2, 3, 17, 1024, 101] | float32 | none | [5120] | 1 | 72/72 | 1 | True | 240 / 96.8% | 331.0900 | pending | pending | pending | pending | [source](candidate/gelu.py#L43) |
+| [1](https://cannbench.com/workspace/jobs/job_7389707a7850) | [1024, 1024] | float16 | none | [8192] | 2 | 72/64 | 1 | False | 96 / 38.7% | 11.8700 | 11.8700 | 4.4900 | 0.3783 | True | [source](candidate/gelu.py#L43) |
+| [2](https://cannbench.com/workspace/jobs/job_7389707a7850) | [2048, 2048] | float32 | none | [5120] | 1 | 72/69 | 1 | True | 240 / 96.8% | 132.8100 | 88.0700 | 15.3700 | 0.1745 | True | [source](candidate/gelu.py#L43) |
+| [3](https://cannbench.com/workspace/jobs/job_7389707a7850) | [4096, 4096] | bfloat16 | none | [8192] | 2 | 72/71 | 1 | False | 96 / 38.7% | 147.8100 | 147.7600 | 30.1400 | 0.2040 | True | [source](candidate/gelu.py#L43) |
+| [4](https://cannbench.com/workspace/jobs/job_7389707a7850) | [8192, 8192] | float16 | tanh | [8192] | 2 | 72/72 | 1 | False | 128 / 51.6% | 206.0800 | 203.0100 | 172.9300 | 0.8518 | True | [source](candidate/gelu.py#L37) |
+| [5](https://cannbench.com/workspace/jobs/job_7389707a7850) | [8192, 8192] | float32 | tanh | [15872] | 2 | 72/72 | 1 | False | 248 / 100.0% | 339.3900 | 338.2200 | 387.2650 | 1.1450 | True | [source](candidate/gelu.py#L37) |
+| [6](https://cannbench.com/workspace/jobs/job_7389707a7850) | [1023, 1023] | bfloat16 | tanh | [8192] | 2 | 72/64 | 1 | False | 128 / 51.6% | 5.8400 | 5.9000 | 4.4600 | 0.7559 | True | [source](candidate/gelu.py#L37) |
+| [7](https://cannbench.com/workspace/jobs/job_7389707a7850) | [1009, 1021] | float16 | none | [8192] | 2 | 72/63 | 1 | False | 96 / 38.7% | 11.9100 | 11.8100 | 4.4500 | 0.3768 | True | [source](candidate/gelu.py#L43) |
+| [8](https://cannbench.com/workspace/jobs/job_7389707a7850) | [1537, 769] | float32 | tanh | [15872] | 2 | 72/38 | 1 | False | 248 / 100.0% | 8.7500 | 8.6300 | 6.1100 | 0.7080 | True | [source](candidate/gelu.py#L37) |
+| [9](https://cannbench.com/workspace/jobs/job_7389707a7850) | [363, 367, 373] | bfloat16 | none | [8192] | 2 | 72/72 | 1 | False | 96 / 38.7% | 433.1000 | 432.2900 | 117.5300 | 0.2719 | True | [source](candidate/gelu.py#L43) |
+| [10](https://cannbench.com/workspace/jobs/job_7389707a7850) | [2049, 513] | float16 | tanh | [8192] | 2 | 72/65 | 1 | False | 128 / 51.6% | 5.8800 | 5.8300 | 4.5600 | 0.7822 | True | [source](candidate/gelu.py#L37) |
+| [11](https://cannbench.com/workspace/jobs/job_7389707a7850) | [3, 7, 13, 4001] | float32 | none | [5120] | 1 | 72/72 | 1 | True | 240 / 96.8% | 37.2700 | 24.5500 | 6.0500 | 0.2464 | True | [source](candidate/gelu.py#L43) |
+| [12](https://cannbench.com/workspace/jobs/job_7389707a7850) | [1000003] | bfloat16 | tanh | [8192] | 2 | 72/62 | 1 | False | 128 / 51.6% | 5.8800 | 5.7700 | 4.3800 | 0.7591 | True | [source](candidate/gelu.py#L37) |
+| [13](https://cannbench.com/workspace/jobs/job_7389707a7850) | [11, 13, 17, 67, 67] | float32 | none | [5120] | 1 | 72/72 | 1 | True | 240 / 96.8% | 342.5200 | 215.8000 | 37.4550 | 0.1736 | True | [source](candidate/gelu.py#L43) |
+| [14](https://cannbench.com/workspace/jobs/job_7389707a7850) | [3, 7, 11, 13, 1009] | float16 | tanh | [8192] | 2 | 72/62 | 1 | False | 128 / 51.6% | 11.9400 | 11.7400 | 7.7800 | 0.6627 | True | [source](candidate/gelu.py#L37) |
+| [15](https://cannbench.com/workspace/jobs/job_7389707a7850) | [512, 2049] | float32 | none | [5120] | 1 | 72/69 | 1 | True | 240 / 96.8% | 36.4700 | 24.1600 | 5.9800 | 0.2475 | True | [source](candidate/gelu.py#L43) |
+| [16](https://cannbench.com/workspace/jobs/job_7389707a7850) | [255, 8193] | bfloat16 | none | [8192] | 2 | 72/64 | 1 | False | 96 / 38.7% | 22.4800 | 22.1200 | 6.2300 | 0.2816 | True | [source](candidate/gelu.py#L43) |
+| [17](https://cannbench.com/workspace/jobs/job_7389707a7850) | [4097, 511] | float16 | tanh | [8192] | 2 | 72/64 | 1 | False | 128 / 51.6% | 9.2300 | 9.2700 | 6.3100 | 0.6807 | True | [source](candidate/gelu.py#L37) |
+| [18](https://cannbench.com/workspace/jobs/job_7389707a7850) | [2, 511, 2049] | float32 | none | [5120] | 1 | 72/69 | 1 | True | 240 / 96.8% | 68.7700 | 45.5800 | 8.8600 | 0.1944 | True | [source](candidate/gelu.py#L43) |
+| [19](https://cannbench.com/workspace/jobs/job_7389707a7850) | [4, 255, 2049] | bfloat16 | tanh | [8192] | 2 | 72/64 | 1 | False | 128 / 51.6% | 9.2100 | 9.2100 | 6.2600 | 0.6797 | True | [source](candidate/gelu.py#L37) |
+| [20](https://cannbench.com/workspace/jobs/job_7389707a7850) | [2, 3, 17, 1024, 101] | float32 | none | [5120] | 1 | 72/72 | 1 | True | 240 / 96.8% | 331.0900 | 209.6000 | 36.1950 | 0.1727 | True | [source](candidate/gelu.py#L43) |
 
 Previous timings: [job_6589259af036](https://cannbench.com/workspace/jobs/job_6589259af036). Cross-run comparisons are observational, not a repeated controlled A/B. [CSV](case-results.csv), [host partition audit](evidence/dispatch.json), [package verification](evidence/package-x86.json).
 
@@ -82,3 +82,21 @@ UB is not a utilization target by itself. At identical FP32 exact tile1024, disa
 The authored compute-kernel AST is identical to the previous submission; only one host geometry constant changed. [Package manifest](evidence/package.json) pins source/runtime/wheel/archive hashes; QEMU verified the installed evaluator bytes, host dispatch, IR passes and AscendC translation for all 20 cases, not NPU execution. Native Model checks compile and execute reduced inputs. Six compiled specializations belong to one authored GeLU kernel. The exact [integration gate](evidence/tools/local_compile_gate.py) and [source contract](evidence/tools/source_contract.py) are archived, and the verifier imports those snapshots rather than unpublished workspace changes. [Fresh task reconciliation](evidence/task-reconciliation.json) confirms the current 20 official definitions and golden source. Scripts still require the pinned runtime/toolchain and official precision checker described by the previous report; this is not a standalone installer.
 
 Transport note: two HTTP/2 connections were stopped with provably incomplete archive bodies (6.68 MB and 7.93 MB read out of 25.90 MB). After each stop, absence of a job and unchanged credits were reconciled. The final transport uses the identical archive/tag via the public server address and HTTP/1.1, retaining HTTPS certificate validation. No complete/ambiguous upload is retried automatically; there are no further automatic retries. This is one intended evaluation, not multiple completed benchmark submissions.
+
+## Hardware conclusion
+
+Independent geometric mean reference/new: 0.4035×. Faster than previous in 16/20 cases. API aggregates are retained separately in [hardware summary](hardware-summary.json); do not confuse its field name with the independently calculated geometric mean.
+
+changed_fp32_exact: 6 passing cases, geometric mean previous/new latency 1.5348×.
+
+unchanged_routes: 14 passing cases, geometric mean previous/new latency 1.0064×.
+
+All 20/20 cases passed accuracy; anti-cheat failures: 0. Score: 62.3922. Independent geometric mean improved from 0.3533× to 0.4035× reference. Only case5 exceeds reference (1.1450×). Reference timings unchanged from the prior report: True.
+
+The service field named geometric_mean_speedup is 0.48733885 here, but equals the arithmetic mean of the 20 per-case speedups; the independently calculated geometric mean is 0.40354982. These are different aggregates, not conflicting measurements.
+
+The six changed FP32 exact cases improve by 1.5080–1.5872× (geometric mean 1.5348×, about 34.8% less execution time). The unchanged fourteen cases average 1.0064× old/new, providing a useful cross-run control, not a statistical confidence interval. This supports a real benefit from the changed tiling geometry; it does not separate larger tiles, fewer loop iterations and changed partition sizes. reuse_alloc remained 1 in both hardware runs: this is not a hardware comparison of reuse modes.
+
+FP32 exact still achieves only 0.1990× reference in geometric mean (roughly 5.03× slower), despite using 240/248 KiB UB. Thus insufficient UB fill is not the sole bottleneck. The negative-tail continued fraction and both branches evaluated before selection remain diagnosis candidates, not newly isolated hardware causes.
+
+Next bounded local experiments: fully qualify the existing tile3840/unroll2 candidate, which was faster at the same 240 KiB in the aligned local probe; then compare balanced tile partitioning with the submitted contiguous partition on matched workloads, especially case8 (72 launched/38 useful). Preserve high-level mathematics, required synchronization and official tolerances. Recheck reuse_alloc at the winning geometry. Neither alternative is part of this hardware run; no additional submission was made or authorized by this report update.

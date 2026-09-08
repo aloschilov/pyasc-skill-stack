@@ -83,12 +83,27 @@ lines+=['','## Interpretation and limits','',
     'The authored compute-kernel AST is identical to the previous submission; only one host geometry constant changed. [Package manifest](evidence/package.json) pins source/runtime/wheel/archive hashes; QEMU verified the installed evaluator bytes, host dispatch, IR passes and AscendC translation for all 20 cases, not NPU execution. Native Model checks compile and execute reduced inputs. Six compiled specializations belong to one authored GeLU kernel. The exact [integration gate](evidence/tools/local_compile_gate.py) and [source contract](evidence/tools/source_contract.py) are archived, and the verifier imports those snapshots rather than unpublished workspace changes. [Fresh task reconciliation](evidence/task-reconciliation.json) confirms the current 20 official definitions and golden source. Scripts still require the pinned runtime/toolchain and official precision checker described by the previous report; this is not a standalone installer.','',
     'Transport note: two HTTP/2 connections were stopped with provably incomplete archive bodies (6.68 MB and 7.93 MB read out of 25.90 MB). After each stop, absence of a job and unchanged credits were reconciled. The final transport uses the identical archive/tag via the public server address and HTTP/1.1, retaining HTTPS certificate validation. No complete/ambiguous upload is retried automatically; there are no further automatic retries. This is one intended evaluation, not multiple completed benchmark submissions.','']
 if complete and cases:
+    assert job['id']=='job_7389707a7850'
+    assert job['job_tag']=='pyasc-adadd7d-gelu-tiling-reuse-20260908'
+    assert len(cases)==20 and set(cases)=={r['case_id'] for r in rows}
+    assert all(abs(c['speedup']-c['baseline_perf_us']/c['elapsed_us'])<1e-10
+               for c in cases.values() if c.get('speedup') and c.get('elapsed_us'))
     valid=[r for r in rows if r['accuracy'] and r['speedup'] and r['speedup']>0]
     summary=dict(job_id=job['id'],job_url=job_url,status=job['status'],passed=job['passed_cases'],total=job['total_cases'],
         api_summary=job['results']['summary'],environment=job['results']['setup_info']['environment'],
         independent_geometric_mean=statistics.geometric_mean(r['speedup'] for r in valid) if valid else None,
         faster_than_previous=sum(r['elapsed_us']<r['previous_us'] for r in valid),
         source_sha256=dispatch['source_sha256'])
+    summary['arithmetic_mean_speedup']=statistics.mean(r['speedup'] for r in valid) if valid else None
+    summary['previous_independent_geometric_mean']=statistics.geometric_mean(float(r['speedup']) for r in old.values())
+    summary['reference_timings_unchanged']=all(r['reference_us']==float(old[r['case_id']]['reference_us']) for r in valid)
+    summary['at_least_reference_cases']=[r['case_id'] for r in valid if r['speedup']>=1]
+    summary['by_route']={f'{dtype}-{mode}':{
+        'cases':len(group),
+        'geomean_reference_over_new':statistics.geometric_mean(r['speedup'] for r in group),
+        'geomean_previous_over_new':statistics.geometric_mean(r['previous_us']/r['elapsed_us'] for r in group)}
+        for dtype in ('float16','bfloat16','float32') for mode in ('none','tanh')
+        if (group:=[r for r in valid if r['dtype']==dtype and r['mode']==mode])}
     summary['by_geometry_change']={label:{'cases':len(group),
         'geomean_previous_over_new_latency':statistics.geometric_mean(r['previous_us']/r['elapsed_us'] for r in group) if group else None}
         for changed,label in [(True,'changed_fp32_exact'),(False,'unchanged_routes')]
@@ -97,5 +112,11 @@ if complete and cases:
     lines+=['## Hardware conclusion','',f"Independent geometric mean reference/new: {fmt(summary['independent_geometric_mean'])}×. Faster than previous in {summary['faster_than_previous']}/20 cases. API aggregates are retained separately in [hardware summary](hardware-summary.json); do not confuse its field name with the independently calculated geometric mean.",'']
     for label,g in summary['by_geometry_change'].items():
         lines += [f"{label}: {g['cases']} passing cases, geometric mean previous/new latency {fmt(g['geomean_previous_over_new_latency'])}×.",'']
+    lines += [
+        f"All {summary['passed']}/{summary['total']} cases passed accuracy; anti-cheat failures: {summary['api_summary']['anti_cheat_failed_cases']}. Score: {summary['api_summary']['overall_score']:.4f}. Independent geometric mean improved from {summary['previous_independent_geometric_mean']:.4f}× to {summary['independent_geometric_mean']:.4f}× reference. Only case5 exceeds reference (1.1450×). Reference timings unchanged from the prior report: {summary['reference_timings_unchanged']}.",'',
+        'The service field named geometric_mean_speedup is 0.48733885 here, but equals the arithmetic mean of the 20 per-case speedups; the independently calculated geometric mean is 0.40354982. These are different aggregates, not conflicting measurements.','',
+        'The six changed FP32 exact cases improve by 1.5080–1.5872× (geometric mean 1.5348×, about 34.8% less execution time). The unchanged fourteen cases average 1.0064× old/new, providing a useful cross-run control, not a statistical confidence interval. This supports a real benefit from the changed tiling geometry; it does not separate larger tiles, fewer loop iterations and changed partition sizes. reuse_alloc remained 1 in both hardware runs: this is not a hardware comparison of reuse modes.','',
+        'FP32 exact still achieves only 0.1990× reference in geometric mean (roughly 5.03× slower), despite using 240/248 KiB UB. Thus insufficient UB fill is not the sole bottleneck. The negative-tail continued fraction and both branches evaluated before selection remain diagnosis candidates, not newly isolated hardware causes.','',
+        'Next bounded local experiments: fully qualify the existing tile3840/unroll2 candidate, which was faster at the same 240 KiB in the aligned local probe; then compare balanced tile partitioning with the submitted contiguous partition on matched workloads, especially case8 (72 launched/38 useful). Preserve high-level mathematics, required synchronization and official tolerances. Recheck reuse_alloc at the winning geometry. Neither alternative is part of this hardware run; no additional submission was made or authorized by this report update.','']
 (ROOT/'README.md').write_text('\n'.join(lines)+'\n')
 print('Report updated; hardware present:',bool(job))
