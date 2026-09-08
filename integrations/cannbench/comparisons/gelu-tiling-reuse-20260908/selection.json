@@ -1,0 +1,34 @@
+{
+  "float32-none": {
+    "dtype": "float32",
+    "mode": "none",
+    "tile": 5120,
+    "unroll": 1,
+    "reuse": 1,
+    "vf": 1
+  },
+  "float32-tanh": {
+    "dtype": "float32",
+    "mode": "tanh",
+    "tile": 15872,
+    "unroll": 2,
+    "reuse": 1,
+    "vf": 0
+  },
+  "float16-none": {
+    "dtype": "float16",
+    "mode": "none",
+    "tile": 8192,
+    "unroll": 2,
+    "reuse": 1,
+    "vf": 0
+  },
+  "float16-tanh": {
+    "dtype": "float16",
+    "mode": "tanh",
+    "tile": 8192,
+    "unroll": 2,
+    "reuse": 1,
+    "vf": 0
+  }
+}

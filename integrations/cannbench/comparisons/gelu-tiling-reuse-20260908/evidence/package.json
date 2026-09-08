@@ -1,0 +1,61 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "candidate_sha256": "1d5220eee6e26f3f377eb7ec75be5fcec8c2bfebda4d347b728686b6434dca86",
+  "runtime_sha256": "feb82abc15a09607dfb5b403af530867242809d91f26b400ba43258e303b2af8",
+  "wheel_sha256": "ffad9499f47ab03abe5b16d52ba4a6bf655c005bb3843d78fd74b63624c98ad3",
+  "diagnostic_only": true,
+  "source_gate": "passed",
+  "routes": {
+    "float32-none": {
+      "dtype": "float32",
+      "mode": "none",
+      "tile": 5120,
+      "unroll": 1,
+      "reuse": 1,
+      "vf": 1
+    },
+    "float32-tanh": {
+      "dtype": "float32",
+      "mode": "tanh",
+      "tile": 15872,
+      "unroll": 2,
+      "reuse": 1,
+      "vf": 0
+    },
+    "float16-none": {
+      "dtype": "float16",
+      "mode": "none",
+      "tile": 8192,
+      "unroll": 2,
+      "reuse": 1,
+      "vf": 0
+    },
+    "float16-tanh": {
+      "dtype": "float16",
+      "mode": "tanh",
+      "tile": 8192,
+      "unroll": 2,
+      "reuse": 1,
+      "vf": 0
+    }
+  },
+  "common_requested_flags": {
+    "reuse_alloc": 1,
+    "static_alloc": null,
+    "insert_sync": true,
+    "opt_level": 3,
+    "debug": false
+  },
+  "expected_static_alloc": true,
+  "source_files": {
+    "__init__.py": "d48f0c2ad96843d1917a598f134378fadb17daba8d095114bf08de2dc3334a3c",
+    "_pyasc_runtime.py": "af4d0eb015bcba32068dd4a1f592d2aa9c31142efb83e54b34873e7fda033475",
+    "gelu.py": "1d5220eee6e26f3f377eb7ec75be5fcec8c2bfebda4d347b728686b6434dca86"
+  },
+  "task_files": {
+    "cases.yaml": "bba64e6f3e332a3d6ee7004f21e609eb5a32bb4a9b6880907c38e4fa54bbe7fe",
+    "golden.py": "e07d2064d717a1159adf1481fafbc774a805a8fb198cd78e0cec0e69b91e6b95",
+    "proto.yaml": "71f94a2728af6e87fe137b3802854675212e656d5bd723d58668b0cda0abe8a2"
+  },
+  "archive_sha256": "5fe2effccdd1a9a12ea72486f9fb6ebec5ef1d0b4874c1e2e80001811507ea82"
+}

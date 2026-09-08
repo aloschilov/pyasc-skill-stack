@@ -39,6 +39,10 @@ for c in job['results']['operators'][0]['cases']:
         job_url=f"https://cannbench.com/workspace/jobs/{job['id']}"))
     r=rows[-1]
     r['vector_blocks']=dispatch[definition['case_id']]['cores'][0]
+    r['tile_shape']=json.dumps([r['tile']])
+    numel=math.prod(definition['input_shape'][0])
+    partition_elements=r['tile']*math.ceil(numel/(r['vector_blocks']*r['tile']))
+    r['useful_vector_blocks']=math.ceil(numel/partition_elements)
     assert r['vector_blocks']==min(72, math.ceil(math.prod(definition['input_shape'][0])/r['tile']))
     specs=[s for s in package['specializations']
            if s['constexprs']['tile_length']==f"ConstExpr[int]({r['tile']})"
@@ -77,11 +81,11 @@ with (ROOT/'case-results.csv').open('w',newline='') as stream:
 def fmt(v): return '—' if v is None else f'{v:.4f}' if isinstance(v,float) else str(v)
 lines=['# GeLU hardware results','',f"[CANNBench job {job['id']}]({summary['job_url']}) — {job['passed_cases']}/{job['total_cases']} correct; status `{job['status']}`.",'',
     'All times below are hardware microseconds. Speedup = official reference / candidate; ≥1 means at least as fast as the reference. Links may require CANNBench sign-in.', '',
-    '| Case | Shape | dtype | Mode | Tile (elements) | Unroll | Vector blocks | VF fusion | UB (KiB) | Previous high-level µs | Candidate µs | Reference µs | Speedup | Accuracy | Implementation |',
-    '|---|---|---|---|---:|---:|---:|---|---:|---:|---:|---:|---:|---|---|']
+    '| Case | Shape | dtype | Mode | tile_shape | Unroll | AIV launched/useful | reuse_alloc | VF fusion | UB (KiB) | Previous high-level µs | Candidate µs | Reference µs | Speedup | Accuracy | Implementation |',
+    '|---|---|---|---|---|---:|---|---:|---|---:|---:|---:|---:|---:|---|---|']
 for r in rows:
     previous=fmt(r['previous_high_level_us']) if r['previous_high_level_passed'] else 'FAIL'
-    lines.append(f"| [{r['case_id']}]({r['job_url']}) | {r['shape']} | {r['dtype']} | {r['approximate']} | {r['tile']} | {r['unroll']} | {r['vector_blocks']} | {r['vf_fusion']} | {r['ub_bytes']//1024} | {previous} | {fmt(r['elapsed_us'])} | {fmt(r['reference_us'])} | {fmt(r['speedup'])}× | {r['accuracy_passed']} | [{r['route']}]({r['implementation']}) |")
+    lines.append(f"| [{r['case_id']}]({r['job_url']}) | {r['shape']} | {r['dtype']} | {r['approximate']} | {r['tile_shape']} | {r['unroll']} | {r['vector_blocks']}/{r['useful_vector_blocks']} | {r['reuse_alloc']} | {r['vf_fusion']} | {r['ub_bytes']//1024} | {previous} | {fmt(r['elapsed_us'])} | {fmt(r['reference_us'])} | {fmt(r['speedup'])}× | {r['accuracy_passed']} | [{r['route']}]({r['implementation']}) |")
 table='\n'.join(lines[6:])
 navigation='''## Case navigation: shapes, implementations and submitted tiling
 
@@ -96,6 +100,8 @@ and [launch/JIT options](candidate/gelu.py#L62) define the submitted configurati
 Vector blocks are the launched AIV block count, verified for each official shape
 in [dispatch/compilation evidence](evidence/package-x86.json); some end blocks can
 have no useful tiles. This is not a measurement of simultaneous core occupancy.
+The useful-block count is analytically derived from the submitted contiguous
+partition. These are vector (AIV) blocks, not matrix (AIC) block launches.
 UB is static compiler-reported storage per specialization, not device telemetry.
 All rows use `reuse_alloc=1`, `static_alloc=None` (effective enabled),
 `insert_sync=True`, `opt_level=3`, `debug=False`; VF and unrolling vary as shown.

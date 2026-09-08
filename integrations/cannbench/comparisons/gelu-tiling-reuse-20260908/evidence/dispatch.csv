@@ -1,0 +1,21 @@
+case_id,shape,dtype,mode,numel,tile_shape,unroll,launched_AIV_blocks,useful_AIV_blocks,tiles_per_partition,reuse_alloc,vf_fusion,static_alloc_requested,static_alloc_effective,interpretation
+1,"[1024, 1024]",float16,none,1048576,[8192],2,72,64,2,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+2,"[2048, 2048]",float32,none,4194304,[5120],1,72,69,12,1,True,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+3,"[4096, 4096]",bfloat16,none,16777216,[8192],2,72,71,29,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+4,"[8192, 8192]",float16,tanh,67108864,[8192],2,72,72,114,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+5,"[8192, 8192]",float32,tanh,67108864,[15872],2,72,72,59,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+6,"[1023, 1023]",bfloat16,tanh,1046529,[8192],2,72,64,2,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+7,"[1009, 1021]",float16,none,1030189,[8192],2,72,63,2,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+8,"[1537, 769]",float32,tanh,1181953,[15872],2,72,38,2,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+9,"[363, 367, 373]",bfloat16,none,49691433,[8192],2,72,72,85,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+10,"[2049, 513]",float16,tanh,1051137,[8192],2,72,65,2,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+11,"[3, 7, 13, 4001]",float32,none,1092273,[5120],1,72,72,3,1,True,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+12,[1000003],bfloat16,tanh,1000003,[8192],2,72,62,2,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+13,"[11, 13, 17, 67, 67]",float32,none,10912759,[5120],1,72,72,30,1,True,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+14,"[3, 7, 11, 13, 1009]",float16,tanh,3030027,[8192],2,72,62,6,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+15,"[512, 2049]",float32,none,1049088,[5120],1,72,69,3,1,True,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+16,"[255, 8193]",bfloat16,none,2089215,[8192],2,72,64,4,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+17,"[4097, 511]",float16,tanh,2093567,[8192],2,72,64,4,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+18,"[2, 511, 2049]",float32,none,2094078,[5120],1,72,69,6,1,True,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+19,"[4, 255, 2049]",bfloat16,tanh,2089980,[8192],2,72,64,4,1,False,None,True,Useful blocks analytically derived; not hardware occupancy telemetry
+20,"[2, 3, 17, 1024, 101]",float32,none,10549248,[5120],1,72,72,29,1,True,None,True,Useful blocks analytically derived; not hardware occupancy telemetry

@@ -1,0 +1,30 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "args": {
+    "phase": "perf",
+    "variant": "submission",
+    "mode": "tanh",
+    "dtype": "float16",
+    "tile": 8192,
+    "tune_geometry": true,
+    "unroll": 2,
+    "cores": 1,
+    "size": 32768,
+    "reuse": 1,
+    "vf": 0,
+    "static": "default",
+    "compact_stress": false,
+    "repeat": 1,
+    "perf_range": [
+      -6.0,
+      2.0
+    ],
+    "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n32768-float16-tanh-t8192-u2-r1-vf0/result.json"
+  },
+  "completed": false,
+  "observations": [],
+  "harness_sha256": "f213bb17fbddf6b55793bab22cc3bb04061b3c78606c81a09c30a5c5ea71a573",
+  "error": "Traceback (most recent call last):\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/check.py\", line 48, in main\n    import asctile\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py\", line 11, in <module>\n    from asc.language.core.constexpr import ConstExpr\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/__init__.py\", line 10, in <module>\n    from .runtime.compiler import CompileOptions\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asc/runtime/compiler.py\", line 13, in <module>\n    import subprocess\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/subprocess.py\", line 118, in <module>\n    import select\n  File \"/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/select.py\", line 5, in <module>\n    rows=json.loads((ROOT/'evidence/perf-summary.json').read_text())\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/pathlib.py\", line 1058, in read_text\n    with self.open(mode='r', encoding=encoding, errors=errors) as f:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/pathlib.py\", line 1044, in open\n    return io.open(self, mode, buffering, encoding, errors, newline)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-summary.json'\n",
+  "unexpected_errors": [],
+  "valid": false
+}

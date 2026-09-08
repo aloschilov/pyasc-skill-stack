@@ -1,0 +1,33 @@
+## Critical Review
+
+### 1. UB Fill Is Not a Speed Metric
+`ub_fit = ub <= 253952` is a binary capacity predicate — the kernel's Unified Buffer footprint fits within 256 KB. It tells you nothing about DMA throughput, compute/DMA overlap, idle cycles, or tail efficiency. A kernel can saturate UB and still be bandwidth-starved or synchronization-bound. Treat UB utilization as a *feasibility gate*, not a performance proxy.
+
+### 2. Matched Logical Work Is Not Actually Matched
+The perf phase fixes `n=65536` across all geometries. However, the submission's `gelu()` dispatches `cores = min(72, ceil(size/tile))`, so tile=4096 → 16 cores, tile=15872 → 5 cores. The tune.py perf phase hardcodes `--cores` (default 1), **bypassing the submission's actual dispatch logic**. Across the matrix, different tiles with cores=1 produce different `block_loop_num` values and different padding/DMA overhead — the "matched" workload claim only holds at the operator-input level, not at the AIV partition level.
+
+### 3. Guard Tails Are Structurally Correct but Under-Tested
+`copy_out` constrains writes via `real_shape=[valid]` into `out_gm[0:input_length)`, and the tail test checks `backing_y[n:] == 12345`. This is sound for the single-core tail phase. However, the multi-core geometry path (submission's `gelu()`) is not exercised in the tail phase — `--cores` defaults to 1. The partition-boundary tail behavior under actual dispatch (where `block_offset + i*tile` spans multiple AIV blocks) remains unverified.
+
+### 4. Declared vs. Active AIV Blocks
+`insert_sync=True` and `opt_level=3` are applied uniformly, but active cores vary by tile. When `cores=min(72, ceil(size/tile))` is small (e.g., 5), the remaining 67 AIV blocks sit idle. The tune matrix does not track **AIV occupancy** or idle-block waste, which directly affects real-hardware throughput.
+
+### 5. Reuse=2 Synchronization Risks
+`reuse_alloc=2` aliases local memory across two successive tile iterations. This creates a **RAW/WAW hazard**: iteration *i*'s `copy_out` must fully drain before iteration *i+2*'s `copy_in` refills the same buffer. `insert_sync=True` inserts barriers, but **no structural test validates that the barrier covers the full inter-iteration DMA lifetime**. The simulator may not model this hazard faithfully. A reuse=2 correctness regression on silicon is absent.
+
+### 6. Timing Validation Gaps
+- **n=3 samples**: `median_ticks` with 3 iterations provides no variance estimate or confidence interval.
+- **CaModel only**: All ticks are simulator-measured. No wall-clock or NPU-elapsed validation exists.
+- **Accuracy not gating timing**: `repeat_accuracy` failures do not invalidate the reported `median_ticks`.
+- **Reuse-allocation timing fidelity unknown**: Whether CaModel accurately simulates DMA overlap under `reuse_alloc=2` is unverified.
+
+---
+
+## Concrete Blockers
+
+| # | Blocker | Resolution |
+|---|---------|------------|
+| **B1** | Perf cores not matched to submission dispatch | Run perf with submission's `gelu()` wrapping function, not raw `kernel[cores]` at cores=1 |
+| **B2** | No silicon reuse=2 race validation | Add a multi-launch bit-exactness test at reuse=2 with adversarial tile sizes on real NPU |
+| **B3** | Simulator-only timing with n=3 | Require ≥10 iterations + hardware cross-validation before any speedup claim |
+| **B4** | Multi-core tail path untested | Add tail phase with `cores >= min(72, ceil(n/tile))` matching actual dispatch |

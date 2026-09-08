@@ -1,5 +1,15 @@
 # CANNBench evaluation reports
 
+## GeLU tiling / reuse-allocation follow-up (2026-09-08)
+
+- [Report: all 20 tile shapes, AIV launched/useful counts, reuse_alloc and UB](../integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/README.md)
+- [Per-case CSV](../integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/case-results.csv)
+
+Local qualification passed: 14/14 perf configurations, 12/12 numerical/tail checks,
+20/20 official compile/dispatch cases. FP32 exact selects tile5120/reuse1;
+other routes retain their measured baseline. Hardware upload is in progress;
+no new CANNBench job or hardware result has been confirmed yet.
+
 This index collects the CANNBench evaluation reports and their corresponding
 remote runs. CANNBench job pages may require the account used for the private
 submissions.

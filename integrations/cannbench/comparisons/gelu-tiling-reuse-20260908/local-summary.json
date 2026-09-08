@@ -1,0 +1,464 @@
+[
+  {
+    "name": "perf-n32768-float16-none-t15872-u2-r2-vf0",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float16",
+      "tile": 15872,
+      "tune_geometry": true,
+      "unroll": 2,
+      "cores": 1,
+      "size": 32768,
+      "reuse": 2,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n32768-float16-none-t15872-u2-r2-vf0/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 253952,
+    "ticks": 22524,
+    "samples": [
+      22524,
+      22679,
+      22515
+    ],
+    "evidence": "evidence/perf-n32768-float16-none-t15872-u2-r2-vf0/result.json"
+  },
+  {
+    "name": "perf-n32768-float16-none-t16384-u2-r1-vf0",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float16",
+      "tile": 16384,
+      "tune_geometry": true,
+      "unroll": 2,
+      "cores": 1,
+      "size": 32768,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n32768-float16-none-t16384-u2-r1-vf0/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 196608,
+    "ticks": 19210,
+    "samples": [
+      19522,
+      19103,
+      19210
+    ],
+    "evidence": "evidence/perf-n32768-float16-none-t16384-u2-r1-vf0/result.json"
+  },
+  {
+    "name": "perf-n32768-float16-none-t20480-u2-r1-vf0",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float16",
+      "tile": 20480,
+      "tune_geometry": true,
+      "unroll": 2,
+      "cores": 1,
+      "size": 32768,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n32768-float16-none-t20480-u2-r1-vf0/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 245760,
+    "ticks": 22454,
+    "samples": [
+      22488,
+      22454,
+      22428
+    ],
+    "evidence": "evidence/perf-n32768-float16-none-t20480-u2-r1-vf0/result.json"
+  },
+  {
+    "name": "perf-n32768-float16-none-t8192-u2-r1-vf0",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float16",
+      "tile": 8192,
+      "tune_geometry": true,
+      "unroll": 2,
+      "cores": 1,
+      "size": 32768,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n32768-float16-none-t8192-u2-r1-vf0/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 98304,
+    "ticks": 19255,
+    "samples": [
+      19255,
+      19263,
+      19172
+    ],
+    "evidence": "evidence/perf-n32768-float16-none-t8192-u2-r1-vf0/result.json"
+  },
+  {
+    "name": "perf-n32768-float16-tanh-t15872-u2-r1-vf0",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "float16",
+      "tile": 15872,
+      "tune_geometry": true,
+      "unroll": 2,
+      "cores": 1,
+      "size": 32768,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n32768-float16-tanh-t15872-u2-r1-vf0/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 253952,
+    "ticks": 10436,
+    "samples": [
+      10891,
+      10199,
+      10436
+    ],
+    "evidence": "evidence/perf-n32768-float16-tanh-t15872-u2-r1-vf0/result.json"
+  },
+  {
+    "name": "perf-n32768-float16-tanh-t20480-u2-r2-vf0",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "float16",
+      "tile": 20480,
+      "tune_geometry": true,
+      "unroll": 2,
+      "cores": 1,
+      "size": 32768,
+      "reuse": 2,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n32768-float16-tanh-t20480-u2-r2-vf0/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 245760,
+    "ticks": 10731,
+    "samples": [
+      10731,
+      10617,
+      10889
+    ],
+    "evidence": "evidence/perf-n32768-float16-tanh-t20480-u2-r2-vf0/result.json"
+  },
+  {
+    "name": "perf-n32768-float16-tanh-t8192-u2-r1-vf0",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "float16",
+      "tile": 8192,
+      "tune_geometry": true,
+      "unroll": 2,
+      "cores": 1,
+      "size": 32768,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n32768-float16-tanh-t8192-u2-r1-vf0/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 131072,
+    "ticks": 7546,
+    "samples": [
+      7937,
+      7454,
+      7546
+    ],
+    "evidence": "evidence/perf-n32768-float16-tanh-t8192-u2-r1-vf0/result.json"
+  },
+  {
+    "name": "perf-n32768-float32-tanh-t15872-u2-r1-vf0",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "float32",
+      "tile": 15872,
+      "tune_geometry": true,
+      "unroll": 2,
+      "cores": 1,
+      "size": 32768,
+      "reuse": 1,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n32768-float32-tanh-t15872-u2-r1-vf0/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 253952,
+    "ticks": 10080,
+    "samples": [
+      10080,
+      10015,
+      10105
+    ],
+    "evidence": "evidence/perf-n32768-float32-tanh-t15872-u2-r1-vf0/result.json"
+  },
+  {
+    "name": "perf-n32768-float32-tanh-t15872-u2-r2-vf0",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "tanh",
+      "dtype": "float32",
+      "tile": 15872,
+      "tune_geometry": true,
+      "unroll": 2,
+      "cores": 1,
+      "size": 32768,
+      "reuse": 2,
+      "vf": 0,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n32768-float32-tanh-t15872-u2-r2-vf0/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 253952,
+    "ticks": 11688,
+    "samples": [
+      11688,
+      11546,
+      11787
+    ],
+    "evidence": "evidence/perf-n32768-float32-tanh-t15872-u2-r2-vf0/result.json"
+  },
+  {
+    "name": "perf-n8192-float32-none-t1024-u1-r0-vf1",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float32",
+      "tile": 1024,
+      "tune_geometry": true,
+      "unroll": 1,
+      "cores": 1,
+      "size": 8192,
+      "reuse": 0,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n8192-float32-none-t1024-u1-r0-vf1/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 139392,
+    "ticks": 16804,
+    "samples": [
+      16804,
+      16854,
+      16722
+    ],
+    "evidence": "evidence/perf-n8192-float32-none-t1024-u1-r0-vf1/result.json"
+  },
+  {
+    "name": "perf-n8192-float32-none-t1024-u1-r1-vf1",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float32",
+      "tile": 1024,
+      "tune_geometry": true,
+      "unroll": 1,
+      "cores": 1,
+      "size": 8192,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n8192-float32-none-t1024-u1-r1-vf1/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 49152,
+    "ticks": 15619,
+    "samples": [
+      15619,
+      15813,
+      15597
+    ],
+    "evidence": "evidence/perf-n8192-float32-none-t1024-u1-r1-vf1/result.json"
+  },
+  {
+    "name": "perf-n8192-float32-none-t1024-u1-r2-vf1",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float32",
+      "tile": 1024,
+      "tune_geometry": true,
+      "unroll": 1,
+      "cores": 1,
+      "size": 8192,
+      "reuse": 2,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n8192-float32-none-t1024-u1-r2-vf1/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 45056,
+    "ticks": 15974,
+    "samples": [
+      15971,
+      15974,
+      16029
+    ],
+    "evidence": "evidence/perf-n8192-float32-none-t1024-u1-r2-vf1/result.json"
+  },
+  {
+    "name": "perf-n8192-float32-none-t5120-u1-r1-vf1",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float32",
+      "tile": 5120,
+      "tune_geometry": true,
+      "unroll": 1,
+      "cores": 1,
+      "size": 8192,
+      "reuse": 1,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n8192-float32-none-t5120-u1-r1-vf1/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 245760,
+    "ticks": 14162,
+    "samples": [
+      14191,
+      13998,
+      14162
+    ],
+    "evidence": "evidence/perf-n8192-float32-none-t5120-u1-r1-vf1/result.json"
+  },
+  {
+    "name": "perf-n8192-float32-none-t5120-u1-r2-vf1",
+    "config": {
+      "phase": "perf",
+      "variant": "submission",
+      "mode": "none",
+      "dtype": "float32",
+      "tile": 5120,
+      "tune_geometry": true,
+      "unroll": 1,
+      "cores": 1,
+      "size": 8192,
+      "reuse": 2,
+      "vf": 1,
+      "static": "default",
+      "compact_stress": false,
+      "repeat": 1,
+      "perf_range": [
+        -6.0,
+        2.0
+      ],
+      "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/perf-n8192-float32-none-t5120-u1-r2-vf1/result.json"
+    },
+    "valid": true,
+    "ub_bytes": 225280,
+    "ticks": 14215,
+    "samples": [
+      14213,
+      14215,
+      14251
+    ],
+    "evidence": "evidence/perf-n8192-float32-none-t5120-u1-r2-vf1/result.json"
+  }
+]

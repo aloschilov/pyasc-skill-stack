@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "candidate_sha256": "1d5220eee6e26f3f377eb7ec75be5fcec8c2bfebda4d347b728686b6434dca86",
+  "checks": [
+    "numerical-float32-none-t5120-u1-r1-vf1",
+    "tail-float32-none-t5120-u1-r1-vf1",
+    "numerical-float32-tanh-t15872-u2-r1-vf0",
+    "tail-float32-tanh-t15872-u2-r1-vf0",
+    "numerical-float16-none-t8192-u2-r1-vf0",
+    "tail-float16-none-t8192-u2-r1-vf0",
+    "numerical-bfloat16-none-t8192-u2-r1-vf0",
+    "tail-bfloat16-none-t8192-u2-r1-vf0",
+    "numerical-float16-tanh-t8192-u2-r1-vf0",
+    "tail-float16-tanh-t8192-u2-r1-vf0",
+    "numerical-bfloat16-tanh-t8192-u2-r1-vf0",
+    "tail-bfloat16-tanh-t8192-u2-r1-vf0"
+  ]
+}

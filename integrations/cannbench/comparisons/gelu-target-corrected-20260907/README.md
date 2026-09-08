@@ -12,6 +12,9 @@ passed 18/20. Do not interpret its hardware results as results for this candidat
 
 ## Hardware outcome
 
+Follow-up: [matched tiling/reuse experiment and per-case launch configuration](../gelu-tiling-reuse-20260908/README.md).
+The historical timings below still describe `job_6589259af036`, not the follow-up.
+
 [All 20 shapes, dtypes, modes, timings and implementation links](RESULTS.md)
 are available as a navigation table and [CSV](case-results.csv).
 [Sanitized result summary](hardware-summary.json) preserves environment and aggregates.
@@ -64,6 +67,8 @@ and [launch/JIT options](candidate/gelu.py#L62) define the submitted configurati
 Vector blocks are the launched AIV block count, verified for each official shape
 in [dispatch/compilation evidence](evidence/package-x86.json); some end blocks can
 have no useful tiles. This is not a measurement of simultaneous core occupancy.
+The useful-block count is analytically derived from the submitted contiguous
+partition. These are vector (AIV) blocks, not matrix (AIC) block launches.
 UB is static compiler-reported storage per specialization, not device telemetry.
 All rows use `reuse_alloc=1`, `static_alloc=None` (effective enabled),
 `insert_sync=True`, `opt_level=3`, `debug=False`; VF and unrolling vary as shown.
@@ -73,28 +78,28 @@ Times are hardware µs; speedup is reference/candidate. Previous high-level is
 `FAIL` means accuracy failed, not zero time. Cross-run differences are observational.
 The [CSV](case-results.csv) also retains historical low-level timings and common flags.
 
-| Case | Shape | dtype | Mode | Tile (elements) | Unroll | Vector blocks | VF fusion | UB (KiB) | Previous high-level µs | Candidate µs | Reference µs | Speedup | Accuracy | Implementation |
-|---|---|---|---|---:|---:|---:|---|---:|---:|---:|---:|---:|---|---|
-| [level1/gelu_1](https://cannbench.com/workspace/jobs/job_6589259af036) | [1024, 1024] | float16 | none | 8192 | 2 | 72 | False | 96 | 23.3900 | 11.8700 | 4.4900 | 0.3783× | True | [promoted-exact-erf](candidate/gelu.py#L43) |
-| [level1/gelu_2](https://cannbench.com/workspace/jobs/job_6589259af036) | [2048, 2048] | float32 | none | 1024 | 1 | 72 | True | 48 | 81.6200 | 132.8100 | 15.3700 | 0.1157× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
-| [level1/gelu_3](https://cannbench.com/workspace/jobs/job_6589259af036) | [4096, 4096] | bfloat16 | none | 8192 | 2 | 72 | False | 96 | 331.7000 | 147.8100 | 30.1400 | 0.2039× | True | [promoted-exact-erf](candidate/gelu.py#L43) |
-| [level1/gelu_4](https://cannbench.com/workspace/jobs/job_6589259af036) | [8192, 8192] | float16 | tanh | 8192 | 2 | 72 | False | 128 | 1639.7000 | 206.0800 | 172.9300 | 0.8391× | True | [corrected-tanh](candidate/gelu.py#L37) |
-| [level1/gelu_5](https://cannbench.com/workspace/jobs/job_6589259af036) | [8192, 8192] | float32 | tanh | 15872 | 2 | 72 | False | 248 | 1256.3700 | 339.3900 | 387.2650 | 1.1411× | True | [corrected-tanh](candidate/gelu.py#L37) |
-| [level1/gelu_6](https://cannbench.com/workspace/jobs/job_6589259af036) | [1023, 1023] | bfloat16 | tanh | 8192 | 2 | 72 | False | 128 | 27.7600 | 5.8400 | 4.4600 | 0.7637× | True | [corrected-tanh](candidate/gelu.py#L37) |
-| [level1/gelu_7](https://cannbench.com/workspace/jobs/job_6589259af036) | [1009, 1021] | float16 | none | 8192 | 2 | 72 | False | 96 | 23.5300 | 11.9100 | 4.4500 | 0.3736× | True | [promoted-exact-erf](candidate/gelu.py#L43) |
-| [level1/gelu_8](https://cannbench.com/workspace/jobs/job_6589259af036) | [1537, 769] | float32 | tanh | 15872 | 2 | 72 | False | 248 | 24.3000 | 8.7500 | 6.1100 | 0.6983× | True | [corrected-tanh](candidate/gelu.py#L37) |
-| [level1/gelu_9](https://cannbench.com/workspace/jobs/job_6589259af036) | [363, 367, 373] | bfloat16 | none | 8192 | 2 | 72 | False | 96 | 993.3100 | 433.1000 | 117.5300 | 0.2714× | True | [promoted-exact-erf](candidate/gelu.py#L43) |
-| [level1/gelu_10](https://cannbench.com/workspace/jobs/job_6589259af036) | [2049, 513] | float16 | tanh | 8192 | 2 | 72 | False | 128 | 27.6900 | 5.8800 | 4.5600 | 0.7755× | True | [corrected-tanh](candidate/gelu.py#L37) |
-| [level1/gelu_11](https://cannbench.com/workspace/jobs/job_6589259af036) | [3, 7, 13, 4001] | float32 | none | 1024 | 1 | 72 | True | 48 | FAIL | 37.2700 | 6.0500 | 0.1623× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
-| [level1/gelu_12](https://cannbench.com/workspace/jobs/job_6589259af036) | [1000003] | bfloat16 | tanh | 8192 | 2 | 72 | False | 128 | 26.7400 | 5.8800 | 4.3800 | 0.7449× | True | [corrected-tanh](candidate/gelu.py#L37) |
-| [level1/gelu_13](https://cannbench.com/workspace/jobs/job_6589259af036) | [11, 13, 17, 67, 67] | float32 | none | 1024 | 1 | 72 | True | 48 | 209.8500 | 342.5200 | 37.4550 | 0.1094× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
-| [level1/gelu_14](https://cannbench.com/workspace/jobs/job_6589259af036) | [3, 7, 11, 13, 1009] | float16 | tanh | 8192 | 2 | 72 | False | 128 | 75.6500 | 11.9400 | 7.7800 | 0.6516× | True | [corrected-tanh](candidate/gelu.py#L37) |
-| [level1/gelu_15](https://cannbench.com/workspace/jobs/job_6589259af036) | [512, 2049] | float32 | none | 1024 | 1 | 72 | True | 48 | 22.9300 | 36.4700 | 5.9800 | 0.1640× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
-| [level1/gelu_16](https://cannbench.com/workspace/jobs/job_6589259af036) | [255, 8193] | bfloat16 | none | 8192 | 2 | 72 | False | 96 | 43.9100 | 22.4800 | 6.2300 | 0.2771× | True | [promoted-exact-erf](candidate/gelu.py#L43) |
-| [level1/gelu_17](https://cannbench.com/workspace/jobs/job_6589259af036) | [4097, 511] | float16 | tanh | 8192 | 2 | 72 | False | 128 | 52.4300 | 9.2300 | 6.3100 | 0.6836× | True | [corrected-tanh](candidate/gelu.py#L37) |
-| [level1/gelu_18](https://cannbench.com/workspace/jobs/job_6589259af036) | [2, 511, 2049] | float32 | none | 1024 | 1 | 72 | True | 48 | 42.2500 | 68.7700 | 8.8600 | 0.1288× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
-| [level1/gelu_19](https://cannbench.com/workspace/jobs/job_6589259af036) | [4, 255, 2049] | bfloat16 | tanh | 8192 | 2 | 72 | False | 128 | 52.5200 | 9.2100 | 6.2600 | 0.6797× | True | [corrected-tanh](candidate/gelu.py#L37) |
-| [level1/gelu_20](https://cannbench.com/workspace/jobs/job_6589259af036) | [2, 3, 17, 1024, 101] | float32 | none | 1024 | 1 | 72 | True | 48 | FAIL | 331.0900 | 36.1950 | 0.1093× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
+| Case | Shape | dtype | Mode | tile_shape | Unroll | AIV launched/useful | reuse_alloc | VF fusion | UB (KiB) | Previous high-level µs | Candidate µs | Reference µs | Speedup | Accuracy | Implementation |
+|---|---|---|---|---|---:|---|---:|---|---:|---:|---:|---:|---:|---|---|
+| [level1/gelu_1](https://cannbench.com/workspace/jobs/job_6589259af036) | [1024, 1024] | float16 | none | [8192] | 2 | 72/64 | 1 | False | 96 | 23.3900 | 11.8700 | 4.4900 | 0.3783× | True | [promoted-exact-erf](candidate/gelu.py#L43) |
+| [level1/gelu_2](https://cannbench.com/workspace/jobs/job_6589259af036) | [2048, 2048] | float32 | none | [1024] | 1 | 72/72 | 1 | True | 48 | 81.6200 | 132.8100 | 15.3700 | 0.1157× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
+| [level1/gelu_3](https://cannbench.com/workspace/jobs/job_6589259af036) | [4096, 4096] | bfloat16 | none | [8192] | 2 | 72/71 | 1 | False | 96 | 331.7000 | 147.8100 | 30.1400 | 0.2039× | True | [promoted-exact-erf](candidate/gelu.py#L43) |
+| [level1/gelu_4](https://cannbench.com/workspace/jobs/job_6589259af036) | [8192, 8192] | float16 | tanh | [8192] | 2 | 72/72 | 1 | False | 128 | 1639.7000 | 206.0800 | 172.9300 | 0.8391× | True | [corrected-tanh](candidate/gelu.py#L37) |
+| [level1/gelu_5](https://cannbench.com/workspace/jobs/job_6589259af036) | [8192, 8192] | float32 | tanh | [15872] | 2 | 72/72 | 1 | False | 248 | 1256.3700 | 339.3900 | 387.2650 | 1.1411× | True | [corrected-tanh](candidate/gelu.py#L37) |
+| [level1/gelu_6](https://cannbench.com/workspace/jobs/job_6589259af036) | [1023, 1023] | bfloat16 | tanh | [8192] | 2 | 72/64 | 1 | False | 128 | 27.7600 | 5.8400 | 4.4600 | 0.7637× | True | [corrected-tanh](candidate/gelu.py#L37) |
+| [level1/gelu_7](https://cannbench.com/workspace/jobs/job_6589259af036) | [1009, 1021] | float16 | none | [8192] | 2 | 72/63 | 1 | False | 96 | 23.5300 | 11.9100 | 4.4500 | 0.3736× | True | [promoted-exact-erf](candidate/gelu.py#L43) |
+| [level1/gelu_8](https://cannbench.com/workspace/jobs/job_6589259af036) | [1537, 769] | float32 | tanh | [15872] | 2 | 72/38 | 1 | False | 248 | 24.3000 | 8.7500 | 6.1100 | 0.6983× | True | [corrected-tanh](candidate/gelu.py#L37) |
+| [level1/gelu_9](https://cannbench.com/workspace/jobs/job_6589259af036) | [363, 367, 373] | bfloat16 | none | [8192] | 2 | 72/72 | 1 | False | 96 | 993.3100 | 433.1000 | 117.5300 | 0.2714× | True | [promoted-exact-erf](candidate/gelu.py#L43) |
+| [level1/gelu_10](https://cannbench.com/workspace/jobs/job_6589259af036) | [2049, 513] | float16 | tanh | [8192] | 2 | 72/65 | 1 | False | 128 | 27.6900 | 5.8800 | 4.5600 | 0.7755× | True | [corrected-tanh](candidate/gelu.py#L37) |
+| [level1/gelu_11](https://cannbench.com/workspace/jobs/job_6589259af036) | [3, 7, 13, 4001] | float32 | none | [1024] | 1 | 72/72 | 1 | True | 48 | FAIL | 37.2700 | 6.0500 | 0.1623× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
+| [level1/gelu_12](https://cannbench.com/workspace/jobs/job_6589259af036) | [1000003] | bfloat16 | tanh | [8192] | 2 | 72/62 | 1 | False | 128 | 26.7400 | 5.8800 | 4.3800 | 0.7449× | True | [corrected-tanh](candidate/gelu.py#L37) |
+| [level1/gelu_13](https://cannbench.com/workspace/jobs/job_6589259af036) | [11, 13, 17, 67, 67] | float32 | none | [1024] | 1 | 72/72 | 1 | True | 48 | 209.8500 | 342.5200 | 37.4550 | 0.1094× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
+| [level1/gelu_14](https://cannbench.com/workspace/jobs/job_6589259af036) | [3, 7, 11, 13, 1009] | float16 | tanh | [8192] | 2 | 72/62 | 1 | False | 128 | 75.6500 | 11.9400 | 7.7800 | 0.6516× | True | [corrected-tanh](candidate/gelu.py#L37) |
+| [level1/gelu_15](https://cannbench.com/workspace/jobs/job_6589259af036) | [512, 2049] | float32 | none | [1024] | 1 | 72/69 | 1 | True | 48 | 22.9300 | 36.4700 | 5.9800 | 0.1640× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
+| [level1/gelu_16](https://cannbench.com/workspace/jobs/job_6589259af036) | [255, 8193] | bfloat16 | none | [8192] | 2 | 72/64 | 1 | False | 96 | 43.9100 | 22.4800 | 6.2300 | 0.2771× | True | [promoted-exact-erf](candidate/gelu.py#L43) |
+| [level1/gelu_17](https://cannbench.com/workspace/jobs/job_6589259af036) | [4097, 511] | float16 | tanh | [8192] | 2 | 72/64 | 1 | False | 128 | 52.4300 | 9.2300 | 6.3100 | 0.6836× | True | [corrected-tanh](candidate/gelu.py#L37) |
+| [level1/gelu_18](https://cannbench.com/workspace/jobs/job_6589259af036) | [2, 511, 2049] | float32 | none | [1024] | 1 | 72/71 | 1 | True | 48 | 42.2500 | 68.7700 | 8.8600 | 0.1288× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
+| [level1/gelu_19](https://cannbench.com/workspace/jobs/job_6589259af036) | [4, 255, 2049] | bfloat16 | tanh | [8192] | 2 | 72/64 | 1 | False | 128 | 52.5200 | 9.2100 | 6.2600 | 0.6797× | True | [corrected-tanh](candidate/gelu.py#L37) |
+| [level1/gelu_20](https://cannbench.com/workspace/jobs/job_6589259af036) | [2, 3, 17, 1024, 101] | float32 | none | [1024] | 1 | 72/72 | 1 | True | 48 | FAIL | 331.0900 | 36.1950 | 0.1093× | True | [fp32-exact-tail](candidate/gelu.py#L43) |
 <!-- case-navigation:end -->
 
 ## Implementation and configuration

@@ -1,0 +1,82 @@
+{
+  "pin": "adadd7d66ed0ee16d33d79487bf584899a26ef1e",
+  "args": {
+    "phase": "compile",
+    "variant": "submission",
+    "mode": "tanh",
+    "dtype": "float32",
+    "tile": 20480,
+    "tune_geometry": true,
+    "unroll": 2,
+    "cores": 1,
+    "size": 31744,
+    "reuse": 2,
+    "vf": 0,
+    "static": "default",
+    "compact_stress": false,
+    "repeat": 1,
+    "perf_range": [
+      -2.0,
+      2.0
+    ],
+    "output": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/evidence/compile-float32-tanh-t20480-u2-r2-vf0/result.json"
+  },
+  "completed": true,
+  "observations": [
+    {
+      "effective_options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": null,
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "always_compile": true,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "insert_sync": true,
+        "vf_vec_len": null,
+        "reuse_alloc": 2,
+        "static_alloc": null,
+        "vf_fusion": false
+      }
+    }
+  ],
+  "harness_sha256": "f213bb17fbddf6b55793bab22cc3bb04061b3c78606c81a09c30a5c5ea71a573",
+  "runtime_file": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/runtime/source/python/asctile/__init__.py",
+  "target_function_ast_unchanged": false,
+  "source_sha256": "3f068907fe7437b8c0daeb5310e8ea2cb3617bd11d242747e093045e5a943d52",
+  "upstream_file_sha256": "35149a26c350ee2645e28133b0ae5f9b083e90ee3404cf5cc303edec5dbcd104",
+  "checker_sha256": "51f603402614f1abbc6f34122d28a1b90e4e8fe1e88cac63bc6bb6196b9b201f",
+  "requested_options": {
+    "reuse_alloc": 2,
+    "static_alloc": null,
+    "vf_fusion": false,
+    "insert_sync": true,
+    "opt_level": 3,
+    "debug": false
+  },
+  "coefficients": {
+    "TANH_APPROX_FACTOR": 0.044715,
+    "NEG_SQRT_EIGHT_OVER_PI": -1.5957691216057308
+  },
+  "selected_geometry": {
+    "tile": 20480,
+    "unroll": 2,
+    "vf_fusion": false
+  },
+  "approximate": "tanh",
+  "elements": 31744,
+  "segments": [],
+  "memory_consumed": {
+    "UB": 327680
+  },
+  "binary_sha256": "9acb7847be605dac2c8d5076844a6796c7a7ae8e4d9152019c70e9d51b2dcedc",
+  "ub_fit": false,
+  "compile_passed": true,
+  "unexpected_errors": [],
+  "valid": false
+}
