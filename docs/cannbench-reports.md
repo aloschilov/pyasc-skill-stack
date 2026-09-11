@@ -1,5 +1,16 @@
 # CANNBench evaluation reports
 
+## GeLU adaptive runner campaign — intermediate report (2026-09-11)
+
+- [Unified intermediate report: all jobs,20 shapes,tiling,JIT,UB and local results](../reports/gelu-adaptive-intermediate-20260911/README.md)
+- [Sanitized evidence and source hashes](../reports/gelu-adaptive-intermediate-20260911/evidence.json)
+
+Stopped at the user's request; the heartbeat was deleted. Seven hardware jobs
+were created in eight counted attempts. Both adaptive T runs passed20/20 with
+GM0.429502× and0.447789×; the >1× goal remains unmet. The25 local JIT
+representatives comprise15 qualified,6 timed out and4 unstarted configurations.
+Local improvements are not new hardware results. No finalist was submitted.
+
 ## GeLU tiling / reuse-allocation follow-up (2026-09-08)
 
 - [Report: all 20 tile shapes, AIV launched/useful counts, reuse_alloc and UB](../integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/README.md)
