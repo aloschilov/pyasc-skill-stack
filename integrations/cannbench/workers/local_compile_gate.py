@@ -85,6 +85,31 @@ class FakeTensor:
     def contiguous(self, *_: Any, **__: Any) -> "FakeTensor":
         return self
 
+    def squeeze(self, dim=None) -> "FakeTensor":
+        if dim is None:
+            shape = tuple(size for size in self.shape if size != 1)
+        else:
+            dimensions = dim if isinstance(dim, (tuple, list)) else (dim,)
+            rank = max(self.ndim, 1)
+            normalized = []
+            for dimension in dimensions:
+                if not -rank <= dimension < rank:
+                    raise IndexError("squeeze dimension out of range")
+                axis = dimension % rank
+                if axis in normalized:
+                    raise RuntimeError("squeeze dimension appears multiple times")
+                normalized.append(axis)
+            shape = tuple(size for axis, size in enumerate(self.shape) if axis not in normalized or size != 1)
+        return FakeTensor(shape, self.dtype, self.device)
+
+    def unsqueeze(self, dim: int) -> "FakeTensor":
+        rank = self.ndim + 1
+        if not -rank <= dim < rank:
+            raise IndexError("unsqueeze dimension out of range")
+        shape = list(self.shape)
+        shape.insert(dim % rank, 1)
+        return FakeTensor(shape, self.dtype, self.device)
+
     def stride(self, dim: int | None = None):
         values = []
         running = 1
@@ -120,8 +145,15 @@ class FakeTensor:
             shape[idx] = self.numel() // known
         return FakeTensor(shape, self.dtype, self.device)
 
-    def flatten(self) -> "FakeTensor":
-        return FakeTensor((self.numel(),), self.dtype, self.device)
+    def flatten(self, start_dim=0, end_dim=-1) -> "FakeTensor":
+        rank = max(self.ndim, 1)
+        if not -rank <= start_dim < rank or not -rank <= end_dim < rank:
+            raise IndexError("flatten dimension out of range")
+        start, end = start_dim % rank, end_dim % rank
+        if start > end:
+            raise RuntimeError("flatten start dimension exceeds end dimension")
+        shape = self.shape[:start] + (math.prod(self.shape[start:end + 1]),) + self.shape[end + 1:]
+        return FakeTensor(shape, self.dtype, self.device)
 
     def __len__(self) -> int:
         return self.shape[0]
