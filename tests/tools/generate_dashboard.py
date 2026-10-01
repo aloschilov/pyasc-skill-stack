@@ -2276,10 +2276,24 @@ init();
 </html>"""
 
 
-def render_cannbench_panel() -> str:
+def cannbench_documents() -> tuple[dict, dict]:
     catalog = (_load_evidence(CANNBENCH_SUMMARY_FILE.parent / "catalog/manifest.json")
                or _load_evidence(CANNBENCH_CATALOG_FILE) or {})
-    summary = _load_evidence(CANNBENCH_SUMMARY_FILE) or {}
+    summary = _load_evidence(CANNBENCH_SUMMARY_FILE)
+    mismatched = summary is not None and any(summary.get(key) != catalog.get(key) for key in
+        ("benchmark_slug", "benchmark_version", "required_operators", "required_cases"))
+    if summary is None or mismatched:
+        sys.path.insert(0, str(REPO_ROOT / "integrations/cannbench/ci"))
+        from hardware_gate import evaluate
+        summary = evaluate(catalog, [])
+        summary["skill_stack_gate_passed"] = False
+        summary["generation_provenance"] = "No complete skill-generated submission identity binding"
+        summary["errors"].insert(0, "Hardware report disagrees with catalog identity/scope" if mismatched else "No hardware report for this revision")
+    return catalog, summary
+
+
+def render_cannbench_panel(documents=None) -> str:
+    catalog, summary = documents or cannbench_documents()
     esc = lambda value: html_lib.escape(str(value), quote=True)
     measured = {o.get("operator"): o for o in summary.get("operators", [])}
     required = catalog.get("required_cases", 0)
@@ -2325,10 +2339,11 @@ def main() -> None:
 
     cap = _load_yaml(CAPABILITIES_FILE)
     data = build_data(cap)
+    cannbench = cannbench_documents()
 
     data_json = json.dumps(data, indent=None, ensure_ascii=False).replace("<", "\\u003c")
     html = HTML_TEMPLATE.replace("__DATA_PLACEHOLDER__", data_json)
-    html = html.replace("<body>", "<body>" + render_cannbench_panel(), 1)
+    html = html.replace("<body>", "<body>" + render_cannbench_panel(cannbench), 1)
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -2336,18 +2351,10 @@ def main() -> None:
     (out_dir / "index.html").write_text(html, encoding="utf-8")
     public = out_dir / "cannbench"
     public.mkdir(exist_ok=True)
-    catalog_source = CANNBENCH_SUMMARY_FILE.parent / "catalog/manifest.json"
-    if not catalog_source.exists():
-        catalog_source = CANNBENCH_CATALOG_FILE
-    for source, name in ((catalog_source, "manifest.json"), (CANNBENCH_SUMMARY_FILE, "hardware-summary.json")):
-        if source.exists():
-            (public / name).write_bytes(source.read_bytes())
-    if not (public / "hardware-summary.json").exists():
-        (public / "hardware-summary.json").write_text(json.dumps({
-            "schema_version": 1, "source": "cannbench-hardware", "gate_passed": False,
-            "generated_at": None, "errors": ["No hardware report for this revision"],
-            "correct_cases": 0, "measured_cases": 0, "operators": [],
-        }, indent=2) + "\n")
+    # Always replace both outputs, including the complete missing-case report.
+    # Reusing an output directory must not retain an earlier measured report.
+    for document, name in zip(cannbench, ("manifest.json", "hardware-summary.json")):
+        (public / name).write_text(json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
 
     print(f"Dashboard written to {out_dir / 'index.html'}")
