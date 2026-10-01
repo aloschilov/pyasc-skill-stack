@@ -38,23 +38,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - name: Select matching CANNBench evidence run
+          ref: main
+      - name: Select exact CANNBench evidence run
         id: evidence
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           EVENT_WORKFLOW: ${{ github.event.workflow_run.name }}
           EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+          EVENT_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           if [ "$EVENT_WORKFLOW" = "CANNBench gate" ]; then
             echo "run_id=$EVENT_RUN_ID" >> "$GITHUB_OUTPUT"
+            echo "source_sha=$EVENT_SHA" >> "$GITHUB_OUTPUT"
           else
             # Listing all runs also handles the first deployment before this
             # newly added workflow has any run or registered workflow ID.
-            run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=main&status=completed&per_page=100" \
-              --jq ".workflow_runs | map(select(.name == \"CANNBench gate\" and .head_sha == \"$SOURCE_SHA\")) | first | .id // empty")
+            # Keep the latest measured evidence visible after a dashboard-only
+            # change. Its source revision is displayed and cannot qualify a
+            # different current revision.
+            read -r run_id source_sha < <(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=main&status=completed&per_page=100" \
+              --jq ".workflow_runs | map(select(.name == \"CANNBench gate\")) | ([.[] | select(.head_sha == \"$SOURCE_SHA\")] + .) | first | if . then [.id,.head_sha] | @tsv else \" \" end")
             echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+            echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
           fi
       - name: Check whether this run produced a report
         id: report
@@ -93,6 +99,25 @@ jobs:
             'required_operators': catalog['required_operators'], 'required_cases': catalog['required_cases'],
             'operators': [], 'errors': ['CANNBench run ' + os.environ['RUN_ID'] + ' produced no hardware artifact']}
           (out / 'hardware-summary.json').write_text(json.dumps(report, indent=2) + '\n')
+          PY
+      - name: Bind displayed evidence to its measured revision
+        if: steps.report.outputs.available == 'true'
+        env:
+          EVIDENCE_SHA: ${{ steps.evidence.outputs.source_sha }}
+          RUN_ID: ${{ steps.evidence.outputs.run_id }}
+        run: |
+          python - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          path = Path('evidence/cannbench/ci-current/hardware-summary.json')
+          report = json.loads(path.read_text())
+          current = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          measured = os.environ['EVIDENCE_SHA']
+          report.update(evidence_revision=measured, dashboard_revision=current, evidence_run_id=os.environ['RUN_ID'])
+          if current != measured:
+              report['skill_stack_gate_passed'] = False
+              report['generation_provenance'] = 'Hardware evidence for revision ' + measured + '; current revision ' + current + ' requires its own source binding'
+          path.write_text(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + '\n')
           PY
       - run: python tests/tools/generate_dashboard.py --output-dir _site
       - uses: actions/configure-pages@v5
