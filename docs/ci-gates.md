@@ -18,7 +18,7 @@ These stages are implemented but full-catalog generation, installed-wheel replay
 
 ## Dashboard
 
-Pages downloads the evidence artifact from the matching CANNBench run, including failed gates, and renders every official operator. Missing and failed cases remain visible. Simulator comparison and historical skill-intervention results remain separate diagnostics. No evidence commit is needed for metrics publication. Generation artifacts are retained separately for 90 days. Each run has a unique artifact directory. A run that fails before uploading hardware evidence is published as missing/failed, preserving the full denominator.
+Pages downloads the exact artifact from the triggering CANNBench run, including failed gates, and renders every official operator. For a CI-only or dashboard change it prefers a matching revision, then the latest completed CANNBench run. Both source revisions are displayed; evidence from an older revision cannot qualify the current skill-stack revision. Pages always builds the current main so a late old campaign cannot roll back the dashboard code. Missing and failed cases remain visible. Simulator comparison and historical skill-intervention results remain separate diagnostics. No evidence commit is needed for metrics publication. Generation artifacts are retained separately for 90 days. Each run has a unique artifact directory. A run that fails before uploading hardware evidence is published as missing/failed, preserving the full denominator.
 
 ## Commands
 

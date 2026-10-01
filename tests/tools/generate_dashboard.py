@@ -2318,6 +2318,7 @@ def render_cannbench_panel(documents=None) -> str:
 <p>Source of truth: official CANNBench catalog, {esc(catalog.get('required_operators', 0))} operators / {esc(required)} cases.</p>
 <p><strong>{state}</strong> · Correctness: {esc(correct)}/{esc(required)} · Hardware timings: {esc(timed)}/{esc(required)} · True GM: {esc(gm_text)}</p>
 <p>Measured report: {esc(summary.get('generated_at', 'No hardware report for this revision'))}. Ratio = reference µs / candidate µs. The API aggregate is not used.</p>
+<p>Measured revision: {esc(summary.get('evidence_revision', 'unrecorded'))} · Dashboard revision: {esc(summary.get('dashboard_revision', 'local preview'))}.</p>
 <p><strong>Skill-stack acceptance: {skill_state}</strong>. {esc(summary.get('generation_provenance', 'No complete skill-generated submission identity binding'))}.</p>
 <ul>{errors}</ul><div style="overflow:auto;max-height:600px"><table><thead><tr><th>Operator</th><th>Level</th><th>Correct</th><th>Measured</th><th>Status</th><th>True GM</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>
 <p><a href="cannbench/manifest.json">Full catalog manifest</a> · <a href="cannbench/hardware-summary.json">Hardware metrics and case results</a> · <a href="https://cannbench.com/workspace/jobs">CANNBench jobs</a></p>
