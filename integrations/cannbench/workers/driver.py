@@ -488,6 +488,12 @@ def run_worker(scratch: Path, message: str, log_path: Path,
         "OPENCODE_DISABLE_EXTERNAL_SKILLS": "1",
         "OPENCODE_DISABLE_CLAUDE_CODE_SKILLS": "1",
     }
+    if os.environ.get("CANNBENCH_OPENCODE_STATE_ROOT"):
+        # Independent concurrent workers must not contend on OpenCode's SQLite
+        # state. Keep each worker's sessions across phases outside artifacts.
+        state = Path(os.environ["CANNBENCH_OPENCODE_STATE_ROOT"]) / hashlib.sha256(str(scratch).encode()).hexdigest()
+        state.mkdir(parents=True, exist_ok=True, mode=0o700)
+        env["XDG_DATA_HOME"] = str(state)
     try:
         proc = subprocess.run(cmd, cwd=scratch, env=env, capture_output=True,
                               text=True, timeout=timeout_s)
@@ -693,9 +699,136 @@ def compact_local_feedback(digest: dict, limit: int = 6) -> dict:
     }
 
 
+def _iteration_order(path: Path) -> int:
+    digits = path.name.removeprefix("iter")
+    return int(digits) if digits.isdigit() else 0
+
+
+def load_reuse_records(reuse_root: Path, catalog: dict, skills_root: Path) -> dict:
+    """Bind recorded native candidates of a previous full-catalog campaign.
+
+    The source campaign stays immutable; only read-only validation happens
+    here. The parent summary must cover the exact complete requested official
+    operator set and catalog, so a historical subset or a hand-authored tree
+    is rejected. A compiler-only failed candidate is acceptable for replay;
+    static-contract failures (no recorded compiler evidence) never are.
+    """
+    sys.path.insert(0, str(WORKERS_DIR.parent / "ci"))
+    from generation_gate import validate_iteration_record
+    summary_file = reuse_root / "summary.json"
+    if not summary_file.is_file():
+        raise ValueError("Reuse source lacks a campaign summary")
+    summary = json.loads(summary_file.read_text())
+    names = {op["function_name"] for op in catalog["operators"]}
+    requested = summary.get("requested_operators") or []
+    if (set(requested) != names or len(requested) != len(names)
+            or summary.get("catalog_sha256") != catalog["catalog_sha256"]):
+        raise ValueError("Reuse source does not cover the complete official catalog")
+    records = {}
+    for spec in catalog["operators"]:
+        name = spec["function_name"]
+        item_dir = reuse_root / (name + "-generate")
+        iterations = sorted(item_dir.glob("iter*"), key=_iteration_order, reverse=True) if item_dir.is_dir() else []
+        for iteration in iterations:
+            try:
+                records[name] = validate_iteration_record(
+                    spec, iteration, skills_root, allow_failed_compile=True)
+                break
+            except (ValueError, KeyError, json.JSONDecodeError, OSError):
+                continue
+    return records
+
+
+def requalify_recorded_iteration(item: WorkItem, record: dict, run_root: Path) -> bool:
+    """Replay a validated recorded candidate under the current compile gate.
+
+    The source campaign is never mutated. If the unchanged candidate passes
+    every required case, its native evidence is copied into a NEW iteration of
+    the new run with an explicit derivation record (original provenance SHA
+    retained, validation updated to the replay report hash) and the candidate
+    is qualified locally. Otherwise False is returned so the existing
+    fresh-generation path runs. Models and sessions remain the original native
+    generation; the replay is never relabeled as fresh model generation.
+    """
+    stage = run_root / item.name / "reuse-attempt"
+    stage.mkdir(parents=True, exist_ok=True)
+    candidate = stage / "candidate.py"
+    shutil.copy2(record["iteration"] / "candidate.py", candidate)
+    problems = static_check(candidate, item.op, item.task_dir)
+    if problems:
+        (stage / "static_check.json").write_text(json.dumps(problems, indent=2) + "\n")
+        item.history.append({"iter": 0, "result": "reuse-static-fail", "problems": problems})
+        return False
+    print(f"[{item.name}] reuse: replaying the recorded candidate under the "
+          "current local compile gate", flush=True)
+    digest = local_evaluate(item.op, candidate, stage, item.task_dir)
+    (stage / "digest.json").write_text(json.dumps(digest, indent=2) + "\n")
+    required = item.contract["case_count"] if item.contract else digest.get("total")
+    if (digest.get("hard_failure") or digest.get("passed") != required
+            or digest.get("total") != required
+            or _sha256(candidate) != record["candidate_sha256"]):
+        item.history.append({
+            "iter": 0,
+            "result": "reuse-replay-fail",
+            "passed": f"{digest.get('passed')}/{digest.get('total')}",
+        })
+        return False
+    iter_dir = run_root / item.name / "iter1"
+    iter_dir.mkdir(parents=True, exist_ok=True)
+    # Copy the recorded native evidence unchanged; the replay compiler report
+    # and the derived provenance replace only the replayed artifacts.
+    for path in record["iteration"].iterdir():
+        if path.is_file() and path.name not in ("provenance.json", "local_compile.json", "digest.json"):
+            shutil.copy2(path, iter_dir / path.name)
+    shutil.copy2(stage / "local_compile.json", iter_dir / "local_compile.json")
+    # Retain original bytes, including failed compiler reports, so derivation
+    # hashes remain independently checkable after the parent artifact expires.
+    shutil.copytree(record["iteration"], iter_dir / "original-record")
+    original = record["provenance"]
+    provenance = json.loads(json.dumps(original))
+    provenance["validation"] = {
+        **(original.get("validation") or {}),
+        "report_sha256": _sha256(iter_dir / "local_compile.json"),
+        "passed": digest.get("passed"),
+        "total": digest.get("total"),
+        "replay": True,
+    }
+    provenance["reuse"] = {
+        "mode": "requalified-replay",
+        "source_iteration": str(record["iteration"]),
+        "original_provenance_sha256": record["provenance_sha256"],
+        "original_candidate_sha256": record["candidate_sha256"],
+        "original_compiler_report_sha256": record["compiler_report_sha256"],
+        "original_validation": original.get("validation"),
+        "note": ("Candidate unchanged from the recorded native generation; "
+                 "replayed under the current local compile gate. Models and "
+                 "sessions remain the original native generation."),
+    }
+    (iter_dir / "provenance.json").write_text(
+        json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
+    package_dir = run_root / "locally_qualified" / "cann_bench"
+    provenance_dir = run_root / "locally_qualified" / "provenance"
+    package_dir.mkdir(parents=True, exist_ok=True)
+    provenance_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(candidate, package_dir / f"{item.op}.py")
+    shutil.copy2(iter_dir / "provenance.json", provenance_dir / f"{item.op}.json")
+    item.history.append({
+        "iter": 1,
+        "result": "locally-qualified-reuse",
+        "passed": f"{digest.get('passed')}/{digest.get('total')}",
+        "models": original["models"],
+    })
+    item.status = (
+        f"locally qualified {digest['passed']}/{digest['total']} "
+        "(requalified unchanged candidate; numerics/performance unverified)"
+    )
+    return True
+
+
 def process_item(item: WorkItem, queue: EvalQueue | None, run_root: Path,
                  iterations: int, dry_run: bool, evaluation: str,
-                 models: tuple[str, ...], phase_attempts: int) -> WorkItem:
+                 models: tuple[str, ...], phase_attempts: int,
+                 reuse_record: dict | None = None) -> WorkItem:
     item_dir = run_root / item.name
     item_dir.mkdir(parents=True, exist_ok=True)
     # Keep scratch inside the checkout so project permissions and skill paths
@@ -717,6 +850,12 @@ def process_item(item: WorkItem, queue: EvalQueue | None, run_root: Path,
     if dry_run:
         item.status = "dry-run: prompt written"
         return item
+
+    if reuse_record is not None and item.kind == "generate" and evaluation == "local":
+        if requalify_recorded_iteration(item, reuse_record, run_root):
+            return item
+        print(f"[{item.name}] reuse replay failed; generating fresh candidates",
+              flush=True)
 
     canonical_module = SUBMISSION_PKG / f"{item.op}.py"
 
@@ -980,8 +1119,17 @@ def main() -> int:
         help="local is credit-free compile/lowering only; remote consumes credits",
     )
     parser.add_argument("--phase-attempts", type=int, default=2)
+    parser.add_argument("--reuse-generation", type=Path,
+                        help="Previous campaign run directory; validated recorded "
+                             "native candidates are requalified before fresh generation")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
+
+    if args.reuse_generation is not None:
+        if not args.catalog:
+            parser.error("--reuse-generation requires --catalog (full official scope)")
+        if args.evaluation == "remote":
+            parser.error("--reuse-generation replays candidates under local evaluation only")
 
     models = tuple(model.strip() for model in args.models.split(",") if model.strip())
     if len(set(models)) < 2:
@@ -1024,6 +1172,15 @@ def main() -> int:
     run_root.mkdir(parents=True)
     if catalog:
         (run_root / "catalog-manifest.json").write_text(json.dumps(catalog, indent=2) + "\n")
+    reuse_records = {}
+    if args.reuse_generation is not None:
+        try:
+            reuse_records = load_reuse_records(
+                args.reuse_generation.resolve(), catalog, SKILLS_ROOT)
+        except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            parser.error("Reuse source rejected: " + str(exc))
+        print(f"reuse: {len(reuse_records)} recorded candidates requalifiable",
+              flush=True)
     print(f"run dir: {run_root}", flush=True)
 
     queue = EvalQueue() if args.evaluation == "remote" else None
@@ -1032,6 +1189,7 @@ def main() -> int:
             pool.submit(
                 process_item, item, queue, run_root, args.iterations,
                 args.dry_run, args.evaluation, models, args.phase_attempts,
+                reuse_records.get(item.op),
             ) for item in items
         ]
         results = []

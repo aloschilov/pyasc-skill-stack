@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Full catalog generation, installed evaluator-wheel qualification and hardware gate.
 
-Schedules issue only GETs. --submit authorizes one full-catalog POST after
-complete skill/compiler evidence and installed-wheel qualification.
+Schedules issue only GETs. --submit starts quota-bounded batches after full
+qualification; --continue-submissions opts into the next durable batch.
 """
 import argparse
 from datetime import datetime, timezone
@@ -37,7 +37,17 @@ def retain_job(payload):
 
 
 def verify_binding(catalog, state, job_ids, repo_root):
-    if not state or job_ids != [state.get("job_id")] or state.get("phase") not in ("submitted", "finished"):
+    if not state:
+        return False
+    if state.get("phase") == "campaign":
+        from batch_campaign import validate_batches
+        validate_batches(state, catalog)
+        batches = state["batches"]
+        if (not batches or job_ids != [b.get("job_id") for b in batches]
+                or len(job_ids) != len(set(job_ids))
+                or any(b.get("phase") not in ("submitted", "finished") for b in batches)):
+            return False
+    elif job_ids != [state.get("job_id")] or state.get("phase") not in ("submitted", "finished"):
         return False
     bundle = state["bundle"]
     if (bundle["catalog_sha256"] != catalog["catalog_sha256"] or bundle["benchmark_version"] != catalog["benchmark_version"]
@@ -86,10 +96,18 @@ def main():
     parser.add_argument("--job-id", action="append", default=[])
     parser.add_argument("--state-file", type=Path, help="Resume an exact durable submission using GETs only")
     parser.add_argument("--generate", action="store_true")
-    parser.add_argument("--submit", action="store_true", help="One full-catalog job after all qualification gates")
+    parser.add_argument("--reuse-generation", type=Path,
+                        help="Previous campaign whose recorded native candidates are "
+                             "requalified before fresh generation")
+    parser.add_argument("--submit", action="store_true", help="Start quota-bounded batches after full qualification")
+    parser.add_argument("--continue-submissions", action="store_true", help="Opt into another batch of the existing qualified campaign")
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--iterations", type=int, default=2)
     args = parser.parse_args()
+    if args.continue_submissions and (args.generate or args.submit or args.job_id):
+        parser.error("--continue-submissions requires GET/resume mode without generation or explicit job IDs")
+    if args.reuse_generation and not args.generate:
+        parser.error("--reuse-generation requires --generate")
     if args.submit and not args.generate:
         parser.error("--submit requires a fresh full-catalog --generate campaign")
     args.output = args.output.resolve()
@@ -108,29 +126,63 @@ def main():
         generation = args.output / "generation"
         if args.generate:
             command = [sys.executable, "integrations/cannbench/workers/driver.py", "--catalog", str(catalog_root / "manifest.json"),
-                       "--output-dir", str(generation), "--items", "all", "--evaluation", "local",
-                       "--models", "gateway/glm-5.3,gateway/qwen3.8-max", "--workers", str(args.workers), "--iterations", str(args.iterations)]
+                        "--output-dir", str(generation), "--items", "all", "--evaluation", "local",
+                        "--models", "gateway/glm-5.3,gateway/qwen3.8-max", "--workers", str(args.workers), "--iterations", str(args.iterations)]
+            if args.reuse_generation:
+                command.extend(["--reuse-generation", str(args.reuse_generation.resolve())])
             with (args.output / "generation.log").open("w") as log:
                 generation_exit = subprocess.run(command, cwd=REPO_ROOT, stdout=log, stderr=subprocess.STDOUT).returncode
         if args.submit:
             if generation_exit != 0:
                 raise ValueError("Generation/compile failed; no submission was created")
             from package_bundle import package_bundle
-            from submission import submit
+            from batch_campaign import initialize, advance
             bundle = args.output / "bundle"
             package_bundle(catalog, generation, REPO_ROOT, bundle)
             qualify_bundle(bundle, catalog_root / "manifest.json", args.output)
-            payload, state = submit(bundle, catalog, REPO_ROOT)
-            ids = [state["job_id"]]; payloads = [retain_job(payload)]
+            campaign_file = initialize(bundle, catalog)
+            results, state = advance(campaign_file, catalog, REPO_ROOT, allow_submit=True)
+            ids = [batch["job_id"] for batch in state["batches"]]
+            payloads = [retain_job(payload) for payload in results]
         else:
             from submission import STATE_ROOT, resume
             selected = args.state_file
+            pointer = STATE_ROOT / "campaign-current.json"
+            if selected is None and pointer.is_file():
+                selected = Path(json.loads(pointer.read_text())["state_file"])
             if selected is None:
                 selected = next((p for p in (STATE_ROOT / "pending.json", STATE_ROOT / "latest.json") if p.is_file()), None)
             if selected and not ids:
-                payload, state = resume(selected, REPO_ROOT)
-                ids = [state["job_id"]]; payloads = [retain_job(payload)]
+                prior = json.loads(selected.read_text())
+                if prior.get("phase") == "campaign":
+                    from batch_campaign import advance
+                    # Reconcile pending intents before evaluating eligibility for a new POST.
+                    results, prior = advance(selected, catalog, REPO_ROOT, allow_submit=False)
+                    state = prior
+                    ids = [b["job_id"] for b in state["batches"]]
+                    payloads = [retain_job(payload) for payload in results]
+                    if args.continue_submissions:
+                        if not verify_binding(catalog, prior, [b.get("job_id") for b in prior["batches"]], REPO_ROOT) and prior["batches"]:
+                            raise ValueError("Current sources differ from the qualified campaign")
+                        if not prior["bundle"].get("generation_sources"):
+                            raise ValueError("Missing qualified generation source identity")
+                        for relative, digest in prior["bundle"]["generation_sources"].items():
+                            source = (REPO_ROOT / relative).resolve()
+                            if not source.is_relative_to(REPO_ROOT) or sha256(source) != digest:
+                                raise ValueError("Current sources differ from the qualified campaign")
+                    state = prior
+                    if args.continue_submissions:
+                        results, state = advance(selected, catalog, REPO_ROOT, allow_submit=True)
+                    ids = [b["job_id"] for b in state["batches"]]
+                    payloads = [retain_job(payload) for payload in results]
+                else:
+                    if args.continue_submissions:
+                        raise ValueError("No qualified batch campaign to continue")
+                    payload, state = resume(selected, REPO_ROOT)
+                    ids = [state["job_id"]]; payloads = [retain_job(payload)]
             else:
+                if args.continue_submissions:
+                    raise ValueError("No qualified batch campaign to continue")
                 if selected:
                     state = json.loads(selected.read_text())
                 payloads = [retain_job(client.get("/api/jobs/" + job_id)) for job_id in ids]

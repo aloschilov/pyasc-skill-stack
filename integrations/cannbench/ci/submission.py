@@ -1,4 +1,4 @@
-"""One durable full-catalog submission; ambiguous POSTs are reconciled by GET."""
+"""Durable submission primitives; ambiguous POSTs are reconciled by GET."""
 import json
 import os
 from pathlib import Path
@@ -75,7 +75,9 @@ def submit(bundle_root, catalog, repo_root, timeout=43200):
                 raise ValueError("Durable submission identity mismatch")
             job_id = state.get("job_id") or reconcile(queue._client, state)
         else:
-            queue._check_credit()
+            credits = queue._client.get_credits().get("credits") or {}
+            if credits.get("unlimited") is not True and int(credits.get("remaining") or 0) < len(catalog["operators"]):
+                raise RuntimeError("Insufficient credits for the full catalog; use quota-bounded campaign batches")
             recent = queue._client.list_jobs(limit=100).get("jobs", [])
             if any(j.get("status") in ("queued", "running", "compiling", "evaluating") for j in recent):
                 raise RuntimeError("Another CANNBench job is active; no submission was created")
@@ -99,7 +101,7 @@ def submit(bundle_root, catalog, repo_root, timeout=43200):
             save(path, state)  # Durable intent precedes the only possible POST.
             save(STATE_ROOT / "pending.json", state)
             try:
-                posted = queue._submit_streaming(str(durable_archive), [op["operator"] for op in catalog["operators"]], state["job_tag"])
+                posted = queue._submit_streaming(str(durable_archive), [op["function_name"] for op in catalog["operators"]], state["job_tag"])
                 job_id = posted.get("job_id") or (posted.get("job") or {}).get("id")
                 if not job_id:
                     raise RuntimeError("Submission response has no hardware job identity")

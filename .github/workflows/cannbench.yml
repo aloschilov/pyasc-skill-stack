@@ -14,12 +14,21 @@ on:
         type: string
         default: ''
       submit:
-        description: 'Submit one complete catalog after generation and installed-wheel qualification'
+        description: 'Start quota-bounded batches of the fully qualified catalog'
         type: boolean
         default: false
+      continue_submissions:
+        description: 'Continue the durable qualified campaign within fresh credits'
+        type: boolean
+        default: false
+      reuse_run_id:
+        description: 'Completed trusted main CANNBench run whose native candidates should be requalified'
+        type: string
+        default: ''
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: cannbench-hardware
@@ -37,9 +46,39 @@ jobs:
       OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
       OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
       CANNBENCH_JOB_IDS: ${{ inputs.job_ids || vars.CANNBENCH_JOB_IDS }}
+      CANNBENCH_OPENCODE_STATE_ROOT: /home/aloschilov/ci-campaign-state/opencode/run-${{ github.run_id }}-${{ github.run_attempt }}
       CANNBENCH_OUTPUT: evidence/cannbench/run-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
+      - name: Validate trusted reuse run
+        if: github.event_name == 'workflow_dispatch' && inputs.reuse_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REUSE_RUN_ID: ${{ inputs.reuse_run_id }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PYCODE'
+          import json, os, re, urllib.request
+          run = os.environ['REUSE_RUN_ID']
+          if not re.fullmatch(r'[0-9]+', run):
+              raise ValueError('Invalid reuse run ID')
+          request = urllib.request.Request(
+              'https://api.github.com/repos/' + os.environ['GH_REPOSITORY'] + '/actions/runs/' + run,
+              headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json'})
+          with urllib.request.urlopen(request) as response:
+              metadata = json.load(response)
+          if (metadata['head_branch'] != 'main' or metadata['status'] != 'completed'
+                  or metadata['path'] != '.github/workflows/cannbench.yml'
+                  or metadata['event'] not in ('workflow_dispatch', 'schedule')):
+              raise ValueError('Only completed trusted main CANNBench runs can be reused')
+          PYCODE
+      - uses: actions/download-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && inputs.reuse_run_id != ''
+        with:
+          name: cannbench-generation
+          path: .cannbench-reuse
+          run-id: ${{ inputs.reuse_run_id }}
+          github-token: ${{ github.token }}
       - name: Verify VM prerequisites
         run: |
           command -v python3
@@ -51,6 +90,8 @@ jobs:
         env:
           GENERATE: ${{ github.event_name == 'workflow_dispatch' && inputs.generate }}
           SUBMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.submit }}
+          CONTINUE_SUBMISSIONS: ${{ github.event_name == 'workflow_dispatch' && inputs.continue_submissions }}
+          REUSE_RUN_ID: ${{ inputs.reuse_run_id }}
         run: |
           set -euo pipefail
           export OPENCODE_CONFIG_CONTENT="$(python3 - <<'PY'
@@ -68,6 +109,8 @@ jobs:
           args=()
           if [ "$GENERATE" = "true" ]; then args+=(--generate); fi
           if [ "$SUBMIT" = "true" ]; then args+=(--submit); fi
+          if [ "$CONTINUE_SUBMISSIONS" = "true" ]; then args+=(--continue-submissions); fi
+          if [ -n "$REUSE_RUN_ID" ]; then args+=(--reuse-generation "$PWD/.cannbench-reuse"); fi
           python3 integrations/cannbench/ci/run.py \
             --output "$CANNBENCH_OUTPUT" "${args[@]}"
       - name: Upload measured evidence, including failures
