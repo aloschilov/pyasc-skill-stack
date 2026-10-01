@@ -1,0 +1,570 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "MoeGatingTopKSoftmax",
+  "function_name": "moe_gating_top_k_softmax",
+  "level": "level3",
+  "category": "LayoutTransform",
+  "difficulty": "L3",
+  "description": "MoE门控网络中Softmax和TopK的融合，输出topK值、专家索引和行位置索引",
+  "desc_md": "# MoeGatingTopKSoftmax 算子 API 描述\n\n## 1. 算子简介\n\nMoE 门控网络中 Softmax 和 TopK 的融合算子，先对输入执行 Softmax 归一化，再取 TopK 个最大值，同时输出专家索引和行位置索引。\n\n**主要应用场景**：\n- Mixture of Experts (MoE) 模型中的门控路由选择\n- 稀疏激活 Transformer 中的专家选择策略\n- MoE 层中 token 到专家的路由分配\n\n**算子特征**：\n- 难度等级：L3（LayoutTransform）\n- 支持 2D 或 3D 输入，输出 TopK 结果、专家索引、行索引三个输出\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\nsoftmaxOut = softmax(x, axis=-1)\n$$\n\n$$\nyOut, expertIdxOut = topK(softmaxOut, k)\n$$\n\n$$\nrowIdxRange = arange(expertIdxOut.shape[0] \\times expertIdxOut.shape[1])\n$$\n\n$$\nrowIdxOut = rowIdxRange.reshape([expertIdxOut.shape[1], expertIdxOut.shape[0]]).transpose(1, 0)\n$$\n\n### 处理流程\n\n1. 对输入 $x$ 沿最后一维执行 Softmax：$\\text{softmaxOut}[i] = \\frac{e^{x_i}}{\\sum_j e^{x_j}}$\n2. 从 Softmax 结果中选取前 $k$ 个最大值作为输出 $yOut$，对应索引为 $expertIdxOut$\n3. 计算 $rowIdxOut$，表示展平后的全局位置索引（用于指示每个输出位置在展平数组中的位置）\n4. 如果 `finished` 中对应行为 True，则 $expertIdxOut$ 中填入 $num\\_expert$（即 $x$ 的最后一维大小）\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.moe_gating_top_k_softmax(Tensor x, Tensor? finished=None, int k=1) -> (Tensor y, Tensor expert_idx, Tensor row_idx)\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入张量，支持 2D 或 3D，shape 为 (..., E)，E 为专家数 |\n| finished | Tensor? | None | 可选，标记哪些行参与计算，dtype 为 bool，shape 为 x_shape[:-1] |\n| k | int | 1 | topK 数量，要求 0 < k <= x最后一维大小，且 k <= 1024 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | (..., k) | 与输入 x 相同 | 输出张量，topK 结果值 |\n| expert_idx | (..., k) | int32 | topK 对应的专家索引 |\n| row_idx | (..., k) | int32 | 展平后的全局位置索引 |\n\n### 数据类型\n\n| 输入 x dtype | 输出 y dtype | 输出 expert_idx dtype | 输出 row_idx dtype |\n|-------------|-------------|---------------------|-------------------|\n| float16 | float16 | int32 | int32 |\n| bfloat16 | bfloat16 | int32 | int32 |\n| float32 | float32 | int32 | int32 |\n\n### 规则与约束\n\n- 输入 `x` 支持 2D 或 3D 张量\n- `k` 必须为正整数，且满足 0 < k <= x最后一维大小，k <= 1024\n- `finished` 为可选参数，若提供则 shape 必须为 x_shape[:-1]，dtype 必须为 bool\n- Softmax 和 TopK 均沿最后一维（dim=-1）计算\n- 当 `finished` 中某行为 True 时，该行对应的 `expert_idx` 值会被设为 `num_expert`\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `B`（batch，3D 输入时） | 1 ~ 64 | x 为 3D `(B, N, E)` 时使用；cases.csv 实测 4 ~ 8 |\n| `N`（tokens） | 1 ~ 262144 | cases.csv 实测 64 ~ 131072 |\n| `E`（专家数，x 最后一维） | 1 ~ 2048 | cases.csv 实测 4 ~ 1024 |\n| `k`（topK） | 1 ~ 1024 | 必须满足 0 < k ≤ E；cases.csv 实测 1 ~ 128 |\n| `finished` | shape = x_shape[:-1] | 可选；dtype 必须为 bool；存在时对应行的 `expert_idx` 置为 E |\n\n约束：\n- `x` rank ∈ {2, 3}；2D 时 shape `(N, E)`，3D 时 shape `(B, N, E)`；Softmax 与 TopK 沿最后一维 (axis=-1) 计算。\n- `0 < k ≤ E` 且 `k ≤ 1024`；`y`、`expert_idx`、`row_idx` 的最后一维大小均为 `k`。\n- `finished.shape == x_shape[:-1]` 且 `finished.dtype == bool`；当 `finished[i] == True` 时对应行的 `expert_idx` 填入 `E`（专家总数），表示该 token 不参与路由。\n- 输出 dtype：`y` 与 `x` 一致；`expert_idx` 与 `row_idx` 均为 int32。\n- `x` 元素必须为非 NaN 有限值（NaN 会破坏 Softmax 归一化，导致 TopK 排序未定义；本基准的 case 集不引入 NaN）。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nMoeGatingTopKSoftmax算子Torch Golden参考实现\n\n公式:\n  softmaxOut = softmax(x, axis=-1)\n  yOut, expertIdxOut = topK(softmaxOut, k)\n  rowIdxRange = arange(expertIdxOut.shape[0] * expertIdxOut.shape[1])\n  rowIdxOut = rowIdxRange.reshape([expertIdxOut.shape[1], expertIdxOut.shape[0]]).transpose(1, 0)\n\n注意: row_idx是展平后的全局位置索引，而非行号\n\"\"\"\ndef moe_gating_top_k_softmax(\n    x: torch.Tensor,\n    finished: torch.Tensor = None,\n    k: int = 1\n) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:\n    \"\"\"\n    MoE门控网络中Softmax和TopK的融合\n\n    Args:\n        x: 输入张量，shape (..., E)\n        finished: 可选，标记哪些行参与计算，bool类型，shape x_shape[:-1]\n        k: topK数量\n\n    Returns:\n        y: topK值，shape (..., k)\n        expert_idx: topK索引（专家序号），shape (..., k)，int32\n        row_idx: 行位置索引（展平后的全局位置），shape (..., k)，int32\n    \"\"\"\n    # Softmax沿最后一维\n    softmax_out = torch.nn.functional.softmax(x, dim=-1)\n\n    # TopK沿最后一维\n    values, indices = torch.topk(softmax_out, k, dim=-1)\n\n    # 计算row_idx，严格对标op-plugin测试代码\n    # 公式: rowIdxRange = arange(shape[0] * shape[1])\n    #       rowIdxOut = rowIdxRange.reshape([shape[1], shape[0]]).transpose(1, 0)\n    # 注意: row_idx是展平后的全局位置索引\n    output_shape = indices.shape\n\n    if len(output_shape) == 2:\n        # 2D: (N, k)\n        # row_idx = arange(N*k).reshape(k, N).transpose(1, 0) -> (N, k)\n        row_idx_range = torch.arange(output_shape[0] * output_shape[1], dtype=torch.int32)\n        row_idx = row_idx_range.reshape(output_shape[1], output_shape[0]).transpose(0, 1)\n    else:\n        # 3D: (B, N, k)\n        # 先把(B, N)看作整体，计算展平后的索引\n        # row_idx_range = arange(B*N*k)\n        # reshape成(k, B*N)，transpose成(B*N, k)\n        # 再reshape成(B, N, k)\n        row_idx_range = torch.arange(output_shape[0] * output_shape[1] * output_shape[2], dtype=torch.int32)\n        row_idx = row_idx_range.reshape(output_shape[2], output_shape[0] * output_shape[1]).transpose(0, 1)\n        row_idx = row_idx.reshape(output_shape)\n\n    # 处理finished参数\n    # F510: `num_expert` (== E) is an out-of-range SENTINEL marking finished\n    # tokens — downstream consumers MUST treat `expert_id == num_expert` as\n    # \"skip routing\", NOT as a valid expert index. `moe_finalize_routing`\n    # golden bounds-checks before `bias[expert_id, :]` to honor this contract;\n    # any non-golden consumer of `indices` must do the same.\n    if finished is not None:\n        num_expert = x.shape[-1]\n        finished_expanded = finished.unsqueeze(-1).expand_as(indices)\n        indices = torch.where(finished_expanded, num_expert, indices)\n\n    # row_idx 由 transpose 构造, 留下的是 view, 而输出契约要求 contiguous (issue #146)\n    return values, indices.to(torch.int32), row_idx.to(torch.int32).contiguous()\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\n# 2D 输入\nx = torch.randn(1024, 64, dtype=torch.float16, device=\"npu\")\ny, expert_idx, row_idx = cann_bench.moe_gating_top_k_softmax(x, k=8)\n\n# 带 finished 参数\nfinished = torch.randint(0, 2, (1024,), dtype=torch.bool, device=\"npu\")\ny, expert_idx, row_idx = cann_bench.moe_gating_top_k_softmax(x, finished=finished, k=8)\n\n# 3D 输入\nx_3d = torch.randn(4, 1024, 64, dtype=torch.float32, device=\"npu\")\ny, expert_idx, row_idx = cann_bench.moe_gating_top_k_softmax(x_3d, k=4)\n```\n",
+  "proto": {
+    "name": "MoeGatingTopKSoftmax",
+    "category": "LayoutTransform",
+    "difficulty": "L3",
+    "formula": "softmaxOut = softmax(x, axis=-1)\nyOut, expertIdxOut = topK(softmaxOut, k)\nrowIdxRange = arange(expertIdxOut.shape[0] * expertIdxOut.shape[1])\nrowIdxOut = rowIdxRange.reshape([expertIdxOut.shape[1], expertIdxOut.shape[0]]).transpose(1, 0)\n",
+    "description": "MoE门控网络中Softmax和TopK的融合，输出topK值、专家索引和行位置索引",
+    "shape_support": "x: 2D或3D; finished: x_shape[:-1]; outputs: (..., k)",
+    "attrs": [
+      {
+        "name": "k",
+        "type": "int",
+        "default": 1,
+        "description": "topK数量，要求0<k<=x最后一维大小，且k<=1024"
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入张量，shape为(..., E)，E为专家数",
+        "dtype": [
+          "float16",
+          "bfloat16",
+          "float32"
+        ],
+        "shape": "2D或3D"
+      },
+      {
+        "name": "finished",
+        "description": "可选输入，标记哪些行参与计算，shape为x_shape[:-1]",
+        "dtype": [
+          "bool"
+        ],
+        "shape": "x_shape[:-1]",
+        "optional": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "topK结果值，shape为(..., k)",
+        "dtype": [
+          "float16",
+          "bfloat16",
+          "float32"
+        ],
+        "shape": "(..., k)"
+      },
+      {
+        "name": "expert_idx",
+        "description": "topK对应的专家索引，shape为(..., k)。",
+        "dtype": [
+          "int32"
+        ],
+        "shape": "(..., k)",
+        "compare": false
+      },
+      {
+        "name": "row_idx",
+        "description": "行位置索引，shape为(..., k)。",
+        "dtype": [
+          "int32"
+        ],
+        "shape": "(..., k)",
+        "compare": false
+      }
+    ],
+    "schema": "moe_gating_top_k_softmax(Tensor x, Tensor? finished=None, int k=1) -> (Tensor y, Tensor expert_idx, Tensor row_idx)"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nMoeGatingTopKSoftmax算子Torch Golden参考实现\n\n公式:\n  softmaxOut = softmax(x, axis=-1)\n  yOut, expertIdxOut = topK(softmaxOut, k)\n  rowIdxRange = arange(expertIdxOut.shape[0] * expertIdxOut.shape[1])\n  rowIdxOut = rowIdxRange.reshape([expertIdxOut.shape[1], expertIdxOut.shape[0]]).transpose(1, 0)\n\n注意: row_idx是展平后的全局位置索引，而非行号\n\"\"\"\ndef moe_gating_top_k_softmax(\n    x: torch.Tensor,\n    finished: torch.Tensor = None,\n    k: int = 1\n) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:\n    \"\"\"\n    MoE门控网络中Softmax和TopK的融合\n\n    Args:\n        x: 输入张量，shape (..., E)\n        finished: 可选，标记哪些行参与计算，bool类型，shape x_shape[:-1]\n        k: topK数量\n\n    Returns:\n        y: topK值，shape (..., k)\n        expert_idx: topK索引（专家序号），shape (..., k)，int32\n        row_idx: 行位置索引（展平后的全局位置），shape (..., k)，int32\n    \"\"\"\n    # Softmax沿最后一维\n    softmax_out = torch.nn.functional.softmax(x, dim=-1)\n\n    # TopK沿最后一维\n    values, indices = torch.topk(softmax_out, k, dim=-1)\n\n    # 计算row_idx，严格对标op-plugin测试代码\n    # 公式: rowIdxRange = arange(shape[0] * shape[1])\n    #       rowIdxOut = rowIdxRange.reshape([shape[1], shape[0]]).transpose(1, 0)\n    # 注意: row_idx是展平后的全局位置索引\n    output_shape = indices.shape\n\n    if len(output_shape) == 2:\n        # 2D: (N, k)\n        # row_idx = arange(N*k).reshape(k, N).transpose(1, 0) -> (N, k)\n        row_idx_range = torch.arange(output_shape[0] * output_shape[1], dtype=torch.int32)\n        row_idx = row_idx_range.reshape(output_shape[1], output_shape[0]).transpose(0, 1)\n    else:\n        # 3D: (B, N, k)\n        # 先把(B, N)看作整体，计算展平后的索引\n        # row_idx_range = arange(B*N*k)\n        # reshape成(k, B*N)，transpose成(B*N, k)\n        # 再reshape成(B, N, k)\n        row_idx_range = torch.arange(output_shape[0] * output_shape[1] * output_shape[2], dtype=torch.int32)\n        row_idx = row_idx_range.reshape(output_shape[2], output_shape[0] * output_shape[1]).transpose(0, 1)\n        row_idx = row_idx.reshape(output_shape)\n\n    # 处理finished参数\n    # F510: `num_expert` (== E) is an out-of-range SENTINEL marking finished\n    # tokens — downstream consumers MUST treat `expert_id == num_expert` as\n    # \"skip routing\", NOT as a valid expert index. `moe_finalize_routing`\n    # golden bounds-checks before `bias[expert_id, :]` to honor this contract;\n    # any non-golden consumer of `indices` must do the same.\n    if finished is not None:\n        num_expert = x.shape[-1]\n        finished_expanded = finished.unsqueeze(-1).expand_as(indices)\n        indices = torch.where(finished_expanded, num_expert, indices)\n\n    # row_idx 由 transpose 构造, 留下的是 view, 而输出契约要求 contiguous (issue #146)\n    return values, indices.to(torch.int32), row_idx.to(torch.int32).contiguous()\n",
+  "cases_yaml": [
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          16
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "k": 2
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-2D-无finished-tokens1024-experts16-k2 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 2,
+      "input_shape": [
+        [
+          16384,
+          32
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "k": 4
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ]
+      ],
+      "note": "M-float32-2D-无finished-tokens16384-experts32-k4 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 3,
+      "input_shape": [
+        [
+          131072,
+          64
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "k": 8
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ]
+      ],
+      "note": "L-bfloat16-2D-无finished-tokens131072-experts64-k8 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 4,
+      "input_shape": [
+        [
+          4,
+          1024,
+          128
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "k": 16
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ]
+      ],
+      "note": "M-float16-3D-无finished-B4-tokens1024-experts128-k16 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 5,
+      "input_shape": [
+        [
+          8192,
+          256
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "k": 32
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "M-float32-2D-无finished-tokens8192-experts256-k32 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 6,
+      "input_shape": [
+        [
+          1024,
+          16
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "bool"
+      ],
+      "attrs": {
+        "k": 2
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float16-2D-带finished-tokens1024-experts16-k2 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 7,
+      "input_shape": [
+        [
+          4,
+          1024,
+          32
+        ],
+        [
+          4,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "bool"
+      ],
+      "attrs": {
+        "k": 4
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "M-float32-3D-带finished-B4-tokens1024-experts32-k4 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 8,
+      "input_shape": [
+        [
+          65536,
+          64
+        ],
+        [
+          65536
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bool"
+      ],
+      "attrs": {
+        "k": 8
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "L-bfloat16-2D-带finished-tokens65536-experts64-k8 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 9,
+      "input_shape": [
+        [
+          4096,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "k": 64
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ]
+      ],
+      "note": "M-float16-2D-无finished-tokens4096-experts512-k64 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 10,
+      "input_shape": [
+        [
+          2048,
+          1024
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "k": 128
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-bfloat16-2D-无finished-tokens2048-experts1024-k128 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 11,
+      "input_shape": [
+        [
+          1009,
+          32
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "k": 4
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ]
+      ],
+      "note": "S-float16-2D-质数tokens1009-experts32-k4 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 12,
+      "input_shape": [
+        [
+          2048,
+          511
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "k": 8
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ]
+      ],
+      "note": "M-float32-2D-质数experts511-tokens2048-k8 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 13,
+      "input_shape": [
+        [
+          8,
+          1009,
+          127
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "k": 16
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "M-bfloat16-3D-质数非对齐-B8-tokens1009-experts127-k16 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 14,
+      "input_shape": [
+        [
+          64,
+          8
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "k": 2
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "XS-float16-2D-最小tokens64-experts8-k2 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 15,
+      "input_shape": [
+        [
+          1024,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "k": 2
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "S-float32-2D-最小experts4-tokens1024-k2 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 16,
+      "input_shape": [
+        [
+          512,
+          16
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "k": 1
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "XS-bfloat16-2D-k最小值1-tokens512-experts16 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 17,
+      "input_shape": [
+        [
+          2048,
+          256
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "k": 8
+      },
+      "value_range": [
+        [
+          -65504,
+          65504
+        ]
+      ],
+      "note": "M-float16-2D-边界值范围-tokens2048-experts256-k8 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 18,
+      "input_shape": [
+        [
+          4096,
+          128
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "k": 16
+      },
+      "value_range": [
+        [
+          -88,
+          88
+        ]
+      ],
+      "note": "M-float32-2D-float32边界值-tokens4096-experts128-k16 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 19,
+      "input_shape": [
+        [
+          1024,
+          32
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "k": 4
+      },
+      "value_range": [
+        [
+          -0.01,
+          0.01
+        ]
+      ],
+      "note": "S-float16-2D-微小值域-tokens1024-experts32-k4 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    },
+    {
+      "operator": "MoeGatingTopKSoftmax",
+      "case_id": 20,
+      "input_shape": [
+        [
+          512,
+          64
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "k": 8
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "XS-bfloat16-2D-零值输入-tokens512-experts64-k8 | baseline_kernels: MoeGatingTopKSoftmax×1"
+    }
+  ],
+  "case_count": 20
+}

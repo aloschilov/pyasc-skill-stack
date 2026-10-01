@@ -1,0 +1,959 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "Scatter",
+  "function_name": "scatter",
+  "level": "level2",
+  "category": "ScatterUpdate",
+  "difficulty": "L2",
+  "description": "将 updates 按索引 indices 更新到 data 中",
+  "desc_md": "# Scatter 算子 API 描述\n\n## 1. 算子简介\n\n将 updates 按索引 indices 更新到 data 中。\n\n**主要应用场景**：\n- 嵌入表更新与稀疏梯度回传\n- One-hot 编码生成\n- 图神经网络中的消息聚合（scatter_add）\n- 稀疏张量的构造与更新\n\n**算子特征**：\n- 难度等级：L2（ScatterUpdate）\n- 三输入单输出，按指定维度将 updates 的值写入到 data 对应索引位置\n\n## 2. 算子定义\n\n### 数学公式\n\n对于 3D 张量，当 dim=0 时：\n\n$$\ny[\\text{index}[i][j][k]][j][k] = \\text{src}[i][j][k]\n$$\n\n更一般地，对于任意维度 dim：\n\n$$\ny[\\text{index}_0][\\text{index}_1] \\cdots [\\text{index}_{\\text{dim}}] \\cdots [\\text{index}_{n-1}] = \\text{updates}[i_0][i_1] \\cdots [i_{n-1}]\n$$\n\n其中 $\\text{index}_d = \\text{indices}[i_0][i_1] \\cdots [i_{n-1}]$ 当 $d = \\text{dim}$，否则 $\\text{index}_d = i_d$。\n\n当指定 reduce 参数时：\n- **add**：$y[\\ldots] = y[\\ldots] + \\text{updates}[\\ldots]$\n- **multiply**：$y[\\ldots] = y[\\ldots] \\times \\text{updates}[\\ldots]$\n- **amax**：$y[\\ldots] = \\max(y[\\ldots], \\text{updates}[\\ldots])$\n- **amin**：$y[\\ldots] = \\min(y[\\ldots], \\text{updates}[\\ldots])$\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.scatter(Tensor data, int dim, Tensor indices, Tensor updates, str? reduce=None) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| data | Tensor | 必选 | 输入数据张量 |\n| dim | int | 必选 | 沿哪个维度 scatter |\n| indices | Tensor | 必选 | 索引张量，值必须在 [0, data.size(dim)) 范围内 |\n| updates | Tensor | 必选 | 更新值张量，与 data 维度数相同 |\n| reduce | str | None | 聚合方式，可选值：None(update), 'add', 'multiply', 'amin', 'amax' |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 与 data 相同 | 与 data 相同 | 输出张量，scatter 结果，与 data 形状相同 |\n\n### 数据类型\n\n| data dtype | indices dtype | updates dtype | 输出 dtype |\n|-----------|--------------|--------------|-----------|\n| float16 | int32 / int64 | float16 | float16 |\n| float32 | int32 / int64 | float32 | float32 |\n| bfloat16 | int32 / int64 | bfloat16 | bfloat16 |\n| int32 | int32 / int64 | int32 | int32 |\n| int64 | int32 / int64 | int64 | int64 |\n\n### 规则与约束\n\n- data、indices、updates 的维度数必须相同\n- indices 的每个维度大小不能超过对应 data 或 updates 的维度大小\n- indices 中的值必须在 [0, data.size(dim)) 范围内\n- updates 和 data 的 dtype 必须一致\n- indices 的 dtype 必须为 int32 或 int64\n- reduce 为 None 时执行直接覆盖更新，为 'add' 时执行累加，为 'multiply' 时执行累乘，为 'amax'/'amin' 时取最大/最小值\n- 输出 shape 与 data shape 完全一致\n- 当 indices 中存在重复索引：\n  - `reduce=None`（覆盖模式）：写入顺序与具体实现相关，PyTorch/NPU 均不保证确定性，最终留下来的值可能是任一个对应的 `updates` 元素\n  - `reduce='add'/'multiply'/'amax'/'amin'`：聚合结果与顺序无关，且语义等价于 `scatter_reduce_(include_self=True)`\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `data` 维度数 | 1 ~ 8 | cases.csv 实测 1 ~ 5；`data`、`indices`、`updates` 维度数必须相同 |\n| `data` 各维度大小 | 1 ~ 2097152 | cases.csv 实测 2 ~ 1048583（一维大张量场景） |\n| `indices` 各维度大小 | 1 ~ 2097152 | cases.csv 实测 2 ~ 8193；每维 ≤ 对应 `data` 维度大小 |\n| `updates` 各维度大小 | 1 ~ 2097152 | cases.csv 实测 2 ~ 8193；shape 须与 `indices` 一致 |\n| `indices` 值 | `[0, data.size(dim))` | cases.csv 实测覆盖完整索引范围 |\n| `dim` | 0 ~ 7 | cases.csv 实测 0 / 1；支持负数索引，等价范围为 `[-rank, rank-1]` |\n| `reduce` | `None` / `add` / `multiply` / `amin` / `amax` | cases.csv 实测全部 5 种取值 |\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nScatter算子Torch Golden参考实现\n\n将updates按索引indices更新到data中\n公式: y[index[i][j][k]] = src[i][j][k] (if dim == 0)\n\"\"\"\ndef scatter(\n    data: torch.Tensor, dim: int, indices: torch.Tensor, updates: torch.Tensor, reduce: str = None\n) -> torch.Tensor:\n    \"\"\"\n    将updates按索引indices更新到data中\n\n    公式: y[index[i][j][k]] = src[i][j][k] (if dim == 0)\n\n    Args:\n        data: 输入数据张量\n        dim: 沿哪个维度scatter\n        indices: 索引张量\n        updates: 更新值张量\n        reduce: 聚合方式 (None/update, add, multiply, amin, amax)\n\n    Returns:\n        输出张量，scatter结果\n    \"\"\"\n\n    y = data.clone()\n    idx = indices.long()\n    if reduce is None or reduce == 'update':\n        y.scatter_(dim, idx, updates)\n    elif reduce == 'add':\n        y.scatter_add_(dim, idx, updates)\n    elif reduce == 'multiply':\n        y.scatter_reduce_(dim, idx, updates, reduce=\"prod\", include_self=True)\n    elif reduce == 'amin':\n        y.scatter_reduce_(dim, idx, updates, reduce=\"amin\", include_self=True)\n    elif reduce == 'amax':\n        y.scatter_reduce_(dim, idx, updates, reduce=\"amax\", include_self=True)\n    return y\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\ndata = torch.randn(1024, 1024, dtype=torch.float16, device=\"npu\")\nindices = torch.randint(0, 1024, (1024, 512), dtype=torch.int32, device=\"npu\")\nupdates = torch.randn(1024, 512, dtype=torch.float16, device=\"npu\")\ny = cann_bench.scatter(data, 1, indices, updates)  # dim=1, 直接更新\n\n# reduce=add 模式\ndata = torch.randn(2048, 512, dtype=torch.float32, device=\"npu\")\nindices = torch.randint(0, 2048, (1024, 512), dtype=torch.int32, device=\"npu\")\nupdates = torch.randn(1024, 512, dtype=torch.float32, device=\"npu\")\ny = cann_bench.scatter(data, 0, indices, updates, reduce=\"add\")\n```\n",
+  "proto": {
+    "name": "Scatter",
+    "category": "ScatterUpdate",
+    "difficulty": "L2",
+    "formula": "y[index[i][j][k]] = src[i][j][k] (if dim == 0)",
+    "description": "将 updates 按索引 indices 更新到 data 中",
+    "shape_support": "输入 ND 格式",
+    "attrs": [
+      {
+        "name": "dim",
+        "type": "Int",
+        "description": "沿哪个维度 scatter",
+        "required": true
+      },
+      {
+        "name": "reduce",
+        "type": "String",
+        "default": null,
+        "description": "聚合方式，可选值：null(update), 'add', 'multiply', 'amin', 'amax'",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "data",
+        "description": "输入数据张量",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16",
+          "int32",
+          "int64"
+        ]
+      },
+      {
+        "name": "indices",
+        "description": "索引张量，值必须在 [0, data.size(dim)) 范围内",
+        "dtype": [
+          "int32",
+          "int64"
+        ]
+      },
+      {
+        "name": "updates",
+        "description": "更新值张量，与 data 维度数相同",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16",
+          "int32",
+          "int64"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出张量，scatter 结果，与 data 形状相同",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16",
+          "int32",
+          "int64"
+        ]
+      }
+    ],
+    "schema": "scatter(Tensor data, int dim, Tensor indices, Tensor updates, str? reduce=None) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nScatter算子Torch Golden参考实现\n\n将updates按索引indices更新到data中\n公式: y[index[i][j][k]] = src[i][j][k] (if dim == 0)\n\"\"\"\ndef scatter(\n    data: torch.Tensor, dim: int, indices: torch.Tensor, updates: torch.Tensor, reduce: str = None\n) -> torch.Tensor:\n    \"\"\"\n    将updates按索引indices更新到data中\n\n    公式: y[index[i][j][k]] = src[i][j][k] (if dim == 0)\n\n    Args:\n        data: 输入数据张量\n        dim: 沿哪个维度scatter\n        indices: 索引张量\n        updates: 更新值张量\n        reduce: 聚合方式 (None/update, add, multiply, amin, amax)\n\n    Returns:\n        输出张量，scatter结果\n    \"\"\"\n\n    y = data.clone()\n    idx = indices.long()\n    if reduce is None or reduce == 'update':\n        y.scatter_(dim, idx, updates)\n    elif reduce == 'add':\n        y.scatter_add_(dim, idx, updates)\n    elif reduce == 'multiply':\n        y.scatter_reduce_(dim, idx, updates, reduce=\"prod\", include_self=True)\n    elif reduce == 'amin':\n        y.scatter_reduce_(dim, idx, updates, reduce=\"amin\", include_self=True)\n    elif reduce == 'amax':\n        y.scatter_reduce_(dim, idx, updates, reduce=\"amax\", include_self=True)\n    return y\n\n\ndef get_input(\n    data: torch.Tensor,\n    indices: torch.Tensor,\n    updates: torch.Tensor,\n    dim: int = 0,\n    reduce: str = None,\n    **kwargs,\n):\n    \"\"\"把 indices 重建为沿 dim 互异，使 reduce=None（update）语义良定义。\n\n    PyTorch 明文规定 ``Tensor.scatter_`` 在 index 沿 dim 存在重复项时结果\n    **nondeterministic**——同一目标位置被多次写入，最终留下哪一个取决于实现的\n    写入顺序。而 cases.yaml 只能用单区间 value_range 表达索引，通用生成器按\n    ``randint(0, D-1)`` 独立采样，生日悖论下重复几乎必然：20 个用例里 14 个是\n    reduce=None，其中 12 个存在大量重复（每列约 9% 的元素被覆盖写）。\n\n    实测两种同样符合 scatter 语义的实现（正序写=后写赢 / 逆序写=先写赢）在同一份\n    输入上的输出差异：c1/c2/c3/c7/c8/c11/c17/c19/c20 约 9%，c13 10.01%，\n    c15 高达 56.38%。也就是说任何 NPU kernel 只要写入顺序与 torch CPU 不一致就\n    必挂，**与实现是否正确无关**。\n\n    这里按 case 的实际形状（不写死）为每个切片重新抽取 n 个互异索引：\n    n = indices.shape[dim] ≤ D = data.shape[dim]（全部用例均满足），取 [0, D) 的\n    随机置换前 n 项。不排序——scatter 的结果与索引顺序无关，无重复即可。\n\n    带 reduce 的用例（add / multiply / amin / amax）原样返回：这些归约可交换，\n    重复索引下结果良定义，不需要也不应该改变其数据分布。\n\n    kernel_eval 用输入名 + attrs 作为关键字调用本函数，并用返回值（按 golden\n    签名的 Tensor 顺序）同时替换 golden 与候选的输入，故比较公平。\n\n    Returns:\n        [data, indices, updates]，顺序与 scatter 签名的 Tensor 参数一致。\n    \"\"\"\n    # 可交换归约：重复索引良定义，保持原始分布\n    if reduce not in (None, 'update'):\n        return [data, indices, updates]\n\n    ndim = indices.dim()\n    dim_n = dim if dim >= 0 else ndim + dim\n    D = int(data.shape[dim_n])\n    n = int(indices.shape[dim_n])\n    if n <= 1 or D <= 1:\n        return [data, indices, updates]\n    if n > D:\n        # 抽屉原理：互异索引不存在，保持原样（当前用例集不会走到这里）\n        return [data, indices, updates]\n\n    # 把 dim 换到最后一维并展平前导维 -> (slices, n)，逐切片独立抽样\n    moved = indices.movedim(dim_n, -1)\n    moved_shape = moved.shape\n    slices = moved.numel() // n\n\n    g = torch.Generator().manual_seed(0)  # 固定种子：跨 eval 运行必须可复现\n    out = torch.empty(slices, n, dtype=torch.int64)\n    # 分块限制峰值内存：置换临时量为 chunk*D，最大用例 slices*D 达 49.7M\n    chunk = max(1, min(slices, (1 << 22) // D or 1))\n    for start in range(0, slices, chunk):\n        stop = min(start + chunk, slices)\n        # argsort(rand) 即随机置换；取前 n 项得到 [0, D) 内 n 个互异索引\n        out[start:stop] = torch.rand(stop - start, D, generator=g).argsort(dim=1)[:, :n]\n\n    new_indices = out.reshape(moved_shape).movedim(-1, dim_n).contiguous()\n    new_indices = new_indices.to(dtype=indices.dtype, device=indices.device)\n    return [data, new_indices, updates]\n",
+  "cases_yaml": [
+    {
+      "operator": "Scatter",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          1024
+        ],
+        [
+          512,
+          1024
+        ],
+        [
+          512,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1023
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-int32-float16-1M-对齐-dim=0-update | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2048,
+          2048
+        ],
+        [
+          1024,
+          2048
+        ],
+        [
+          1024,
+          2048
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          0,
+          2047
+        ],
+        [
+          -2,
+          2
+        ]
+      ],
+      "note": "M-float32-int32-float32-4M-对齐-dim=0-update | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        [
+          2048,
+          4096
+        ],
+        [
+          2048,
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64",
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          0,
+          4095
+        ],
+        [
+          -3,
+          3
+        ]
+      ],
+      "note": "L-bfloat16-int64-bfloat16-16M-对齐-dim=0-update | baseline_kernels: TensorMove×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8192,
+          8192
+        ],
+        [
+          8192,
+          4096
+        ],
+        [
+          8192,
+          4096
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16"
+      ],
+      "attrs": {
+        "dim": 1,
+        "reduce": "add"
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          0,
+          8191
+        ],
+        [
+          -5,
+          5
+        ]
+      ],
+      "note": "L-float16-67M-对齐-dim=1-add | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int64",
+        "float32"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": "multiply"
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          0,
+          4095
+        ],
+        [
+          -50,
+          50
+        ]
+      ],
+      "note": "L-float32-268M-对齐-dim=0-multiply | NO_NPU_IMPL: torch fallback to CPU (kernels: TensorMove×1)"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 6,
+      "input_shape": [
+        [
+          8192,
+          4096
+        ],
+        [
+          8192,
+          4096
+        ],
+        [
+          8192,
+          4096
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32",
+        "int32"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": "amax"
+      },
+      "value_range": [
+        [
+          -2147483648,
+          2147483647
+        ],
+        [
+          0,
+          8191
+        ],
+        [
+          -10000,
+          10000
+        ]
+      ],
+      "note": "L-int32-1G-对齐-dim=0-amax-int32全范围 | NO_NPU_IMPL: torch fallback to CPU (kernels: TensorMove×1 + Cast×1)"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1023,
+          1023
+        ],
+        [
+          511,
+          1023
+        ],
+        [
+          511,
+          1023
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          0,
+          1022
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "S-bfloat16-1M-非对齐-dim=0-对称微小值域-2D | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1009,
+          1021
+        ],
+        [
+          1009,
+          511
+        ],
+        [
+          1009,
+          511
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16"
+      ],
+      "attrs": {
+        "dim": -1,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          -1,
+          2
+        ],
+        [
+          0,
+          1020
+        ],
+        [
+          -1,
+          2
+        ]
+      ],
+      "note": "S-float16-1M-质数非对齐-dim=-1（负向索引）-update | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 9,
+      "input_shape": [
+        [
+          1537,
+          769
+        ],
+        [
+          769,
+          769
+        ],
+        [
+          769,
+          769
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": "add"
+      },
+      "value_range": [
+        [
+          -5,
+          10
+        ],
+        [
+          0,
+          1536
+        ],
+        [
+          -5,
+          10
+        ]
+      ],
+      "note": "S-float32-1M-非对齐-dim=0-add | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 10,
+      "input_shape": [
+        [
+          363,
+          367,
+          373
+        ],
+        [
+          181,
+          367,
+          373
+        ],
+        [
+          181,
+          367,
+          373
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          -50,
+          100
+        ],
+        [
+          0,
+          362
+        ],
+        [
+          -50,
+          100
+        ]
+      ],
+      "note": "L-bfloat16-50M-质数非对齐-dim=0-3D | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 11,
+      "input_shape": [
+        [
+          2049,
+          513
+        ],
+        [
+          1024,
+          513
+        ],
+        [
+          1024,
+          513
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          -65504,
+          65504
+        ],
+        [
+          0,
+          2048
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "S-float16-1M-非对齐-dim=0-float16边界值 | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 12,
+      "input_shape": [
+        [
+          3,
+          7,
+          13,
+          4001
+        ],
+        [
+          2,
+          7,
+          13,
+          4001
+        ],
+        [
+          2,
+          7,
+          13,
+          4001
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int64",
+        "float32"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": "amin"
+      },
+      "value_range": [
+        [
+          -88,
+          88
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          -88,
+          88
+        ]
+      ],
+      "note": "M-float32-1M-质数非对齐-dim=0-amin-4D | NO_NPU_IMPL: torch fallback to CPU (kernels: TensorMove×1)"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 13,
+      "input_shape": [
+        [
+          2,
+          7,
+          256,
+          251
+        ],
+        [
+          2,
+          4,
+          256,
+          251
+        ],
+        [
+          2,
+          4,
+          256,
+          251
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": 1,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          -0.01,
+          0.01
+        ],
+        [
+          0,
+          6
+        ],
+        [
+          -0.01,
+          0.01
+        ]
+      ],
+      "note": "S-bfloat16-900K-质数非对齐-dim=1-对称微小值域-4D | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 14,
+      "input_shape": [
+        [
+          1048583
+        ],
+        [
+          1048
+        ],
+        [
+          1048
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          0,
+          1048582
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "note": "S-float32-1M-质数非对齐-dim=0-inf特殊值-1D | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 15,
+      "input_shape": [
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ],
+        [
+          7,
+          13,
+          17,
+          67,
+          67
+        ],
+        [
+          7,
+          13,
+          17,
+          67,
+          67
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int64",
+        "float16"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          0,
+          10
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "note": "M-float16-10M-质数非对齐-dim=0-nan特殊值-5D | baseline_kernels: TensorMove×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 16,
+      "input_shape": [
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ],
+        [
+          2,
+          7,
+          11,
+          13,
+          1013
+        ],
+        [
+          2,
+          7,
+          11,
+          13,
+          1013
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "M-float32-3M-质数非对齐-dim=0-零值-5D | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 17,
+      "input_shape": [
+        [
+          16,
+          64,
+          1024
+        ],
+        [
+          16,
+          64,
+          512
+        ],
+        [
+          16,
+          64,
+          512
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": 2,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          0,
+          1023
+        ],
+        [
+          -0.5,
+          0.5
+        ]
+      ],
+      "note": "M-bfloat16-1M-非对齐-dim=2（最内轴 on 3D）-微小值域 | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 18,
+      "input_shape": [
+        [
+          255,
+          8193
+        ],
+        [
+          127,
+          8193
+        ],
+        [
+          127,
+          8193
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int64",
+        "float16"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": "add"
+      },
+      "value_range": [
+        [
+          -1,
+          3
+        ],
+        [
+          0,
+          254
+        ],
+        [
+          -1,
+          3
+        ]
+      ],
+      "note": "M-float16-2M-非对齐-dim=0-add | baseline_kernels: TensorMove×1 + LinearIndex×1 + ScatterElementsV2×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4097,
+          511
+        ],
+        [
+          2048,
+          511
+        ],
+        [
+          2048,
+          511
+        ]
+      ],
+      "dtype": [
+        "int64",
+        "int64",
+        "int64"
+      ],
+      "attrs": {
+        "dim": 0,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          -1000000000,
+          1000000000
+        ],
+        [
+          0,
+          4096
+        ],
+        [
+          -1000000000,
+          1000000000
+        ]
+      ],
+      "note": "M-int64-2M-非对齐-dim=0-int64数据/索引-update | baseline_kernels: TensorMove×1 + ScatterElements×1"
+    },
+    {
+      "operator": "Scatter",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          511,
+          2049
+        ],
+        [
+          2,
+          255,
+          2049
+        ],
+        [
+          2,
+          255,
+          2049
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": 1,
+        "reduce": null
+      },
+      "value_range": [
+        [
+          -3,
+          6
+        ],
+        [
+          0,
+          510
+        ],
+        [
+          -3,
+          6
+        ]
+      ],
+      "note": "S-bfloat16-2M-非对齐-dim=1-非对称中值域-3D | baseline_kernels: TensorMove×1 + Cast×1 + LinearIndex×1 + ScatterElementsV2×1"
+    }
+  ],
+  "case_count": 20
+}

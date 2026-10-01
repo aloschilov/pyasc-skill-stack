@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from contracts import case_arguments, load_contract
 
 
 PYASC_COMMIT = "0a631f70968c3cb7c33ce45330a85768dd5a6f06"
@@ -212,7 +213,11 @@ def tensor(shape: Any, dtype: str) -> FakeTensor:
     return FakeTensor(shape, DTYPES[dtype])
 
 
-def case_call(op: str, fn: Any, case: dict[str, Any]) -> Any:
+def case_call(op: str, fn: Any, case: dict[str, Any], proto: dict | None = None) -> Any:
+    if proto is not None:
+        arguments = case_arguments(proto, case, tensor)
+        inspect.signature(fn).bind(**arguments)
+        return fn(**arguments)
     shapes = case["input_shape"]
     dtypes = case["dtype"]
     attrs = case.get("attrs") or {}
@@ -320,6 +325,8 @@ def compile_specialization(jit: Any, prepared: tuple[Any, ...]) -> dict[str, Any
     memory = module.op.get_dict_of_int_attr(ir.attr.memory_consumed) or {}
     jit.launcher.check_memory_overflow(memory)
     kernel_args = [str(kind) for kind in ir.get_kernel_arg_attrs(module)]
+    if any("FftsAddr" in kind for kind in kernel_args):
+        raise RuntimeError("FFTS argument is incompatible with the CANNBench 950PR evaluator")
     return {
         "status": "passed",
         "memory_consumed": memory,
@@ -329,7 +336,7 @@ def compile_specialization(jit: Any, prepared: tuple[Any, ...]) -> dict[str, Any
     }
 
 
-def evaluate(candidate: Path, op: str, cases_path: Path) -> dict[str, Any]:
+def evaluate(candidate: Path, op: str, cases_path: Path, proto: dict | None = None) -> dict[str, Any]:
     import asc.runtime.config as config
     from asc.runtime.jit import JITFunction
 
@@ -366,7 +373,7 @@ def evaluate(candidate: Path, op: str, cases_path: Path) -> dict[str, Any]:
                     ),
                 )
             try:
-                case_call(op, fn, case)
+                case_call(op, fn, case, proto)
                 dispatch_error = None
             except Exception as exc:
                 dispatch_error = f"{type(exc).__name__}: {exc}"
@@ -460,11 +467,12 @@ def main() -> int:
     parser.add_argument("--candidate", required=True, type=Path)
     parser.add_argument("--op", required=True)
     parser.add_argument("--cases", type=Path)
+    parser.add_argument("--proto", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     cases = args.cases or Path("integrations/cannbench/tasks") / args.op / "cases.yaml"
     try:
-        report = evaluate(args.candidate, args.op, cases)
+        report = evaluate(args.candidate, args.op, cases, load_contract(args.proto.parent) if args.proto else None)
     except Exception as exc:
         report = {
             "schema_version": 1,

@@ -1,0 +1,1276 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "ApplyAdamW",
+  "function_name": "apply_adam_w",
+  "level": "level2",
+  "category": "FusedComposite",
+  "difficulty": "L2",
+  "description": "AdamW 优化器实现，解耦权重衰减",
+  "desc_md": "# ApplyAdamW 算子 API 描述\n\n## 1. 算子简介\n\nAdamW 优化器实现，解耦权重衰减。\n\n**主要应用场景**：\n- 深度学习模型参数优化，尤其是 Transformer 类模型的训练\n- 解耦权重衰减正则化，避免 L2 正则化与自适应学习率的耦合问题\n- 大规模预训练模型（如 GPT、BERT）的优化器实现\n\n**算子特征**：\n- 难度等级：L2（FusedComposite）\n- 四输入（var、grad、m、v）单输出（y），逐元素运算，输出 shape 与输入一致\n- 支持 1-8 维张量\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\nm_t = \\beta_1 \\cdot m_{t-1} + (1 - \\beta_1) \\cdot grad\n$$\n\n$$\nv_t = \\beta_2 \\cdot v_{t-1} + (1 - \\beta_2) \\cdot grad^2\n$$\n\n$$\n\\hat{m} = \\frac{m_t}{1 - \\beta_1^t}\n$$\n\n$$\n\\hat{v} = \\frac{v_t}{1 - \\beta_2^t}\n$$\n\n$$\nvar_t = var_{t-1} - lr \\cdot \\left( \\frac{\\hat{m}}{\\sqrt{\\hat{v}} + \\epsilon} + weight\\_decay \\cdot var_{t-1} \\right)\n$$\n\n其中：\n- $m_t$ 为一阶矩估计（动量）\n- $v_t$ 为二阶矩估计\n- $\\hat{m}$、$\\hat{v}$ 为偏差修正后的矩估计\n- 权重衰减（weight_decay）以解耦方式直接作用于参数\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.apply_adam_w(Tensor var, Tensor grad, Tensor m, Tensor v, float lr, float beta1, float beta2, float weight_decay, float epsilon=1e-8, int step=1, bool maximize=false) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| var | Tensor | 必选 | 变量张量（需要优化的参数） |\n| grad | Tensor | 必选 | 梯度张量 |\n| m | Tensor | 必选 | 一阶矩张量（动量） |\n| v | Tensor | 必选 | 二阶矩张量 |\n| lr | float | 必选 | 学习率 |\n| beta1 | float | 必选 | 一阶矩估计的指数衰减率 (默认 0.9) |\n| beta2 | float | 必选 | 二阶矩估计的指数衰减率 (默认 0.999) |\n| weight_decay | float | 必选 | 权重衰减系数（解耦） |\n| epsilon | float | 1e-8 | 数值稳定常数 |\n| step | int | 1 | 当前优化步数 t，用于偏置校正分母 (1 - beta^t)；默认 1 等价于单步更新 |\n| maximize | bool | false | 是否最大化目标函数（默认最小化） |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 与输入 var 相同 | 与输入 var 相同 | 更新后的变量 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| float32 | float32 |\n| float16 | float16 |\n| bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- var、grad、m、v 四个张量的 shape 和 dtype 必须完全一致\n- 支持 1-8 维张量\n- 输出 shape 与输入 var 的 shape 完全一致，输出 dtype 与输入一致\n- `beta1`、`beta2` 取值范围通常为 [0, 1)\n- `epsilon` 用于防止除零，通常取极小正数\n- 当 `maximize=true` 时，更新方向取反（用于最大化目标函数）\n- `step` 默认 1（cases.yaml 不传时走 default），公式分母 `1 - beta^step` 在 step=1 时退化为 `1 - beta`，与历史 baseline 兼容；多步训练场景由调用方按需传入\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `var/grad/m/v` 维度数 (ndim) | 1 ~ 8 | cases.csv 实测 1 ~ 5；四个张量 shape/dtype 必须一致 |\n| `var/grad/m/v` 单维大小 | 1 ~ 1048576 | cases.csv 实测 2 ~ 1000003 |\n| `var/grad/m/v` 总元素数 | 1 ~ 256M | cases.csv 实测 ~1M ~ ~47M  |\n| `lr` | 0.0 ~ 1.0 | cases.csv 实测 1e-4 ~ 0.1 |\n| `beta1` | 0.0 ~ 1.0 | cases.csv 实测 0.0 ~ 0.99；取值范围 `[0, 1)` |\n| `beta2` | 0.0 ~ 1.0 | cases.csv 实测 0.5 ~ 0.999；取值范围 `[0, 1)` |\n| `weight_decay` | 0.0 ~ 1.0 | cases.csv 实测 0.0 ~ 0.5 |\n| `epsilon` | 0.0 ~ 1.0 | cases.csv 实测 0.0 ~ 1e-4；通常取极小正数（默认 1e-8） |\n| `maximize` | `false` / `true` | cases.csv 已覆盖两种取值；`true` 时更新方向取反 |\n\n约束：四个张量 `var/grad/m/v` 的 shape 和 dtype 必须完全一致；输出 `y` 形状/dtype 与 `var` 一致。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nApplyAdamW 算子 Torch Golden 参考实现\n\nAdamW 优化器实现，解耦权重衰减\n公式:\n    m_t = beta1 * m_{t-1} + (1 - beta1) * grad\n    v_t = beta2 * v_{t-1} + (1 - beta2) * grad^2\n    m_hat = m_t / (1 - beta1^t)\n    v_hat = v_t / (1 - beta2^t)\n    var_t = var_{t-1} - lr * (m_hat / (sqrt(v_hat) + eps) + weight_decay * var_{t-1})\n\"\"\"\ndef apply_adam_w(\n    var: torch.Tensor,\n    grad: torch.Tensor,\n    m: torch.Tensor,\n    v: torch.Tensor,\n    lr: float,\n    beta1: float,\n    beta2: float,\n    weight_decay: float,\n    epsilon: float = 1e-8,\n    step: int = 1,\n    maximize: bool = False,\n) -> torch.Tensor:\n    \"\"\"\n    AdamW 优化器实现，解耦权重衰减\n\n    Args:\n        var/grad/m/v: 四个 tensor 输入，shape/dtype 一致\n        lr/beta1/beta2/weight_decay/epsilon: 见上文\n        step: 当前优化步数 t，默认 1\n        maximize: 是否最大化目标函数\n\n    Returns:\n        更新后的变量\n    \"\"\"\n    input_dtype = var.dtype\n    if input_dtype in (torch.float16, torch.bfloat16):\n        compute_dtype = torch.float32\n    else:\n        compute_dtype = input_dtype\n\n    var = var.to(compute_dtype)\n    grad = grad.to(compute_dtype)\n    m = m.to(compute_dtype)\n    v = v.to(compute_dtype)\n\n    m_new = beta1 * m + (1 - beta1) * grad\n    v_new = beta2 * v + (1 - beta2) * grad * grad\n    # 偏置校正：分母按 step 取指数\n    m_hat = m_new / (1 - beta1 ** step)\n    v_hat = v_new / (1 - beta2 ** step)\n    update = m_hat / (v_hat.sqrt() + epsilon)\n    if weight_decay != 0:\n        update = update + var * weight_decay\n    result = var + lr * update if maximize else var - lr * update\n\n    if input_dtype in (torch.float16, torch.bfloat16):\n        return result.to(input_dtype)\n    return result\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nvar = torch.randn(1024, 1024, dtype=torch.float32, device=\"npu\")\ngrad = torch.randn(1024, 1024, dtype=torch.float32, device=\"npu\")\nm = torch.zeros(1024, 1024, dtype=torch.float32, device=\"npu\")\nv = torch.zeros(1024, 1024, dtype=torch.float32, device=\"npu\")\n\ny = cann_bench.apply_adam_w(var, grad, m, v, lr=0.001, beta1=0.9, beta2=0.999, weight_decay=0.01)\ny = cann_bench.apply_adam_w(var, grad, m, v, lr=0.001, beta1=0.9, beta2=0.999, weight_decay=0.0, epsilon=1e-8, maximize=True)\n```\n",
+  "proto": {
+    "name": "ApplyAdamW",
+    "category": "FusedComposite",
+    "difficulty": "L2",
+    "formula": "m_t = beta1 * m_{t-1} + (1 - beta1) * grad\nv_t = beta2 * v_{t-1} + (1 - beta2) * grad^2\nm_hat = m_t / (1 - beta1^t)\nv_hat = v_t / (1 - beta2^t)\nvar_t = var_{t-1} - lr * (m_hat / (sqrt(v_hat) + eps) + weight_decay * var_{t-1})\n",
+    "description": "AdamW 优化器实现，解耦权重衰减",
+    "shape_support": "var/m/v/grad: 1-8 维",
+    "attrs": [
+      {
+        "name": "lr",
+        "type": "float",
+        "description": "学习率",
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "float",
+        "description": "一阶矩估计的指数衰减率 (默认 0.9)",
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "float",
+        "description": "二阶矩估计的指数衰减率 (默认 0.999)",
+        "required": true
+      },
+      {
+        "name": "weight_decay",
+        "type": "float",
+        "description": "权重衰减系数（解耦）",
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "float",
+        "default": "1e-8",
+        "description": "数值稳定常数",
+        "required": false
+      },
+      {
+        "name": "step",
+        "type": "int",
+        "default": 1,
+        "description": "当前优化步数 t，用于偏置校正分母 (1 - beta^t)；下游可由此换算 beta_power",
+        "required": false
+      },
+      {
+        "name": "maximize",
+        "type": "bool",
+        "default": false,
+        "description": "是否最大化目标函数（默认最小化）",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "var",
+        "description": "变量张量（需要优化的参数）",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "grad",
+        "description": "梯度张量",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "m",
+        "description": "一阶矩张量（动量）",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "v",
+        "description": "二阶矩张量",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "更新后的变量",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "apply_adam_w(Tensor var, Tensor grad, Tensor m, Tensor v, float lr, float beta1, float beta2, float weight_decay, float epsilon=1e-8, int step=1, bool maximize=false) -> Tensor y",
+    "precision_thresholds": {
+      "float32": 0.005,
+      "float16": 0.01,
+      "bfloat16": 0.01
+    }
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nApplyAdamW 算子 Torch Golden 参考实现\n\nFP16/BF16 输入升精度到 FP32 计算，FP32/FP64 保持原样计算。\n\"\"\"\n\n\ndef apply_adam_w(\n    var: torch.Tensor,\n    grad: torch.Tensor,\n    m: torch.Tensor,\n    v: torch.Tensor,\n    lr: float,\n    beta1: float,\n    beta2: float,\n    weight_decay: float,\n    epsilon: float = 1e-8,\n    step: int = 1,\n    maximize: bool = False,\n) -> torch.Tensor:\n    # 检测输入 dtype\n    input_dtype = var.dtype\n\n    # FP16/BF16 输入需要升到 FP32 计算以保证精度\n    # FP32/FP64 输入保持原样计算\n    if input_dtype in (torch.float16, torch.bfloat16):\n        compute_dtype = torch.float32\n    else:\n        compute_dtype = input_dtype\n\n    # 转换到计算精度\n    var = var.to(compute_dtype)\n    grad = grad.to(compute_dtype)\n    m = m.to(compute_dtype)\n    v = v.to(compute_dtype)\n\n    # Adam 偏置校正——按 step 取指数。step=1 时与旧公式 (1 - beta) 完全等价，\n    # 现有 cases 不传 step 时走 default=1 保持向后兼容。\n    m_new = beta1 * m + (1 - beta1) * grad\n    v_new = beta2 * v + (1 - beta2) * grad * grad\n    m_hat = m_new / (1 - beta1 ** step)\n    v_hat = v_new / (1 - beta2 ** step)\n    # epsilon OUTSIDE the sqrt — matches torch.optim.AdamW and fused npu_apply_adam_w.\n    # F618 moved it inside claiming to \"match torch.optim.AdamW\", but that is backwards:\n    # verified grad=0,m=.05,v=0,lr=1e-3 -> eps-outside=-44999 (== torch.optim.AdamW),\n    # eps-inside=-3.5 (the F618 form). torch_npu fused is eps-outside too.\n    update = m_hat / (v_hat.sqrt() + epsilon)\n    if weight_decay != 0:\n        update = update + var * weight_decay\n    result = var + lr * update if maximize else var - lr * update\n\n    # 转回原始 dtype\n    if input_dtype in (torch.float16, torch.bfloat16):\n        return result.to(input_dtype)\n    return result\n",
+  "cases_yaml": [
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.0,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          0,
+          0.1
+        ]
+      ],
+      "note": "M-float32-1M-对齐-对称小值域-lr=0.001 | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "lr": 0.01,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.01,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          -2,
+          2
+        ],
+        [
+          -0.2,
+          0.2
+        ],
+        [
+          0,
+          0.2
+        ]
+      ],
+      "note": "M-float16-4M-对齐-对称小值域-lr=0.01 | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "lr": 0.0001,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.1,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          -3,
+          3
+        ],
+        [
+          -0.3,
+          0.3
+        ],
+        [
+          0,
+          0.3
+        ]
+      ],
+      "note": "L-bfloat16-16M-对齐-对称小值域-lr=0.0001 | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 4,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "lr": 0.1,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.0,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -5,
+          5
+        ],
+        [
+          -5,
+          5
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          0,
+          0.5
+        ]
+      ],
+      "note": "L-float32-67M-对齐-对称中值域-lr=0.1 | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4096,
+          8192
+        ],
+        [
+          4096,
+          8192
+        ],
+        [
+          4096,
+          8192
+        ],
+        [
+          4096,
+          8192
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "lr": 0.1,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.1,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -5,
+          5
+        ],
+        [
+          -5,
+          5
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          0,
+          0.5
+        ]
+      ],
+      "note": "L-float16-268M-对齐-对称大值域-lr=1.0-wd=1.0 | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 6,
+      "input_shape": [
+        [
+          1023,
+          1023
+        ],
+        [
+          1023,
+          1023
+        ],
+        [
+          1023,
+          1023
+        ],
+        [
+          1023,
+          1023
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.01,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.01,
+          0.01
+        ],
+        [
+          0,
+          0.01
+        ]
+      ],
+      "note": "S-bfloat16-1M-非对齐-对称微小值域 | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1009,
+          1021
+        ],
+        [
+          1009,
+          1021
+        ],
+        [
+          1009,
+          1021
+        ],
+        [
+          1009,
+          1021
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "lr": 0.1,
+        "beta1": 0.5,
+        "beta2": 0.9,
+        "weight_decay": 0.5,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -1,
+          2
+        ],
+        [
+          -1,
+          2
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          0,
+          0.1
+        ]
+      ],
+      "note": "M-float32-1M-质数非对齐-低动量-beta1=0.5 | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1537,
+          769
+        ],
+        [
+          1537,
+          769
+        ],
+        [
+          1537,
+          769
+        ],
+        [
+          1537,
+          769
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "lr": 0.0001,
+        "beta1": 0.99,
+        "beta2": 0.99,
+        "weight_decay": 0.0,
+        "epsilon": 1e-06,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -5,
+          10
+        ],
+        [
+          -5,
+          10
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          0,
+          0.5
+        ]
+      ],
+      "note": "S-float16-1M-非对齐-高动量-beta1=0.99 | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 9,
+      "input_shape": [
+        [
+          363,
+          367,
+          373
+        ],
+        [
+          363,
+          367,
+          373
+        ],
+        [
+          363,
+          367,
+          373
+        ],
+        [
+          363,
+          367,
+          373
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "lr": 0.01,
+        "beta1": 0.0,
+        "beta2": 0.5,
+        "weight_decay": 0.5,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -50,
+          100
+        ],
+        [
+          -50,
+          100
+        ],
+        [
+          -5,
+          5
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "note": "L-bfloat16-50M-质数非对齐-无动量-beta1=0.0-3D | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 10,
+      "input_shape": [
+        [
+          2049,
+          513
+        ],
+        [
+          2049,
+          513
+        ],
+        [
+          2049,
+          513
+        ],
+        [
+          2049,
+          513
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.01,
+        "epsilon": 1e-08,
+        "maximize": true
+      },
+      "value_range": [
+        [
+          -65504,
+          65504
+        ],
+        [
+          -65504,
+          65504
+        ],
+        [
+          -6550,
+          6550
+        ],
+        [
+          0,
+          6550
+        ]
+      ],
+      "note": "M-float32-1M-非对齐-maximize=true | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 11,
+      "input_shape": [
+        [
+          3,
+          7,
+          13,
+          4001
+        ],
+        [
+          3,
+          7,
+          13,
+          4001
+        ],
+        [
+          3,
+          7,
+          13,
+          4001
+        ],
+        [
+          3,
+          7,
+          13,
+          4001
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.0,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -88,
+          88
+        ],
+        [
+          -88,
+          88
+        ],
+        [
+          -8.8,
+          8.8
+        ],
+        [
+          0,
+          8.8
+        ]
+      ],
+      "note": "S-float16-1M-质数非对齐-float32边界值-4D | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 12,
+      "input_shape": [
+        [
+          1000003
+        ],
+        [
+          1000003
+        ],
+        [
+          1000003
+        ],
+        [
+          1000003
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.0,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-bfloat16-1M-质数非对齐-inf特殊值-1D | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 13,
+      "input_shape": [
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ],
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ],
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ],
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.0,
+        "epsilon": 0.0,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "note": "L-float32-10M-质数非对齐-epsilon=0.0-nan特殊值-5D | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 14,
+      "input_shape": [
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ],
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ],
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ],
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.0,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "M-float16-3M-质数非对齐-零值-5D | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 15,
+      "input_shape": [
+        [
+          512,
+          2049
+        ],
+        [
+          512,
+          2049
+        ],
+        [
+          512,
+          2049
+        ],
+        [
+          512,
+          2049
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.0,
+        "epsilon": 0.0001,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.05,
+          0.05
+        ],
+        [
+          0,
+          0.05
+        ]
+      ],
+      "note": "M-float32-1M-非对齐-大epsilon=1e-04 | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 16,
+      "input_shape": [
+        [
+          255,
+          8193
+        ],
+        [
+          255,
+          8193
+        ],
+        [
+          255,
+          8193
+        ],
+        [
+          255,
+          8193
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "lr": 0.01,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.01,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -1,
+          3
+        ],
+        [
+          -1,
+          3
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          0,
+          0.1
+        ]
+      ],
+      "note": "M-bfloat16-2M-非对齐-非对称小值域 | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 17,
+      "input_shape": [
+        [
+          4097,
+          511
+        ],
+        [
+          4097,
+          511
+        ],
+        [
+          4097,
+          511
+        ],
+        [
+          4097,
+          511
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "lr": 0.1,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.1,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          -1000,
+          1000
+        ],
+        [
+          -100,
+          100
+        ],
+        [
+          0,
+          100
+        ]
+      ],
+      "note": "M-float16-2M-非对齐-对称大值域 | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 18,
+      "input_shape": [
+        [
+          2,
+          511,
+          2049
+        ],
+        [
+          2,
+          511,
+          2049
+        ],
+        [
+          2,
+          511,
+          2049
+        ],
+        [
+          2,
+          511,
+          2049
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.0,
+        "epsilon": 1e-08,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -0.2,
+          0.2
+        ],
+        [
+          -0.2,
+          0.2
+        ],
+        [
+          -0.02,
+          0.02
+        ],
+        [
+          0,
+          0.02
+        ]
+      ],
+      "note": "M-float32-2M-非对齐-对称微小值域-3D | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4,
+          255,
+          2049
+        ],
+        [
+          4,
+          255,
+          2049
+        ],
+        [
+          4,
+          255,
+          2049
+        ],
+        [
+          4,
+          255,
+          2049
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "lr": 0.0001,
+        "beta1": 0.99,
+        "beta2": 0.99,
+        "weight_decay": 0.5,
+        "epsilon": 1e-06,
+        "maximize": false
+      },
+      "value_range": [
+        [
+          -3,
+          6
+        ],
+        [
+          -3,
+          6
+        ],
+        [
+          -0.3,
+          0.3
+        ],
+        [
+          0,
+          0.3
+        ]
+      ],
+      "note": "M-bfloat16-2M-非对齐-非对称中值域-3D | baseline_kernels: ApplyAdamW×1"
+    },
+    {
+      "operator": "ApplyAdamW",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          3,
+          17,
+          1024,
+          101
+        ],
+        [
+          2,
+          3,
+          17,
+          1024,
+          101
+        ],
+        [
+          2,
+          3,
+          17,
+          1024,
+          101
+        ],
+        [
+          2,
+          3,
+          17,
+          1024,
+          101
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "lr": 0.001,
+        "beta1": 0.9,
+        "beta2": 0.999,
+        "weight_decay": 0.01,
+        "epsilon": 1e-08,
+        "maximize": true
+      },
+      "value_range": [
+        [
+          -20,
+          40
+        ],
+        [
+          -20,
+          40
+        ],
+        [
+          -2,
+          2
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "note": "L-float32-10M-非对齐-非对称大值域-5D-maximize=true | baseline_kernels: ApplyAdamW×1"
+    }
+  ],
+  "case_count": 20
+}

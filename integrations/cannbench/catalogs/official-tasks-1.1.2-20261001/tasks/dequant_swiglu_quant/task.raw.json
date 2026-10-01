@@ -1,0 +1,840 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "DequantSwigluQuant",
+  "function_name": "dequant_swiglu_quant",
+  "level": "level3",
+  "category": "FusedComposite",
+  "difficulty": "L3",
+  "description": "反量化 + SwiGLU + 动态量化（per-token）三步融合（精简版，去掉 group_index/swiglu_mode/bias/quant_offset/static-quant-mode）",
+  "desc_md": "# DequantSwigluQuant 算子 API 描述\n\n## 1. 算子简介\n\n对输入张量 x 进行**反量化（Dequant）→ SwiGLU 激活 → 动态量化（per-token Quant）**\n三步融合，输出量化后的结果 y 和 per-token scale。**精简版**仅保留生产推理常用的\n5 个参数，**仅动态量化**；不暴露 group_index（MoE 分组路由）、swiglu_mode 变种、\nbias、quant_offset、quant_mode（固定为 dynamic per-token）等。\n\n**主要应用场景**\n- 大语言模型推理 FFN 层 W8A8 量化加速（int32 + per-token dequant + SwiGLU + 重量化）\n- BF16 → INT8 一体化加速（去掉中间 dequant/quant 显存开销）\n\n**算子特征**\n- 难度等级：L3（FusedComposite）\n- 主输入 `x`，可选 3 个 Tensor（`weight_scale`, `activation_scale`, `quant_scale`）\n- 双输出 `(y, scale)`：量化结果 + per-token scale\n- 仅支持动态量化（per-token max → scale）\n- 输入最后一维 `2H` 必须为偶数\n\n## 2. 算子定义\n\n### 数学公式\n\n设 x ∈ ℝ^[TokensNum, 2H]，按最后一维等分两半：\n\n$$\nA = x[\\,..., : H],\\qquad B = x[\\,..., H:\\,]\n$$\n\n**Step 1 — 反量化**：\n\n$$\n\\text{dequantOut} = \\begin{cases}\n\\bigl(x \\cdot \\text{weight\\_scale}\\bigr) \\cdot \\text{activation\\_scale.unsqueeze(-1)} & x \\in \\text{int32} \\\\\nx.\\text{float}() & x \\in \\text{bfloat16} \\cup \\text{float16}\n\\end{cases}\n$$\n\n**Step 2 — SwiGLU 激活**（与官方 API 对齐）：\n\n| `activate_left` | 公式 |\n|:--:|---|\n| `False`（默认） | `swiglu_out = SiLU(B) * A` |\n| `True` | `swiglu_out = SiLU(A) * B` |\n\n**Step 3 — smooth quant 系数（可选）**：\n\n$$\n\\text{swiglu\\_out} = \\text{swiglu\\_out} \\cdot \\text{quant\\_scale}\n$$\n\n`quant_scale` 形状 `[1, H]`，broadcast 到 `[TokensNum, H]`。当其为 None 时跳过。\n\n**Step 4 — 动态量化（per-token）**：\n\n$$\ns_i = \\max_j |\\text{swiglu\\_out}_{i,j}|\\, /\\, 127,\\qquad\ny_{i,j} = \\text{clamp}\\bigl(\\,\\text{round}(\\text{swiglu\\_out}_{i,j} / s_i),\\ -128,\\ 127\\,\\bigr) \\in \\text{int8}\n$$\n\n`scale` 输出每个 token 的 $s_i$（float32）。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.dequant_swiglu_quant(\n    Tensor x,\n    Tensor? weight_scale=None,\n    Tensor? activation_scale=None,\n    Tensor? quant_scale=None,\n    bool   activate_left=False,\n) -> (Tensor y, Tensor scale)\n```\n\n### Shape 变量\n\n| 变量 | 含义 |\n|---|---|\n| `TokensNum` | token 数（≥ 0）|\n| `H` | 输出最后一维大小（`x` 最后一维的一半，> 0）|\n\n### 输入参数\n\n| 参数 | 类型 | shape | dtype | 必选 | 描述 |\n|---|---|---|---|:--:|---|\n| `x` | Tensor | `[TokensNum, 2H]` | int32 / bfloat16 / float16 | ✓ | 主输入；尾轴必须为偶数 |\n| `weight_scale` | Tensor | `[1, 2H]` | float32 | x=int32 时必选 | 权重量化的反量化系数 |\n| `activation_scale` | Tensor | `[TokensNum]` | float32 | x=int32 时必选 | per-token 激活反量化系数 |\n| `quant_scale` | Tensor | `[1, H]` | float32 | 可选 | smooth 量化系数（仅 float32）|\n| `activate_left` | bool | — | — | 可选（默认 False） | False = `SiLU(B)*A`；True = `SiLU(A)*B` |\n\n### 输出\n\n| 参数 | shape | dtype | 描述 |\n|---|---|---|---|\n| `y` | `[TokensNum, H]` | int8 | 量化后输出 |\n| `scale` | `[TokensNum]` | float32 | 每 token 的量化 scale（max abs / 127） |\n\n### 数据类型支持\n\n| `x` 输入 dtype | `weight_scale` / `activation_scale` | `quant_scale` | `y` | `scale` |\n|---|---|---|---|---|\n| int32 | **必须提供** (float32 / float32) | 可选 float32 | int8 | float32 |\n| bfloat16 | **必须为 None** | 可选 float32 | int8 | float32 |\n| float16 | **必须为 None** | 可选 float32 | int8 | float32 |\n\n### 规则与约束\n\n- `x.shape[-1]` 必须为**偶数**；`x` 必须是 2D。\n- `x` 为 int32 时，`weight_scale` 与 `activation_scale` 必须非 None。\n- `x` 为 bfloat16 / float16 时，`weight_scale` 与 `activation_scale` 必须为 None。\n- `quant_scale` 仅支持 float32 dtype；fp16 / bf16 在 CANN 850 上调用会运行时报错。\n- 输出 `y` 仅 int8，`scale` 仅 float32。\n- 该接口仅支持**推理场景**及**图模式**调用。\n- 支持芯片：Atlas A2 / Atlas 800I A2 / A200I A2 / Atlas A3 系列。\n\n### 不支持的参数（相对官方 API）\n\n下列参数 `tasks` 精简版**不暴露**，调用底层算子时取默认值：\n\n| 参数 | 默认值 | 用途 / 不暴露原因 |\n|---|---|---|\n| `quant_mode` | 1（pinned dynamic）| 静态模式在 CANN 850 实测中表现为 identity scale 且 scale 返回未初始化内存，不具备生产可用性 |\n| `bias` | None | x 的偏置；可在算子外做 |\n| `quant_offset` | None | 量化偏移；生产部署中几乎都为 0 |\n| `group_index` | None | MoE 分组路由 |\n| `swiglu_mode` | 0 | 0=传统 SwiGLU；1=变种（带 clamp + alpha + bias）|\n| `clamp_limit` | 7.0 | 仅变种 SwiGLU 生效 |\n| `glu_alpha` | 1.702 | 仅变种 SwiGLU 生效 |\n| `glu_bias` | 1.0 | 仅变种 SwiGLU 生效 |\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `TokensNum`（`x` 第 0 维） | 1 ~ 65536 | cases.csv 实测 127 ~ 32768；`activation_scale` 长度须等于 TokensNum |\n| `2H`（`x` 最后一维） | 2 ~ 16384 | cases.csv 实测 64 ~ 8194；**必须为偶数**；`weight_scale` 形状须为 `[1, 2H]` |\n| `H`（输出最后一维） | 1 ~ 8192 | 由 `2H/2` 派生；`quant_scale` 形状须为 `[1, H]` |\n| `activate_left` | {false, true} | cases.csv 实测两值；false=`SiLU(B)*A`，true=`SiLU(A)*B` |\n\n约束：`x` 必须为 2D 张量；`x.dtype=int32` 时 `weight_scale` 与 `activation_scale` 必须同时非 None，否则两者必须同时为 None；`quant_scale` 仅支持 float32。\n\n## 4. 精度要求\n\n由于输出 `y` 是 int8（容易出现 ±1 舍入抖动），采用经典量化算子的判定：\n\n| 输出 | 验证方式 | 通过阈值 |\n|---|---|---|\n| `y` (int8) | 与 golden 逐元素比较，允许 `\\|diff\\| ≤ 1` 元素占比 < 1e-3 | — |\n| `scale` (float32) | 浮点相对误差 | rtol = 1e-3, atol = 1e-5 |\n\n参考[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)。\n\n## 5. 标准 Golden 代码\n\n详见同目录 `golden.py`。核心逻辑：\n\n```python\ndef dequant_swiglu_quant(x, weight_scale=None, activation_scale=None,\n                        quant_scale=None, activate_left=False):\n    # Step 1: dequant\n    if x.dtype == torch.int32:\n        d = x.float() * weight_scale.float()\n        d = d * activation_scale.float().unsqueeze(-1)\n    else:  # bfloat16\n        d = x.float()\n    # Step 2: swiglu\n    A, B = d[..., :d.shape[-1]//2], d[..., d.shape[-1]//2:]\n    silu = torch.nn.functional.silu\n    out = silu(A)*B if activate_left else silu(B)*A\n    # Step 3: smooth quant\n    if quant_scale is not None:\n        out = out * quant_scale.float()\n    # Step 4: dynamic per-token int8 quantize\n    s = (out.abs().amax(-1) / 127.0).clamp_min(1e-12)         # [TokensNum]\n    y = torch.clamp((out / s.unsqueeze(-1)).round(), -128, 127).to(torch.int8)\n    return y, s.to(torch.float32)\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch, torch_npu\n\n# 路径 A：x = bfloat16，无 weight_scale，纯 SwiGLU + 动态量化\nx = torch.randn(2048, 4096, dtype=torch.bfloat16, device=\"npu\")\ny, scale = torch_npu.npu_dequant_swiglu_quant(x, quant_mode=1)\n# y: [2048, 2048] int8, scale: [2048] float32\n\n# 路径 B：x = int32（W8A8 反量化路径）+ smooth quant\nx  = torch.randint(-128, 127, (1024, 4096), dtype=torch.int32, device=\"npu\")\nws = torch.randn(1, 4096, dtype=torch.float32, device=\"npu\")     # weight_scale\nas_ = torch.randn(1024,    dtype=torch.float32, device=\"npu\")    # activation_scale\nqs = torch.randn(1, 2048, dtype=torch.float32, device=\"npu\")     # quant_scale\ny, scale = torch_npu.npu_dequant_swiglu_quant(\n    x, weight_scale=ws, activation_scale=as_, quant_scale=qs, quant_mode=1)\n```\n\n> 注：`tasks` 暴露的接口不接受 `quant_mode` 参数；调用底层 torch_npu 时\n> 由 ref 函数固定传 `quant_mode=1`。\n\n### 参考文档\n\n- 官方 CANN 算子文档：[aclnnDequantSwigluQuant](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850/API/aolapi/context/ops-nn/aclnnDequantSwigluQuant.md)\n- torch_npu 绑定：`python -c \"import torch_npu; print(torch_npu.npu_dequant_swiglu_quant.__doc__)\"`\n\n### 相关算子\n\n- `torch_npu.npu_swiglu_quant` —— 不带反量化的 SwiGLU + 量化\n- `torch_npu.npu_grouped_matmul_swiglu_quant_v2` —— 包含 GEMM 的更上层融合算子\n",
+  "proto": {
+    "name": "DequantSwigluQuant",
+    "category": "FusedComposite",
+    "difficulty": "L3",
+    "formula": "dequant_out = (x.float() * weight_scale + 0) * activation_scale.unsqueeze(-1)   # x=int32 path\ndequant_out = x                                                                  # x=bfloat16 path\nA, B = split(dequant_out, last_dim, 2)\nswiglu_out = SiLU(A) * B   if activate_left else   SiLU(B) * A\nif quant_scale is not None: swiglu_out = swiglu_out * quant_scale\ny, scale  = Quantize(swiglu_out)   # static (quant_mode=0) or dynamic per-token (=1)\n",
+    "description": "反量化 + SwiGLU + 动态量化（per-token）三步融合（精简版，去掉 group_index/swiglu_mode/bias/quant_offset/static-quant-mode）",
+    "shape_support": "x: [TokensNum, 2H]; 输出 y: [TokensNum, H], scale: [TokensNum]",
+    "precision_thresholds": {
+      "int8": 1.0
+    },
+    "attrs": [
+      {
+        "name": "activate_left",
+        "type": "bool",
+        "default": false,
+        "description": "False: SwiGLU = SiLU(B) * A，B 为 split 后的右半边\nTrue : SwiGLU = SiLU(A) * B，A 为 split 后的左半边\n",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "主输入张量；尾轴必须为偶数",
+        "dtype": [
+          "int32",
+          "bfloat16",
+          "float16"
+        ],
+        "shape": "[TokensNum, 2H]"
+      },
+      {
+        "name": "weight_scale",
+        "description": "权重量化的反量化系数；当 x=int32 时必须非 None，当 x=bfloat16/float16 时必须 None",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[1, 2H]",
+        "optional": true
+      },
+      {
+        "name": "activation_scale",
+        "description": "per-token 激活量化的反量化系数；当 x=int32 时必须非 None，当 x=bfloat16/float16 时必须 None",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[TokensNum]",
+        "optional": true
+      },
+      {
+        "name": "quant_scale",
+        "description": "smooth quant 系数，量化前对 swiglu_out 逐元素乘",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[1, H]",
+        "optional": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "量化后的输出张量",
+        "dtype": [
+          "int8"
+        ],
+        "shape": "[TokensNum, H]"
+      },
+      {
+        "name": "scale",
+        "description": "per-token 量化 scale；动态量化模式下为实测值",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[TokensNum]"
+      }
+    ],
+    "schema": "dequant_swiglu_quant(Tensor x, Tensor? weight_scale=None, Tensor? activation_scale=None, Tensor? quant_scale=None, bool activate_left=False) -> (Tensor y, Tensor scale)"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\n\"\"\"DequantSwigluQuant Golden 参考实现（精简版，5 参数，仅动态量化）。\n\n签名是 `torch_npu.npu_dequant_swiglu_quant` 在去掉 group_index / swiglu_mode /\nbias / quant_offset 后并固定 quant_mode=1（动态 per-token）的子集：\n\n  dequant_swiglu_quant(x, weight_scale, activation_scale, quant_scale,\n                       activate_left) -> (y, scale)\n\nx 支持 int32（W8A8 反量化路径，必配 weight_scale + activation_scale）和\nbfloat16 / float16（直接 SwiGLU 路径，weight_scale / activation_scale 必须 None）。\n\n固定动态量化的原因：CANN 850 的静态量化路径在实测中表现为 identity scale\n且 scale 返回值未初始化（垃圾数据），不具备生产可用性，因此从 tasks\nspec 中移除。\n\"\"\"\nfrom typing import Optional, Tuple\nimport torch\n\n\ndef dequant_swiglu_quant(\n    x: torch.Tensor,\n    weight_scale: Optional[torch.Tensor] = None,\n    activation_scale: Optional[torch.Tensor] = None,\n    quant_scale: Optional[torch.Tensor] = None,\n    activate_left: bool = False,\n) -> Tuple[torch.Tensor, torch.Tensor]:\n    \"\"\"\n    Args:\n        x: [TokensNum, 2H] int32 / bfloat16 / float16\n        weight_scale: [1, 2H] float32；x=int32 时必须；x=bfloat16/float16 时必须 None\n        activation_scale: [TokensNum] float32；x=int32 时必须；x=bfloat16/float16 时必须 None\n        quant_scale: [1, H] float32；smooth quant 系数（可选）\n        activate_left: False = SiLU(B)*A；True = SiLU(A)*B\n\n    Returns:\n        y: [TokensNum, H] int8（每行独立 per-token scale 量化）\n        scale: [TokensNum] float32（每 token 的 scale）\n    \"\"\"\n    # ---- Step 1: 反量化 ----\n    if x.dtype == torch.int32:\n        assert weight_scale is not None and activation_scale is not None, \\\n            \"x=int32 时必须提供 weight_scale 和 activation_scale\"\n        # weight_scale 形状 [1, 2H]；activation_scale 形状 [TokensNum]\n        dequant_out = x.float() * weight_scale.float()                   # broadcast → [TokensNum, 2H]\n        dequant_out = dequant_out * activation_scale.float().unsqueeze(-1)\n    elif x.dtype in (torch.bfloat16, torch.float16):\n        assert weight_scale is None and activation_scale is None, \\\n            f\"x={x.dtype} 时 weight_scale / activation_scale 必须为 None\"\n        dequant_out = x.float()\n    else:\n        dequant_out = x\n\n    # ---- Step 2: SwiGLU 激活 ----\n    last_dim = dequant_out.shape[-1]\n    assert last_dim % 2 == 0, f\"x 最后一维必须为偶数, got {last_dim}\"\n    half = last_dim // 2\n    A = dequant_out[..., :half]    # 左半\n    B = dequant_out[..., half:]    # 右半\n    silu = torch.nn.functional.silu\n    if activate_left:\n        # 官方 API: True → swish(split[0]) * split[1] = SiLU(A) * B\n        swiglu_out = silu(A) * B\n    else:\n        # 官方 API: False → swish(split[1]) * split[0] = SiLU(B) * A\n        swiglu_out = silu(B) * A\n\n    # ---- Step 3: smooth quant 系数（可选） ----\n    if quant_scale is not None:\n        swiglu_out = swiglu_out * quant_scale.float()    # broadcast [1, H] → [TokensNum, H]\n\n    # ---- Step 4: 动态量化（per-token，int8） ----\n    # 每行独立 max → 每行独立 scale；与 quant_mode=1 一致\n    max_per_row = swiglu_out.abs().amax(dim=-1)              # [TokensNum]\n    s = (max_per_row.float() / 127.0).clamp_min(1e-12)       # avoid div 0\n    y = torch.clamp((swiglu_out.float() / s.unsqueeze(-1)).round(), -128, 127).to(torch.int8)\n    scale = s.to(torch.float32)\n    return y, scale\n",
+  "cases_yaml": [
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 1,
+      "input_shape": [
+        [
+          512,
+          2048
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "activate_left": true
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "S-float16-256K-对齐-dynamic-activate_left-小M | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 2,
+      "input_shape": [
+        [
+          1024,
+          4096
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "M-float16-2M-对齐-dynamic-FFN-base | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 3,
+      "input_shape": [
+        [
+          2048,
+          8192
+        ],
+        null,
+        null,
+        [
+          1,
+          4096
+        ]
+      ],
+      "dtype": [
+        "float16",
+        null,
+        null,
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": true
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "L-float16-16M-对齐-dynamic-activate_left-quant_scale | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 4,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        null,
+        null,
+        [
+          1,
+          2048
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        null,
+        null,
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "L-bfloat16-16M-对齐-dynamic-quant_scale | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 5,
+      "input_shape": [
+        [
+          127,
+          1024
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "S-bfloat16-128K-质数非对齐-dynamic-小M | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 6,
+      "input_shape": [
+        [
+          8192,
+          1024
+        ],
+        null,
+        null,
+        [
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        null,
+        null,
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "L-float16-8M-对齐-dynamic-quant_scale-大M-小H | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1023,
+          4098
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "activate_left": true
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "M-bfloat16-4M-非对齐-dynamic-activate_left | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 8,
+      "input_shape": [
+        [
+          255,
+          8194
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "M-bfloat16-2M-非对齐-大H | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 9,
+      "input_shape": [
+        [
+          512,
+          2048
+        ],
+        [
+          1,
+          2048
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": true
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ]
+      ],
+      "note": "S-int32-256K-对齐-dynamic-activate_left-小M-W8A8 | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 10,
+      "input_shape": [
+        [
+          1024,
+          4096
+        ],
+        [
+          1,
+          4096
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ]
+      ],
+      "note": "M-int32-2M-对齐-dynamic-W8A8-base | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 11,
+      "input_shape": [
+        [
+          2048,
+          8192
+        ],
+        [
+          1,
+          8192
+        ],
+        [
+          2048
+        ],
+        [
+          1,
+          4096
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": true
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "L-int32-16M-对齐-dynamic-activate_left-quant_scale-W8A8 | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 12,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        [
+          1,
+          4096
+        ],
+        [
+          4096
+        ],
+        [
+          1,
+          2048
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "L-int32-16M-对齐-dynamic-quant_scale-W8A8 | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 13,
+      "input_shape": [
+        [
+          127,
+          1024
+        ],
+        [
+          1,
+          1024
+        ],
+        [
+          127
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ]
+      ],
+      "note": "S-int32-128K-质数非对齐-dynamic-小M-W8A8 | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 14,
+      "input_shape": [
+        [
+          8192,
+          1024
+        ],
+        [
+          1,
+          1024
+        ],
+        [
+          8192
+        ],
+        [
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "L-int32-8M-对齐-dynamic-quant_scale-大M-小H-W8A8 | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 15,
+      "input_shape": [
+        [
+          1023,
+          4098
+        ],
+        [
+          1,
+          4098
+        ],
+        [
+          1023
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": true
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ]
+      ],
+      "note": "M-int32-4M-非对齐-dynamic-activate_left-W8A8 | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 16,
+      "input_shape": [
+        [
+          255,
+          8194
+        ],
+        [
+          1,
+          8194
+        ],
+        [
+          255
+        ],
+        [
+          1,
+          4097
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "M-int32-2M-非对齐-大H-quant_scale-W8A8 | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 17,
+      "input_shape": [
+        [
+          10007,
+          64
+        ],
+        [
+          1,
+          64
+        ],
+        [
+          10007
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ]
+      ],
+      "note": "M-int32-640K-质数非对齐-dynamic-小H-W8A8 | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 18,
+      "input_shape": [
+        [
+          32768,
+          256
+        ],
+        [
+          1,
+          256
+        ],
+        [
+          32768
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ]
+      ],
+      "note": "L-int32-8M-对齐-dynamic-大M-小H-W8A8 | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4001,
+          2048
+        ],
+        [
+          1,
+          2048
+        ],
+        [
+          4001
+        ],
+        [
+          1,
+          1024
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": true
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -1.0,
+          1.0
+        ]
+      ],
+      "note": "M-int32-8M-质数非对齐-dynamic-activate_left-quant_scale-W8A8 | baseline_kernels: DequantSwigluQuant×1"
+    },
+    {
+      "operator": "DequantSwigluQuant",
+      "case_id": 20,
+      "input_shape": [
+        [
+          16384,
+          512
+        ],
+        [
+          1,
+          512
+        ],
+        [
+          16384
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "activate_left": false
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.5,
+          0.5
+        ]
+      ],
+      "note": "L-int32-8M-对齐-dynamic-大M-W8A8 | baseline_kernels: DequantSwigluQuant×1"
+    }
+  ],
+  "case_count": 20
+}

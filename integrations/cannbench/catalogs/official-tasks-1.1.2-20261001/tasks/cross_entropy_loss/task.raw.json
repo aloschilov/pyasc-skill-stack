@@ -1,0 +1,740 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "CrossEntropyLoss",
+  "function_name": "cross_entropy_loss",
+  "level": "level2",
+  "category": "NumericalStable",
+  "difficulty": "L2",
+  "description": "计算交叉熵损失，用于分类任务",
+  "desc_md": "# CrossEntropyLoss 算子 API 描述\n\n## 1. 算子简介\n\n计算交叉熵损失，用于分类任务。\n\n**主要应用场景**：\n- 多分类任务的损失函数（图像分类、文本分类等）\n- 语言模型的 next-token 预测训练\n- 支持硬标签（类别索引）和软标签（概率分布）两种模式\n\n**算子特征**：\n- 难度等级：L2（NumericalStable）\n- 双输入（logits 和 target）单输出（loss），涉及 softmax、对数、归约等多步计算\n- 输入 x 为 (N, C) 或更高维的 logits 张量，target 为 (N,) 的类别索引或 (N, C) 的软标签\n\n## 2. 算子定义\n\n### 数学公式\n\n**基本公式**：\n\n$$\nL = -\\log\\left(\\frac{\\exp(x_{target})}{\\sum_{j}\\exp(x_j)}\\right)\n$$\n\n等价于：\n\n$$\nL = -x_{target} + \\log\\left(\\sum_{j}\\exp(x_j)\\right)\n$$\n\n**带权重的公式**：\n\n$$\nL = -weight_{target} \\cdot \\log\\left(\\frac{\\exp(x_{target})}{\\sum_{j}\\exp(x_j)}\\right)\n$$\n\n其中：\n- `reduction='none'` 时返回每个样本的损失，shape 为 (N,)\n- `reduction='mean'` 时返回 batch 平均损失（标量）\n- `reduction='sum'` 时返回 batch 总损失（标量）\n- `ignore_index` 指定的标签不参与损失计算\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.cross_entropy_loss(Tensor input, Tensor target, str reduction=\"mean\", int ignore_index=-100) -> Tensor loss\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| input | Tensor | 必选 | 输入 logits 张量（未经 softmax） |\n| target | Tensor | 必选 | 目标标签索引（hard labels）或概率分布（soft labels） |\n| reduction | string | \"mean\" | 损失聚合方式 ('none' \\| 'mean' \\| 'sum') |\n| ignore_index | int | -100 | 忽略的标签索引（不影响损失计算） |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| loss | reduction='none' 时为 (N,)，否则为标量 | 与 input 相同 | 损失值 |\n\n### 数据类型\n\n| x dtype | target dtype | 输出 dtype |\n|---------|-------------|-----------|\n| float32 | int32 / int64 | float32 |\n| float16 | int32 / int64 | float16 |\n| bfloat16 | int32 / int64 | bfloat16 |\n| float32 | float32 | float32 |\n| float16 | float16 | float16 |\n| bfloat16 | bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- x 的 shape 为 (N, C) 或 (N, C, d1, d2, ...)，其中 N 为 batch size，C 为类别数\n- 硬标签模式：target 的 shape 为 (N,) 或 (N, d1, d2, ...)，值为 [0, C) 范围内的类别索引\n- 软标签模式：target 的 shape 为 (N, C)，值为概率分布\n- `ignore_index` 仅在硬标签模式下生效\n- 输入 x 应为原始 logits（未经 softmax），内部自动应用 log_softmax\n- 需注意数值稳定性：内部实现应使用 log-sum-exp 技巧避免溢出\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `N`（batch size，x 第 0 维） | 1 ~ 2097152 | cases.csv 实测 2 ~ 1,000,003 |\n| `C`（类别数，x 第 1 维） | 2 ~ 16384 | cases.csv 实测 2 ~ 16,384 |\n| 额外空间维度 `d_i`（x 第 ≥2 维） | 1 ~ 1024 | cases.csv 实测 3 ~ 1024 |\n| `rank(x)`（x 维度数） | 2 ~ 8 | cases.csv 实测 2 ~ 5 维 |\n| `rank(target)` | rank(x)-1 或 rank(x) | 硬标签缺 C 维；软标签同 x；cases.csv 全为硬标签 |\n| `reduction` | \"none\" / \"mean\" / \"sum\" | cases.csv 三种均覆盖 |\n| `ignore_index` | int64 任意值 | cases.csv 实测 -100 / -1 / 0 / 10 / 50 / 100 |\n\n约束：硬标签模式下 target 各元素取值范围为 [0, C) 或等于 `ignore_index`；软标签模式下 target 形状须与 x 完全一致。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nCrossEntropyLoss 算子 Torch Golden 参考实现\n\n计算交叉熵损失，用于分类任务\n\n公式:\n    L = -log(exp(x[target]) / sum(exp(x)))\n    或带 weight: L = -weight[target] * log(exp(x[target]) / sum(exp(x)))\n\n参考 PyTorch API: torch.nn.CrossEntropyLoss\n    https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html\n\nParameters:\n    - input: (N, C) 或 (N, C, H, W) 等 - logits 张量（未经 softmax）\n    - target: (N,) 硬标签 或 (N, C) 软标签（概率分布）\n    - weight: (C,) 各类别的权重（可选）\n    - ignore_index: int, 默认 -100 - 忽略的标签索引\n    - reduction: 'none' | 'mean' | 'sum', 默认 'mean' - 损失聚合方式\n\"\"\"\n\n\ndef cross_entropy_loss(\n    input: torch.Tensor,\n    target: torch.Tensor,\n    reduction: str = 'mean',\n    ignore_index: int = -100\n) -> torch.Tensor:\n    \"\"\"\n    计算交叉熵损失\n\n    Args:\n        input: 输入 logits 张量，shape (N, C) 或 (N, C, d1, d2, ...)\n           N = batch size, C = 类别数（channel_first 约定）\n           注意：输入应为 logits（未经 softmax），内部会自动应用 log_softmax\n        target: 目标标签\n               - 硬标签：shape (N,) 或 (N, d1, d2, ...)，值为类别索引\n               - 软标签：shape (N, C)，值为概率分布\n        reduction: 损失聚合方式\n                  'none': 返回每个样本的损失，shape (N,)\n                  'mean': 返回 batch 平均损失\n                  'sum': 返回 batch 总损失\n        ignore_index: 忽略的标签索引\n                      当 target 为硬标签且值为 ignore_index 时，该样本不计入损失\n\n    Returns:\n        损失值：如果 reduction='none'，返回 shape (N,) 的张量\n               否则返回标量张量\n\n    Examples:\n        >>> N, C = 16, 10  # 16个样本，10个类别\n        >>> x = torch.randn(N, C)\n        >>> target = torch.randint(0, C, (N,))\n        >>> loss = cross_entropy_loss(input, target)\n    \"\"\"\n    # CANN 支持 int32 / int64 硬标签，而 CPU PyTorch 要求硬标签为 Long。\n    # 仅转换 Golden 使用的整型视图；浮点软标签保持原 dtype。\n    golden_target = target.long() if not target.is_floating_point() else target\n    loss = torch.nn.functional.cross_entropy(\n        input=input,\n        target=golden_target,\n        reduction=reduction,\n        ignore_index=ignore_index\n    )\n\n    return loss\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx = torch.randn(1024, 2048, dtype=torch.float32, device=\"npu\")\ntarget = torch.randint(0, 2048, (1024,), dtype=torch.int64, device=\"npu\")\n\nloss = cann_bench.cross_entropy_loss(x, target, reduction=\"mean\", ignore_index=-100)\nloss = cann_bench.cross_entropy_loss(x, target, reduction=\"sum\", ignore_index=-100)\nloss = cann_bench.cross_entropy_loss(x, target, reduction=\"none\", ignore_index=-100)\n```\n",
+  "proto": {
+    "name": "CrossEntropyLoss",
+    "category": "NumericalStable",
+    "difficulty": "L2",
+    "formula": "L = -log(exp(x[target]) / sum(exp(x)))\n或带 weight: L = -weight[target] * log(exp(x[target]) / sum(exp(x)))\n",
+    "description": "计算交叉熵损失，用于分类任务",
+    "shape_support": "input: (N, C) 或 (N, C, d1, d2, ...) - channel_first 约定，C 为类别维度\ntarget: (N,) 或 (N, d1, d2, ...) 硬标签，或 (N, C) 软标签\n",
+    "attrs": [
+      {
+        "name": "reduction",
+        "type": "string",
+        "default": "mean",
+        "description": "损失聚合方式 ('none' | 'mean' | 'sum')",
+        "required": false
+      },
+      {
+        "name": "ignore_index",
+        "type": "int",
+        "default": -100,
+        "description": "忽略的标签索引（不影响损失计算）",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "input",
+        "description": "输入 logits 张量（未经 softmax）",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "target",
+        "description": "目标标签索引（hard labels）或概率分布（soft labels）",
+        "dtype": [
+          "int32",
+          "int64",
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "loss",
+        "description": "损失值（reduction='none' 时 shape 为 (N,)，否则为标量）",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "cross_entropy_loss(Tensor input, Tensor target, str reduction=\"mean\", int ignore_index=-100) -> Tensor loss"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\nimport torch.nn.functional as F\n\n\ndef cross_entropy_loss(\n    input: torch.Tensor,\n    target: torch.Tensor,\n    reduction: str = \"mean\",\n    ignore_index: int = -100,\n) -> torch.Tensor:\n    \"\"\"CrossEntropyLoss Torch Golden 参考实现 (P1 op, 对齐 torch.nn.functional.cross_entropy).\n\n    公式: L = -log(softmax(input)[target])  ('mean' / 'sum' / 'none' reduction)\n\n    本 spec 只暴露 reduction + ignore_index 两个 attr,torch 的其他 optional\n    kwargs (weight / label_smoothing / size_average / reduce) 不在本评测范围。\n\n    Args:\n        input: logits 张量,shape (N, C) 或 (N, C, d1, ...) (channel_first)\n        target: 硬标签 (N,) 或 (N, d1, ...) ,或 软标签 (N, C) 等\n        reduction: 'mean' | 'sum' | 'none',默认 'mean'\n        ignore_index: 忽略的硬标签索引,默认 -100\n\n    Returns:\n        loss: reduction='none' 时 shape 与 target 一致 (去除 C 维),否则标量\n    \"\"\"\n    # CANN CrossEntropyLoss supports both int32 and int64 class indices, while\n    # PyTorch's CPU reference requires hard-label targets to be Long.  Convert\n    # only the Golden's integral view: callers (and therefore the candidate\n    # operator) retain the original target dtype.  Floating soft labels must\n    # stay floating and follow PyTorch's probability-target path.\n    golden_target = target.long() if not target.is_floating_point() else target\n    return F.cross_entropy(\n        input=input,\n        target=golden_target,\n        reduction=reduction,\n        ignore_index=ignore_index,\n    )\n",
+  "cases_yaml": [
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          2048
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          2047
+        ]
+      ],
+      "note": "S-float16-int64_target-2M-对齐-对称小值域-mean | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Cast×4 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2048,
+          4096
+        ],
+        [
+          2048
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          0,
+          4095
+        ]
+      ],
+      "note": "M-float32-int64_target-8M-对齐-对称小值域-mean | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          8192
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          0,
+          8191
+        ]
+      ],
+      "note": "M-bfloat16-int64_target-33M-对齐-对称小值域-mean | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8192,
+          16384
+        ],
+        [
+          8192
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "sum",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          0,
+          16383
+        ]
+      ],
+      "note": "L-float16-134M-对齐-对称中值域-sum | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Cast×4 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4096,
+          16384
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "none",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          0,
+          16383
+        ]
+      ],
+      "note": "L-float32-536M-对齐-对称大值域-none | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 6,
+      "input_shape": [
+        [
+          1023,
+          2047
+        ],
+        [
+          1023
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -1
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          0,
+          2046
+        ]
+      ],
+      "note": "S-bfloat16-2M-非对齐-对称微小值域-ignore_index=-1 | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1009,
+          1021
+        ],
+        [
+          1009
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": 0
+      },
+      "value_range": [
+        [
+          -1,
+          2
+        ],
+        [
+          0,
+          1020
+        ]
+      ],
+      "note": "S-float16-1M-质数非对齐-ignore_index=0 | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Cast×4 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1537,
+          769
+        ],
+        [
+          1537
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": 100
+      },
+      "value_range": [
+        [
+          -5,
+          10
+        ],
+        [
+          0,
+          768
+        ]
+      ],
+      "note": "S-float32-1M-非对齐-ignore_index=100 | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 9,
+      "input_shape": [
+        [
+          363,
+          373,
+          367
+        ],
+        [
+          363,
+          367
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -50,
+          100
+        ],
+        [
+          0,
+          372
+        ]
+      ],
+      "note": "M-bfloat16-50M-质数非对齐-3D | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Transpose×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 10,
+      "input_shape": [
+        [
+          2049,
+          513
+        ],
+        [
+          2049
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -400,
+          400
+        ],
+        [
+          0,
+          512
+        ]
+      ],
+      "note": "S-float16-1M-非对齐-float16边界值 | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Cast×4 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 11,
+      "input_shape": [
+        [
+          3,
+          4001,
+          7,
+          13
+        ],
+        [
+          3,
+          7,
+          13
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -88,
+          88
+        ],
+        [
+          0,
+          4000
+        ]
+      ],
+      "note": "S-float32-1M-质数非对齐-float32边界值-4D | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Transpose×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 12,
+      "input_shape": [
+        [
+          1000003,
+          2
+        ],
+        [
+          1000003
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "M-bfloat16-2M-质数非对齐-大值域-二分类 | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 13,
+      "input_shape": [
+        [
+          11,
+          67,
+          13,
+          17,
+          67
+        ],
+        [
+          11,
+          13,
+          17,
+          67
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          0,
+          66
+        ]
+      ],
+      "note": "M-float16-10M-质数非对齐-常规值域-5D | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Cast×4 + Transpose×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 14,
+      "input_shape": [
+        [
+          3,
+          1013,
+          7,
+          11,
+          13
+        ],
+        [
+          3,
+          7,
+          11,
+          13
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1012
+        ]
+      ],
+      "note": "M-float32-3M-质数非对齐-logits=0特殊值-5D | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Transpose×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 15,
+      "input_shape": [
+        [
+          512,
+          2049
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          0,
+          2048
+        ]
+      ],
+      "note": "S-bfloat16-1M-非对齐-对称微小值域 | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 16,
+      "input_shape": [
+        [
+          255,
+          8193
+        ],
+        [
+          255
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "sum",
+        "ignore_index": 50
+      },
+      "value_range": [
+        [
+          -1,
+          3
+        ],
+        [
+          0,
+          8192
+        ]
+      ],
+      "note": "S-float16-2M-非对齐-ignore_index=50-sum | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Cast×4 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 17,
+      "input_shape": [
+        [
+          4097,
+          511
+        ],
+        [
+          4097
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "none",
+        "ignore_index": -1
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          0,
+          510
+        ]
+      ],
+      "note": "S-float32-2M-非对齐-对称大值域-none | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 18,
+      "input_shape": [
+        [
+          2,
+          2049,
+          511
+        ],
+        [
+          2,
+          511
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -0.2,
+          0.2
+        ],
+        [
+          0,
+          2048
+        ]
+      ],
+      "note": "S-bfloat16-2M-非对齐-对称微小值域-3D | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Transpose×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4,
+          2049,
+          255
+        ],
+        [
+          4,
+          255
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": 10
+      },
+      "value_range": [
+        [
+          -3,
+          6
+        ],
+        [
+          0,
+          2048
+        ]
+      ],
+      "note": "S-float16-2M-非对齐-ignore_index=10 | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Cast×4 + Transpose×1 + MemSet×1 + NLLLoss×1"
+    },
+    {
+      "operator": "CrossEntropyLoss",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          101,
+          3,
+          17,
+          1024
+        ],
+        [
+          2,
+          3,
+          17,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int64"
+      ],
+      "attrs": {
+        "reduction": "mean",
+        "ignore_index": -100
+      },
+      "value_range": [
+        [
+          -20,
+          40
+        ],
+        [
+          0,
+          100
+        ]
+      ],
+      "note": "M-float32-10M-非对齐-非对称大值域-5D | baseline_kernels: LogSoftmaxV2×1 + OnesLike×1 + Transpose×1 + MemSet×1 + NLLLoss×1"
+    }
+  ],
+  "case_count": 20
+}

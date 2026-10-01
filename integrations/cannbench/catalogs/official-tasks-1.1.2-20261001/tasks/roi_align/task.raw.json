@@ -1,0 +1,849 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "ROIAlign",
+  "function_name": "roi_align",
+  "level": "level3",
+  "category": "FusedComposite",
+  "difficulty": "L3",
+  "description": "池化层，用于非均匀输入尺寸的特征图",
+  "desc_md": "# ROIAlign 算子 API 描述\n\n## 1. 算子简介\n\n池化层，用于非均匀输入尺寸的特征图。\n\n**主要应用场景**：\n- 目标检测中对候选区域（Region of Interest）进行特征提取\n- Faster R-CNN、Mask R-CNN 等两阶段检测框架中的特征对齐\n- 实例分割中将不同大小的 ROI 映射到固定尺寸的特征表示\n\n**算子特征**：\n- 难度等级：L3（FusedComposite）\n- 双输入（特征图 x 和 ROI 框 rois）单输出，支持双线性插值模式\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\ny = \\text{roi\\_align}(x, \\text{boxes}, \\text{output\\_size})\n$$\n\n对于每个 box，将其映射到输入特征图上的区域（通过 spatial_scale 缩放），然后将该区域划分为 outputHeight x outputWidth 个 bin，在每个 bin 内通过双线性插值采样后进行平均池化，得到固定尺寸的输出。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.roi_align(Tensor x, Tensor boxes, int outputHeight, int outputWidth,\n                     float spatial_scale, int sampling_ratio, bool aligned) -> Tensor y\n```\n\n本算子签名与 `torch_npu.npu_roi_align` 一致：`boxes` 为 (numBoxes, 5) 张量，第 0 列为\nbatch 索引（与 features 同 dtype，整数值），第 1-4 列为 (x0, y0, x1, y1) 像素坐标。\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入特征图，shape 为 [B, C, H, W] |\n| boxes | Tensor | 必选 | ROI 框，shape 为 [numBoxes, 5]，每行 (batch_idx, x0, y0, x1, y1)；col 0 为整数值的 batch 索引，取值 ∈ [0, B-1] |\n| outputHeight | int | 必选 | 输出高度 |\n| outputWidth | int | 必选 | 输出宽度 |\n| spatial_scale | float | 必选 | 空间缩放因子（用于将 boxes 坐标乘到特征图分辨率） |\n| sampling_ratio | int | -1 | 采样比率 (-1 或 0 时自动计算 ceil(roi_h/oh)) |\n| aligned | bool | false | 是否对齐 (aligned=True 时 boxes 坐标偏移 -0.5 像素) |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | [numBoxes, C, outputHeight, outputWidth] | 与输入 x 相同 | 输出张量，ROI 对齐结果 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| float32 | float32 |\n| float16 | float16 |\n\n### 规则与约束\n\n- 输入特征图 x 的 shape 为 [B, C, H, W]，即 batch、通道、高、宽四维格式\n- ROI 框 boxes 的 shape 为 [numBoxes, 5]，每行 (batch_idx, x0, y0, x1, y1)\n- x 和 boxes 的 dtype 需一致\n- boxes 第 0 列须为整数值的 batch 索引，取值 ∈ [0, B-1]；fp16 下 B 须 ≤ 1024 以保证整数精度\n- outputHeight 和 outputWidth 需为正整数\n- spatial_scale 用于将 ROI 坐标从原图尺度映射到特征图尺度\n- sampling_ratio 为 -1 或 0 时自动计算采样点数\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `B`（batch） | 1 ~ 64 | cases.csv 实测 2 ~ 4；fp16 下要求 `B ≤ 1024` 以保证 `batch_idx` 在 fp16 中能精确表示 |\n| `C`（通道） | 1 ~ 2048 | cases.csv 实测 127 ~ 1023 |\n| `H`（特征图高） | 8 ~ 512 | cases.csv 实测 31 ~ 128 |\n| `W`（特征图宽） | 8 ~ 512 | cases.csv 实测 31 ~ 128 |\n| `numBoxes`（ROI 数） | 1 ~ 2048 | cases.csv 实测 50 ~ 256 |\n| `boxes.shape[1]` | = 5 | 固定 `(batch_idx, x0, y0, x1, y1)` |\n| `outputHeight` | 1 ~ 64 | cases.csv 实测 1 ~ 28 |\n| `outputWidth` | 1 ~ 64 | cases.csv 实测 1 ~ 28 |\n| `spatial_scale` | (0, 1] | cases.csv 实测 0.0625 / 0.125 / 0.25 / 1.0 |\n| `sampling_ratio` | -1 ~ 16 | -1 / 0 表示自动（取 `ceil(roi_h/oh)`）；cases.csv 实测 0 / 1 / 2 / 4 |\n| `aligned` | `false` / `true` | cases.csv 全部覆盖 |\n\n约束：\n- shape 关系：`x.shape == [B, C, H, W]`、`boxes.shape == [numBoxes, 5]`，输出 `y.shape == [numBoxes, C, outputHeight, outputWidth]`。\n- dtype 关系：`x.dtype == boxes.dtype`（必须同为 float16 或 float32）；输出 `y.dtype` 与 `x.dtype` 一致。\n- `boxes` 数据约束：第 0 列 `batch_idx` 必须为整数值且 ∈ [0, B-1]；fp16 下 B ≤ 1024，否则 batch_idx 在 fp16 中无法精确表示。\n- 几何约束：`(x0, y0, x1, y1)` 是原图像素坐标；乘以 `spatial_scale` 映射到特征图坐标后，结果应落入 `[0, W) × [0, H)`；超出范围的部分由 bilinear 插值的 clamp 行为决定（输出靠近边界值或 0）。\n- `outputHeight`、`outputWidth` 必须为正整数；`sampling_ratio` 取 -1 或 0 时自动按 `ceil(roi_h/oh)` 计算采样点数，否则使用指定值（必须为正整数）。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n> 优先使用 `torchvision.ops.roi_align`，不可用时使用纯 Python fallback。\n\n```python\nimport torch\n\ntry:\n    from torchvision.ops import roi_align as _tv_roi_align\n    HAS_TORCHVISION = True\nexcept Exception:\n    HAS_TORCHVISION = False\n\n\ndef _bilinear_interpolate(input, roi_batch_ind, y, x, ymask, xmask):\n    _, channels, height, width = input.size()\n    y = y.clamp(min=0); x = x.clamp(min=0)\n    y_low = y.int(); x_low = x.int()\n    y_high = torch.where(y_low >= height - 1, height - 1, y_low + 1)\n    y_low = torch.where(y_low >= height - 1, height - 1, y_low)\n    y = torch.where(y_low >= height - 1, y.to(input.dtype), y)\n    x_high = torch.where(x_low >= width - 1, width - 1, x_low + 1)\n    x_low = torch.where(x_low >= width - 1, width - 1, x_low)\n    x = torch.where(x_low >= width - 1, x.to(input.dtype), x)\n    ly = y - y_low; lx = x - x_low; hy = 1.0 - ly; hx = 1.0 - lx\n    def masked_index(y_idx, x_idx):\n        if ymask is not None:\n            y_idx = torch.where(ymask[:, None, :], y_idx, 0)\n            x_idx = torch.where(xmask[:, None, :], x_idx, 0)\n        return input[roi_batch_ind[:, None, None, None, None, None],\n                     torch.arange(channels, device=input.device)[None, :, None, None, None, None],\n                     y_idx[:, None, :, None, :, None], x_idx[:, None, None, :, None, :]]\n    v1 = masked_index(y_low, x_low); v2 = masked_index(y_low, x_high)\n    v3 = masked_index(y_high, x_low); v4 = masked_index(y_high, x_high)\n    def outer_prod(y_t, x_t):\n        return y_t[:, None, :, None, :, None] * x_t[:, None, None, :, None, :]\n    return outer_prod(hy, hx)*v1 + outer_prod(hy, lx)*v2 + outer_prod(ly, hx)*v3 + outer_prod(ly, lx)*v4\n\n\ndef _roi_align_fallback(\n    x, boxes, outputHeight, outputWidth, spatial_scale, sampling_ratio, aligned,\n):\n    \"\"\"纯 Python fallback，对标 torchvision.ops.roi_align 的纯 Python 参考实现。\"\"\"\n    orig_dtype = x.dtype\n    x_fp32 = x.float(); boxes_fp32 = boxes.float()\n    _, channels, height, width = x_fp32.size()\n    roi_batch_ind = boxes_fp32[:, 0].long()\n    offset = 0.5 if aligned else 0.0\n    roi_start_w = boxes_fp32[:, 1] * spatial_scale - offset\n    roi_start_h = boxes_fp32[:, 2] * spatial_scale - offset\n    roi_end_w = boxes_fp32[:, 3] * spatial_scale - offset\n    roi_end_h = boxes_fp32[:, 4] * spatial_scale - offset\n    roi_width = roi_end_w - roi_start_w; roi_height = roi_end_h - roi_start_h\n    if not aligned:\n        roi_width = roi_width.clamp(min=1.0); roi_height = roi_height.clamp(min=1.0)\n    bin_size_h = roi_height / outputHeight; bin_size_w = roi_width / outputWidth\n    exact_sampling = sampling_ratio > 0\n    roi_bin_grid_h = sampling_ratio if exact_sampling else torch.ceil(roi_height / outputHeight)\n    roi_bin_grid_w = sampling_ratio if exact_sampling else torch.ceil(roi_width / outputWidth)\n    if exact_sampling:\n        count = max(roi_bin_grid_h * roi_bin_grid_w, 1)\n        iy = torch.arange(roi_bin_grid_h, device=x.device); ix = torch.arange(roi_bin_grid_w, device=x.device)\n        ymask = None; xmask = None\n    else:\n        count = torch.clamp(roi_bin_grid_h * roi_bin_grid_w, min=1)\n        iy = torch.arange(height, device=x.device); ix = torch.arange(width, device=x.device)\n        ymask = iy[None, :] < roi_bin_grid_h[:, None]; xmask = ix[None, :] < roi_bin_grid_w[:, None]\n    def from_K(t): return t[:, None, None]\n    y = from_K(roi_start_h) + torch.arange(outputHeight, device=x.device)[None, :, None] * from_K(bin_size_h) + (iy[None, None, :] + 0.5).to(x_fp32.dtype) * from_K(bin_size_h / roi_bin_grid_h)\n    x_pos = from_K(roi_start_w) + torch.arange(outputWidth, device=x.device)[None, :, None] * from_K(bin_size_w) + (ix[None, None, :] + 0.5).to(x_fp32.dtype) * from_K(bin_size_w / roi_bin_grid_w)\n    val = _bilinear_interpolate(x_fp32, roi_batch_ind, y, x_pos, ymask, xmask)\n    if not exact_sampling:\n        val = torch.where(ymask[:, None, None, None, :, None], val, 0)\n        val = torch.where(xmask[:, None, None, None, None, :], val, 0)\n    output = val.sum((-1, -2))\n    if isinstance(count, torch.Tensor): output = output / count[:, None, None, None]\n    else: output = output / count\n    return output.to(orig_dtype)\n\n\ndef roi_align(\n    x: torch.Tensor, boxes: torch.Tensor, outputHeight: int, outputWidth: int,\n    spatial_scale: float, sampling_ratio: int = -1, aligned: bool = False,\n) -> torch.Tensor:\n    \"\"\"\n    池化层，用于非均匀输入尺寸的特征图\n    公式: y = roi_align(x, boxes, output_size)\n    \"\"\"\n    if HAS_TORCHVISION:\n        return _tv_roi_align(x, boxes, (outputHeight, outputWidth),\n            spatial_scale=spatial_scale, sampling_ratio=sampling_ratio, aligned=aligned)\n    return _roi_align_fallback(x, boxes, outputHeight, outputWidth,\n        spatial_scale, sampling_ratio, aligned)\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx = torch.randn(2, 256, 64, 64, dtype=torch.float32, device=\"npu\")\nboxes = torch.tensor([[0, 10.0, 10.0, 50.0, 50.0], [1, 20.0, 20.0, 60.0, 60.0]],\n                     dtype=torch.float32, device=\"npu\")\ny = cann_bench.roi_align(x, boxes, 7, 7, 0.0625, 2, False)\n```\n\n### NPU 实现路径与基线测量说明\n\ntorch_npu 上对应 API 为\n`torch_npu.npu_roi_align(features, boxes, spatial_scale, pooled_height, pooled_width, sample_num, roi_end_mode)`。\n`aligned` 与 `roi_end_mode` 的映射遵循官方 `torch_npu/contrib/module/roi_align.py`：`aligned=True → roi_end_mode=3`，\n`aligned=False → roi_end_mode=0`。\n\n**`baseline_perf_us` = `torch_npu.npu_roi_align(...)` 单次调用在 device 端启动的全部 kernel 的时长之和（msprof pattern-interval 中位数）。**\n不做计时窗口外的预处理（不预转 NC1HWC0、不预拼 rois、不预 Cast），不做后处理过滤。也就是说：包装层的「fusion pass」——\ntorch_npu binding 调 `aclnnRoiAlign` V1 时由 `libopapi.so` 内部展开的 `Reshape + Cast + ConcatD + (Trans/Slice) + ROIAlign`——\n统统计入 baseline。这是第三方调用该 API 时实际看到的成本，不能减。\n\n#### V1 vs V2 背景（reference only，不影响 baseline 值）\n\n`torch_npu.npu_roi_align` 当前绑定到 `aclnnRoiAlign` V1（`libopapi.so::aclnnRoiAlign`）。\n反汇编 `libopapi.so` 显示 V1 内部用 `Reshape + Cast (fp16→fp32) + ConcatD` 把用户传入的 (N,5)\n拆成 (rois (N,4), batchIndices int64) 再喂 kernel；V2（`aclnnRoiAlignV2`，接受 (N,5) 直通）\n未在 `torch_npu` 暴露任何 Python 入口。故 fp16 调用路径上的 `Cast×2` 是 V1 实现的固有开销，\n不属于 ROIAlign kernel 的纯计算，但作为本 baseline 的可观测成本被计入。\n\n实测在 op_summary 中观察到的 kernel 链（全部计入 baseline）：\n\n| dtype | C 通道 | kernel 链 |\n|---|---|---|\n| fp32 | 任意 | `TransData×1 + ROIAlign×1` |\n| fp16 | C%16==0 | `Cast×2 + TransData×1 + ROIAlign×1` |\n| fp16 | C%16≠0 | `Cast×2 + TransData×3 + ROIAlign×1 + Slice×1` |\n\n`note` 后缀 `| baseline_kernels: <完整 kernel 链>` 明确列出该 case 实际启动的所有 kernel。\n\n### boxes 数据的取值约束（cases.yaml 的语义补充）\n\n`boxes` 第 0 列（batch_idx）必须为整数值且 ∈ [0, B-1]。cases.yaml 的 `value_range` 是均匀随机采样，\n直接随机会产生越界。harness 在 `inputs.py:_apply_op_aliases` 把 `boxes[:, 0]` 强制设为 `arange(N) % B`\n（确保每个 ROI 指向合法 batch、覆盖均匀）。这是**输入数据合法性整形**，第三方 kernel 在自己实现中\n对相同输入约束也需要承认 batch_idx 必须有效——不属于 baseline 计时窗口的工作量。\n",
+  "proto": {
+    "name": "ROIAlign",
+    "category": "FusedComposite",
+    "difficulty": "L3",
+    "formula": "y = roi_align(x, boxes, output_size)",
+    "description": "池化层，用于非均匀输入尺寸的特征图",
+    "precision_thresholds": {
+      "float16": 0.1,
+      "float32": 0.01
+    },
+    "shape_support": "x: [B, C, H, W], boxes: [numBoxes, 5]",
+    "attrs": [
+      {
+        "name": "outputHeight",
+        "type": "int",
+        "description": "输出高度",
+        "required": true
+      },
+      {
+        "name": "outputWidth",
+        "type": "int",
+        "description": "输出宽度",
+        "required": true
+      },
+      {
+        "name": "spatial_scale",
+        "type": "float",
+        "description": "空间缩放因子 (用于将 boxes 坐标映射到特征图尺度)",
+        "required": true
+      },
+      {
+        "name": "sampling_ratio",
+        "type": "int",
+        "default": -1,
+        "description": "采样比率 (-1 或 0 表示自动计算)",
+        "required": false
+      },
+      {
+        "name": "aligned",
+        "type": "bool",
+        "default": false,
+        "description": "是否对齐 (aligned=True 时 boxes 坐标偏移 -0.5 像素)",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入特征图 [B, C, H, W]",
+        "dtype": [
+          "float32",
+          "float16"
+        ]
+      },
+      {
+        "name": "boxes",
+        "description": "ROI 框 [numBoxes, 5]，每行 (batch_idx, x0, y0, x1, y1)；col 0 为整数值的 batch 索引（同 features dtype）",
+        "dtype": [
+          "float32",
+          "float16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出张量 [numBoxes, C, outputHeight, outputWidth]，ROI 对齐结果",
+        "dtype": [
+          "float32",
+          "float16"
+        ]
+      }
+    ],
+    "schema": "roi_align(Tensor x, Tensor boxes, int outputHeight, int outputWidth, float spatial_scale, int sampling_ratio, bool aligned) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nROIAlign operator Torch golden reference.\n\nRegion-of-interest pooling for feature maps of non-uniform input size.\nFormula: y = roi_align(x, boxes, output_size)\n\nThe signature matches torch_npu.npu_roi_align: boxes is an (N, 5) tensor whose\ncolumn 0 is the batch index (same dtype as the features) and columns 1-4 are the\n(x0, y0, x1, y1) pixel coordinates.\n\nPrefers torchvision.ops.roi_align; when torchvision is unavailable it falls back\nto a pure-Python implementation mirroring the torchvision reference.\n\"\"\"\n\ntry:\n    from torchvision.ops import roi_align as _tv_roi_align\n    HAS_TORCHVISION = True\nexcept Exception:\n    HAS_TORCHVISION = False\n\n\ndef _bilinear_interpolate(\n    input, roi_batch_ind, y, x, ymask, xmask,\n):\n    \"\"\"Bilinear interpolation, mirroring torchvision's _bilinear_interpolate.\"\"\"\n    _, channels, height, width = input.size()\n    y = y.clamp(min=0)\n    x = x.clamp(min=0)\n    y_low = y.int()\n    x_low = x.int()\n    y_high = torch.where(y_low >= height - 1, height - 1, y_low + 1)\n    y_low = torch.where(y_low >= height - 1, height - 1, y_low)\n    y = torch.where(y_low >= height - 1, y.to(input.dtype), y)\n    x_high = torch.where(x_low >= width - 1, width - 1, x_low + 1)\n    x_low = torch.where(x_low >= width - 1, width - 1, x_low)\n    x = torch.where(x_low >= width - 1, x.to(input.dtype), x)\n    ly = y - y_low\n    lx = x - x_low\n    hy = 1.0 - ly\n    hx = 1.0 - lx\n\n    def masked_index(y_idx, x_idx):\n        if ymask is not None:\n            assert xmask is not None\n            y_idx = torch.where(ymask[:, None, :], y_idx, 0)\n            x_idx = torch.where(xmask[:, None, :], x_idx, 0)\n        return input[\n            roi_batch_ind[:, None, None, None, None, None],\n            torch.arange(channels, device=input.device)[None, :, None, None, None, None],\n            y_idx[:, None, :, None, :, None],\n            x_idx[:, None, None, :, None, :],\n        ]\n\n    v1 = masked_index(y_low, x_low)\n    v2 = masked_index(y_low, x_high)\n    v3 = masked_index(y_high, x_low)\n    v4 = masked_index(y_high, x_high)\n\n    def outer_prod(y_t, x_t):\n        return y_t[:, None, :, None, :, None] * x_t[:, None, None, :, None, :]\n\n    w1 = outer_prod(hy, hx)\n    w2 = outer_prod(hy, lx)\n    w3 = outer_prod(ly, hx)\n    w4 = outer_prod(ly, lx)\n    return w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4\n\n\ndef _roi_align_fallback(\n    x, boxes, outputHeight, outputWidth,\n    spatial_scale, sampling_ratio, aligned,\n):\n    \"\"\"Pure-Python fallback mirroring torchvision.ops.roi_align's reference path.\"\"\"\n    orig_dtype = x.dtype\n    x_fp32 = x.float()\n    boxes_fp32 = boxes.float()\n    _, channels, height, width = x_fp32.size()\n    roi_batch_ind = boxes_fp32[:, 0].long()\n    offset = 0.5 if aligned else 0.0\n    roi_start_w = boxes_fp32[:, 1] * spatial_scale - offset\n    roi_start_h = boxes_fp32[:, 2] * spatial_scale - offset\n    roi_end_w = boxes_fp32[:, 3] * spatial_scale - offset\n    roi_end_h = boxes_fp32[:, 4] * spatial_scale - offset\n    roi_width = roi_end_w - roi_start_w\n    roi_height = roi_end_h - roi_start_h\n    if not aligned:\n        roi_width = roi_width.clamp(min=1.0)\n        roi_height = roi_height.clamp(min=1.0)\n    bin_size_h = roi_height / outputHeight\n    bin_size_w = roi_width / outputWidth\n    exact_sampling = sampling_ratio > 0\n    roi_bin_grid_h = sampling_ratio if exact_sampling else torch.ceil(roi_height / outputHeight)\n    roi_bin_grid_w = sampling_ratio if exact_sampling else torch.ceil(roi_width / outputWidth)\n    if exact_sampling:\n        count = max(roi_bin_grid_h * roi_bin_grid_w, 1)\n        iy = torch.arange(roi_bin_grid_h, device=x.device)\n        ix = torch.arange(roi_bin_grid_w, device=x.device)\n        ymask = None\n        xmask = None\n    else:\n        count = torch.clamp(roi_bin_grid_h * roi_bin_grid_w, min=1)\n        iy = torch.arange(height, device=x.device)\n        ix = torch.arange(width, device=x.device)\n        ymask = iy[None, :] < roi_bin_grid_h[:, None]\n        xmask = ix[None, :] < roi_bin_grid_w[:, None]\n\n    def from_K(t):\n        return t[:, None, None]\n\n    y = (\n        from_K(roi_start_h)\n        + torch.arange(outputHeight, device=x.device)[None, :, None] * from_K(bin_size_h)\n        + (iy[None, None, :] + 0.5).to(x_fp32.dtype) * from_K(bin_size_h / roi_bin_grid_h)\n    )\n    x_pos = (\n        from_K(roi_start_w)\n        + torch.arange(outputWidth, device=x.device)[None, :, None] * from_K(bin_size_w)\n        + (ix[None, None, :] + 0.5).to(x_fp32.dtype) * from_K(bin_size_w / roi_bin_grid_w)\n    )\n\n    # _bilinear_interpolate materializes [n, C, oh, gh, ow, gw]; for auto-sampling\n    # (gh,gw span the full feature map) this reaches ~18 GiB on case 16 and OOMs the\n    # NPU. Per-ROI reductions are independent, so chunking the ROI axis is bit-exact\n    # and caps the peak val tensor to ~1 GiB (fp32).\n    n_rois = y.shape[0]\n    elems_per_roi = max(\n        1, x_fp32.shape[1] * y.shape[1] * y.shape[2] * x_pos.shape[1] * x_pos.shape[2]\n    )\n    chunk = max(1, (256 * 1024 * 1024) // elems_per_roi)\n    parts = []\n    for st in range(0, n_rois, chunk):\n        en = st + chunk\n        val = _bilinear_interpolate(\n            x_fp32, roi_batch_ind[st:en], y[st:en], x_pos[st:en],\n            None if ymask is None else ymask[st:en],\n            None if xmask is None else xmask[st:en],\n        )\n        if not exact_sampling:\n            val = torch.where(ymask[st:en][:, None, None, None, :, None], val, 0)\n            val = torch.where(xmask[st:en][:, None, None, None, None, :], val, 0)\n        out_chunk = val.sum((-1, -2))\n        if isinstance(count, torch.Tensor):\n            out_chunk = out_chunk / count[st:en][:, None, None, None]\n        else:\n            out_chunk = out_chunk / count\n        parts.append(out_chunk)\n    output = torch.cat(parts, dim=0)\n\n    return output.to(orig_dtype)\n\n\ndef roi_align(\n    x: torch.Tensor, boxes: torch.Tensor, outputHeight: int, outputWidth: int,\n    spatial_scale: float, sampling_ratio: int = -1, aligned: bool = False,\n) -> torch.Tensor:\n    \"\"\"Region-of-interest pooling for feature maps of non-uniform input size.\n\n    Formula: y = roi_align(x, boxes, output_size)\n\n    Args:\n        x: input feature map [B, C, H, W]\n        boxes: ROI boxes [N, 5], each row (batch_idx, x0, y0, x1, y1); col 0 is the\n            integer batch index (same dtype as the features)\n        outputHeight: output height\n        outputWidth: output width\n        spatial_scale: spatial scale factor (maps box coords to feature resolution)\n        sampling_ratio: sampling ratio (-1 or 0 -> auto ceil(roi_h/oh))\n        aligned: whether to align (aligned=True shifts ROI coords by -0.5 pixel)\n\n    Returns:\n        output tensor [N, C, outputHeight, outputWidth]\n    \"\"\"\n    if HAS_TORCHVISION:\n        return _tv_roi_align(\n            x, boxes, (outputHeight, outputWidth),\n            spatial_scale=spatial_scale,\n            sampling_ratio=sampling_ratio,\n            aligned=aligned,\n        )\n    return _roi_align_fallback(\n        x, boxes, outputHeight, outputWidth,\n        spatial_scale, sampling_ratio, aligned,\n    )\n\n\ndef get_input(\n    x: torch.Tensor,\n    boxes: torch.Tensor,\n    outputHeight: int,\n    outputWidth: int,\n    spatial_scale: float,\n    sampling_ratio: int = -1,\n    aligned: bool = False,\n    **kwargs,\n):\n    \"\"\"Input preprocessing: rebuild legal ROI boxes (feature map x kept as-is).\n\n    A cases.yaml value_range is a single [min, max] interval and cannot express the\n    structured boxes (N,5) contract (col0 an integer batch index, col1-4 satisfying\n    x1>x0/y1>y0 and landing inside the feature map after scaling). Spread over [-1,1]\n    by the generic generator, col0 becomes non-integer/negative and boxes degenerate.\n    The golden tolerates this (.long() truncation + clamp) but torch_npu.npu_roi_align\n    does not, so its accuracy explodes. get_input regenerates legal boxes here.\n\n    kernel_eval calls this with input names + attrs as keywords and uses the return\n    value (a list in golden-signature Tensor order) to replace the inputs of BOTH the\n    golden and the candidate, so the comparison stays fair.\n\n    Args:\n        x: feature map [B, C, H, W] (returned as-is, including inf/nan stress cases)\n        boxes: original boxes [N, 5] (only N/dtype/device used; contents rebuilt)\n        spatial_scale: coord->feature-map scale, used to bound the coordinate range\n\n    Returns:\n        [x, new_boxes], ordered to match the golden signature's (x, boxes, ...) tensors.\n    \"\"\"\n    B, _, H, W = x.shape\n    N = boxes.shape[0]\n    g = torch.Generator().manual_seed(0)  # deterministic for reproducibility\n\n    # col0: integer batch index in [0, B); fp16 represents it exactly for B <= 4\n    batch_idx = torch.randint(0, B, (N,), generator=g).float()\n\n    # col1-4: pixel coords kept non-degenerate and inside the map after *spatial_scale\n    max_x = (W - 1) / spatial_scale\n    max_y = (H - 1) / spatial_scale\n    x0 = torch.rand(N, generator=g) * 0.5 * max_x\n    y0 = torch.rand(N, generator=g) * 0.5 * max_y\n    x1 = x0 + (0.1 + 0.4 * torch.rand(N, generator=g)) * max_x  # width in (0.1,0.5)*max -> x1>x0, x1<=max\n    y1 = y0 + (0.1 + 0.4 * torch.rand(N, generator=g)) * max_y\n\n    new_boxes = torch.stack([batch_idx, x0, y0, x1, y1], dim=1).to(boxes.device, boxes.dtype)\n    return [x, new_boxes]\n",
+  "cases_yaml": [
+    {
+      "operator": "ROIAlign",
+      "case_id": 1,
+      "input_shape": [
+        [
+          2,
+          256,
+          64,
+          64
+        ],
+        [
+          128,
+          5
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "outputHeight": 7,
+        "outputWidth": 7,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 2,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-1M-对齐-bilinear-7x7-scale=1/16 | baseline_kernels: Cast×2 + TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2,
+          256,
+          128,
+          128
+        ],
+        [
+          128,
+          5
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "outputHeight": 14,
+        "outputWidth": 14,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 2,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "L-float32-4M-对齐-bilinear-14x14 | baseline_kernels: TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 3,
+      "input_shape": [
+        [
+          2,
+          128,
+          32,
+          32
+        ],
+        [
+          64,
+          5
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "outputHeight": 7,
+        "outputWidth": 7,
+        "spatial_scale": 0.125,
+        "sampling_ratio": 1,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float32-256K-对齐-bilinear-7x7-scale=1/8 | baseline_kernels: TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 4,
+      "input_shape": [
+        [
+          4,
+          256,
+          64,
+          64
+        ],
+        [
+          128,
+          5
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "outputHeight": 3,
+        "outputWidth": 3,
+        "spatial_scale": 0.25,
+        "sampling_ratio": 0,
+        "aligned": true
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-1M-对齐-bilinear-3x3-scale=1/4-aligned=true | baseline_kernels: Cast×2 + TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 5,
+      "input_shape": [
+        [
+          2,
+          128,
+          128,
+          128
+        ],
+        [
+          128,
+          5
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "outputHeight": 1,
+        "outputWidth": 1,
+        "spatial_scale": 1.0,
+        "sampling_ratio": 2,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-float32-4M-对齐-bilinear-1x1全局池化-scale=1 | baseline_kernels: TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 6,
+      "input_shape": [
+        [
+          4,
+          251,
+          63,
+          67
+        ],
+        [
+          256,
+          5
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "outputHeight": 28,
+        "outputWidth": 28,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 4,
+        "aligned": true
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-float16-4M-非对齐-bilinear-28x28-upsampling | baseline_kernels: Cast×2 + TransData×3 + ROIAlign×1 + Slice×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 7,
+      "input_shape": [
+        [
+          3,
+          251,
+          63,
+          63
+        ],
+        [
+          100,
+          5
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "outputHeight": 7,
+        "outputWidth": 7,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 2,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-1M-质数非对齐-bilinear-7x7-微小值域 | baseline_kernels: Cast×2 + TransData×3 + ROIAlign×1 + Slice×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 8,
+      "input_shape": [
+        [
+          2,
+          257,
+          65,
+          65
+        ],
+        [
+          97,
+          5
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "outputHeight": 7,
+        "outputWidth": 7,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 2,
+        "aligned": true
+      },
+      "value_range": [
+        [
+          -1,
+          2
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float32-1M-非对齐-bilinear-7x7-aligned-非对称 | baseline_kernels: TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 9,
+      "input_shape": [
+        [
+          3,
+          127,
+          31,
+          31
+        ],
+        [
+          50,
+          5
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "outputHeight": 5,
+        "outputWidth": 5,
+        "spatial_scale": 0.125,
+        "sampling_ratio": 1,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -5,
+          10
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float32-300K-质数非对齐-bilinear-5x5-非对称 | baseline_kernels: TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 10,
+      "input_shape": [
+        [
+          2,
+          509,
+          43,
+          43
+        ],
+        [
+          100,
+          5
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "outputHeight": 11,
+        "outputWidth": 11,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 2,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -50,
+          100
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-2M-质数非对齐-bilinear-11x11 | baseline_kernels: Cast×2 + TransData×3 + ROIAlign×1 + Slice×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 11,
+      "input_shape": [
+        [
+          2,
+          256,
+          65,
+          63
+        ],
+        [
+          100,
+          5
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "outputHeight": 7,
+        "outputWidth": 7,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 2,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -65504,
+          65504
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-1M-非对齐-bilinear-7x7-float16边界值 | baseline_kernels: Cast×2 + TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 12,
+      "input_shape": [
+        [
+          2,
+          256,
+          97,
+          97
+        ],
+        [
+          193,
+          5
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "outputHeight": 13,
+        "outputWidth": 13,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 2,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -88,
+          88
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-float32-4M-质数非对齐-bilinear-13x13-float32边界值 | baseline_kernels: TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 13,
+      "input_shape": [
+        [
+          2,
+          251,
+          63,
+          65
+        ],
+        [
+          100,
+          5
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "outputHeight": 7,
+        "outputWidth": 7,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 2,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float32-2M-非对齐-bilinear-7x7-inf特殊值 | baseline_kernels: TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 14,
+      "input_shape": [
+        [
+          2,
+          127,
+          31,
+          33
+        ],
+        [
+          50,
+          5
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "outputHeight": 7,
+        "outputWidth": 7,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 2,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-258K-非对齐-bilinear-7x7-nan特殊值 | baseline_kernels: Cast×2 + TransData×3 + ROIAlign×1 + Slice×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 15,
+      "input_shape": [
+        [
+          4,
+          251,
+          63,
+          65
+        ],
+        [
+          128,
+          5
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "outputHeight": 7,
+        "outputWidth": 7,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 2,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "M-float32-4M-非对齐-bilinear-7x7-零值 | baseline_kernels: TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 16,
+      "input_shape": [
+        [
+          2,
+          255,
+          63,
+          63
+        ],
+        [
+          100,
+          5
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "outputHeight": 7,
+        "outputWidth": 7,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 0,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-1M-非对齐-bilinear-7x7-sampling_ratio=auto | baseline_kernels: Cast×2 + TransData×3 + ROIAlign×1 + Slice×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 17,
+      "input_shape": [
+        [
+          3,
+          511,
+          31,
+          31
+        ],
+        [
+          50,
+          5
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "outputHeight": 15,
+        "outputWidth": 15,
+        "spatial_scale": 0.125,
+        "sampling_ratio": 2,
+        "aligned": true
+      },
+      "value_range": [
+        [
+          -1,
+          3
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float32-3M-非对齐-bilinear-15x15-upsampling-aligned | baseline_kernels: TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 18,
+      "input_shape": [
+        [
+          2,
+          1023,
+          31,
+          31
+        ],
+        [
+          100,
+          5
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "outputHeight": 7,
+        "outputWidth": 7,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 1,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float32-2M-非对齐-bilinear-7x7-大值域 | baseline_kernels: TransData×1 + ROIAlign×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 19,
+      "input_shape": [
+        [
+          2,
+          127,
+          63,
+          63
+        ],
+        [
+          64,
+          5
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "outputHeight": 4,
+        "outputWidth": 4,
+        "spatial_scale": 0.25,
+        "sampling_ratio": 2,
+        "aligned": true
+      },
+      "value_range": [
+        [
+          -3,
+          6
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-1M-非对齐-bilinear-4x4-downsampling-aligned | baseline_kernels: Cast×2 + TransData×3 + ROIAlign×1 + Slice×1"
+    },
+    {
+      "operator": "ROIAlign",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          127,
+          127,
+          127
+        ],
+        [
+          100,
+          5
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "outputHeight": 21,
+        "outputWidth": 21,
+        "spatial_scale": 0.0625,
+        "sampling_ratio": 2,
+        "aligned": false
+      },
+      "value_range": [
+        [
+          -20,
+          40
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-float32-4M-非对齐-bilinear-21x21-非对称大值域 | baseline_kernels: TransData×1 + ROIAlign×1"
+    }
+  ],
+  "case_count": 20
+}

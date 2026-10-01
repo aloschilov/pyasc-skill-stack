@@ -1,10 +1,7 @@
 name: Build pyasc-sim image
 
-# Manual-only build of a single-arch pyasc-sim leg (amd64 on a GitHub-hosted
-# runner — the RTX 4090 amd64 box is retired + QEMU emulation of the
-# CANN+pyasc+LLVM toolchain is impractical) + optional multiarch manifest
-# merge. After both the arm64 leg (built on the Mac) + the amd64 leg (this)
-# are pushed, set merge=true to publish ghcr.io/<owner>/pyasc-sim:py3.11.
+# Manual-only simulator image build on the designated CANN VM, under its
+# shared execution locks. Supports an optional multiarch manifest merge.
 #
 # Requires the GITCODE_CREDENTIALS repo secret: a git-credentials line
 # `https://<user>:<token>@gitcode.com` (gitcode.com needs auth on clone).
@@ -32,7 +29,8 @@ permissions:
 jobs:
   build:
     name: Build + push pyasc-sim:py3.11-${{ inputs.arch }}
-    runs-on: ${{ inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: cannbench-vm
+    if: github.ref == 'refs/heads/main'
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +63,7 @@ jobs:
           PYASC_GIT_REV: ${{ inputs.pyasc_rev }}
           GIT_CREDENTIALS_FILE: ${{ secrets.GITCODE_CREDENTIALS && '/tmp/git-credentials' || '' }}
           PYASC_SETUP_JOBS: "2"
-        run: bash docker/build-sim-image.sh --arch ${{ inputs.arch }} --push
+        run: python3 integrations/cannbench/ci/vm_locks.py --kind execution -- bash docker/build-sim-image.sh --arch ${{ inputs.arch }} --push
 
       - name: Merge multiarch manifest
         if: ${{ inputs.merge }}

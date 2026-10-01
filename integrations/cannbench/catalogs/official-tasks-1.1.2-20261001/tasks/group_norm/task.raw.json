@@ -1,0 +1,721 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "GroupNorm",
+  "function_name": "group_norm",
+  "level": "level2",
+  "category": "Normalization",
+  "difficulty": "L2",
+  "description": "计算分组归一化",
+  "desc_md": "# GroupNorm 算子 API 描述\n\n## 1. 算子简介\n\n计算分组归一化。\n\n**主要应用场景**：\n- 计算机视觉模型中的归一化层（ResNeXt、EfficientNet 等）\n- 当 batch size 较小时替代 BatchNorm（GroupNorm 不依赖 batch 统计量）\n- 生成模型（GAN、Diffusion Model）中的归一化层\n\n**算子特征**：\n- 难度等级：L2（Normalization）\n- 三输入（x、gamma、beta）单输出，涉及分组、均值、方差、归一化、仿射变换等多步计算\n- 将通道维度分为 num_groups 组，每组内独立计算均值和方差\n\n## 2. 算子定义\n\n### 数学公式\n\n**基本公式**：\n\n$$\ny = \\frac{x - \\mu}{\\sqrt{\\sigma^2 + \\epsilon}} \\cdot \\gamma + \\beta\n$$\n\n其中均值和方差按组计算：\n\n$$\n\\mu_g = \\frac{1}{|S_g|}\\sum_{i \\in S_g} x_i, \\quad \\sigma_g^2 = \\frac{1}{|S_g|}\\sum_{i \\in S_g}(x_i - \\mu_g)^2\n$$\n\n其中：\n- `S_g` 为第 g 组所包含的元素集合（同组通道的所有空间位置）\n- `num_groups` 组数，C 必须能被 num_groups 整除\n- `gamma` 和 `beta` 分别为逐通道的缩放和偏置参数，shape 为 (C,)\n- `epsilon` 为数值稳定性参数，防止除零\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.group_norm(Tensor x, Tensor gamma, Tensor beta, int num_groups, float epsilon) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入张量，shape 为 (N, C, ...) |\n| gamma | Tensor | 必选 | 缩放参数，shape 为 (C,) |\n| beta | Tensor | 必选 | 偏置参数，shape 为 (C,) |\n| num_groups | int | 必选 | 分组数 |\n| epsilon | float | 1e-5 | 数值稳定性参数 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 与输入 x 相同 | 与输入 x 相同 | 分组归一化后的张量 |\n\n### 数据类型\n\n| x dtype | gamma dtype | beta dtype | 输出 dtype |\n|---------|------------|-----------|-----------|\n| float16 | float16 | float16 | float16 |\n| float32 | float32 | float32 | float32 |\n| bfloat16 | bfloat16 | bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- x 的 shape 为 (N, C, ...) 或 (N, C)，其中 N 为 batch size，C 为通道数\n- C 必须能被 num_groups 整除\n- gamma 和 beta 的 shape 均为 (C,)，dtype 需与 x 一致\n- num_groups=1 时等价于 LayerNorm（对所有通道归一化）\n- num_groups=C 时等价于 InstanceNorm（每个通道独立归一化）\n- 需注意数值稳定性：当组内方差极小时，归一化结果可能不稳定\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `N`（batch） | 1 ~ 2048 | cases.csv 实测 1 ~ 1023 |\n| `C`（通道） | 1 ~ 1024 | cases.csv 实测 31 ~ 513；必须能被 `num_groups` 整除 |\n| 空间维度（`H`, `W`, ...） | 1 ~ 512 | cases.csv 实测 5 ~ 480；支持 2D `(N, C)`、3D `(N, C, L)`、4D `(N, C, H, W)`、5D `(N, C, D, H, W)` 等 |\n| `num_groups` | 1 ~ 64 | cases.csv 实测 1 ~ 32；必须能整除 `C`；=1 等价 LayerNorm，=C 等价 InstanceNorm |\n| `epsilon` | 1e-8 ~ 1 | cases.csv 实测 1e-8 ~ 1e-3；必须 > 0 |\n\n约束：`C % num_groups == 0`；`gamma`、`beta` 的 shape 均为 `(C,)` 且 dtype 与 `x` 一致。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nGroupNorm 算子 Torch Golden 参考实现\n\n计算分组归一化\n\n公式:\n    y = (x - mean) / sqrt(var + eps) * gamma + beta\n\n参考 PyTorch API: torch.nn.functional.group_norm\n    https://pytorch.org/docs/stable/generated/torch.nn.functional.group_norm.html\n\nParameters:\n    - x: (N, C, ...) 输入张量，N=batch size, C=通道数\n    - gamma: (C,) 缩放参数\n    - beta: (C,) 偏置参数\n    - num_groups: int - 分组数，C 必须能被 num_groups 整除\n    - epsilon: float, 默认 1e-5 - 数值稳定性参数\n\"\"\"\n\n\ndef group_norm(\n    x: torch.Tensor,\n    gamma: torch.Tensor,\n    beta: torch.Tensor,\n    num_groups: int,\n    epsilon: float = 1e-5\n) -> torch.Tensor:\n    \"\"\"\n    计算分组归一化\n\n    Args:\n        x: 输入张量，shape (N, C, ...) 或 (N, C)\n           N = batch size, C = 通道数\n           C 必须能被 num_groups 整除\n        gamma: 缩放参数，shape (C,)\n        beta: 偏置参数，shape (C,)\n        num_groups: 分组数，将 C 个通道分为 num_groups 组\n                    每组内独立计算均值和方差\n        epsilon: 数值稳定性参数，防止除零\n                 默认值 1e-5\n\n    Returns:\n        分组归一化后的张量，shape 与输入相同\n\n    Examples:\n        >>> x = torch.randn(8, 32, 64, 64)\n        >>> gamma = torch.ones(32)\n        >>> beta = torch.zeros(32)\n        >>> y = group_norm(x, gamma, beta, num_groups=8, epsilon=1e-5)\n    \"\"\"\n    y = torch.nn.functional.group_norm(\n        input=x,\n        num_groups=num_groups,\n        weight=gamma,\n        bias=beta,\n        eps=epsilon\n    )\n\n    return y\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx = torch.randn(8, 32, 64, 64, dtype=torch.float32, device=\"npu\")\ngamma = torch.ones(32, dtype=torch.float32, device=\"npu\")\nbeta = torch.zeros(32, dtype=torch.float32, device=\"npu\")\n\ny = cann_bench.group_norm(x, gamma, beta, num_groups=8, epsilon=1e-5)\ny = cann_bench.group_norm(x, gamma, beta, num_groups=4, epsilon=1e-5)\ny = cann_bench.group_norm(x, gamma, beta, num_groups=32, epsilon=1e-5)\n```\n",
+  "proto": {
+    "name": "GroupNorm",
+    "category": "Normalization",
+    "difficulty": "L2",
+    "formula": "y = (x - mean) / sqrt(var + eps) * gamma + beta\n",
+    "description": "计算分组归一化",
+    "shape_support": "x (input): (N, C, ...) - N=batch size, C=通道数，后续为空间维度\ngamma (weight): (C,) - 缩放参数\nbeta (bias): (C,) - 偏置参数\n",
+    "precision_thresholds": {
+      "float16": 0.005,
+      "float32": 0.005,
+      "bfloat16": 0.01
+    },
+    "attrs": [
+      {
+        "name": "num_groups",
+        "type": "int",
+        "description": "分组数",
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "float",
+        "default": "1e-5",
+        "description": "数值稳定性参数",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入张量，shape 为 (N, C, ...)",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "gamma",
+        "description": "缩放参数，shape 为 (C,)",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "beta",
+        "description": "偏置参数，shape 为 (C,)",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "分组归一化后的张量，与输入 shape 和 dtype 相同",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "group_norm(Tensor x, Tensor gamma, Tensor beta, int num_groups, float epsilon) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nGroupNorm 算子 Torch Golden 参考实现\n\n计算分组归一化\n\n公式:\n    y = (x - mean) / sqrt(var + eps) * gamma + beta\n\n参考 PyTorch API: torch.nn.functional.group_norm\n    https://pytorch.org/docs/stable/generated/torch.nn.functional.group_norm.html\n\nParameters:\n    - x: (N, C, ...) 输入张量，N=batch size, C=通道数\n    - gamma: (C,) 缩放参数\n    - beta: (C,) 偏置参数\n    - num_groups: int - 分组数，C 必须能被 num_groups 整除\n    - epsilon: float, 默认 1e-5 - 数值稳定性参数\n\"\"\"\n\n\ndef group_norm(\n    x: torch.Tensor,\n    gamma: torch.Tensor,\n    beta: torch.Tensor,\n    num_groups: int,\n    epsilon: float = 1e-5\n) -> torch.Tensor:\n    \"\"\"\n    计算分组归一化\n\n    Args:\n        x: 输入张量，shape (N, C, ...) 或 (N, C)\n           N = batch size, C = 通道数\n           C 必须能被 num_groups 整除\n        gamma: 缩放参数，shape (C,)\n        beta: 偏置参数，shape (C,)\n        num_groups: 分组数，将 C 个通道分为 num_groups 组\n                    每组内独立计算均值和方差\n        epsilon: 数值稳定性参数，防止除零\n                 默认值 1e-5\n\n    Returns:\n        分组归一化后的张量，shape 与输入相同\n\n    Examples:\n        >>> x = torch.randn(8, 32, 64, 64)\n        >>> gamma = torch.ones(32)\n        >>> beta = torch.zeros(32)\n        >>> y = group_norm(x, gamma, beta, num_groups=8, epsilon=1e-5)\n    \"\"\"\n    y = torch.nn.functional.group_norm(\n        input=x,\n        num_groups=num_groups,\n        weight=gamma,\n        bias=beta,\n        eps=epsilon\n    )\n\n    return y\n",
+  "cases_yaml": [
+    {
+      "operator": "GroupNorm",
+      "case_id": 1,
+      "input_shape": [
+        [
+          8,
+          32,
+          64,
+          64
+        ],
+        [
+          32
+        ],
+        [
+          32
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "num_groups": 8,
+        "epsilon": 1e-05
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-1M-aligned-groups8-C32-symmetric-small | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 2,
+      "input_shape": [
+        [
+          4,
+          64,
+          128,
+          128
+        ],
+        [
+          64
+        ],
+        [
+          64
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "num_groups": 16,
+        "epsilon": 1e-05
+      },
+      "value_range": [
+        -2,
+        2
+      ],
+      "note": "M-float32-4M-aligned-groups16-C64-symmetric-small | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 3,
+      "input_shape": [
+        [
+          2,
+          128,
+          256,
+          256
+        ],
+        [
+          128
+        ],
+        [
+          128
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "num_groups": 32,
+        "epsilon": 1e-05
+      },
+      "value_range": [
+        -3,
+        3
+      ],
+      "note": "M-bfloat16-16M-aligned-groups32-C128-symmetric-small | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 4,
+      "input_shape": [
+        [
+          16,
+          257,
+          32,
+          31
+        ],
+        [
+          257
+        ],
+        [
+          257
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "num_groups": 1,
+        "epsilon": 1e-05
+      },
+      "value_range": [
+        -10,
+        10
+      ],
+      "note": "S-float16-4M-nonaligned-groups1-InstanceNorm-equiv-symmetric-mid | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 5,
+      "input_shape": [
+        [
+          8,
+          512,
+          17,
+          15
+        ],
+        [
+          512
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "num_groups": 2,
+        "epsilon": 1e-05
+      },
+      "value_range": [
+        -100,
+        100
+      ],
+      "note": "S-float32-1M-nonaligned-groups2-symmetric-large | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 6,
+      "input_shape": [
+        [
+          64,
+          64,
+          128
+        ],
+        [
+          64
+        ],
+        [
+          64
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "num_groups": 4,
+        "epsilon": 1e-05
+      },
+      "value_range": [
+        -5,
+        5
+      ],
+      "note": "S-bfloat16-524K-aligned-3D-input-groups4 | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 7,
+      "input_shape": [
+        [
+          2,
+          256,
+          128,
+          128
+        ],
+        [
+          256
+        ],
+        [
+          256
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "num_groups": 16,
+        "epsilon": 1e-05
+      },
+      "value_range": [
+        -0.1,
+        0.1
+      ],
+      "note": "M-float16-8M-aligned-groups16-C256-symmetric-tiny | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 8,
+      "input_shape": [
+        [
+          16,
+          127,
+          31,
+          33
+        ],
+        [
+          127
+        ],
+        [
+          127
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "num_groups": 1,
+        "epsilon": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float32-2M-nonaligned-epsilon1e6-groups1 | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 9,
+      "input_shape": [
+        [
+          3,
+          64,
+          64,
+          64
+        ],
+        [
+          64
+        ],
+        [
+          64
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "num_groups": 8,
+        "epsilon": 0.001
+      },
+      "value_range": [
+        -0.5,
+        0.5
+      ],
+      "note": "S-bfloat16-786K-aligned-3D-input-epsilon1e3-groups8 | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 10,
+      "input_shape": [
+        [
+          7,
+          32,
+          63,
+          65
+        ],
+        [
+          32
+        ],
+        [
+          32
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "num_groups": 4,
+        "epsilon": 0.0001
+      },
+      "value_range": [
+        -1,
+        2
+      ],
+      "note": "S-float16-917K-nonaligned-spatial-prime-groups4 | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 11,
+      "input_shape": [
+        [
+          3,
+          64,
+          127,
+          129
+        ],
+        [
+          64
+        ],
+        [
+          64
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "num_groups": 8,
+        "epsilon": 0.0001
+      },
+      "value_range": [
+        -50,
+        100
+      ],
+      "note": "M-float32-3M-nonaligned-spatial-prime-groups8 | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 12,
+      "input_shape": [
+        [
+          5,
+          48,
+          33,
+          65
+        ],
+        [
+          48
+        ],
+        [
+          48
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "num_groups": 6,
+        "epsilon": 0.0001
+      },
+      "value_range": [
+        -3,
+        6
+      ],
+      "note": "S-bfloat16-514K-nonaligned-C48-groups6 | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 13,
+      "input_shape": [
+        [
+          1023,
+          257
+        ],
+        [
+          257
+        ],
+        [
+          257
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "num_groups": 1,
+        "epsilon": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-263K-nonaligned-2D-input-groups1 | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 14,
+      "input_shape": [
+        [
+          2,
+          60,
+          5,
+          7,
+          480
+        ],
+        [
+          60
+        ],
+        [
+          60
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "num_groups": 4,
+        "epsilon": 1e-05
+      },
+      "value_range": [
+        -10,
+        10
+      ],
+      "note": "S-float32-2M-nonaligned-5D-input-groups4 | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 15,
+      "input_shape": [
+        [
+          4,
+          31,
+          251,
+          251
+        ],
+        [
+          31
+        ],
+        [
+          31
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "num_groups": 1,
+        "epsilon": 1e-08
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "M-bfloat16-7M-nonaligned-prime-spatial-inf-special | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 16,
+      "input_shape": [
+        [
+          2,
+          64,
+          67,
+          71
+        ],
+        [
+          64
+        ],
+        [
+          64
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "num_groups": 8,
+        "epsilon": 1e-07
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "S-float16-608K-nonaligned-prime-spatial-nan-special | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 17,
+      "input_shape": [
+        [
+          8,
+          127,
+          33,
+          31
+        ],
+        [
+          127
+        ],
+        [
+          127
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "num_groups": 1,
+        "epsilon": 0.0001
+      },
+      "value_range": [
+        0,
+        0
+      ],
+      "note": "S-float32-1M-nonaligned-groups1-zero-special-value | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 18,
+      "input_shape": [
+        [
+          2,
+          256,
+          127,
+          129
+        ],
+        [
+          256
+        ],
+        [
+          256
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "num_groups": 16,
+        "epsilon": 1e-05
+      },
+      "value_range": [
+        -0.2,
+        0.2
+      ],
+      "note": "M-bfloat16-8M-nonaligned-C256-groups16-symmetric-tiny | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4,
+          128,
+          255,
+          257
+        ],
+        [
+          128
+        ],
+        [
+          128
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "num_groups": 32,
+        "epsilon": 0.001
+      },
+      "value_range": [
+        -65504,
+        65504
+      ],
+      "note": "M-float16-33M-nonaligned-float16-boundary-groups32 | baseline_kernels: GroupNormSilu×1"
+    },
+    {
+      "operator": "GroupNorm",
+      "case_id": 20,
+      "input_shape": [
+        [
+          1,
+          513,
+          63,
+          63
+        ],
+        [
+          513
+        ],
+        [
+          513
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "num_groups": 3,
+        "epsilon": 1e-06
+      },
+      "value_range": [
+        -20,
+        40
+      ],
+      "note": "S-float32-2M-nonaligned-large-channel-groups3-asymmetric-range | baseline_kernels: GroupNormSilu×1"
+    }
+  ],
+  "case_count": 20
+}

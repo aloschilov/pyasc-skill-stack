@@ -1,0 +1,539 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "Exp",
+  "function_name": "exp",
+  "level": "level1",
+  "category": "Elementwise",
+  "difficulty": "L1",
+  "description": "计算输入张量的指数函数，支持自定义底数、缩放和偏移",
+  "desc_md": "# Exp 算子 API 描述\n\n## 1. 算子简介\n\nExp 算子用于计算输入张量的广义指数函数，支持自定义底数（base）、缩放因子（scale）和偏移量（shift）三个参数，涵盖自然指数、任意底数指数等多种变体。\n\n**主要应用场景**：\n- Softmax 中的自然指数计算\n- 注意力机制中的指数缩放\n- 概率分布与对数域间的转换\n- 学习率调度与指数衰减\n\n**算子特征**：\n- 难度等级：L1（Elementwise）\n- 单输入单输出，逐元素运算，输出 shape 与输入完全一致\n\n## 2. 算子定义\n\n### 数学公式\n\n**通用公式**：\n\n$$\ny = e^{(x \\cdot scale + shift) \\cdot \\ln(base)}, \\quad base > 0\n$$\n\n**自然指数**（当 $base \\leq 0$ 时，使用自然底数 $e$）：\n\n$$\ny = e^{x \\cdot scale + shift}\n$$\n\n### 特殊情况\n\n| 条件 | 简化公式 |\n|------|---------|\n| base ≤ 0, scale=1, shift=0 | $y = e^x$ |\n| base > 0, scale=1, shift=0 | $y = base^x$ |\n| base=1（任意 scale, shift） | $y = 1$（因 $\\ln 1 = 0$） |\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.exp(Tensor x, float base=-1.0, float scale=1.0, float shift=0.0) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入张量，支持任意维度 |\n| base | float | -1.0 | 指数底数；≤ 0 表示使用自然底数 $e$，> 0 表示自定义底数 |\n| scale | float | 1.0 | 输入缩放因子 |\n| shift | float | 0.0 | 输入偏移量 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 与输入 x 相同 | 与输入 x 相同 | 指数计算结果 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| float16 | float16 |\n| float32 | float32 |\n| bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- 输出 shape 与输入 shape 完全一致，输出 dtype 与输入 dtype 一致\n- `base` 参数：≤ 0 时一律视为自然底数 $e$；> 0 时使用该值作为底数\n- `x` 支持任意维度（1D ~ 5D 及更高维），不限制具体 shape\n- 需注意数值溢出：float16 的有效范围约 [-65504, 65504]，float32 下 $e^x$ 在 $|x| > 88$ 左右可能溢出为 inf\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `x` 维度数 | 1 ~ 8 | cases.csv 实测 1D ~ 5D；逐元素算子，不限维度数 |\n| `x` 各维大小 | 1 ~ 1048576 | cases.csv 各维实测 2 ~ 8192（含 1D 张量长度 1000007） |\n| `x` 元素总数 | 1 ~ 64M | cases.csv 实测 ~1M ~ 64M |\n| `base` | -1.0 ~ 1024.0 | cases.csv 实测 -1.0 / 1.0 / 2.0 / 10.0；≤ 0 时一律视为自然底数 e |\n| `scale` | -1024.0 ~ 1024.0 | cases.csv 实测 0.5 ~ 2.0 |\n| `shift` | -1024.0 ~ 1024.0 | cases.csv 实测 0.0 ~ 2.0 |\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\ndef exp(\n    x: torch.Tensor, base: float = -1.0, scale: float = 1.0, shift: float = 0.0\n) -> torch.Tensor:\n    \"\"\"\n    计算输入张量的指数函数\n\n    - base <= 0: y = exp(scale * x + shift)\n    - base > 0: y = exp((shift + scale * x) * ln(base))\n\n    Args:\n        x: 输入张量\n        base: 指数底数，base <= 0 表示使用自然底数 e\n        scale: 输入缩放因子\n        shift: 输入偏移量\n\n    Returns:\n        指数计算结果\n    \"\"\"\n    # FP16/BF16 输入为保证精度会先提升到 FP32 计算\n    input_dtype = x.dtype\n    compute_dtype = torch.float32 if input_dtype in (torch.float16, torch.bfloat16) else input_dtype\n    x_compute = x.to(compute_dtype)\n\n    temp = scale * x_compute + shift\n    if base > 0:\n        temp = temp * torch.log(torch.tensor(base, dtype=temp.dtype, device=temp.device))\n    y = torch.exp(temp)\n\n    # 计算完成后恢复到输入 dtype\n    return y.to(input_dtype)\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx = torch.randn(1024, 1024, dtype=torch.float16, device=\"npu\")\ny = cann_bench.exp(x, base=-1.0, scale=1.0, shift=0.0)  # 自然指数 e^x\ny = cann_bench.exp(x, base=2.0, scale=1.0, shift=0.0)   # 2^x\ny = cann_bench.exp(x, base=-1.0, scale=2.0, shift=1.0)  # e^(2x+1)\n```\n",
+  "proto": {
+    "name": "Exp",
+    "category": "Elementwise",
+    "difficulty": "L1",
+    "formula": "y = e^((x * scale + shift) * ln(base))",
+    "description": "计算输入张量的指数函数，支持自定义底数、缩放和偏移",
+    "shape_support": "输入任意维度，输出与输入相同shape",
+    "attrs": [
+      {
+        "name": "base",
+        "type": "float",
+        "default": -1.0,
+        "description": "指数底数，-1.0表示使用自然底数e，正值表示自定义底数"
+      },
+      {
+        "name": "scale",
+        "type": "float",
+        "default": 1.0,
+        "description": "输入缩放因子"
+      },
+      {
+        "name": "shift",
+        "type": "float",
+        "default": 0.0,
+        "description": "输入偏移量"
+      }
+    ],
+    "note": "当base=-1时，公式简化为 y = e^(x * scale + shift)",
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入张量",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "指数计算结果，输出数据类型与输入一致",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "exp(Tensor x, float base=-1.0, float scale=1.0, float shift=0.0) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nExp算子Torch Golden参考实现\n\n计算输入张量的指数函数\n- base <= 0: y = exp(scale * x + shift)\n- base > 0: y = exp((shift + scale * x) * ln(base))\n\"\"\"\ndef exp(\n    x: torch.Tensor, base: float = -1.0, scale: float = 1.0, shift: float = 0.0\n) -> torch.Tensor:\n    \"\"\"\n    计算输入张量的指数函数\n\n    - base <= 0: y = exp(scale * x + shift)\n    - base > 0: y = exp((shift + scale * x) * ln(base))\n\n    Args:\n        x: 输入张量\n        base: 指数底数，base <= 0 表示使用自然底数 e\n        scale: 输入缩放因子\n        shift: 输入偏移量\n\n    Returns:\n        指数计算结果\n    \"\"\"\n    # 检测输入 dtype\n    input_dtype = x.dtype\n\n    # FP16/BF16 输入需要升到 FP32 计算以保证精度\n    # FP32/FP64 输入保持原样计算\n    if input_dtype in (torch.float16, torch.bfloat16):\n        compute_dtype = torch.float32\n    else:\n        compute_dtype = input_dtype\n\n    # 转换到计算精度\n    x_compute = x.to(compute_dtype)\n\n    temp = scale * x_compute + shift\n    if base > 0:\n        temp = temp * torch.log(torch.tensor(base, dtype=temp.dtype, device=temp.device))\n    y = torch.exp(temp)\n\n    # 转回原始 dtype\n    if input_dtype in (torch.float16, torch.bfloat16):\n        return y.to(input_dtype)\n    return y",
+  "cases_yaml": [
+    {
+      "operator": "Exp",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "base": -1.0,
+        "scale": 1.0,
+        "shift": 0.0
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-1M-对齐-对称小值域-base=-1 | baseline_kernels: AutomaticBufferFusionOp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2048,
+          2048
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "base": -1.0,
+        "scale": 1.5,
+        "shift": 0.0
+      },
+      "value_range": [
+        -2,
+        2
+      ],
+      "note": "M-float32-4M-对齐-对称小值域-scale=1.5 | baseline_kernels: AutomaticBufferFusionOp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "base": -1.0,
+        "scale": 2.0,
+        "shift": 0.0
+      },
+      "value_range": [
+        -3,
+        3
+      ],
+      "note": "M-bfloat16-16M-对齐-对称小值域-scale=2 | baseline_kernels: AutomaticBufferFusionOp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8192,
+          8192
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "base": -1.0,
+        "scale": 0.5,
+        "shift": 0.0
+      },
+      "value_range": [
+        -10,
+        10
+      ],
+      "note": "L-float16-67M-对齐-对称中值域-scale=0.5 | baseline_kernels: AutomaticBufferFusionOp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 5,
+      "input_shape": [
+        [
+          8192,
+          8192
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "base": -1.0,
+        "scale": 1.0,
+        "shift": 1.0
+      },
+      "value_range": [
+        -100,
+        100
+      ],
+      "note": "L-float32-268M-对齐-对称大值域-shift=1 | baseline_kernels: AutomaticBufferFusionOp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 6,
+      "input_shape": [
+        [
+          1023,
+          1023
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "base": 2.0,
+        "scale": 1.0,
+        "shift": 0.0
+      },
+      "value_range": [
+        -0.1,
+        0.1
+      ],
+      "note": "S-bfloat16-1M-非对齐-对称微小值域-base=2 | baseline_kernels: AutomaticBufferFusionOp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1009,
+          1021
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "base": 2.0,
+        "scale": 1.5,
+        "shift": 0.0
+      },
+      "value_range": [
+        -1,
+        2
+      ],
+      "note": "S-float16-1M-质数非对齐-非对称小值域-base=2-scale=1.5 | baseline_kernels: AutomaticBufferFusionOp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1537,
+          769
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "base": 10.0,
+        "scale": 1.0,
+        "shift": 0.0
+      },
+      "value_range": [
+        -5,
+        10
+      ],
+      "note": "S-float32-1M-非对齐-非对称中值域-base=10 | baseline_kernels: AutomaticBufferFusionOp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 9,
+      "input_shape": [
+        [
+          363,
+          367,
+          373
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "base": -1.0,
+        "scale": 2.0,
+        "shift": 0.5
+      },
+      "value_range": [
+        -50,
+        100
+      ],
+      "note": "M-bfloat16-50M-质数非对齐-非对称大值域-scale=2-shift=0.5 | baseline_kernels: Muls×1 + Add×1 + Exp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 10,
+      "input_shape": [
+        [
+          2049,
+          513
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "base": -1.0,
+        "scale": 1.0,
+        "shift": 2.0
+      },
+      "value_range": [
+        -65504,
+        65504
+      ],
+      "note": "S-float16-1M-非对齐-float16边界值-shift=2 | baseline_kernels: Mul×1 + Add×1 + Exp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 11,
+      "input_shape": [
+        [
+          3,
+          7,
+          13,
+          4003
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "base": 1.0,
+        "scale": 2.0,
+        "shift": 0.0
+      },
+      "value_range": [
+        -88,
+        88
+      ],
+      "note": "S-float32-1M-质数非对齐-float32边界值-base=1 | baseline_kernels: Mul×1 + Add×1 + Exp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 12,
+      "input_shape": [
+        [
+          1000007
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "base": -1.0,
+        "scale": 0.5,
+        "shift": 0.5
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "S-bfloat16-1M-质数非对齐-inf特殊值-scale=0.5-shift=0.5 | baseline_kernels: Muls×1 + Add×1 + Exp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 13,
+      "input_shape": [
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "base": 2.0,
+        "scale": 1.0,
+        "shift": 1.0
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "M-float32-10M-质数非对齐-nan特殊值-base=2-shift=1 | baseline_kernels: Mul×2 + Add×1 + Exp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 14,
+      "input_shape": [
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "base": -1.0,
+        "scale": 2.0,
+        "shift": 1.0
+      },
+      "value_range": [
+        0,
+        0
+      ],
+      "note": "S-float16-3M-质数非对齐-零值-scale=2-shift=1 | baseline_kernels: Mul×1 + Add×1 + Exp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 15,
+      "input_shape": [
+        [
+          512,
+          2049
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "base": -1.0,
+        "scale": 1.0,
+        "shift": 0.5
+      },
+      "value_range": [
+        -0.5,
+        0.5
+      ],
+      "note": "S-float32-1M-非对齐-对称微小值域-shift=0.5 | baseline_kernels: Mul×1 + Add×1 + Exp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 16,
+      "input_shape": [
+        [
+          255,
+          8193
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "base": -1.0,
+        "scale": 1.2,
+        "shift": 0.0
+      },
+      "value_range": [
+        -1,
+        3
+      ],
+      "note": "S-bfloat16-2M-非对齐-非对称小值域-scale=1.2 | baseline_kernels: Muls×1 + Add×1 + Exp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 17,
+      "input_shape": [
+        [
+          4097,
+          511
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "base": 1.0,
+        "scale": 0.5,
+        "shift": 0.0
+      },
+      "value_range": [
+        -1000,
+        1000
+      ],
+      "note": "S-float16-2M-非对齐-对称大值域-base=1-scale=0.5 | baseline_kernels: Mul×1 + Add×1 + Exp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 18,
+      "input_shape": [
+        [
+          2,
+          511,
+          2049
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "base": 2.0,
+        "scale": 0.5,
+        "shift": 0.0
+      },
+      "value_range": [
+        -0.2,
+        0.2
+      ],
+      "note": "S-float32-2M-非对齐-对称微小值域-base=2-scale=0.5 | baseline_kernels: Mul×2 + Add×1 + Exp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4,
+          255,
+          2049
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "base": 10.0,
+        "scale": 0.5,
+        "shift": 0.5
+      },
+      "value_range": [
+        -3,
+        6
+      ],
+      "note": "S-bfloat16-2M-非对齐-非对称中值域-base=10-scale=0.5-shift=0.5 | baseline_kernels: Muls×2 + Add×1 + Exp×1"
+    },
+    {
+      "operator": "Exp",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          3,
+          17,
+          1024,
+          101
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "base": 1.0,
+        "scale": 1.5,
+        "shift": 1.0
+      },
+      "value_range": [
+        -20,
+        40
+      ],
+      "note": "M-float16-10M-非对齐-非对称大值域-base=1-scale=1.5-shift=1 | baseline_kernels: Mul×1 + Add×1 + Exp×1"
+    }
+  ],
+  "case_count": 20
+}

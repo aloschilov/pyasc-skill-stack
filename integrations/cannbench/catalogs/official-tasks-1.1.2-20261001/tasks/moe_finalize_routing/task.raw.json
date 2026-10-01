@@ -1,0 +1,1579 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "MoeFinalizeRouting",
+  "function_name": "moe_finalize_routing",
+  "level": "level3",
+  "category": "FusedComposite",
+  "difficulty": "L3",
+  "description": "在 MoE 计算的最后，合并 MoE FFN 的输出结果，支持共享专家残差连接和专家级偏置",
+  "desc_md": "# MoeFinalizeRouting 算子 API 描述\n\n## 1. 算子简介\n\n在 MoE 计算的最后，合并 MoE FFN (Feedforward Neural Network) 的输出结果，支持共享专家残差连接和专家级偏置。\n\n**主要应用场景**：\n- Mixture of Experts (MoE) 模型中专家输出的最终聚合\n- MoE Transformer 层中多专家结果的加权融合\n- 稀疏激活模型中 token 级别的专家输出合并\n\n**算子特征**：\n- 难度等级：L3（FusedComposite）\n- 多输入单输出，支持 drop less 和 drop pad 两种模式\n- 支持共享专家残差连接（skip1/skip2）\n- 支持专家级偏置（bias）\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\n\\text{expertid} = \\text{expert\\_for\\_source\\_row}[i,k]\n$$\n\n$$\n\\text{out}(i,j) = \\text{skip1}_{i,j} + \\text{skip2}_{i,j} + \\sum_{k=0}^{K}(\\text{scales}_{i,k} \\times (\\text{expanded\\_permuted\\_rows}_{\\,\\text{expanded\\_src\\_to\\_dst\\_row}_{i+k \\times \\text{num\\_rows}}\\,,\\,j} + \\text{bias}_{\\text{expertid},j}))\n$$\n\n> 索引说明：`expanded_src_to_dst_row` 是 1D 张量 `(NUM_ROWS·K)`，\n> `expanded_src_to_dst_row_{i+k·num_rows}` 整体作为一个标量行索引；\n> 该行索引再与列下标 `j` 一起在二维的 `expanded_permuted_rows` 上取值。\n\n### 处理流程\n\n1. 初始化输出：`out = skip1 + skip2`（若 skip1/skip2 存在）\n2. 对于每个 token i 和每个选中的专家 k：\n   - 根据 `expanded_src_to_dst_row` 获取专家输出的行索引\n   - 若索引为 -1（drop pad 模式），则该位置贡献为 0\n   - 否则，计算 `scales[i,k] * (expanded_permuted_rows[index] + bias[expert_id])`\n3. 将所有专家的贡献累加到输出\n\n### drop_pad_mode 说明\n\n| drop_pad_mode | 模式 | expanded_src_to_dst_row 排列 | 索引范围 |\n|---------------|------|------------------------------|---------|\n| 0 | drop less | 按列排列 | [0, NUM_ROWS * K - 1] |\n| 1 | drop pad | 按列排列 | [-1, E * C - 1] |\n| 2 | drop less | 按行排列 | [0, NUM_ROWS * K - 1] |\n| 3 | drop pad | 按行排列 | [-1, E * C - 1] |\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.moe_finalize_routing(\n    Tensor expanded_permuted_rows,\n    Tensor expanded_src_to_dst_row,\n    Tensor? skip1 = None,\n    Tensor? skip2 = None,\n    Tensor? bias = None,\n    Tensor? scales = None,\n    Tensor? expert_for_source_row = None,\n    int drop_pad_mode = 0\n) -> Tensor out\n```\n\n底层由 `torch_npu.npu_moe_finalize_routing` 在 eager 模式下统一派发到 CANN `aclnnMoeFinalizeRoutingV2`（IR: `MoeFinalizeRoutingV2`）；msprof 在本基准全部 20 个用例上均观测到唯一内核 `MoeFinalizeRoutingV2`。注：torchair 图模式下当 `skip1/bias/scales/expert_for_source_row` 均非 None 且 `drop_pad_mode==0` 时会改用 V1 IR `MoeFinalizeRouting`；本基准未走图模式。\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 | Shape |\n|------|------|--------|------|-------|\n| expanded_permuted_rows | Tensor | 必选 | MoE FFN 输出，经过专家处理的结果。`drop_pad_mode=0/2` 时为 2D `(NUM_ROWS * K, H)`，`drop_pad_mode=1/3` 时为 3D `(E, C, H)` | 见左 |\n| expanded_src_to_dst_row | Tensor | 必选 | 行索引映射，保存每个专家处理结果的索引 | (NUM_ROWS * K) |\n| skip1 | Tensor | None | 共享专家1，残差连接 | (NUM_ROWS, H) |\n| skip2 | Tensor | None | 共享专家2，残差连接 | (NUM_ROWS, H) |\n| bias | Tensor | None | 专家偏置 | (E, H) |\n| scales | Tensor | None | 路由权重，专家缩放因子 | (NUM_ROWS, K) |\n| expert_for_source_row | Tensor | None | 专家索引，每行处理的专家号 | (NUM_ROWS, K) |\n| drop_pad_mode | int | 0 | 模式选择，取值范围 [0, 3]，由 V2 内核支持 | - |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| out | (NUM_ROWS, H) | 与 expanded_permuted_rows 相同 | MoE FFN 合并的输出结果 |\n\n### 数据类型\n\n| expanded_permuted_rows | skip1/skip2/bias/scales | expanded_src_to_dst_row | expert_for_source_row |\n|------------------------|-------------------------|-------------------------|----------------------|\n| float32 | float32 | int32 | int32 |\n| float16 | float16 | int32 | int32 |\n| bfloat16 | bfloat16 或 float32 (混合精度) | int32 | int32 |\n\n### 规则与约束\n\n1. `skip1` 为 None 时，`skip2` 必须也为 None\n2. `scales` 不存在时，K 默认为 1\n3. `bias` 存在时，`expert_for_source_row` 必须同时存在\n4. `skip1`、`skip2` 的 dtype 需与 `expanded_permuted_rows` 一致\n5. `expanded_src_to_dst_row` 的 dtype 为 int32\n6. `expert_for_source_row` 的 dtype 为 int32，取值范围 [0, E-1]\n7. `drop_pad_mode` 取 1/3 时 `expanded_permuted_rows` 必须是 3D `(E, C, H)`，且 `expanded_src_to_dst_row` 的取值范围扩展为 `[-1, E*C-1]`（-1 表示该位置被丢弃）\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `NUM_ROWS`（token 数） | 1 ~ 524288 | cases.csv 实测 64 ~ 32768 |\n| `K`（topk） | 1 ~ 32 | cases.csv 实测 1 ~ 16；`scales is None` 时 `K=1` |\n| `H`（hidden） | 1 ~ 8192 | cases.csv 实测 32 ~ 2048 |\n| `E`（专家数） | 1 ~ 256 | cases.csv 实测 8 ~ 64；`expert_for_source_row` 取值 ∈ [0, E-1] |\n| `C`（expert capacity，3D 模式） | 1 ~ 1024 | drop_pad_mode=1/3 时使用；cases.csv 实测 20 ~ 40 |\n| `drop_pad_mode` | 0 ~ 3 | 0/2: drop_less；1/3: drop_pad（输入为 3D，索引含 -1）；cases.csv 实测覆盖 0/1/2/3 |\n\n约束：\n- `expanded_permuted_rows` shape 与 `drop_pad_mode` 联动：`drop_pad_mode ∈ {0, 2}` 时为 2D `(NUM_ROWS * K, H)`，`drop_pad_mode ∈ {1, 3}` 时为 3D `(E, C, H)`。\n- `expanded_src_to_dst_row` 取值范围：`drop_pad_mode ∈ {0, 2}` 时 ∈ [0, NUM_ROWS*K - 1]；`drop_pad_mode ∈ {1, 3}` 时 ∈ [-1, E*C - 1]（-1 表示该位置被丢弃）。\n- 可选张量依赖：`skip1 is None` 时 `skip2` 必须也为 `None`；`bias` 存在时 `expert_for_source_row` 必须同时存在。\n- dtype 一致性：`skip1`、`skip2`、`bias` 的 dtype 与 `expanded_permuted_rows` 一致；`scales` 在主路径下同步 dtype，混合精度路径允许 `bfloat16` + `float32` scales（见 case 12）；`expanded_src_to_dst_row` 与 `expert_for_source_row` 均为 int32。\n- shape 关系：`expanded_src_to_dst_row.shape == (NUM_ROWS * K,)`、`scales.shape == (NUM_ROWS, K)`、`expert_for_source_row.shape == (NUM_ROWS, K)`、`skip1.shape == skip2.shape == (NUM_ROWS, H)`、`bias.shape == (E, H)`、输出 `out.shape == (NUM_ROWS, H)`。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\nimport numpy as np\nfrom copy import deepcopy\n\ndef moe_finalize_routing(\n    expanded_permuted_rows: torch.Tensor,\n    expanded_src_to_dst_row: torch.Tensor,\n    skip1: torch.Tensor = None,\n    skip2: torch.Tensor = None,\n    bias: torch.Tensor = None,\n    scales: torch.Tensor = None,\n    expert_for_source_row: torch.Tensor = None,\n    drop_pad_mode: int = 0,\n) -> torch.Tensor:\n    \"\"\"\n    MoE Finalize Routing 算子 Torch Golden 参考实现\n\n    在 MoE 计算的最后，合并 MoE FFN 的输出结果\n\n    Args:\n        expanded_permuted_rows: MoE FFN 输出，shape 为 (NUM_ROWS * K, H) 或 (E, C, H)\n        expanded_src_to_dst_row: 行索引映射，shape 为 (NUM_ROWS * K)\n        skip1: 共享专家1，shape 为 (NUM_ROWS, H)\n        skip2: 共享专家2，shape 为 (NUM_ROWS, H)\n        bias: 专家偏置，shape 为 (E, H)\n        scales: 路由权重，shape 为 (NUM_ROWS, K)\n        expert_for_source_row: 专家索引，shape 为 (NUM_ROWS, K)\n        drop_pad_mode: 模式选择，取值范围 [0, 3]\n\n    Returns:\n        输出张量，shape 为 (NUM_ROWS, H)\n    \"\"\"\n    # 确定 K 和 num_rows\n    NK = expanded_src_to_dst_row.shape[0]\n    K = 1\n    if scales is not None:\n        K = scales.shape[1]\n    num_rows = NK // K\n    H = expanded_permuted_rows.shape[-1]\n\n    # 将 expanded_permuted_rows reshape 为 2D\n    expanded_permuted_rows = expanded_permuted_rows.reshape(-1, H)\n\n    # 初始化输出：skip1 + skip2\n    if (skip1 is not None) and (skip2 is not None):\n        out = skip1.clone() + skip2\n    elif (skip2 is not None) and (skip1 is None):\n        out = skip2.clone()\n    elif (skip2 is None) and (skip1 is not None):\n        out = skip1.clone()\n    else:\n        out = torch.zeros(num_rows, H, dtype=expanded_permuted_rows.dtype, device=expanded_permuted_rows.device)\n\n    # 核心计算循环\n    for i in range(num_rows):\n        for k in range(K):\n            # 根据 drop_pad_mode 获取索引位置\n            if drop_pad_mode == 0 or drop_pad_mode == 1:\n                # 按列排列\n                index_pos = k * num_rows + i\n            else:\n                # 按行排列 (drop_pad_mode == 2 or 3)\n                index_pos = i * K + k\n\n            value = expanded_src_to_dst_row[index_pos].item()\n\n            # drop pad 模式：索引为 -1 表示该 token 被丢弃，该位置整项贡献为 0（含 bias，\n            # 见上文“处理流程”第 2 步）。被丢弃的 token 未经过该专家的 FFN，故 bias 也不计入。\n            if value == -1:\n                continue\n\n            dst_row = expanded_permuted_rows[value, :]\n\n            # 获取缩放因子\n            scale_val = 1.0\n            if scales is not None:\n                scale_val = scales[i, k]\n\n            # 获取专家 ID 和 bias\n            if bias is not None and expert_for_source_row is not None:\n                expert_id = expert_for_source_row[i, k].item()\n                out[i, :] += scale_val * (dst_row + bias[expert_id, :])\n            else:\n                out[i, :] += scale_val * dst_row\n\n    return out\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\n# drop less 模式示例 (drop_pad_mode=0)\nnum_rows = 1024\ntopk = 8\nhidden_dim = 512\nexpert_num = 16\n\nexpanded_permuted_rows = torch.randn(num_rows * topk, hidden_dim, dtype=torch.float16, device=\"npu\")\nskip1 = torch.randn(num_rows, hidden_dim, dtype=torch.float16, device=\"npu\")\nskip2 = torch.randn(num_rows, hidden_dim, dtype=torch.float16, device=\"npu\")\nbias = torch.randn(expert_num, hidden_dim, dtype=torch.float16, device=\"npu\")\nscales = torch.randn(num_rows, topk, dtype=torch.float16, device=\"npu\")\nexpanded_src_to_dst_row = torch.randint(0, num_rows * topk, (num_rows * topk,), dtype=torch.int32, device=\"npu\")\nexpert_for_source_row = torch.randint(0, expert_num, (num_rows, topk), dtype=torch.int32, device=\"npu\")\n\nout = cann_bench.moe_finalize_routing(\n    expanded_permuted_rows,\n    expanded_src_to_dst_row=expanded_src_to_dst_row,\n    skip1=skip1, skip2=skip2,\n    bias=bias, scales=scales,\n    expert_for_source_row=expert_for_source_row,\n    drop_pad_mode=0,\n)\n\n# drop pad 模式示例 (drop_pad_mode=1)\nexpert_capacity = 20\nexpanded_permuted_rows_3d = torch.randn(expert_num, expert_capacity, hidden_dim, dtype=torch.float16, device=\"npu\")\nexpanded_src_to_dst_row_pad = torch.randint(-1, expert_num * expert_capacity - 1, (num_rows,), dtype=torch.int32, device=\"npu\")\n\nout = cann_bench.moe_finalize_routing(\n    expanded_permuted_rows_3d,\n    expanded_src_to_dst_row=expanded_src_to_dst_row_pad,\n    skip1=skip1, skip2=skip2,\n    bias=bias, scales=None,\n    expert_for_source_row=expert_for_source_row,\n    drop_pad_mode=1,\n)\n```\n",
+  "proto": {
+    "name": "MoeFinalizeRouting",
+    "category": "FusedComposite",
+    "difficulty": "L3",
+    "formula": "out(i,j) = skip1_{i,j} + skip2_{i,j} + Σ_{k=0}^{K}(scales_{i,k} * (expanded_permuted_rows_{expanded_src_to_dst_row_{...},j} + bias_{expertid,j}))",
+    "description": "在 MoE 计算的最后，合并 MoE FFN 的输出结果，支持共享专家残差连接和专家级偏置",
+    "shape_support": "expanded_permuted_rows: (NUM_ROWS * K, H) 或 (E, C, H); skip1/skip2: (NUM_ROWS, H); bias: (E, H); scales: (NUM_ROWS, K)",
+    "attrs": [
+      {
+        "name": "drop_pad_mode",
+        "type": "int",
+        "default": 0,
+        "description": "模式选择，取值范围 [0, 3]。0: drop less 按列排列; 1: drop pad 按列排列; 2: drop less 按行排列; 3: drop pad 按行排列"
+      }
+    ],
+    "inputs": [
+      {
+        "name": "expanded_permuted_rows",
+        "description": "MoE FFN 输出，经过专家处理的结果。drop_pad_mode=0/2 时 shape 为 (NUM_ROWS * K, H)，drop_pad_mode=1/3 时 shape 为 (E, C, H)",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "(NUM_ROWS * K, H) 或 (E, C, H)"
+      },
+      {
+        "name": "expanded_src_to_dst_row",
+        "description": "行索引映射，保存每个专家处理结果的索引。shape 为 (NUM_ROWS * K)，dtype 为 int32。drop_pad_mode=0/2 时取值范围 [0, NUM_ROWS * K - 1]，drop_pad_mode=1/3 时取值范围 [-1, E * C - 1]（-1 表示丢弃）",
+        "dtype": [
+          "int32"
+        ],
+        "shape": "(NUM_ROWS * K)"
+      },
+      {
+        "name": "skip1",
+        "description": "共享专家1，残差连接。shape 为 (NUM_ROWS, H)，dtype 与 expanded_permuted_rows 一致",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "optional": true
+      },
+      {
+        "name": "skip2",
+        "description": "共享专家2，残差连接。shape 为 (NUM_ROWS, H)，dtype 与 expanded_permuted_rows 一致。skip1 为 None 时，skip2 必须也为 None",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "optional": true
+      },
+      {
+        "name": "bias",
+        "description": "专家偏置。shape 为 (E, H)，dtype 与 expanded_permuted_rows 一致。bias 存在时，expert_for_source_row 必须同时存在",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "optional": true
+      },
+      {
+        "name": "scales",
+        "description": "路由权重，专家缩放因子。shape 为 (NUM_ROWS, K)，dtype 与 expanded_permuted_rows 一致。scales 不存在时，K 默认为 1",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "optional": true
+      },
+      {
+        "name": "expert_for_source_row",
+        "description": "专家索引，每行处理的专家号。shape 为 (NUM_ROWS, K)，dtype 为 int32，取值范围 [0, E - 1]",
+        "dtype": [
+          "int32"
+        ],
+        "optional": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out",
+        "description": "输出张量，MoE FFN 合并的输出结果。shape 为 (NUM_ROWS, H)，dtype 与 expanded_permuted_rows 一致",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "moe_finalize_routing(Tensor expanded_permuted_rows, Tensor expanded_src_to_dst_row, Tensor? skip1=None, Tensor? skip2=None, Tensor? bias=None, Tensor? scales=None, Tensor? expert_for_source_row=None, int drop_pad_mode=0) -> Tensor out"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\nimport numpy as np\nfrom copy import deepcopy\n\nfrom typing import Optional\n\n\"\"\"\nMoeFinalizeRouting 算子 Torch Golden 参考实现\n\n在 MoE 计算的最后，合并 MoE FFN 的输出结果\n公式：out = skip1 + skip2 + Σ(scales * (expanded_permuted_rows + bias))\n\"\"\"\n\ndef moe_finalize_routing(\n    expanded_permuted_rows: torch.Tensor,\n    expanded_src_to_dst_row: torch.Tensor,\n    skip1: Optional[torch.Tensor] = None,\n    skip2: Optional[torch.Tensor] = None,\n    bias: Optional[torch.Tensor] = None,\n    scales: Optional[torch.Tensor] = None,\n    expert_for_source_row: Optional[torch.Tensor] = None,\n    drop_pad_mode: int = 0,\n):\n    \"\"\"\n    MoE Finalize Routing 算子 Torch Golden 参考实现\n\n    在 MoE 计算的最后，合并 MoE FFN 的输出结果\n\n    Args:\n        expanded_permuted_rows: MoE FFN 输出，shape 为 (NUM_ROWS * K, H) 或 (E, C, H)\n        expanded_src_to_dst_row: 行索引映射，shape 为 (NUM_ROWS * K)\n        skip1: 共享专家1，shape 为 (NUM_ROWS, H)\n        skip2: 共享专家2，shape 为 (NUM_ROWS, H)\n        bias: 专家偏置，shape 为 (E, H)\n        scales: 路由权重，shape 为 (NUM_ROWS, K)\n        expert_for_source_row: 专家索引，shape 为 (NUM_ROWS, K)\n        drop_pad_mode: 模式选择，取值范围 [0, 3]\n            0: drop less, 按列排列\n            1: drop pad, 按列排列\n            2: drop less, 按行排列\n            3: drop pad, 按行排列\n\n    Returns:\n        输出张量，shape 为 (NUM_ROWS, H)\n    \"\"\"\n    # 确定输入类型（numpy 或 torch）\n    is_torch = isinstance(expanded_permuted_rows, torch.Tensor)\n\n    # 低精度类型升到 fp32，避免累积循环中的舍入误差与 fp64 参考值产生偏差\n    original_dtype = None\n    if is_torch:\n        original_dtype = expanded_permuted_rows.dtype\n        _low_prec = original_dtype in (torch.float16, torch.bfloat16)\n        if _low_prec:\n            expanded_permuted_rows = expanded_permuted_rows.float()\n            if skip1 is not None:\n                skip1 = skip1.float()\n            if skip2 is not None:\n                skip2 = skip2.float()\n            if bias is not None:\n                bias = bias.float()\n            if scales is not None:\n                scales = scales.float()\n\n    # 确定 K 和 num_rows\n    NK = expanded_src_to_dst_row.shape[0]\n    K = scales.shape[1] if scales is not None else 1\n    num_rows = NK // K\n    H = expanded_permuted_rows.shape[-1]\n\n    # 将 expanded_permuted_rows reshape 为 2D\n    if is_torch:\n        expanded_permuted_rows = expanded_permuted_rows.reshape(-1, H)\n        dtype = expanded_permuted_rows.dtype\n        device = expanded_permuted_rows.device\n    else:\n        expanded_permuted_rows = expanded_permuted_rows.reshape(-1, H)\n        dtype = expanded_permuted_rows.dtype\n\n    # 初始化输出：skip1 + skip2\n    if (skip1 is not None) and (skip2 is not None):\n        if is_torch:\n            out = skip1.clone() + skip2\n        else:\n            out = skip1.copy() + skip2\n    elif (skip2 is not None) and (skip1 is None):\n        if is_torch:\n            out = skip2.clone()\n        else:\n            out = deepcopy(skip2)\n    elif (skip2 is None) and (skip1 is not None):\n        if is_torch:\n            out = skip1.clone()\n        else:\n            out = deepcopy(skip1)\n    else:\n        if is_torch:\n            out = torch.zeros(num_rows, H, dtype=dtype, device=device)\n        else:\n            out = np.zeros([num_rows, H], dtype=dtype)\n\n    # Vectorised over rows; only the small K (~topk) loop remains. The old form\n    # looped num_rows*K times doing a per-step `.item()` (device->host sync) and\n    # timed out on NPU. Keeping the k-loop preserves the per-row accumulation order,\n    # so the fp32 result is bit-identical to the original; the heavy H-dim gather /\n    # scaled-add run vectorised on the input device.\n    rows = torch.arange(num_rows) if is_torch else np.arange(num_rows)\n    num_experts = bias.shape[0] if bias is not None else 0\n    for k in range(K):\n        # row index into expanded_src_to_dst_row for this k (per drop_pad_mode layout)\n        index_pos = (k * num_rows + rows) if drop_pad_mode in (0, 1) else (rows * K + k)\n        value = expanded_src_to_dst_row[index_pos]  # (num_rows,)\n\n        # value == -1 (drop pad) contributes a zero row; otherwise gather it.\n        if is_torch:\n            valid = value != -1\n            dst_row = expanded_permuted_rows[value.clamp(min=0).long()].clone()\n            dst_row[~valid] = 0\n        else:\n            valid = value != -1\n            dst_row = expanded_permuted_rows[np.clip(value, 0, None).astype(np.int64)].copy()\n            dst_row[~valid] = 0\n        term = dst_row\n\n        # F510: bound-check expert_id before indexing bias. The upstream\n        # `moe_gating_top_k_softmax` golden uses num_expert (== E, out-of-range) as a\n        # sentinel for finished tokens; such rows contribute the unbiased value.\n        if bias is not None and expert_for_source_row is not None:\n            expert_id = expert_for_source_row[:, k]\n            valid_e = (expert_id >= 0) & (expert_id < num_experts)\n            if is_torch:\n                bias_row = bias[expert_id.clamp(0, num_experts - 1).long()].clone()\n                bias_row[~valid_e] = 0\n            else:\n                bias_row = bias[np.clip(expert_id, 0, num_experts - 1).astype(np.int64)].copy()\n                bias_row[~valid_e] = 0\n            term = dst_row + bias_row\n\n        # A dropped (-1) token must contribute NOTHING — not even bias. The real\n        # MoeFinalizeRoutingV2 kernel skips the whole term for a -1 row; the previous\n        # golden zeroed only dst_row but still added scale*bias here, so every\n        # drop_pad case with an occasional -1 index diverged from the kernel (q7\n        # probe: golden with this line == V2 kernel bit-exact, max_diff=0). valid is\n        # (num_rows,), so this also zeros the bias part for dropped rows.\n        term[~valid] = 0\n\n        if scales is not None:\n            out = out + scales[:, k][:, None] * term\n        else:\n            out = out + 1.0 * term\n\n    if is_torch and original_dtype is not None and _low_prec:\n        out = out.to(original_dtype)\n\n    return out\n\n\ndef generate_moe_finalize_routing_inputs(\n    expert_num=16,\n    hidden_dim=512,\n    topk=8,\n    num_rows=1024,\n    dtype=\"float16\",\n    use_skip2=True,\n    use_bias=True,\n    use_scales=True,\n    drop_pad_mode=0,\n    expert_capacity=None,\n    seed=42\n):\n    \"\"\"\n    生成 MoeFinalizeRouting 算子的测试输入数据\n\n    Args:\n        expert_num: 专家数量 E\n        hidden_dim: 隐藏层维度 H\n        topk: 每个token选择的专家数 K\n        num_rows: token 数量 NUM_ROWS\n        dtype: 数据类型，支持 float16, float32, bfloat16\n        use_skip2: 是否使用 skip2\n        use_bias: 是否使用 bias\n        use_scales: 是否使用 scales\n        drop_pad_mode: 模式选择 [0, 3]\n        expert_capacity: drop pad 模式下的专家容量 C\n        seed: 随机种子\n\n    Returns:\n        包含所有输入参数的字典\n    \"\"\"\n    # 设置随机种子\n    if seed is not None:\n        torch.manual_seed(seed)\n        np.random.seed(seed)\n\n    # 数据类型映射\n    dtype_map = {\n        \"float16\": torch.float16,\n        \"float32\": torch.float32,\n        \"bfloat16\": torch.bfloat16\n    }\n    torch_dtype = dtype_map.get(dtype, torch.float16)\n    np_dtype = {\n        \"float16\": np.float16,\n        \"float32\": np.float32,\n        \"bfloat16\": np.float32  # numpy不支持bfloat16，用float32代替\n    }.get(dtype, np.float16)\n\n    # 根据 drop_pad_mode 生成不同 shape 的 expanded_permuted_rows\n    if drop_pad_mode == 0 or drop_pad_mode == 2:\n        # drop less 模式：2D shape\n        expanded_permuted_rows = torch.randn(num_rows * topk, hidden_dim, dtype=torch_dtype)\n        expanded_permuted_rows_np = np.random.randn(num_rows * topk, hidden_dim).astype(np_dtype)\n        # 索引范围 [0, NUM_ROWS * K - 1]\n        expanded_src_to_dst_row = torch.randint(0, num_rows * topk, (num_rows * topk,), dtype=torch.int32)\n        expanded_src_to_dst_row_np = np.arange(num_rows * topk).astype(np.int32)\n        np.random.shuffle(expanded_src_to_dst_row_np)\n    else:\n        # drop pad 模式：3D shape\n        if expert_capacity is None:\n            expert_capacity = num_rows // expert_num + 10\n        expanded_permuted_rows = torch.randn(expert_num, expert_capacity, hidden_dim, dtype=torch_dtype)\n        expanded_permuted_rows_np = np.random.randn(expert_num, expert_capacity, hidden_dim).astype(np_dtype)\n        # 索引范围 [-1, E * C - 1]\n        expanded_src_to_dst_row = torch.randint(-1, expert_num * expert_capacity - 1, (num_rows * topk,), dtype=torch.int32)\n        expanded_src_to_dst_row_np = np.random.randint(-1, expert_num * expert_capacity - 1, num_rows * topk).astype(np.int32)\n\n    # skip1\n    skip1 = torch.randn(num_rows, hidden_dim, dtype=torch_dtype)\n    skip1_np = np.random.randn(num_rows, hidden_dim).astype(np_dtype)\n\n    # skip2\n    if use_skip2:\n        skip2 = torch.randn(num_rows, hidden_dim, dtype=torch_dtype)\n        skip2_np = np.random.randn(num_rows, hidden_dim).astype(np_dtype)\n    else:\n        skip2 = None\n        skip2_np = None\n\n    # bias\n    if use_bias:\n        bias = torch.randn(expert_num, hidden_dim, dtype=torch_dtype)\n        bias_np = np.random.randn(expert_num, hidden_dim).astype(np_dtype)\n        # expert_for_source_row 必须存在\n        expert_for_source_row = torch.randint(0, expert_num, (num_rows, topk), dtype=torch.int32)\n        expert_for_source_row_np = np.random.randint(0, expert_num, size=(num_rows, topk)).astype(np.int32)\n    else:\n        bias = None\n        bias_np = None\n        expert_for_source_row = None\n        expert_for_source_row_np = None\n\n    # scales\n    if use_scales:\n        scales = torch.randn(num_rows, topk, dtype=torch_dtype)\n        scales_np = np.random.randn(num_rows, topk).astype(np_dtype)\n    else:\n        scales = None\n        scales_np = None\n\n    return {\n        \"torch\": {\n            \"expanded_permuted_rows\": expanded_permuted_rows,\n            \"skip1\": skip1,\n            \"skip2\": skip2,\n            \"bias\": bias,\n            \"scales\": scales,\n            \"expanded_src_to_dst_row\": expanded_src_to_dst_row,\n            \"expert_for_source_row\": expert_for_source_row,\n            \"drop_pad_mode\": drop_pad_mode\n        },\n        \"numpy\": {\n            \"expanded_permuted_rows\": expanded_permuted_rows_np,\n            \"skip1\": skip1_np,\n            \"skip2\": skip2_np,\n            \"bias\": bias_np,\n            \"scales\": scales_np,\n            \"expanded_src_to_dst_row\": expanded_src_to_dst_row_np,\n            \"expert_for_source_row\": expert_for_source_row_np,\n            \"drop_pad_mode\": drop_pad_mode\n        }\n    }\n\n\nif __name__ == \"__main__\":\n    # 测试示例\n    inputs = generate_moe_finalize_routing_inputs(\n        expert_num=16, hidden_dim=512, topk=8, num_rows=1024,\n        dtype=\"float16\", drop_pad_mode=0\n    )\n\n    # 使用 numpy 计算 golden\n    golden_np = moe_finalize_routing(**inputs[\"numpy\"])\n    print(f\"Golden output shape: {golden_np.shape}\")\n    print(f\"Golden output dtype: {golden_np.dtype}\")\n    print(f\"Golden output sample: {golden_np[0, :5]}\")\n\n    # 使用 torch 计算 golden\n    golden_torch = moe_finalize_routing(**inputs[\"torch\"])\n    print(f\"Torch golden output shape: {golden_torch.shape}\")\n    print(f\"Torch golden output dtype: {golden_torch.dtype}\")\n    print(f\"Torch golden output sample: {golden_torch[0, :5]}\")\n\ndef get_input(\n    expanded_permuted_rows: torch.Tensor,\n    expanded_src_to_dst_row: torch.Tensor,\n    skip1: Optional[torch.Tensor] = None,\n    skip2: Optional[torch.Tensor] = None,\n    bias: Optional[torch.Tensor] = None,\n    scales: Optional[torch.Tensor] = None,\n    expert_for_source_row: Optional[torch.Tensor] = None,\n    drop_pad_mode: int = 0,\n    **kwargs,\n):\n    \"\"\"把 expanded_src_to_dst_row 重建为满足单射契约的行映射。\n\n    该输入是 MoeInitRouting 产出的\"源行 -> 展开缓冲区行\"映射：每个源行 (token, k)\n    占据展开缓冲区中**互不相同**的一行。drop_less (mode 0/2) 下它是 [0, NK) 的完整\n    置换；drop_pad (mode 1/3) 下是到 [0, E*C) 的单射，容量溢出的源行取 -1 表示丢弃。\n\n    而单区间 value_range 表达不了\"互异\"，通用生成器按 randint 独立有放回采样，导致\n    部分展开行被读多次、另一部分从未被读。golden 与真实 MoeFinalizeRoutingV2 都做\n    gather，重复索引下数值仍然可比（现网用例即如此通过），但：\n      1. 访存模式与真实场景不符——真实场景每行恰好读一次，重复采样把它变成随机重复\n         读，L2 命中率虚高，perf 数据不具代表性；\n      2. 任何采用 scatter 方向实现的候选（遍历展开行写回目的行，与 gather 等价当且\n         仅当映射单射）都会与 golden 分叉，而契约本身是站在候选一边的。\n\n    这里按 case 的实际形状推导目的空间大小 num_dst = expanded_permuted_rows 展平成\n    (num_dst, H) 后的行数（drop_less 下等于 NK，drop_pad 下等于 E*C），为非 -1 的位置\n    分配 [0, num_dst) 的互异值。**-1 的位置原样保留**，以维持 drop_pad 用例既有的\n    丢弃覆盖与随种子可复现的行为。\n\n    注：drop_pad 的完整契约还要求目的行落在该源行所属专家的容量块 [e*C, (e+1)*C) 内\n    （e 取自 expert_for_source_row）。golden 不校验这一点，且按专家分配会让丢弃率降到\n    近乎 0（当前用例 E*C 远大于 NK），反而削弱 -1 路径覆盖，故此处只做单射重建；如需\n    专家对齐应由用例设计一并调整容量。\n\n    kernel_eval 用输入名 + attrs 作为关键字调用本函数，并用返回值（按 golden 签名的\n    Tensor 顺序）同时替换 golden 与候选的输入，故比较公平。\n\n    Returns:\n        [expanded_permuted_rows, expanded_src_to_dst_row, skip1, skip2, bias, scales,\n         expert_for_source_row]，顺序与 moe_finalize_routing 签名一致。\n    \"\"\"\n    unchanged = [expanded_permuted_rows, expanded_src_to_dst_row, skip1, skip2,\n                 bias, scales, expert_for_source_row]\n    esdr = expanded_src_to_dst_row\n    if not isinstance(esdr, torch.Tensor) or esdr.numel() == 0:\n        return unchanged\n\n    H = int(expanded_permuted_rows.shape[-1])\n    num_dst = expanded_permuted_rows.numel() // H\n\n    flat = esdr.reshape(-1)\n    keep = flat != -1\n    n_keep = int(keep.sum())\n    if n_keep > num_dst:\n        # 抽屉原理：单射不存在（当前用例集不会走到这里），保持原样\n        return unchanged\n\n    g = torch.Generator().manual_seed(0)  # 固定种子：跨 eval 运行必须可复现\n    # argsort(rand) 即随机置换；取前 n_keep 项得到 [0, num_dst) 内互异的目的行\n    dst = torch.rand(num_dst, generator=g).argsort()[:n_keep]\n\n    new_flat = flat.clone()\n    new_flat[keep] = dst.to(dtype=flat.dtype, device=flat.device)\n    new_esdr = new_flat.reshape(esdr.shape)\n\n    return [expanded_permuted_rows, new_esdr, skip1, skip2, bias, scales,\n            expert_for_source_row]\n",
+  "cases_yaml": [
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 1,
+      "input_shape": [
+        [
+          8192,
+          512
+        ],
+        [
+          8192
+        ],
+        [
+          1024,
+          512
+        ],
+        [
+          1024,
+          512
+        ],
+        [
+          16,
+          512
+        ],
+        [
+          1024,
+          8
+        ],
+        [
+          1024,
+          8
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          8191
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          15
+        ]
+      ],
+      "note": "S-float16-完整参数-drop_less_列排列-对齐-K8-H512-E16 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 2,
+      "input_shape": [
+        [
+          32768,
+          1024
+        ],
+        [
+          32768
+        ],
+        [
+          8192,
+          1024
+        ],
+        [
+          8192,
+          1024
+        ],
+        [
+          32,
+          1024
+        ],
+        [
+          8192,
+          4
+        ],
+        [
+          8192,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          0,
+          32767
+        ],
+        [
+          -2,
+          2
+        ],
+        [
+          -2,
+          2
+        ],
+        [
+          -2,
+          2
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          31
+        ]
+      ],
+      "note": "L-float32-完整参数-drop_less_列排列-对齐-K4-H1024-E32 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 3,
+      "input_shape": [
+        [
+          8192,
+          2048
+        ],
+        [
+          8192
+        ],
+        [
+          4096,
+          2048
+        ],
+        [
+          4096,
+          2048
+        ],
+        [
+          8,
+          2048
+        ],
+        [
+          4096,
+          2
+        ],
+        [
+          4096,
+          2
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 2
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          0,
+          8191
+        ],
+        [
+          -3,
+          3
+        ],
+        [
+          -3,
+          3
+        ],
+        [
+          -3,
+          3
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          7
+        ]
+      ],
+      "note": "M-bfloat16-完整参数-drop_less_行排列-对齐-K2-H2048-E8 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8192,
+          512
+        ],
+        [
+          8192
+        ],
+        [
+          2048,
+          512
+        ],
+        null,
+        [
+          16,
+          512
+        ],
+        [
+          2048,
+          4
+        ],
+        [
+          2048,
+          4
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          8191
+        ],
+        [
+          -1,
+          1
+        ],
+        null,
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          15
+        ]
+      ],
+      "note": "S-float16-无skip2-drop_less-对齐-K4 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 5,
+      "input_shape": [
+        [
+          12288,
+          256
+        ],
+        [
+          12288
+        ],
+        [
+          1536,
+          256
+        ],
+        [
+          1536,
+          256
+        ],
+        null,
+        [
+          1536,
+          8
+        ],
+        null
+      ],
+      "dtype": [
+        "float32",
+        "int32",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          12287
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        null,
+        [
+          0,
+          1
+        ],
+        null
+      ],
+      "note": "M-float32-无bias-drop_less-对齐-K8 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 6,
+      "input_shape": [
+        [
+          512,
+          1024
+        ],
+        [
+          512
+        ],
+        [
+          512,
+          1024
+        ],
+        [
+          512,
+          1024
+        ],
+        [
+          8,
+          1024
+        ],
+        null,
+        [
+          512,
+          1
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          511
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        null,
+        [
+          0,
+          7
+        ]
+      ],
+      "note": "S-float16-无scales-K1-drop_less-对齐 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 7,
+      "input_shape": [
+        [
+          4096,
+          256
+        ],
+        [
+          4096
+        ],
+        null,
+        null,
+        [
+          16,
+          256
+        ],
+        [
+          1024,
+          4
+        ],
+        [
+          1024,
+          4
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          4095
+        ],
+        null,
+        null,
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          15
+        ]
+      ],
+      "note": "M-bfloat16-无skip-drop_less-对齐 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 8,
+      "input_shape": [
+        [
+          8184,
+          511
+        ],
+        [
+          8184
+        ],
+        [
+          1023,
+          511
+        ],
+        [
+          1023,
+          511
+        ],
+        [
+          16,
+          511
+        ],
+        [
+          1023,
+          8
+        ],
+        [
+          1023,
+          8
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          0,
+          8183
+        ],
+        [
+          -10,
+          10
+        ],
+        [
+          -10,
+          10
+        ],
+        [
+          -10,
+          10
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          15
+        ]
+      ],
+      "note": "S-float16-完整参数-质数非对齐-drop_less-K8 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 9,
+      "input_shape": [
+        [
+          65536,
+          127
+        ],
+        [
+          65536
+        ],
+        [
+          4096,
+          127
+        ],
+        [
+          4096,
+          127
+        ],
+        [
+          32,
+          127
+        ],
+        [
+          4096,
+          16
+        ],
+        [
+          4096,
+          16
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          0,
+          65535
+        ],
+        [
+          -100,
+          100
+        ],
+        [
+          -100,
+          100
+        ],
+        [
+          -100,
+          100
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          31
+        ]
+      ],
+      "note": "M-bfloat16-大K16-对齐-drop_less | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 10,
+      "input_shape": [
+        [
+          16,
+          20,
+          512
+        ],
+        [
+          100
+        ],
+        [
+          100,
+          512
+        ],
+        [
+          100,
+          512
+        ],
+        [
+          16,
+          512
+        ],
+        null,
+        [
+          100,
+          1
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 1
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          319
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        null,
+        [
+          0,
+          15
+        ]
+      ],
+      "note": "S-float16-drop_pad_列排列-3D-E16C20H512-K1 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 11,
+      "input_shape": [
+        [
+          16,
+          40,
+          256
+        ],
+        [
+          400
+        ],
+        [
+          200,
+          256
+        ],
+        [
+          200,
+          256
+        ],
+        [
+          16,
+          256
+        ],
+        [
+          200,
+          2
+        ],
+        [
+          200,
+          2
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 3
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          -1,
+          639
+        ],
+        [
+          -2,
+          2
+        ],
+        [
+          -2,
+          2
+        ],
+        [
+          -2,
+          2
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          15
+        ]
+      ],
+      "note": "M-float32-drop_pad_行排列-3D-E16C40H256-K2 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 12,
+      "input_shape": [
+        [
+          8192,
+          512
+        ],
+        [
+          8192
+        ],
+        [
+          2048,
+          512
+        ],
+        [
+          2048,
+          512
+        ],
+        [
+          16,
+          512
+        ],
+        [
+          2048,
+          4
+        ],
+        [
+          2048,
+          4
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          8191
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          15
+        ]
+      ],
+      "note": "M-bfloat16-fp32_scales-混合精度-drop_less | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 13,
+      "input_shape": [
+        [
+          1024,
+          128
+        ],
+        [
+          1024
+        ],
+        [
+          256,
+          128
+        ],
+        [
+          256,
+          128
+        ],
+        [
+          8,
+          128
+        ],
+        [
+          256,
+          4
+        ],
+        [
+          256,
+          4
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          0,
+          1023
+        ],
+        [
+          -10,
+          10
+        ],
+        [
+          -10,
+          10
+        ],
+        [
+          -10,
+          10
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          7
+        ]
+      ],
+      "note": "S-float16-边界值-drop_less | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 14,
+      "input_shape": [
+        [
+          256,
+          64
+        ],
+        [
+          256
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          8,
+          64
+        ],
+        [
+          64,
+          4
+        ],
+        [
+          64,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          255
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          7
+        ]
+      ],
+      "note": "XS-float32-小规模-完整参数-drop_less | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 15,
+      "input_shape": [
+        [
+          262144,
+          512
+        ],
+        [
+          262144
+        ],
+        [
+          32768,
+          512
+        ],
+        [
+          32768,
+          512
+        ],
+        [
+          64,
+          512
+        ],
+        [
+          32768,
+          8
+        ],
+        [
+          32768,
+          8
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          262143
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          63
+        ]
+      ],
+      "note": "XL-float16-超大规模-drop_less-对齐-K8 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 16,
+      "input_shape": [
+        [
+          2048,
+          32
+        ],
+        [
+          2048
+        ],
+        [
+          512,
+          32
+        ],
+        null,
+        [
+          16,
+          32
+        ],
+        [
+          512,
+          4
+        ],
+        [
+          512,
+          4
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          2047
+        ],
+        [
+          -1,
+          1
+        ],
+        null,
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          15
+        ]
+      ],
+      "note": "S-float16-H32最小值-无skip2 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 17,
+      "input_shape": [
+        [
+          1024,
+          512
+        ],
+        [
+          1024
+        ],
+        [
+          1024,
+          512
+        ],
+        [
+          1024,
+          512
+        ],
+        [
+          8,
+          512
+        ],
+        null,
+        [
+          1024,
+          1
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1023
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        null,
+        [
+          0,
+          7
+        ]
+      ],
+      "note": "M-float32-K1最小值-无scales | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 18,
+      "input_shape": [
+        [
+          4036,
+          1021
+        ],
+        [
+          4036
+        ],
+        [
+          1009,
+          1021
+        ],
+        [
+          1009,
+          1021
+        ],
+        [
+          16,
+          1021
+        ],
+        [
+          1009,
+          4
+        ],
+        [
+          1009,
+          4
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          4035
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          15
+        ]
+      ],
+      "note": "M-float16-质数非对齐NUM_ROWS-H1021 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 19,
+      "input_shape": [
+        [
+          1024,
+          128
+        ],
+        [
+          1024
+        ],
+        [
+          256,
+          128
+        ],
+        [
+          256,
+          128
+        ],
+        [
+          8,
+          128
+        ],
+        [
+          256,
+          4
+        ],
+        [
+          256,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 0
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1023
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          7
+        ]
+      ],
+      "note": "S-float32-零值输入测试 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    },
+    {
+      "operator": "MoeFinalizeRouting",
+      "case_id": 20,
+      "input_shape": [
+        [
+          16,
+          30,
+          256
+        ],
+        [
+          150
+        ],
+        [
+          150,
+          256
+        ],
+        [
+          150,
+          256
+        ],
+        [
+          16,
+          256
+        ],
+        [
+          150,
+          1
+        ],
+        [
+          150,
+          1
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "drop_pad_mode": 1
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          479
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          15
+        ]
+      ],
+      "note": "M-float16-drop_pad-3D-E16C30H256-含无效索引-1 | baseline_kernels: MoeFinalizeRoutingV2×1"
+    }
+  ],
+  "case_count": 20
+}

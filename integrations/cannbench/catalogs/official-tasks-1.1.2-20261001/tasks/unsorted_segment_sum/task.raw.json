@@ -1,0 +1,695 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "UnsortedSegmentSum",
+  "function_name": "unsorted_segment_sum",
+  "level": "level2",
+  "category": "ScatterUpdate",
+  "difficulty": "L2",
+  "description": "沿segment_ids指定的段对数据进行求和",
+  "desc_md": "# UnsortedSegmentSum 算子 API 描述\n\n## 1. 算子简介\n\n沿 segment_ids 指定的段对数据进行求和。\n\n**主要应用场景**：\n- 图神经网络中的节点特征聚合（按邻居分段求和）\n- 点云处理中的体素化聚合\n- 稀疏特征的按组求和与池化\n- 嵌入表梯度的按 ID 累加\n\n**算子特征**：\n- 难度等级：L2（ScatterUpdate）\n- 双输入单输出，根据 segment_ids 将 data 中的元素按段分组求和\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\ny[i] = \\sum_{j: \\text{segment\\_ids}[j] = i} \\text{data}[j]\n$$\n\n对于每个段 $i \\in [0, \\text{num\\_segments})$，将所有 segment_ids 等于 $i$ 的 data 元素在第 0 维上求和。若某段没有对应的元素，则输出为零。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.unsorted_segment_sum(Tensor data, Tensor segment_ids, int num_segments) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| data | Tensor | 必选 | 输入数据张量 |\n| segment_ids | Tensor | 必选 | 段 ID 张量，值在 [0, num_segments) 范围内 |\n| num_segments | int | 必选 | 段数量 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | (num_segments, *data.shape[1:]) | 与 data 相同 | 输出张量，段求和结果 |\n\n### 数据类型\n\n| data dtype | segment_ids dtype | 输出 dtype |\n|-----------|------------------|-----------|\n| float16 | int32 / int64 | float16 |\n| bfloat16 | int32 / int64 | bfloat16 |\n| float32 | int32 / int64 | float32 |\n| int32 | int32 / int64 | int32 |\n| int64 | int32 / int64 | int64 |\n\n### 规则与约束\n\n- segment_ids 必须为 1D 张量，长度等于 data 的第 0 维大小，即 `segment_ids.shape == (data.shape[0],)`\n- segment_ids 中的值必须在 `[0, num_segments)` 范围内\n- segment_ids 的 dtype 必须为 int32 或 int64\n- 输出的第 0 维大小为 num_segments，其余维度与 data 的尾部维度一致：`y.shape == (num_segments, *data.shape[1:])`\n- 输出 dtype 与 data 一致\n- 若某个段 ID 在 segment_ids 中未出现，对应输出段为全零\n- num_segments 必须为正整数\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `data.rank` | 1 ~ 8 | cases.csv 实测 1 ~ 5 |\n| `data.shape[0]`（段轴长度，N） | 1 ~ 4194304 | cases.csv 实测 2 ~ 2097152；约束 `segment_ids.shape[0] == data.shape[0]` |\n| `data.shape[1:]`（每个尾部维度） | 1 ~ 16384 | cases.csv 实测 7 ~ 8193 |\n| `segment_ids.rank` | 1 | 固定为 1D，长度等于 `data.shape[0]` |\n| `segment_ids.shape[0]` | 1 ~ 4194304 | cases.csv 实测 2 ~ 2097152；与 `data.shape[0]` 相等 |\n| `num_segments`（attr） | 1 ~ 32768 | cases.csv 实测 1 ~ 16384；约束 `segment_ids ∈ [0, num_segments)` |\n\n约束：\n- shape 关系：`segment_ids.shape == (data.shape[0],)`（必须为 1D 且长度等于 data 第 0 维）；`y.shape == (num_segments, *data.shape[1:])`。\n- dtype 关系：`y.dtype == data.dtype`（输出沿 data dtype）；`segment_ids.dtype ∈ {int32, int64}`，与 data dtype 解耦。\n- 值域约束：`segment_ids` 中每个元素 `v` 必须满足 `0 ≤ v < num_segments`；越界元素的行为未定义。\n- 稀疏段：未在 `segment_ids` 中出现的段 ID 对应输出行为全零（zero-fill）。\n- attr 约束：`num_segments` 必须为正整数。\n- 数值精度：浮点 dtype 下内部使用 fp32 累加以减小累积误差（参见 §5 golden 代码）；NaN/Inf 在求和后可能传播为输出 NaN/Inf。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nUnsortedSegmentSum算子Torch Golden参考实现\n\n沿segment_ids指定的段对数据进行求和\n公式: y[i] = sum(data[j]) where segment_ids[j] == i\n\"\"\"\ndef unsorted_segment_sum(\n    data: torch.Tensor, segment_ids: torch.Tensor, num_segments: int\n) -> torch.Tensor:\n    \"\"\"\n    沿segment_ids指定的段对数据进行求和\n    \n    公式: y[i] = sum(data[j]) where segment_ids[j] == i\n    \n    对于 FP16/BF16 输入，使用 FP32 进行内部累加以保证精度，\n    其他类型保持原样\n    \n    Args:\n        data: 输入数据张量\n        segment_ids: 段ID张量\n        num_segments: 段数量\n    \n    Returns:\n        输出张量，段求和结果\n    \"\"\"\n\n    output_shape = (num_segments,) + data.shape[1:]\n    \n    # FP16/BF16 输入升精度到 FP32 进行累加以保证精度\n    if data.dtype in (torch.float16, torch.bfloat16):\n        y_fp32 = torch.zeros(output_shape, dtype=torch.float32, device=data.device)\n        data_fp32 = data.to(torch.float32)\n        y_fp32.index_add_(0, segment_ids, data_fp32)\n        y = y_fp32.to(data.dtype)\n    else:\n        y = torch.zeros(output_shape, dtype=data.dtype, device=data.device)\n        y.index_add_(0, segment_ids, data)\n    \n    return y\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\ndata = torch.randn(1048576, dtype=torch.float16, device=\"npu\")\nsegment_ids = torch.randint(0, 1024, (1048576,), dtype=torch.int32, device=\"npu\")\ny = cann_bench.unsorted_segment_sum(data, segment_ids, num_segments=1024)\n\n# 2D 数据按段求和\ndata = torch.randn(1024, 1024, dtype=torch.float32, device=\"npu\")\nsegment_ids = torch.randint(0, 256, (1024,), dtype=torch.int32, device=\"npu\")\ny = cann_bench.unsorted_segment_sum(data, segment_ids, num_segments=256)\n\n# int32 数据类型\ndata = torch.randint(-1000, 1000, (2048, 512), dtype=torch.int32, device=\"npu\")\nsegment_ids = torch.randint(0, 512, (2048,), dtype=torch.int32, device=\"npu\")\ny = cann_bench.unsorted_segment_sum(data, segment_ids, num_segments=512)\n```\n",
+  "proto": {
+    "name": "UnsortedSegmentSum",
+    "category": "ScatterUpdate",
+    "difficulty": "L2",
+    "formula": "y[i] = sum(data[j]) where segment_ids[j] == i",
+    "description": "沿segment_ids指定的段对数据进行求和",
+    "shape_support": "输入ND格式",
+    "precision_thresholds": {
+      "float32": 0.001
+    },
+    "attrs": [
+      {
+        "name": "num_segments",
+        "type": "INT",
+        "description": "段数量",
+        "required": true
+      }
+    ],
+    "inputs": [
+      {
+        "name": "data",
+        "description": "输入数据张量",
+        "dtype": [
+          "float16",
+          "bfloat16",
+          "float32",
+          "int32",
+          "int64"
+        ]
+      },
+      {
+        "name": "segment_ids",
+        "description": "段ID张量",
+        "dtype": [
+          "int32",
+          "int64"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出张量，段求和结果",
+        "dtype": [
+          "float16",
+          "bfloat16",
+          "float32",
+          "int32",
+          "int64"
+        ]
+      }
+    ],
+    "schema": "unsorted_segment_sum(Tensor data, Tensor segment_ids, int num_segments) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nUnsortedSegmentSum算子Torch Golden参考实现\n\n沿segment_ids指定的段对数据进行求和\n公式: y[i] = sum(data[j]) where segment_ids[j] == i\n\"\"\"\ndef unsorted_segment_sum(\n    data: torch.Tensor, segment_ids: torch.Tensor, num_segments: int\n) -> torch.Tensor:\n    \"\"\"\n    沿segment_ids指定的段对数据进行求和\n\n    公式: y[i] = sum(data[j]) where segment_ids[j] == i\n\n    对于 FP16 输入，使用 FP32 进行内部累加以保证精度，其他类型保持原样\n\n    Args:\n        data: 输入数据张量\n        segment_ids: 段ID张量\n        num_segments: 段数量\n\n    Returns:\n        输出张量，段求和结果\n    \"\"\"\n    output_shape = (num_segments,) + data.shape[1:]\n\n    # FP16/BF16 输入升精度到 FP32 进行累加以保证精度\n    if data.dtype in (torch.float16, torch.bfloat16):\n        y_fp32 = torch.zeros(output_shape, dtype=torch.float32, device=data.device)\n        data_fp32 = data.to(torch.float32)\n        y_fp32.index_add_(0, segment_ids, data_fp32)\n        y = y_fp32.to(data.dtype)\n    else:\n        y = torch.zeros(output_shape, dtype=data.dtype, device=data.device)\n        y.index_add_(0, segment_ids, data)\n\n    return y\n",
+  "cases_yaml": [
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          1024
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 1024
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1023
+        ]
+      ],
+      "note": "S-float16-int32_ids-1M-对齐-对称小值域 | baseline_kernels: ZerosLike×1 + Cast×1 + InplaceIndexAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 2048
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          0,
+          2047
+        ]
+      ],
+      "note": "M-float32-int32_ids-4M-对齐-对称小值域 | baseline_kernels: ZerosLike×1 + Cast×1 + InplaceScatterAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64"
+      ],
+      "attrs": {
+        "num_segments": 4096
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          0,
+          4095
+        ]
+      ],
+      "note": "M-bfloat16-int64_ids-16M-对齐-对称小值域 | baseline_kernels: ZerosLike×1 + Cast×1 + Sort×1 + InplaceIndexAddWithSorted×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8192,
+          8192
+        ],
+        [
+          8192
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 8192
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          0,
+          8191
+        ]
+      ],
+      "note": "L-int32-int32_ids-67M-对齐-对称中值域 | baseline_kernels: ZerosLike×1 + Cast×1 + InplaceScatterAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4096,
+          8192
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "int64",
+        "int64"
+      ],
+      "attrs": {
+        "num_segments": 16384
+      },
+      "value_range": [
+        [
+          -100000,
+          100000
+        ],
+        [
+          0,
+          16383
+        ]
+      ],
+      "note": "L-int64-int64_ids-268M-对齐-对称大值域 | baseline_kernels: ZerosLike×1 + InplaceIndexAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 6,
+      "input_shape": [
+        [
+          1023,
+          1023
+        ],
+        [
+          1023
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 1023
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          0,
+          1022
+        ]
+      ],
+      "note": "S-float16-int32_ids-1M-非对齐-对称微小值域 | baseline_kernels: ZerosLike×1 + Cast×1 + InplaceIndexAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1009,
+          1021
+        ],
+        [
+          1009
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 1009
+      },
+      "value_range": [
+        [
+          -1,
+          2
+        ],
+        [
+          0,
+          1008
+        ]
+      ],
+      "note": "S-float32-int32_ids-1M-质数非对齐-非对称小值域 | baseline_kernels: ZerosLike×1 + Cast×1 + InplaceScatterAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1537,
+          769
+        ],
+        [
+          1537
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 1537
+      },
+      "value_range": [
+        [
+          -5,
+          10
+        ],
+        [
+          0,
+          1536
+        ]
+      ],
+      "note": "S-bfloat16-int32_ids-1M-非对齐-非对称中值域 | baseline_kernels: ZerosLike×1 + Cast×2 + Sort×1 + InplaceIndexAddWithSorted×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 9,
+      "input_shape": [
+        [
+          363,
+          367,
+          373
+        ],
+        [
+          363
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 363
+      },
+      "value_range": [
+        [
+          -50,
+          100
+        ],
+        [
+          0,
+          362
+        ]
+      ],
+      "note": "M-float16-int32_ids-50M-质数非对齐-非对称大值域-3D | baseline_kernels: ZerosLike×1 + Cast×1 + InplaceIndexAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 10,
+      "input_shape": [
+        [
+          2049,
+          513
+        ],
+        [
+          2049
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int64"
+      ],
+      "attrs": {
+        "num_segments": 2049
+      },
+      "value_range": [
+        [
+          -65504,
+          65504
+        ],
+        [
+          0,
+          2048
+        ]
+      ],
+      "note": "S-float32-int64_ids-1M-非对齐-float16边界值 | baseline_kernels: ZerosLike×1 + InplaceScatterAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 11,
+      "input_shape": [
+        [
+          3,
+          7,
+          13,
+          4001
+        ],
+        [
+          3
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 3
+      },
+      "value_range": [
+        [
+          -88,
+          88
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "note": "S-bfloat16-int32_ids-1M-质数非对齐-float32边界值-4D | baseline_kernels: ZerosLike×1 + Cast×2 + Sort×1 + InplaceIndexAddWithSorted×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 12,
+      "input_shape": [
+        [
+          1048589
+        ],
+        [
+          1048589
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 1024
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          0,
+          1023
+        ]
+      ],
+      "note": "S-float16-int32_ids-1M-质数非对齐-inf特殊值-1D-v2 | baseline_kernels: ZerosLike×1 + Cast×1 + InplaceIndexAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 13,
+      "input_shape": [
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ],
+        [
+          11
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 11
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          0,
+          10
+        ]
+      ],
+      "note": "M-float32-int32_ids-10M-质数非对齐-nan特殊值-5D | baseline_kernels: ZerosLike×1 + Cast×1 + InplaceScatterAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 14,
+      "input_shape": [
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ],
+        [
+          3
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 3
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "note": "S-bfloat16-int32_ids-3M-质数非对齐-零值-5D | baseline_kernels: ZerosLike×1 + Cast×2 + Sort×1 + InplaceIndexAddWithSorted×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 15,
+      "input_shape": [
+        [
+          1048583
+        ],
+        [
+          1048583
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 1
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "S-float32-num_segments=1-1M-质数非对齐-全归约 | baseline_kernels: ZerosLike×1 + Cast×1 + InplaceScatterAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 16,
+      "input_shape": [
+        [
+          2097152
+        ],
+        [
+          2097152
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 4096
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          0,
+          4095
+        ]
+      ],
+      "note": "M-float16-num_segments=4096-2M-对齐-多段 | baseline_kernels: ZerosLike×1 + Cast×1 + InplaceIndexAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 17,
+      "input_shape": [
+        [
+          512,
+          2049
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 512
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          0,
+          511
+        ]
+      ],
+      "note": "S-bfloat16-int32_ids-1M-非对齐-对称微小值域 | baseline_kernels: ZerosLike×1 + Cast×2 + Sort×1 + InplaceIndexAddWithSorted×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 18,
+      "input_shape": [
+        [
+          255,
+          8193
+        ],
+        [
+          255
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int64"
+      ],
+      "attrs": {
+        "num_segments": 255
+      },
+      "value_range": [
+        [
+          -1,
+          3
+        ],
+        [
+          0,
+          254
+        ]
+      ],
+      "note": "S-float16-int64_ids-2M-非对齐-非对称小值域 | baseline_kernels: ZerosLike×1 + InplaceIndexAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4097,
+          511
+        ],
+        [
+          4097
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 4097
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          0,
+          4096
+        ]
+      ],
+      "note": "S-float32-int32_ids-2M-非对齐-对称大值域 | baseline_kernels: ZerosLike×1 + Cast×1 + InplaceScatterAdd×1"
+    },
+    {
+      "operator": "UnsortedSegmentSum",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          511,
+          2049
+        ],
+        [
+          2
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "num_segments": 2
+      },
+      "value_range": [
+        [
+          -3,
+          6
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-bfloat16-int32_ids-2M-非对齐-非对称中值域-3D | baseline_kernels: ZerosLike×1 + Cast×2 + Sort×1 + InplaceIndexAddWithSorted×1"
+    }
+  ],
+  "case_count": 20
+}

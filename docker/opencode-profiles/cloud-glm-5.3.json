@@ -1,0 +1,41 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "gateway": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "OpenCode gateway",
+      "options": {
+        "baseURL": "{env:OPENCODE_BASE_URL}",
+        "apiKey": "{env:OPENCODE_API_KEY}"
+      },
+      "models": {
+        "glm-5.3": {
+          "name": "GLM-5.3",
+          "options": {
+            "thinking": {"type": "disabled"},
+            "reasoningEffort": "low",
+            "reasoning_effort": "low"
+          },
+          "limit": {
+            "context": 256000,
+            "output": 32768
+          }
+        }
+      }
+    }
+  },
+  "model": "gateway/glm-5.3",
+  "permission": {
+    "read": "allow",
+    "edit": "allow",
+    "bash": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "skill": "allow",
+    "task": "allow",
+    "external_directory": {
+      "*": "deny"
+    }
+  }
+}

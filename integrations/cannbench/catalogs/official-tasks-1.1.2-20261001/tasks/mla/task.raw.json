@@ -1,0 +1,1191 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "MLA",
+  "function_name": "mla",
+  "level": "level4",
+  "category": "FusedComposite",
+  "difficulty": "L4",
+  "description": "多头潜在注意力 (Multi-Head Latent Attention)，Q 和 K 均分为 nope/rope 两部分拼接；v 与 k_nope 在数值上完全相同 (共享 latent KV cache)，接口保留独立入参以兼容通用 attention API；支持 BSND/BNSD layout",
+  "desc_md": "# MLA 算子 API 描述\n\n## 1. 算子简介\n\n多头潜在注意力 (Multi-Head Latent Attention) 算子，仅包含注意力计算部分（不含 KV 解压缩），是 DeepSeek-V2/V3 等模型的核心注意力机制。\n\n**主要应用场景**：\n- 大语言模型推理中的 MLA 注意力计算（如 DeepSeek-V2、DeepSeek-V3）\n- 超长序列推理场景\n- 需要在推理效率和模型质量之间取得平衡的大规模 Transformer 架构\n\n**算子特征**：\n- 难度等级：L4（FusedComposite）\n- 多输入（q_nope, q_rope, k_nope, k_rope, v）单输出\n- Q 和 K 均分为 nope 和 rope 两部分传入，内部拼接后计算注意力\n- V 与 K_nope 不仅 shape 相同 (`[B, S_kv, N_kv, d_nope]`)，**数值上也完全相同**——生产环境中 V 就是从 latent KV cache 读出的 K_nope 那段内存，共享同一份数据；算子接口为兼容通用 attention API 保留为独立入参\n- 输出 head dim 为 d_nope\n- 支持 GQA 模式（N_q 个 query head 共享 N_kv 个 KV head），MLA 典型配置 N_kv=1\n- 支持 BSND 和 BNSD 两种输入输出 layout\n- 支持 `is_causal` 因果掩码：仅计算 attention 矩阵 [S, S_kv] 中从右下角向左上方延伸 45° 对角线及其下方部分（其余位置在 softmax 前置 -inf）\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\nQ = \\text{concat}(Q_{nope}, Q_{rope}) \\quad \\text{dim: } d_{nope} + d_{rope}\n$$\n\n$$\nK = \\text{concat}(K_{nope}, K_{rope}) \\quad \\text{dim: } d_{nope} + d_{rope}\n$$\n\n$$\ny = \\text{softmax}\\left(Q \\times K^T \\times \\text{scaleValue}\\right) \\times V\n$$\n\n其中：\n- $Q_{nope}$、$K_{nope}$ 为 nope 部分，维度 $d_{nope}$\n- $Q_{rope}$、$K_{rope}$ 为 rope 部分（经过 RoPE 编码），维度 $d_{rope}$\n- $V$ 的 head dim 为 $d_{nope}$，因此输出的 head dim 也为 $d_{nope}$\n- $\\text{scaleValue}$ 为缩放因子（<=0 时自动使用 $1/\\sqrt{d_{nope} + d_{rope}}$）\n- 当 $N_q > N_{kv}$ 时进行 GQA 扩展，每个 KV head 被 $N_q / N_{kv}$ 个 query head 共享\n\n具体子步骤：\n1. **Q 拼接**：$Q = \\text{concat}(Q_{nope}, Q_{rope})$\n2. **K 拼接**：$K = \\text{concat}(K_{nope}, K_{rope})$\n3. **GQA 扩展**：将 KV head 复制 $N_q / N_{kv}$ 次匹配 query head 数\n4. **缩放点积**：$\\text{scores} = Q \\times K^T \\times \\text{scaleValue}$\n5. **因果掩码（可选）**：当 `is_causal=True` 时，对 `scores[..., i, j]` 满足 $j > i + (S_{kv} - S)$ 的位置置为 $-\\infty$（即仅保留从右下角向左上方 45° 延伸的对角线及其下方部分），$S=S_{kv}$ 时退化为标准下三角掩码\n6. **Softmax 归一化**：$\\text{attn\\_weights} = \\text{softmax}(\\text{scores}, \\text{dim}=-1)$\n7. **加权求和**：$y = \\text{attn\\_weights} \\times V$\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.mla(Tensor q_nope, Tensor q_rope, Tensor k_nope, Tensor k_rope, Tensor v, int numKVHeads=1, float scaleValue=-1.0, str inputLayout=\"BSND\", bool is_causal=False) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| q_nope | Tensor | 必选 | query 的 nope 部分，BSND: [B, S, N_q, d_nope]，BNSD: [B, N_q, S, d_nope] |\n| q_rope | Tensor | 必选 | query 的 rope 部分，BSND: [B, S, N_q, d_rope]，BNSD: [B, N_q, S, d_rope] |\n| k_nope | Tensor | 必选 | key 的 nope 部分，BSND: [B, S_kv, N_kv, d_nope]，BNSD: [B, N_kv, S_kv, d_nope] |\n| k_rope | Tensor | 必选 | key 的 rope 部分，BSND: [B, S_kv, N_kv, d_rope]，BNSD: [B, N_kv, S_kv, d_rope] |\n| v | Tensor | 必选 | 值张量，BSND: [B, S_kv, N_kv, d_nope]，BNSD: [B, N_kv, S_kv, d_nope]。语义上要求 `v == k_nope`（数值完全相同，共享 latent KV cache） |\n| numKVHeads | int | 1 | KV 头数 |\n| scaleValue | float | -1.0 | 缩放因子，<=0 时自动使用 1/sqrt(d_nope + d_rope) |\n| inputLayout | str | \"BSND\" | 输入输出 layout，\"BSND\" 或 \"BNSD\" |\n| is_causal | bool | False | 是否启用因果掩码。False 时全计算；True 时仅计算 [S, S_kv] attention 矩阵中从右下角向左上方 45° 延伸的对角线及其下方部分（即满足 $j \\le i + (S_{kv} - S)$ 的位置），上方部分在 softmax 前置 -inf |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | BSND: [B, S, N_q, d_nope]；BNSD: [B, N_q, S, d_nope] | 与输入相同 | 注意力输出张量，head dim 为 d_nope |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| float16 | float16 |\n| bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- 所有输入 Tensor 的 dtype 必须一致\n- N_q 必须能被 N_kv 整除\n- q_nope 和 k_nope 的 head dim 一致（d_nope），q_rope 和 k_rope 的 head dim 一致（d_rope）\n- v 的 head dim = d_nope，输出的 head dim 也为 d_nope\n- **语义约束 `v == k_nope`**：v 与 k_nope 在数值上必须完全相同（共享同一份 latent KV cache）。算子接口保留独立入参以兼容标准 attention API，但调用方有责任保证两者一致；本规范的 Golden 实现不强制检查\n- 所有输入和输出遵循相同的 layout（BSND 或 BNSD）\n- `is_causal=True` 时要求 $S \\le S_{kv}$（否则 mask 会将部分 query 行全部屏蔽，导致 softmax 出现 NaN）\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `B`（batch） | 1 ~ 128 | cases.csv 实测 1 ~ 128 |\n| `S`（query 序列长度） | 1 ~ 512 | cases.csv 实测 BSND: 1 / 2 / 128 / 256；BNSD: 1 / 2 / 128 / 512 |\n| `S_kv`（KV 序列长度） | 128 ~ 2048 | cases.csv 实测 128 / 256 / 512 / 1024 / 2048；`is_causal=True` 时要求 $S \\le S_{kv}$ |\n| `N_q`（query head 数） | 32 ~ 128 | cases.csv 实测 64 / 128；必须能被 `N_kv` 整除 |\n| `N_kv`（KV head 数 = `numKVHeads`） | 1 | MLA 典型配置，固定为 1 |\n| `d_nope`（nope head dim） | 128 ~ 512，64 对齐 | cases.csv 实测 448 / 512；与 `v`、输出 head dim 一致 |\n| `d_rope`（rope head dim） | 32 ~ 128，64 对齐 | cases.csv 实测均为 64 |\n| `scaleValue` | float (`<=0` 自动取 $1/\\sqrt{d_{nope}+d_{rope}}$) | cases.csv 实测均为 -1.0（走默认缩放） |\n| `inputLayout` | `\"BSND\"` / `\"BNSD\"` | cases.csv 实测两种 layout 均覆盖 |\n| `is_causal` | `True` / `False` | cases.csv 实测两种取值均覆盖 |\n\n约束：`N_q` 必须能被 `N_kv` 整除；`q_nope`、`k_nope`、`v` 的最后一维必须相同（均为 `d_nope`），`q_rope`、`k_rope` 的最后一维必须相同（均为 `d_rope`）；所有输入 dtype 必须一致；`is_causal=True` 时必须满足 $S \\le S_{kv}$。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nMLA算子Torch Golden参考实现\n\n多头潜在注意力 (Multi-Head Latent Attention)，仅包含注意力计算部分\nQ 和 K 均分为 nope 和 rope 两部分传入，内部拼接后计算注意力\n支持 BSND 和 BNSD 两种输入 layout\n\n语义约束:\n    v 与 k_nope 在数值上完全相同 (共享同一份 latent KV cache)。\n    算子接口为兼容通用 attention API 保留独立入参；调用方需保证两者\n    一致，本 Golden 实现不做强制检查。\n\n公式:\n    Q = concat(Q_nope, Q_rope)   dim: d_nope + d_rope\n    K = concat(K_nope, K_rope)   dim: d_nope + d_rope\n    V = K_nope                    dim: d_nope     (语义上等价)\n    y = softmax(Q @ K^T * scaleValue) @ V\n\"\"\"\n\n\ndef mla(\n    q_nope: torch.Tensor,\n    q_rope: torch.Tensor,\n    k_nope: torch.Tensor,\n    k_rope: torch.Tensor,\n    v: torch.Tensor,\n    numKVHeads: int = 1,\n    scaleValue: float = -1.0,\n    inputLayout: str = \"BSND\",\n    is_causal: bool = False,\n) -> torch.Tensor:\n    \"\"\"\n    多头潜在注意力 (Multi-Head Latent Attention)\n\n    Args:\n        q_nope: query 的 nope 部分，BSND: [B, S, N_q, d_nope]，BNSD: [B, N_q, S, d_nope]\n        q_rope: query 的 rope 部分，BSND: [B, S, N_q, d_rope]，BNSD: [B, N_q, S, d_rope]\n        k_nope: key 的 nope 部分，BSND: [B, S_kv, N_kv, d_nope]，BNSD: [B, N_kv, S_kv, d_nope]\n        k_rope: key 的 rope 部分，BSND: [B, S_kv, N_kv, d_rope]，BNSD: [B, N_kv, S_kv, d_rope]\n        v: 值张量，BSND: [B, S_kv, N_kv, d_nope]，BNSD: [B, N_kv, S_kv, d_nope]\n        numKVHeads: KV 头数\n        scaleValue: 缩放因子，<=0 时自动使用 1/sqrt(d_nope + d_rope)\n        inputLayout: 输入 layout，\"BSND\" 或 \"BNSD\"\n        is_causal: 是否启用因果掩码（右下角对齐），True 时 scores[..., i, j] 满足\n            j > i + (S_kv - S) 的位置在 softmax 前置为 -inf。要求 S <= S_kv。\n\n    Returns:\n        输出张量，与输入 layout 一致，head dim 为 d_nope\n    \"\"\"\n    # 统一转为 BSND 内部计算\n    if inputLayout == \"BNSD\":\n        q_nope = q_nope.permute(0, 2, 1, 3)\n        q_rope = q_rope.permute(0, 2, 1, 3)\n        k_nope = k_nope.permute(0, 2, 1, 3)\n        k_rope = k_rope.permute(0, 2, 1, 3)\n        v = v.permute(0, 2, 1, 3)\n\n    B, S, N_q, d_nope = q_nope.shape\n    d_rope = q_rope.shape[-1]\n    D_qk = d_nope + d_rope\n    S_kv = k_nope.shape[1]\n    N_kv = numKVHeads\n\n    if scaleValue <= 0:\n        scaleValue = 1.0 / (D_qk ** 0.5)\n\n    # 拼接 Q = [Q_nope, Q_rope]: [B, S, N_q, d_nope + d_rope]\n    q = torch.cat([q_nope, q_rope], dim=-1)\n\n    # 拼接 K = [K_nope, K_rope]: [B, S_kv, N_kv, d_nope + d_rope]\n    k = torch.cat([k_nope, k_rope], dim=-1)\n\n    # GQA: 每个 KV head 被 G = N_q // N_kv 个 Q head 共享。不把 K/V 物化到 N_q 头\n    # (fp64 oracle 下大 batch 用例会物化上百 GiB → OOM)，而是把 group 维折叠进\n    # matmul 的 M 维: Q -> [B, N_kv, G*S, D]，K/V 保持 N_kv 头随 batched matmul 复用。\n    # 数值上与展开完全等价，峰值内存由 scores 决定而非物化后的 K/V。\n    G = N_q // N_kv\n    q = q.reshape(B, S, N_kv, G, D_qk).permute(0, 2, 3, 1, 4).reshape(B, N_kv, G * S, D_qk)\n    k = k.permute(0, 2, 1, 3)  # [B, N_kv, S_kv, D_qk]\n    v = v.permute(0, 2, 1, 3)  # [B, N_kv, S_kv, d_nope]\n\n    # 缩放点积注意力: scores [B, N_kv, G*S, S_kv]，还原 G/S 两维以便掩码与 softmax\n    scores = torch.matmul(q, k.transpose(-2, -1)) * scaleValue\n    scores = scores.reshape(B, N_kv, G, S, S_kv)\n    if is_causal:\n        i = torch.arange(S, device=scores.device).unsqueeze(-1)\n        j = torch.arange(S_kv, device=scores.device).unsqueeze(0)\n        causal_mask = j > (i + (S_kv - S))  # 右下角对齐：上三角置 -inf；[S, S_kv] 广播到各 group\n        scores = scores.masked_fill(causal_mask, float('-inf'))\n    # F217: 全 mask 行 (整行 = -inf) 在 softmax 时得 0/0 = NaN，对齐\n    # sparse_flash_attention 加显式保护 → 全 mask 行权重置 0。\n    scores_max = scores.max(dim=-1, keepdim=True).values\n    all_masked = torch.isinf(scores_max) & (scores_max < 0)\n    attn_weights = torch.nn.functional.softmax(scores, dim=-1)\n    attn_weights = torch.where(all_masked, torch.zeros_like(attn_weights), attn_weights)\n    attn_weights = attn_weights.reshape(B, N_kv, G * S, S_kv)\n    out = torch.matmul(attn_weights, v)  # [B, N_kv, G*S, d_nope]\n\n    # 还原为 BSND: [B, S, N_q, d_nope]（N_q 头序 = n_kv * G + g，与展开路径一致）\n    out = out.reshape(B, N_kv, G, S, d_nope).permute(0, 3, 1, 2, 4).reshape(B, S, N_q, d_nope)\n\n    # 按输入 layout 输出\n    if inputLayout == \"BNSD\":\n        out = out.permute(0, 2, 1, 3)\n\n    # 上面的 reshape/permute 链留下的是 view, 而输出契约要求 contiguous (issue #146)\n    return out.contiguous()\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nB, S, S_kv = 2, 128, 256\nN_q, N_kv = 128, 1\nd_nope, d_rope = 512, 64\n\n# BSND layout\nq_nope = torch.randn(B, S, N_q, d_nope, dtype=torch.float16, device=\"npu\")\nq_rope = torch.randn(B, S, N_q, d_rope, dtype=torch.float16, device=\"npu\")\nk_nope = torch.randn(B, S_kv, N_kv, d_nope, dtype=torch.float16, device=\"npu\")\nk_rope = torch.randn(B, S_kv, N_kv, d_rope, dtype=torch.float16, device=\"npu\")\nv = torch.randn(B, S_kv, N_kv, d_nope, dtype=torch.float16, device=\"npu\")\ny = cann_bench.mla(q_nope, q_rope, k_nope, k_rope, v,\n                      numKVHeads=N_kv, scaleValue=-1.0, inputLayout=\"BSND\", is_causal=False)\n# y shape: [B, S, N_q, d_nope] = [2, 128, 128, 512]\n```\n",
+  "proto": {
+    "name": "MLA",
+    "category": "FusedComposite",
+    "difficulty": "L4",
+    "formula": "Q = concat(Q_nope, Q_rope)   dim: d_nope + d_rope\nK = concat(K_nope, K_rope)   dim: d_nope + d_rope\nV = K_nope                    dim: d_nope        (语义上等价)\ny = softmax(Q @ K^T * scaleValue) @ V\n",
+    "description": "多头潜在注意力 (Multi-Head Latent Attention)，Q 和 K 均分为 nope/rope 两部分拼接；v 与 k_nope 在数值上完全相同 (共享 latent KV cache)，接口保留独立入参以兼容通用 attention API；支持 BSND/BNSD layout",
+    "shape_support": "BSND: q_nope/v [B, S, N, d_nope]，q_rope [B, S, N, d_rope]，k_nope [B, S_kv, N_kv, d_nope]，k_rope [B, S_kv, N_kv, d_rope]；BNSD 对应交换 S 和 N 维度",
+    "attrs": [
+      {
+        "name": "numKVHeads",
+        "type": "int",
+        "default": 1,
+        "description": "KV 头数",
+        "required": true
+      },
+      {
+        "name": "scaleValue",
+        "type": "float",
+        "default": -1.0,
+        "description": "缩放因子，<=0 时自动使用 1/sqrt(d_nope + d_rope)",
+        "required": false
+      },
+      {
+        "name": "inputLayout",
+        "type": "str",
+        "default": "BSND",
+        "description": "输入输出 layout，\"BSND\" 或 \"BNSD\"",
+        "required": false
+      },
+      {
+        "name": "is_causal",
+        "type": "bool",
+        "default": false,
+        "description": "是否启用因果掩码（右下角对齐），True 时仅计算 attention 矩阵中 j <= i + (S_kv - S) 的位置",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "q_nope",
+        "description": "query 的 nope 部分",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "BSND: [B, S, N_q, d_nope]；BNSD: [B, N_q, S, d_nope]"
+      },
+      {
+        "name": "q_rope",
+        "description": "query 的 rope 部分",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "BSND: [B, S, N_q, d_rope]；BNSD: [B, N_q, S, d_rope]"
+      },
+      {
+        "name": "k_nope",
+        "description": "key 的 nope 部分",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "BSND: [B, S_kv, N_kv, d_nope]；BNSD: [B, N_kv, S_kv, d_nope]"
+      },
+      {
+        "name": "k_rope",
+        "description": "key 的 rope 部分",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "BSND: [B, S_kv, N_kv, d_rope]；BNSD: [B, N_kv, S_kv, d_rope]"
+      },
+      {
+        "name": "v",
+        "description": "值张量，head dim 为 d_nope。语义上 v 与 k_nope 数值完全相同 (共享同一份 latent KV cache，生产环境中即同一段 HBM)；接口保留独立入参以兼容通用 attention API",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "BSND: [B, S_kv, N_kv, d_nope]；BNSD: [B, N_kv, S_kv, d_nope]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "注意力输出张量，head dim 为 d_nope",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "BSND: [B, S, N_q, d_nope]；BNSD: [B, N_q, S, d_nope]"
+      }
+    ],
+    "schema": "mla(Tensor q_nope, Tensor q_rope, Tensor k_nope, Tensor k_rope, Tensor v, int numKVHeads=1, float scaleValue=-1.0, str inputLayout=\"BSND\", bool is_causal=False) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nMLA算子Torch Golden参考实现\n\n多头潜在注意力 (Multi-Head Latent Attention)，仅包含注意力计算部分\nQ 和 K 均分为 nope 和 rope 两部分传入，内部拼接后计算注意力\n支持 BSND 和 BNSD 两种输入 layout\n\n语义约束:\n    v 与 k_nope 在数值上完全相同 (共享同一份 latent KV cache)。\n    算子接口为兼容通用 attention API 保留独立入参；调用方需保证两者\n    一致，本 Golden 实现不做强制检查。\n\n公式:\n    Q = concat(Q_nope, Q_rope)   dim: d_nope + d_rope\n    K = concat(K_nope, K_rope)   dim: d_nope + d_rope\n    V = K_nope                    dim: d_nope     (语义上等价)\n    y = softmax(Q @ K^T * scaleValue) @ V\n\"\"\"\n\n\ndef mla(\n    q_nope: torch.Tensor,\n    q_rope: torch.Tensor,\n    k_nope: torch.Tensor,\n    k_rope: torch.Tensor,\n    v: torch.Tensor,\n    numKVHeads: int = 1,\n    scaleValue: float = -1.0,\n    inputLayout: str = \"BSND\",\n    is_causal: bool = False,\n) -> torch.Tensor:\n    \"\"\"\n    多头潜在注意力 (Multi-Head Latent Attention)\n\n    Args:\n        q_nope: query 的 nope 部分，BSND: [B, S, N_q, d_nope]，BNSD: [B, N_q, S, d_nope]\n        q_rope: query 的 rope 部分，BSND: [B, S, N_q, d_rope]，BNSD: [B, N_q, S, d_rope]\n        k_nope: key 的 nope 部分，BSND: [B, S_kv, N_kv, d_nope]，BNSD: [B, N_kv, S_kv, d_nope]\n        k_rope: key 的 rope 部分，BSND: [B, S_kv, N_kv, d_rope]，BNSD: [B, N_kv, S_kv, d_rope]\n        v: 值张量，BSND: [B, S_kv, N_kv, d_nope]，BNSD: [B, N_kv, S_kv, d_nope]\n        numKVHeads: KV 头数\n        scaleValue: 缩放因子，<=0 时自动使用 1/sqrt(d_nope + d_rope)\n        inputLayout: 输入 layout，\"BSND\" 或 \"BNSD\"\n        is_causal: 是否启用因果掩码（右下角对齐），True 时 scores[..., i, j] 满足\n            j > i + (S_kv - S) 的位置在 softmax 前置为 -inf。要求 S <= S_kv。\n\n    Returns:\n        输出张量，与输入 layout 一致，head dim 为 d_nope\n    \"\"\"\n    # 统一转为 BSND 内部计算\n    if inputLayout == \"BNSD\":\n        q_nope = q_nope.permute(0, 2, 1, 3)\n        q_rope = q_rope.permute(0, 2, 1, 3)\n        k_nope = k_nope.permute(0, 2, 1, 3)\n        k_rope = k_rope.permute(0, 2, 1, 3)\n        v = v.permute(0, 2, 1, 3)\n\n    B, S, N_q, d_nope = q_nope.shape\n    d_rope = q_rope.shape[-1]\n    D_qk = d_nope + d_rope\n    S_kv = k_nope.shape[1]\n    N_kv = numKVHeads\n\n    if scaleValue <= 0:\n        scaleValue = 1.0 / (D_qk ** 0.5)\n\n    # 拼接 Q = [Q_nope, Q_rope]: [B, S, N_q, d_nope + d_rope]\n    q = torch.cat([q_nope, q_rope], dim=-1)\n\n    # 拼接 K = [K_nope, K_rope]: [B, S_kv, N_kv, d_nope + d_rope]\n    k = torch.cat([k_nope, k_rope], dim=-1)\n\n    # GQA: 每个 KV head 被 G = N_q // N_kv 个 Q head 共享。不把 K/V 物化到 N_q 头\n    # (fp64 oracle 下大 batch 用例会物化上百 GiB → OOM)，而是把 group 维折叠进\n    # matmul 的 M 维: Q -> [B, N_kv, G*S, D]，K/V 保持 N_kv 头随 batched matmul 复用。\n    # 数值上与展开完全等价，峰值内存由 scores 决定而非物化后的 K/V。\n    G = N_q // N_kv\n    q = q.reshape(B, S, N_kv, G, D_qk).permute(0, 2, 3, 1, 4).reshape(B, N_kv, G * S, D_qk)\n    k = k.permute(0, 2, 1, 3)  # [B, N_kv, S_kv, D_qk]\n    v = v.permute(0, 2, 1, 3)  # [B, N_kv, S_kv, d_nope]\n\n    # 缩放点积注意力: scores [B, N_kv, G*S, S_kv]，还原 G/S 两维以便掩码与 softmax\n    scores = torch.matmul(q, k.transpose(-2, -1)) * scaleValue\n    scores = scores.reshape(B, N_kv, G, S, S_kv)\n    if is_causal:\n        i = torch.arange(S, device=scores.device).unsqueeze(-1)\n        j = torch.arange(S_kv, device=scores.device).unsqueeze(0)\n        causal_mask = j > (i + (S_kv - S))  # 右下角对齐：上三角置 -inf；[S, S_kv] 广播到各 group\n        scores = scores.masked_fill(causal_mask, float('-inf'))\n    # F217: 全 mask 行 (整行 = -inf) 在 softmax 时得 0/0 = NaN，对齐\n    # sparse_flash_attention 加显式保护 → 全 mask 行权重置 0。\n    scores_max = scores.max(dim=-1, keepdim=True).values\n    all_masked = torch.isinf(scores_max) & (scores_max < 0)\n    attn_weights = torch.nn.functional.softmax(scores, dim=-1)\n    attn_weights = torch.where(all_masked, torch.zeros_like(attn_weights), attn_weights)\n    attn_weights = attn_weights.reshape(B, N_kv, G * S, S_kv)\n    out = torch.matmul(attn_weights, v)  # [B, N_kv, G*S, d_nope]\n\n    # 还原为 BSND: [B, S, N_q, d_nope]（N_q 头序 = n_kv * G + g，与展开路径一致）\n    out = out.reshape(B, N_kv, G, S, d_nope).permute(0, 3, 1, 2, 4).reshape(B, S, N_q, d_nope)\n\n    # 按输入 layout 输出\n    if inputLayout == \"BNSD\":\n        out = out.permute(0, 2, 1, 3)\n\n    # 上面的 reshape/permute 链留下的是 view, 而输出契约要求 contiguous (issue #146)\n    return out.contiguous()\n",
+  "cases_yaml": [
+    {
+      "operator": "MLA",
+      "case_id": 1,
+      "input_shape": [
+        [
+          2,
+          128,
+          128,
+          512
+        ],
+        [
+          2,
+          128,
+          128,
+          64
+        ],
+        [
+          2,
+          128,
+          1,
+          512
+        ],
+        [
+          2,
+          128,
+          1,
+          64
+        ],
+        [
+          2,
+          128,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "M-float16-BSND-B2S128Nq128Nkv1-dnope512drope64-prefill-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 2,
+      "input_shape": [
+        [
+          4,
+          256,
+          128,
+          512
+        ],
+        [
+          4,
+          256,
+          128,
+          64
+        ],
+        [
+          4,
+          256,
+          1,
+          512
+        ],
+        [
+          4,
+          256,
+          1,
+          64
+        ],
+        [
+          4,
+          256,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-bfloat16-BSND-B4S256Nq128Nkv1-dnope512drope64-prefill-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 3,
+      "input_shape": [
+        [
+          2,
+          128,
+          64,
+          448
+        ],
+        [
+          2,
+          128,
+          64,
+          64
+        ],
+        [
+          2,
+          128,
+          1,
+          448
+        ],
+        [
+          2,
+          128,
+          1,
+          64
+        ],
+        [
+          2,
+          128,
+          1,
+          448
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "M-bfloat16-BSND-B2S128Nq64Nkv1-dnope448drope64-causal"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 4,
+      "input_shape": [
+        [
+          2,
+          256,
+          128,
+          512
+        ],
+        [
+          2,
+          256,
+          128,
+          64
+        ],
+        [
+          2,
+          128,
+          1,
+          512
+        ],
+        [
+          2,
+          128,
+          1,
+          64
+        ],
+        [
+          2,
+          128,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "M-float16-BSND-B2Sq256Skv128Nq128-dnope512-cross | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 5,
+      "input_shape": [
+        [
+          2,
+          256,
+          128,
+          512
+        ],
+        [
+          2,
+          256,
+          128,
+          64
+        ],
+        [
+          2,
+          256,
+          1,
+          512
+        ],
+        [
+          2,
+          256,
+          1,
+          64
+        ],
+        [
+          2,
+          256,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-BSND-B2S256Nq128-dnope512-long-prefill-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 6,
+      "input_shape": [
+        [
+          2,
+          256,
+          128,
+          448
+        ],
+        [
+          2,
+          256,
+          128,
+          64
+        ],
+        [
+          2,
+          256,
+          1,
+          448
+        ],
+        [
+          2,
+          256,
+          1,
+          64
+        ],
+        [
+          2,
+          256,
+          1,
+          448
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-BSND-B2S256Nq128-dnope448-long-prefill"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1,
+          1,
+          128,
+          512
+        ],
+        [
+          1,
+          1,
+          128,
+          64
+        ],
+        [
+          1,
+          2048,
+          1,
+          512
+        ],
+        [
+          1,
+          2048,
+          1,
+          64
+        ],
+        [
+          1,
+          2048,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-BSND-B1S1Skv2048Nq128-decode-single-batch | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 8,
+      "input_shape": [
+        [
+          16,
+          1,
+          128,
+          512
+        ],
+        [
+          16,
+          1,
+          128,
+          64
+        ],
+        [
+          16,
+          2048,
+          1,
+          512
+        ],
+        [
+          16,
+          2048,
+          1,
+          64
+        ],
+        [
+          16,
+          2048,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "M-float16-BSND-B16S1Skv2048Nq128-decode | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 9,
+      "input_shape": [
+        [
+          32,
+          1,
+          128,
+          512
+        ],
+        [
+          32,
+          1,
+          128,
+          64
+        ],
+        [
+          32,
+          2048,
+          1,
+          512
+        ],
+        [
+          32,
+          2048,
+          1,
+          64
+        ],
+        [
+          32,
+          2048,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-bfloat16-BSND-B32S1Skv2048Nq128-decode | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 10,
+      "input_shape": [
+        [
+          60,
+          1,
+          128,
+          512
+        ],
+        [
+          60,
+          1,
+          128,
+          64
+        ],
+        [
+          60,
+          2048,
+          1,
+          512
+        ],
+        [
+          60,
+          2048,
+          1,
+          64
+        ],
+        [
+          60,
+          2048,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-BSND-B60S1Skv2048Nq128-dnope512-decode-large-batch | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 11,
+      "input_shape": [
+        [
+          128,
+          1,
+          128,
+          512
+        ],
+        [
+          128,
+          1,
+          128,
+          64
+        ],
+        [
+          128,
+          1024,
+          1,
+          512
+        ],
+        [
+          128,
+          1024,
+          1,
+          64
+        ],
+        [
+          128,
+          1024,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-BSND-B128S1Skv4096Nq128-dnope512-decode-large-batch | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 12,
+      "input_shape": [
+        [
+          60,
+          1,
+          64,
+          512
+        ],
+        [
+          60,
+          1,
+          64,
+          64
+        ],
+        [
+          60,
+          2048,
+          1,
+          512
+        ],
+        [
+          60,
+          2048,
+          1,
+          64
+        ],
+        [
+          60,
+          2048,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-BSND-B60S1Skv2048Nq64-dnope512-decode-large-batch | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 13,
+      "input_shape": [
+        [
+          2,
+          128,
+          128,
+          512
+        ],
+        [
+          2,
+          128,
+          128,
+          64
+        ],
+        [
+          2,
+          1,
+          128,
+          512
+        ],
+        [
+          2,
+          1,
+          128,
+          64
+        ],
+        [
+          2,
+          1,
+          128,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BNSD",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "M-float16-BNSD-B2Nq128S128-dnope512drope64-prefill-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 14,
+      "input_shape": [
+        [
+          2,
+          128,
+          128,
+          448
+        ],
+        [
+          2,
+          128,
+          128,
+          64
+        ],
+        [
+          2,
+          1,
+          128,
+          448
+        ],
+        [
+          2,
+          1,
+          128,
+          64
+        ],
+        [
+          2,
+          1,
+          128,
+          448
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BNSD",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "M-float16-BNSD-B2Nq128S128-dnope448drope64-prefill-causal"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 15,
+      "input_shape": [
+        [
+          2,
+          128,
+          512,
+          512
+        ],
+        [
+          2,
+          128,
+          512,
+          64
+        ],
+        [
+          2,
+          1,
+          512,
+          512
+        ],
+        [
+          2,
+          1,
+          512,
+          64
+        ],
+        [
+          2,
+          1,
+          512,
+          512
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BNSD",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-bfloat16-BNSD-B2Nq128S512-dnope512-long-prefill-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 16,
+      "input_shape": [
+        [
+          60,
+          128,
+          1,
+          512
+        ],
+        [
+          60,
+          128,
+          1,
+          64
+        ],
+        [
+          60,
+          1,
+          2048,
+          512
+        ],
+        [
+          60,
+          1,
+          2048,
+          64
+        ],
+        [
+          60,
+          1,
+          2048,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BNSD",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-BNSD-B60Nq128S1Skv2048-decode-large-batch | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 17,
+      "input_shape": [
+        [
+          16,
+          2,
+          128,
+          512
+        ],
+        [
+          16,
+          2,
+          128,
+          64
+        ],
+        [
+          16,
+          2048,
+          1,
+          512
+        ],
+        [
+          16,
+          2048,
+          1,
+          64
+        ],
+        [
+          16,
+          2048,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-BSND-B16Sq2Skv2048Nq128-dnope512-MTP-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 18,
+      "input_shape": [
+        [
+          96,
+          2,
+          128,
+          512
+        ],
+        [
+          96,
+          2,
+          128,
+          64
+        ],
+        [
+          96,
+          2048,
+          1,
+          512
+        ],
+        [
+          96,
+          2048,
+          1,
+          64
+        ],
+        [
+          96,
+          2048,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-bfloat16-BSND-B96Sq2Skv4096Nq128-dnope512-MTP-large-batch-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 19,
+      "input_shape": [
+        [
+          16,
+          128,
+          2,
+          512
+        ],
+        [
+          16,
+          128,
+          2,
+          64
+        ],
+        [
+          16,
+          1,
+          2048,
+          512
+        ],
+        [
+          16,
+          1,
+          2048,
+          64
+        ],
+        [
+          16,
+          1,
+          2048,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BNSD",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-BNSD-B16Nq128Sq2Skv2048-dnope512-MTP | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MLA",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          128,
+          128,
+          512
+        ],
+        [
+          2,
+          128,
+          128,
+          64
+        ],
+        [
+          2,
+          128,
+          1,
+          512
+        ],
+        [
+          2,
+          128,
+          1,
+          64
+        ],
+        [
+          2,
+          128,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "numKVHeads": 1,
+        "scaleValue": -1.0,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        0,
+        0
+      ],
+      "note": "M-float16-BSND-zero-input-causal | baseline_kernels: FusedInferAttentionScore×1"
+    }
+  ],
+  "case_count": 20
+}

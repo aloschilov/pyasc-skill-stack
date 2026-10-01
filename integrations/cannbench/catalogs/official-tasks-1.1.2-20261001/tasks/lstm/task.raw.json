@@ -1,0 +1,2422 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "LSTM",
+  "function_name": "lstm",
+  "level": "level4",
+  "category": "FusedComposite",
+  "difficulty": "L4",
+  "description": "Long Short-Term Memory 循环神经网络",
+  "desc_md": "# LSTM 算子 API 描述\n\n## 1. 算子简介\n\nLong Short-Term Memory 循环神经网络算子，通过输入门、遗忘门、输出门和细胞状态的门控机制实现长距离依赖建模，支持多层堆叠、双向处理、投影降维和可选偏置。\n\n**主要应用场景**：\n- 自然语言处理中的序列到序列建模（机器翻译、文本生成）\n- 语音识别与合成中的时序特征建模\n- 时间序列预测与长距离依赖建模\n- 需要投影降维（proj_size）的大规模隐藏状态场景\n\n**算子特征**：\n- 难度等级：L4（FusedComposite）\n- 多输入（x, weight_ih, weight_hh, 可选 bias_ih, bias_hh, h0, c0）三输出（y, hn, cn）\n- 支持多层堆叠、双向处理、batch_first 格式、层间 Dropout、投影降维\n\n## 2. 算子定义\n\n### 数学公式\n\n对于每个时间步 $t$：\n\n$$\ni_t = \\sigma(W_i x_t + U_i h_{t-1} + b_i) \\quad \\text{（输入门）}\n$$\n\n$$\nf_t = \\sigma(W_f x_t + U_f h_{t-1} + b_f) \\quad \\text{（遗忘门）}\n$$\n\n$$\ng_t = \\tanh(W_g x_t + U_g h_{t-1} + b_g) \\quad \\text{（候选细胞状态）}\n$$\n\n$$\no_t = \\sigma(W_o x_t + U_o h_{t-1} + b_o) \\quad \\text{（输出门）}\n$$\n\n$$\nc_t = f_t \\odot c_{t-1} + i_t \\odot g_t \\quad \\text{（细胞状态）}\n$$\n\n$$\nh_t' = o_t \\odot \\tanh(c_t) \\quad \\text{（隐藏状态）}\n$$\n\n当 `projSize > 0`（LSTM with Projection / LSTMP）时，隐藏状态再经投影矩阵 $W_{hr}$ 降维至 projSize 维；`projSize = 0` 时 $h_t = h_t'$：\n\n$$\nh_t = W_{hr}\\, h_t' = W_{hr}\\,(o_t \\odot \\tanh(c_t)) \\quad \\text{（投影隐藏状态，维度 projSize）}\n$$\n\n其中：\n- $i_t, f_t, o_t$ 分别为输入门、遗忘门、输出门\n- $g_t$ 为候选细胞状态\n- $c_t$ 为细胞状态，$h_t$ 为隐藏状态（$h_t'$ 为投影前隐藏状态，仅 projSize>0 时区分）\n- $W_{hr}$ 为投影矩阵（shape $(\\text{projSize}, \\text{hiddenSize})$，仅 projSize>0 / LSTMP 时存在）\n- $\\sigma$ 为 sigmoid 函数，$\\odot$ 为逐元素乘法\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.lstm(Tensor x, TensorList weight_ih, TensorList weight_hh, int inputSize, int hiddenSize, int numLayers, bool bias=True, bool batchFirst=False, float dropout=0.0, bool bidirectional=False, int projSize=0, TensorList? bias_ih=None, TensorList? bias_hh=None, TensorList? weight_hr=None, Tensor? h0=None, Tensor? c0=None) -> (Tensor y, Tensor hn, Tensor cn)\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入序列张量，shape 为 (S, B, input_size) 或 (B, S, input_size) |\n| weight_ih | TensorList | 必选 | 输入到隐藏层权重列表，每层/每个方向独立 tensor。详见权重列表格式 |\n| weight_hh | TensorList | 必选 | 隐藏层到隐藏层权重列表，每个 tensor shape 为 (4*hiddenSize, hiddenSize) |\n| inputSize | int | 必选 | 输入特征维度 |\n| hiddenSize | int | 必选 | 隐藏状态特征维度 |\n| numLayers | int | 1 | 循环层数 |\n| bias | bool | true | 是否使用偏置 |\n| batchFirst | bool | false | 输入是否为 (B, S, input_size) 格式 |\n| dropout | float | 0.0 | Dropout 概率（层间） |\n| bidirectional | bool | false | 是否双向 LSTM |\n| projSize | int | 0 | 投影维度（>0 时启用 LSTM with Projection） |\n| bias_ih | TensorList | None | 输入到隐藏层偏置列表（可选），每个 tensor shape 为 (4*hiddenSize) |\n| bias_hh | TensorList | None | 隐藏层到隐藏层偏置列表（可选），每个 tensor shape 为 (4*hiddenSize) |\n| weight_hr | TensorList | None | 投影矩阵列表（可选，仅 projSize>0 / LSTMP 需要），每层/每个方向一个 tensor，shape 为 (projSize, hiddenSize) |\n| h0 | Tensor | None | 初始隐藏状态（可选，默认全 0），shape 为 (num_layers * num_directions, B, hiddenSize) |\n| c0 | Tensor | None | 初始细胞状态（可选，默认全 0），shape 为 (num_layers * num_directions, B, hiddenSize) |\n\n### 权重列表格式\n\nLSTM 有 4 个门（i, f, g, o），每个门都需要独立的权重矩阵。权重以 TensorList 形式传入，每层、每个方向为独立的 tensor。\n\n**TensorList 长度计算：**\n\n- `len(weight_ih) = numLayers * num_directions`\n- `len(weight_hh) = numLayers * num_directions`\n- `len(bias_ih) = numLayers * num_directions`（如有偏置）\n- `len(bias_hh) = numLayers * num_directions`（如有偏置）\n\n**排列顺序：**\n\n```\n[weight_ih_l0, weight_ih_l0_reverse, weight_ih_l1, weight_ih_l1_reverse, ...]  (bidirectional=true)\n[weight_ih_l0, weight_ih_l1, ...]  (bidirectional=false)\n```\n\n**每个 tensor shape：**\n\n| 参数 | Layer 0 | Layer k (k>0) |\n|------|---------|---------------|\n| weight_ih (单向) | (4*hiddenSize, inputSize) | (4*hiddenSize, hiddenSize) |\n| weight_ih (双向) | (4*hiddenSize, inputSize) | (4*hiddenSize, 2*hiddenSize) |\n| weight_hh | (4*hiddenSize, hiddenSize) | (4*hiddenSize, hiddenSize 或 projSize) |\n| bias_ih/bias_hh | (4*hiddenSize) | (4*hiddenSize) |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | (S, B, num_directions * hiddenSize) 或 (B, S, num_directions * hiddenSize) | 与输入 x 相同 | 输出序列 |\n| hn | (num_layers * num_directions, B, hiddenSize 或 projSize) | 与输入 x 相同 | 最终隐藏状态 |\n| cn | (num_layers * num_directions, B, hiddenSize) | 与输入 x 相同 | 最终细胞状态 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| float32 | float32 |\n| float16 | float16 |\n| bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- 所有输入 Tensor 的 dtype 必须一致\n- LSTM 有 4 个门（i, f, g, o），因此权重矩阵行数为 4*hiddenSize\n- 多层 LSTM 时，Layer k 的输入来自前一层的输出，因此 weight_ih 的列维度需要调整\n- 当 `bias=true` 时，`bias_ih` 和 `bias_hh` 必须提供\n- 当 `bidirectional=true` 时，num_directions=2，否则为 1\n- `dropout` 仅在 `numLayers > 1` 时生效，作用于层间（非最后一层）\n- `projSize > 0` 时启用投影降维，隐藏状态的有效维度变为 projSize，weight_hh 列维度变为 projSize\n- `batchFirst=true` 时，输入 x 的 shape 为 (B, S, input_size)，输出 y 的 shape 为 (B, S, num_directions * hiddenSize)\n- PyTorch LSTM 内部使用 float32 计算，float16/bfloat16 输入会转换为 float32 后计算，结果再转回原 dtype\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `S`（序列长度） | 1 ~ 2048 | cases.csv 实测 5 ~ 200 |\n| `B`（batch） | 1 ~ 256 | cases.csv 实测 2 ~ 32 |\n| `inputSize` | 1 ~ 2048 | cases.csv 实测 32 ~ 512 |\n| `hiddenSize` | 1 ~ 2048 | cases.csv 实测 16 ~ 256；weight 行数 = 4*hiddenSize |\n| `numLayers` | 1 ~ 8 | cases.csv 实测 1 ~ 3 |\n| `bias` | {true, false} | cases.csv 覆盖两种；为 true 时 bias_ih/bias_hh 必填 |\n| `batchFirst` | {true, false} | cases.csv 覆盖两种；true 时 x 为 (B, S, inputSize) |\n| `dropout` | 0.0 ~ 1.0 | cases.csv 实测 0.0 ~ 0.1；仅 numLayers>1 时生效 |\n| `bidirectional` | {true, false} | cases.csv 覆盖两种；true 时 num_directions=2 |\n| `projSize` | 0 ~ hiddenSize | cases.csv 实测 0 / 16；>0 时启用投影降维 |\n| `h0`, `c0` 维度 0 | = numLayers * num_directions | 可选；缺省全 0 |\n\n约束：`weight_ih[k]` shape 为 (4*hiddenSize, inputSize)（第 0 层）或 (4*hiddenSize, num_directions*hiddenSize)（其它层）；`weight_hh[k]` shape 为 (4*hiddenSize, hiddenSize 或 projSize)；`bias_ih[k]`、`bias_hh[k]` shape 为 (4*hiddenSize)；TensorList 长度 = numLayers * num_directions。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\nfrom typing import List, Optional, Tuple\n\ndef lstm(\n    x: torch.Tensor,\n    weight_ih: List[torch.Tensor],\n    weight_hh: List[torch.Tensor],\n    inputSize: int,\n    hiddenSize: int,\n    numLayers: int = 1,\n    bias: bool = True,\n    batchFirst: bool = False,\n    dropout: float = 0.0,\n    bidirectional: bool = False,\n    projSize: int = 0,\n    bias_ih: Optional[List[torch.Tensor]] = None,\n    bias_hh: Optional[List[torch.Tensor]] = None,\n    weight_hr: Optional[List[torch.Tensor]] = None,\n    h0: Optional[torch.Tensor] = None,\n    c0: Optional[torch.Tensor] = None,\n) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:\n    \"\"\"\n    LSTM 前向计算（对标 PyTorch torch.nn.LSTM）\n\n    Args:\n        x: 输入序列 (S, B, inputSize) 或 (B, S, inputSize) if batch_first\n        weight_ih: TensorList，每层每方向一个 [4*hiddenSize, input_dim] tensor\n        weight_hh: TensorList，每层每方向一个 [4*hiddenSize, hiddenSize or projSize] tensor\n        inputSize: 输入特征维度\n        hiddenSize: 隐藏状态维度\n        numLayers: 层数\n        bias: 是否使用偏置\n        batchFirst: 输入格式是否为 (batch, seq, feature)\n        dropout: 层间 dropout\n        bidirectional: 是否双向\n        projSize: 投影维度 (>0 时启用 LSTM with Projection / LSTMP)\n        bias_ih: TensorList?, 每层每方向一个 [4*hiddenSize] tensor\n        bias_hh: TensorList?, 每层每方向一个 [4*hiddenSize] tensor\n        weight_hr: TensorList?, 投影矩阵，每层每方向一个 [projSize, hiddenSize]\n            tensor；仅 projSize>0 时需要 (LSTMP)\n        h0: 初始隐藏状态 [numLayers*num_directions, B, hiddenSize or projSize]\n        c0: 初始细胞状态 [numLayers*num_directions, B, hiddenSize]\n\n    Returns:\n        y: 输出序列\n        hn: 最终隐藏状态\n        cn: 最终细胞状态\n    \"\"\"\n    num_directions = 2 if bidirectional else 1\n    gate_size = 4 * hiddenSize  # LSTM: i, f, g, o\n    effective_hidden = projSize if projSize > 0 else hiddenSize\n\n    if projSize > 0 and weight_hr is None:\n        raise ValueError(\"projSize>0 (LSTMP) requires weight_hr (projection matrix list)\")\n\n    lstm_layer = torch.nn.LSTM(\n        input_size=inputSize,\n        hidden_size=hiddenSize,\n        num_layers=numLayers,\n        bias=bias,\n        batch_first=batchFirst,\n        dropout=dropout if numLayers > 1 else 0.0,\n        bidirectional=bidirectional,\n        proj_size=projSize if projSize > 0 else 0,\n    )\n\n    input_dtype = x.dtype\n    lstm_layer = lstm_layer.float().to(x.device)\n    # Inference golden: disable inter-layer dropout so the reference is deterministic\n    # (nn.Module defaults to train mode; for numLayers>1 + dropout>0 the forward would\n    # apply a random mask each call -> nondeterministic hn/cn that no kernel can match).\n    lstm_layer.eval()\n\n    # 计算每层的输入维度\n    layer_inputs = [inputSize]\n    for layer in range(1, numLayers):\n        layer_inputs.append(effective_hidden * num_directions)\n\n    # 设置权重参数（TensorList 格式）。projSize>0 时必须设上投影权重 weight_hr，\n    # 否则 nn.LSTM 用随机初始化的投影矩阵 -> 参考输出非确定。\n    with torch.no_grad():\n        for layer in range(numLayers):\n            layer_input = layer_inputs[layer]\n            for d in range(num_directions):\n                idx = layer * num_directions + d\n                suffix = f\"l{layer}\" if d == 0 else f\"l{layer}_reverse\"\n\n                # 从 TensorList 中取对应 tensor\n                wi = weight_ih[idx][:gate_size, :layer_input]\n                wh = weight_hh[idx][:gate_size, :effective_hidden]\n\n                getattr(lstm_layer, f'weight_ih_{suffix}').copy_(wi.float())\n                getattr(lstm_layer, f'weight_hh_{suffix}').copy_(wh.float())\n\n                if projSize > 0:\n                    wr = weight_hr[idx][:projSize, :hiddenSize]\n                    getattr(lstm_layer, f'weight_hr_{suffix}').copy_(wr.float())\n\n                if bias and bias_ih is not None and bias_hh is not None:\n                    bi = bias_ih[idx][:gate_size]\n                    bh = bias_hh[idx][:gate_size]\n                    getattr(lstm_layer, f'bias_ih_{suffix}').copy_(bi.float())\n                    getattr(lstm_layer, f'bias_hh_{suffix}').copy_(bh.float())\n\n    x_float = x.float()\n    if h0 is None:\n        batch_size = x.shape[1] if not batchFirst else x.shape[0]\n        h0 = torch.zeros(numLayers * num_directions, batch_size, effective_hidden,\n                         dtype=torch.float32, device=x.device)\n    else:\n        h0 = h0.float()\n\n    if c0 is None:\n        batch_size = x.shape[1] if not batchFirst else x.shape[0]\n        c0 = torch.zeros(numLayers * num_directions, batch_size, hiddenSize,\n                         dtype=torch.float32, device=x.device)\n    else:\n        c0 = c0.float()\n\n    y, (hn, cn) = lstm_layer(x_float, (h0, c0))\n    y = y.to(input_dtype)\n    hn = hn.to(input_dtype)\n    cn = cn.to(input_dtype)\n\n    return y, hn, cn\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\n# 单层单向 LSTM（TensorList 格式）\nseq_len, batch, input_size, hidden_size = 20, 8, 128, 256\nx = torch.randn(seq_len, batch, input_size, dtype=torch.float32, device=\"npu\")\nweight_ih = [torch.randn(4 * hidden_size, input_size, dtype=torch.float32, device=\"npu\")]\nweight_hh = [torch.randn(4 * hidden_size, hidden_size, dtype=torch.float32, device=\"npu\")]\nbias_ih = [torch.randn(4 * hidden_size, dtype=torch.float32, device=\"npu\")]\nbias_hh = [torch.randn(4 * hidden_size, dtype=torch.float32, device=\"npu\")]\ny, hn, cn = cann_bench.lstm(x, weight_ih, weight_hh,\n                               inputSize=input_size, hiddenSize=hidden_size, numLayers=1,\n                               bias=True, batchFirst=False, bidirectional=False,\n                               bias_ih=bias_ih, bias_hh=bias_hh)\n\n# 双向 LSTM\nweight_ih_bi = [torch.randn(4 * hidden_size, input_size), torch.randn(4 * hidden_size, input_size)]\nweight_hh_bi = [torch.randn(4 * hidden_size, hidden_size), torch.randn(4 * hidden_size, hidden_size)]\ny_bi, hn_bi, cn_bi = cann_bench.lstm(x, weight_ih_bi, weight_hh_bi,\n                                        inputSize=input_size, hiddenSize=hidden_size, numLayers=1,\n                                        bias=False, bidirectional=True)\n```\n",
+  "proto": {
+    "name": "LSTM",
+    "category": "FusedComposite",
+    "difficulty": "L4",
+    "formula": "i_t = σ(W_i @ x_t + U_i @ h_{t-1} + b_i)  # 输入门\nf_t = σ(W_f @ x_t + U_f @ h_{t-1} + b_f)  # 遗忘门\ng_t = tanh(W_g @ x_t + U_g @ h_{t-1} + b_g)  # 候选细胞状态\no_t = σ(W_o @ x_t + U_o @ h_{t-1} + b_o)  # 输出门\nc_t = f_t ⊙ c_{t-1} + i_t ⊙ g_t  # 细胞状态\nh_t = o_t ⊙ tanh(c_t)  # 隐藏状态\n",
+    "description": "Long Short-Term Memory 循环神经网络",
+    "shape_support": "x: (S, B, input_size), (h0, c0): (num_layers * num_directions, B, hidden_size)",
+    "precision_thresholds": {
+      "float32": 0.05,
+      "float16": 0.05,
+      "bfloat16": 0.05
+    },
+    "attrs": [
+      {
+        "name": "inputSize",
+        "type": "int",
+        "description": "输入特征维度",
+        "required": true
+      },
+      {
+        "name": "hiddenSize",
+        "type": "int",
+        "description": "隐藏状态特征维度",
+        "required": true
+      },
+      {
+        "name": "numLayers",
+        "type": "int",
+        "default": 1,
+        "description": "循环层数",
+        "required": false
+      },
+      {
+        "name": "bias",
+        "type": "bool",
+        "default": true,
+        "description": "是否使用偏置",
+        "required": false
+      },
+      {
+        "name": "batchFirst",
+        "type": "bool",
+        "default": false,
+        "description": "输入是否为 (batch, seq, feature) 格式",
+        "required": false
+      },
+      {
+        "name": "dropout",
+        "type": "float",
+        "default": 0.0,
+        "description": "Dropout 概率（层间）",
+        "required": false
+      },
+      {
+        "name": "bidirectional",
+        "type": "bool",
+        "default": false,
+        "description": "是否双向 LSTM",
+        "required": false
+      },
+      {
+        "name": "projSize",
+        "type": "int",
+        "default": 0,
+        "description": "投影维度（>0 时启用 LSTM with Projection）",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入序列张量，shape 为 (S, B, input_size) 或 (B, S, input_size) if batch_first",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "weight_ih",
+        "description": "输入到隐藏层权重列表（TensorList），每层/每个方向独立 tensor:\n- 单向 numLayers=1: [weight_ih_l0], shape=(4*hiddenSize, inputSize)\n- 双向 numLayers=1: [weight_ih_l0, weight_ih_l0_reverse], 每个 shape=(4*hiddenSize, inputSize)\n- 单向 numLayers=2: [weight_ih_l0, weight_ih_l1], shape 分别为 (4*hiddenSize, inputSize), (4*hiddenSize, hiddenSize)\n- 双向 numLayers=2: [weight_ih_l0, weight_ih_l0_reverse, weight_ih_l1, weight_ih_l1_reverse]\n列表长度 = numLayers * num_directions\n",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "weight_hh",
+        "description": "隐藏层到隐藏层权重列表（TensorList），每层/每个方向独立 tensor:\n- 每个 tensor shape: (4*hiddenSize, hiddenSize) 或 (4*hiddenSize, projSize) if projSize>0\n列表长度 = numLayers * num_directions\n",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "bias_ih",
+        "description": "输入到隐藏层偏置列表（可选），每个 tensor shape: (4*hiddenSize)，列表长度 = numLayers * num_directions",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "optional": true
+      },
+      {
+        "name": "bias_hh",
+        "description": "隐藏层到隐藏层偏置列表（可选），每个 tensor shape: (4*hiddenSize)，列表长度 = numLayers * num_directions",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "optional": true
+      },
+      {
+        "name": "weight_hr",
+        "description": "投影矩阵列表（可选，仅 projSize>0 / LSTMP 需要），每层/每方向一个 tensor，shape: (projSize, hiddenSize)，列表长度 = numLayers * num_directions",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "optional": true
+      },
+      {
+        "name": "h0",
+        "description": "初始隐藏状态 (可选，默认全 0)，shape 为 (num_layers * num_directions, B, hiddenSize 或 projSize)",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "optional": true
+      },
+      {
+        "name": "c0",
+        "description": "初始细胞状态 (可选，默认全 0)，shape 为 (num_layers * num_directions, B, hiddenSize)",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "optional": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出序列 (S, B, num_directions * hiddenSize) 或 (B, S, num_directions * hiddenSize)",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "hn",
+        "description": "最终隐藏状态 (num_layers * num_directions, B, hiddenSize 或 projSize)",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "cn",
+        "description": "最终细胞状态 (num_layers * num_directions, B, hiddenSize)",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "lstm(Tensor x, Tensor[] weight_ih, Tensor[] weight_hh, int inputSize, int hiddenSize, int numLayers, bool bias=True, bool batchFirst=False, float dropout=0.0, bool bidirectional=False, int projSize=0, Tensor[]? bias_ih=None, Tensor[]? bias_hh=None, Tensor[]? weight_hr=None, Tensor? h0=None, Tensor? c0=None) -> (Tensor y, Tensor hn, Tensor cn)"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\nfrom typing import List, Optional, Tuple\n\n\"\"\"\nLSTM 算子 Torch Golden 参考实现\n\n对标 PyTorch torch.nn.LSTM 接口，使用 TensorList 格式传递权重。\n每层每方向的权重是独立的 tensor：\n  - weight_ih_l0, weight_hh_l0, bias_ih_l0, bias_hh_l0 (forward)\n  - weight_ih_l0_reverse, weight_hh_l0_reverse, ... (reverse, if bidirectional)\n  - weight_ih_l1, ... (layer 1, if numLayers > 1)\n  - weight_hr_l0, ... (projection matrix, if projSize > 0; LSTMP)\n\"\"\"\n\n\ndef lstm(\n    x: torch.Tensor,\n    weight_ih: List[torch.Tensor],\n    weight_hh: List[torch.Tensor],\n    inputSize: int,\n    hiddenSize: int,\n    numLayers: int = 1,\n    bias: bool = True,\n    batchFirst: bool = False,\n    dropout: float = 0.0,\n    bidirectional: bool = False,\n    projSize: int = 0,\n    bias_ih: Optional[List[torch.Tensor]] = None,\n    bias_hh: Optional[List[torch.Tensor]] = None,\n    weight_hr: Optional[List[torch.Tensor]] = None,\n    h0: Optional[torch.Tensor] = None,\n    c0: Optional[torch.Tensor] = None,\n) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:\n    \"\"\"\n    LSTM 前向计算（对标 PyTorch torch.nn.LSTM）\n\n    Args:\n        x: 输入序列 (S, B, inputSize) 或 (B, S, inputSize) if batch_first\n        weight_ih: TensorList，每层每方向一个 [4*hiddenSize, input_dim] tensor\n        weight_hh: TensorList，每层每方向一个 [4*hiddenSize, hiddenSize or projSize] tensor\n        inputSize: 输入特征维度\n        hiddenSize: 隐藏状态维度\n        numLayers: 层数\n        bias: 是否使用偏置\n        batchFirst: 输入格式是否为 (batch, seq, feature)\n        dropout: 层间 dropout\n        bidirectional: 是否双向\n        projSize: 投影维度 (>0 时启用 LSTM with Projection / LSTMP)\n        bias_ih: TensorList?, 每层每方向一个 [4*hiddenSize] tensor\n        bias_hh: TensorList?, 每层每方向一个 [4*hiddenSize] tensor\n        weight_hr: TensorList?, 投影矩阵，每层每方向一个 [projSize, hiddenSize]\n            tensor；仅 projSize>0 时需要 (LSTMP)\n        h0: 初始隐藏状态 [numLayers*num_directions, B, hiddenSize or projSize]\n        c0: 初始细胞状态 [numLayers*num_directions, B, hiddenSize]\n\n    Returns:\n        y: 输出序列\n        hn: 最终隐藏状态\n        cn: 最终细胞状态\n    \"\"\"\n    num_directions = 2 if bidirectional else 1\n    gate_size = 4 * hiddenSize  # LSTM: i, f, g, o\n    effective_hidden = projSize if projSize > 0 else hiddenSize\n\n    if projSize > 0 and weight_hr is None:\n        raise ValueError(\"projSize>0 (LSTMP) requires weight_hr (projection matrix list)\")\n\n    lstm_layer = torch.nn.LSTM(\n        input_size=inputSize,\n        hidden_size=hiddenSize,\n        num_layers=numLayers,\n        bias=bias,\n        batch_first=batchFirst,\n        dropout=dropout if numLayers > 1 else 0.0,\n        bidirectional=bidirectional,\n        proj_size=projSize if projSize > 0 else 0,\n    )\n\n    input_dtype = x.dtype\n    lstm_layer = lstm_layer.float().to(x.device)\n    # Inference golden: disable inter-layer dropout so the reference is deterministic\n    # (nn.Module defaults to train mode; for numLayers>1 + dropout>0 the forward would\n    # apply a random mask each call -> nondeterministic hn/cn that no kernel can match).\n    lstm_layer.eval()\n\n    # 计算每层的输入维度\n    layer_inputs = [inputSize]\n    for layer in range(1, numLayers):\n        layer_inputs.append(effective_hidden * num_directions)\n\n    # 设置权重参数（TensorList 格式）。projSize>0 时必须设上投影权重 weight_hr，\n    # 否则 nn.LSTM 用随机初始化的投影矩阵 -> 参考输出非确定。\n    with torch.no_grad():\n        for layer in range(numLayers):\n            layer_input = layer_inputs[layer]\n            for d in range(num_directions):\n                idx = layer * num_directions + d\n                suffix = f\"l{layer}\" if d == 0 else f\"l{layer}_reverse\"\n\n                # 从 TensorList 中取对应 tensor\n                wi = weight_ih[idx][:gate_size, :layer_input]\n                wh = weight_hh[idx][:gate_size, :effective_hidden]\n\n                getattr(lstm_layer, f'weight_ih_{suffix}').copy_(wi.float())\n                getattr(lstm_layer, f'weight_hh_{suffix}').copy_(wh.float())\n\n                if projSize > 0:\n                    wr = weight_hr[idx][:projSize, :hiddenSize]\n                    getattr(lstm_layer, f'weight_hr_{suffix}').copy_(wr.float())\n\n                if bias and bias_ih is not None and bias_hh is not None:\n                    bi = bias_ih[idx][:gate_size]\n                    bh = bias_hh[idx][:gate_size]\n                    getattr(lstm_layer, f'bias_ih_{suffix}').copy_(bi.float())\n                    getattr(lstm_layer, f'bias_hh_{suffix}').copy_(bh.float())\n\n    x_float = x.float()\n    if h0 is None:\n        batch_size = x.shape[1] if not batchFirst else x.shape[0]\n        h0 = torch.zeros(numLayers * num_directions, batch_size, effective_hidden,\n                         dtype=torch.float32, device=x.device)\n    else:\n        h0 = h0.float()\n\n    if c0 is None:\n        batch_size = x.shape[1] if not batchFirst else x.shape[0]\n        c0 = torch.zeros(numLayers * num_directions, batch_size, hiddenSize,\n                         dtype=torch.float32, device=x.device)\n    else:\n        c0 = c0.float()\n\n    y, (hn, cn) = lstm_layer(x_float, (h0, c0))\n    y = y.to(input_dtype)\n    hn = hn.to(input_dtype)\n    cn = cn.to(input_dtype)\n\n    return y, hn, cn\n",
+  "cases_yaml": [
+    {
+      "operator": "LSTM",
+      "case_id": 1,
+      "input_shape": [
+        [
+          10,
+          4,
+          64
+        ],
+        [
+          [
+            128,
+            64
+          ]
+        ],
+        [
+          [
+            128,
+            32
+          ]
+        ],
+        [
+          [
+            128
+          ]
+        ],
+        [
+          [
+            128
+          ]
+        ],
+        null,
+        null
+      ],
+      "dtype": [
+        "float32",
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        null,
+        null
+      ],
+      "attrs": {
+        "inputSize": 64,
+        "hiddenSize": 32,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        null,
+        null
+      ],
+      "note": "S-float32-case1 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 2,
+      "input_shape": [
+        [
+          20,
+          16,
+          128
+        ],
+        [
+          [
+            256,
+            128
+          ]
+        ],
+        [
+          [
+            256,
+            64
+          ]
+        ],
+        [
+          [
+            256
+          ]
+        ],
+        [
+          [
+            256
+          ]
+        ]
+      ],
+      "dtype": [
+        "float16",
+        [
+          "float16"
+        ],
+        [
+          "float16"
+        ],
+        [
+          "float16"
+        ],
+        [
+          "float16"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 128,
+        "hiddenSize": 64,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-float16-case2 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 3,
+      "input_shape": [
+        [
+          50,
+          32,
+          256
+        ],
+        [
+          [
+            512,
+            256
+          ]
+        ],
+        [
+          [
+            512,
+            128
+          ]
+        ],
+        [
+          [
+            512
+          ]
+        ],
+        [
+          [
+            512
+          ]
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        [
+          "bfloat16"
+        ],
+        [
+          "bfloat16"
+        ],
+        [
+          "bfloat16"
+        ],
+        [
+          "bfloat16"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 256,
+        "hiddenSize": 128,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-bfloat16-case3 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + Cast×13 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 4,
+      "input_shape": [
+        [
+          12,
+          5,
+          64
+        ],
+        [
+          [
+            128,
+            64
+          ],
+          [
+            128,
+            64
+          ]
+        ],
+        [
+          [
+            128,
+            32
+          ],
+          [
+            128,
+            32
+          ]
+        ],
+        [
+          [
+            128
+          ],
+          [
+            128
+          ]
+        ],
+        [
+          [
+            128
+          ],
+          [
+            128
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32",
+        [
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 64,
+        "hiddenSize": 32,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": true,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-float32-case4 | baseline_kernels: ZerosLike×3 + ConcatD×5 + Add×2 + Transpose×2 + DynamicRNN×2 + TransData×10 + ReverseV2×4"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 5,
+      "input_shape": [
+        [
+          24,
+          8,
+          128
+        ],
+        [
+          [
+            256,
+            128
+          ],
+          [
+            256,
+            128
+          ]
+        ],
+        [
+          [
+            256,
+            64
+          ],
+          [
+            256,
+            64
+          ]
+        ],
+        [
+          [
+            256
+          ],
+          [
+            256
+          ]
+        ],
+        [
+          [
+            256
+          ],
+          [
+            256
+          ]
+        ]
+      ],
+      "dtype": [
+        "float16",
+        [
+          "float16",
+          "float16"
+        ],
+        [
+          "float16",
+          "float16"
+        ],
+        [
+          "float16",
+          "float16"
+        ],
+        [
+          "float16",
+          "float16"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 128,
+        "hiddenSize": 64,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": true,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-float16-case5 | baseline_kernels: ZerosLike×3 + ConcatD×5 + Add×2 + Transpose×2 + DynamicRNN×2 + TransData×10 + ReverseV2×4"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 6,
+      "input_shape": [
+        [
+          8,
+          8,
+          96
+        ],
+        [
+          [
+            256,
+            96
+          ],
+          [
+            256,
+            64
+          ]
+        ],
+        [
+          [
+            256,
+            64
+          ],
+          [
+            256,
+            64
+          ]
+        ],
+        [
+          [
+            256
+          ],
+          [
+            256
+          ]
+        ],
+        [
+          [
+            256
+          ],
+          [
+            256
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32",
+        [
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 96,
+        "hiddenSize": 64,
+        "numLayers": 2,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-float32-case6 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 7,
+      "input_shape": [
+        [
+          30,
+          16,
+          256
+        ],
+        [
+          [
+            512,
+            256
+          ],
+          [
+            512,
+            128
+          ],
+          [
+            512,
+            128
+          ]
+        ],
+        [
+          [
+            512,
+            128
+          ],
+          [
+            512,
+            128
+          ],
+          [
+            512,
+            128
+          ]
+        ],
+        [
+          [
+            512
+          ],
+          [
+            512
+          ],
+          [
+            512
+          ]
+        ],
+        [
+          [
+            512
+          ],
+          [
+            512
+          ],
+          [
+            512
+          ]
+        ]
+      ],
+      "dtype": [
+        "float16",
+        [
+          "float16",
+          "float16",
+          "float16"
+        ],
+        [
+          "float16",
+          "float16",
+          "float16"
+        ],
+        [
+          "float16",
+          "float16",
+          "float16"
+        ],
+        [
+          "float16",
+          "float16",
+          "float16"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 256,
+        "hiddenSize": 128,
+        "numLayers": 3,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.1,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-float16-case7 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 8,
+      "input_shape": [
+        [
+          16,
+          6,
+          96
+        ],
+        [
+          [
+            256,
+            96
+          ],
+          [
+            256,
+            96
+          ],
+          [
+            256,
+            128
+          ],
+          [
+            256,
+            128
+          ]
+        ],
+        [
+          [
+            256,
+            64
+          ],
+          [
+            256,
+            64
+          ],
+          [
+            256,
+            64
+          ],
+          [
+            256,
+            64
+          ]
+        ],
+        [
+          [
+            256
+          ],
+          [
+            256
+          ],
+          [
+            256
+          ],
+          [
+            256
+          ]
+        ],
+        [
+          [
+            256
+          ],
+          [
+            256
+          ],
+          [
+            256
+          ],
+          [
+            256
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32",
+        [
+          "float32",
+          "float32",
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32",
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32",
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32",
+          "float32",
+          "float32"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 96,
+        "hiddenSize": 64,
+        "numLayers": 2,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": true,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-float32-case8 | baseline_kernels: ZerosLike×3 + ConcatD×5 + Add×2 + Transpose×2 + DynamicRNN×2 + TransData×10 + ReverseV2×4"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 9,
+      "input_shape": [
+        [
+          15,
+          12,
+          128
+        ],
+        [
+          [
+            256,
+            128
+          ],
+          [
+            256,
+            128
+          ],
+          [
+            256,
+            128
+          ],
+          [
+            256,
+            128
+          ]
+        ],
+        [
+          [
+            256,
+            64
+          ],
+          [
+            256,
+            64
+          ],
+          [
+            256,
+            64
+          ],
+          [
+            256,
+            64
+          ]
+        ],
+        [
+          [
+            256
+          ],
+          [
+            256
+          ],
+          [
+            256
+          ],
+          [
+            256
+          ]
+        ],
+        [
+          [
+            256
+          ],
+          [
+            256
+          ],
+          [
+            256
+          ],
+          [
+            256
+          ]
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        [
+          "bfloat16",
+          "bfloat16",
+          "bfloat16",
+          "bfloat16"
+        ],
+        [
+          "bfloat16",
+          "bfloat16",
+          "bfloat16",
+          "bfloat16"
+        ],
+        [
+          "bfloat16",
+          "bfloat16",
+          "bfloat16",
+          "bfloat16"
+        ],
+        [
+          "bfloat16",
+          "bfloat16",
+          "bfloat16",
+          "bfloat16"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 128,
+        "hiddenSize": 64,
+        "numLayers": 2,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": true,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-bfloat16-case9 | baseline_kernels: ZerosLike×3 + ConcatD×5 + Add×2 + Transpose×2 + Cast×26 + DynamicRNN×2 + TransData×10 + ReverseV2×4"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 10,
+      "input_shape": [
+        [
+          6,
+          8,
+          64
+        ],
+        [
+          [
+            128,
+            64
+          ]
+        ],
+        [
+          [
+            128,
+            32
+          ]
+        ],
+        [
+          [
+            128
+          ]
+        ],
+        [
+          [
+            128
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32",
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 64,
+        "hiddenSize": 32,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": true,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-float32-case10 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 11,
+      "input_shape": [
+        [
+          8,
+          3,
+          64
+        ],
+        [
+          [
+            128,
+            64
+          ]
+        ],
+        [
+          [
+            128,
+            32
+          ]
+        ],
+        null,
+        null,
+        null,
+        null
+      ],
+      "dtype": [
+        "float32",
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        null,
+        null,
+        null,
+        null
+      ],
+      "attrs": {
+        "inputSize": 64,
+        "hiddenSize": 32,
+        "numLayers": 1,
+        "bias": false,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        null,
+        null,
+        null,
+        null
+      ],
+      "note": "S-float32-case11 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 12,
+      "input_shape": [
+        [
+          18,
+          7,
+          128
+        ],
+        [
+          [
+            256,
+            128
+          ],
+          [
+            256,
+            128
+          ]
+        ],
+        [
+          [
+            256,
+            64
+          ],
+          [
+            256,
+            64
+          ]
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        [
+          "bfloat16",
+          "bfloat16"
+        ],
+        [
+          "bfloat16",
+          "bfloat16"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 128,
+        "hiddenSize": 64,
+        "numLayers": 1,
+        "bias": false,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": true,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ]
+      ],
+      "note": "S-bfloat16-case12 | baseline_kernels: ZerosLike×3 + ConcatD×5 + Add×2 + Transpose×2 + Cast×26 + DynamicRNN×2 + TransData×10 + ReverseV2×4"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 13,
+      "input_shape": [
+        [
+          100,
+          8,
+          256
+        ],
+        [
+          [
+            512,
+            256
+          ]
+        ],
+        [
+          [
+            512,
+            128
+          ]
+        ],
+        [
+          [
+            512
+          ]
+        ],
+        [
+          [
+            512
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32",
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 256,
+        "hiddenSize": 128,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-float32-case13 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 14,
+      "input_shape": [
+        [
+          200,
+          3,
+          512
+        ],
+        [
+          [
+            1024,
+            512
+          ]
+        ],
+        [
+          [
+            1024,
+            256
+          ]
+        ],
+        [
+          [
+            1024
+          ]
+        ],
+        [
+          [
+            1024
+          ]
+        ]
+      ],
+      "dtype": [
+        "float16",
+        [
+          "float16"
+        ],
+        [
+          "float16"
+        ],
+        [
+          "float16"
+        ],
+        [
+          "float16"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 512,
+        "hiddenSize": 256,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-float16-case14 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 15,
+      "input_shape": [
+        [
+          7,
+          6,
+          64
+        ],
+        [
+          [
+            128,
+            64
+          ]
+        ],
+        [
+          [
+            128,
+            32
+          ]
+        ],
+        [
+          [
+            128
+          ]
+        ],
+        [
+          [
+            128
+          ]
+        ],
+        null,
+        [
+          1,
+          6,
+          32
+        ],
+        [
+          1,
+          6,
+          32
+        ]
+      ],
+      "dtype": [
+        "float32",
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        null,
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "inputSize": 64,
+        "hiddenSize": 32,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        null,
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "S-float32-case15 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 16,
+      "input_shape": [
+        [
+          5,
+          2,
+          32
+        ],
+        [
+          [
+            64,
+            32
+          ]
+        ],
+        [
+          [
+            64,
+            16
+          ]
+        ],
+        [
+          [
+            64
+          ]
+        ],
+        [
+          [
+            64
+          ]
+        ]
+      ],
+      "dtype": [
+        "float16",
+        [
+          "float16"
+        ],
+        [
+          "float16"
+        ],
+        [
+          "float16"
+        ],
+        [
+          "float16"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 32,
+        "hiddenSize": 16,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-float16-case16 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 17,
+      "input_shape": [
+        [
+          10,
+          4,
+          127
+        ],
+        [
+          [
+            508,
+            127
+          ]
+        ],
+        [
+          [
+            508,
+            127
+          ]
+        ],
+        [
+          [
+            508
+          ]
+        ],
+        [
+          [
+            508
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32",
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 127,
+        "hiddenSize": 127,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-float32-case17 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 18,
+      "input_shape": [
+        [
+          15,
+          6,
+          63
+        ],
+        [
+          [
+            124,
+            63
+          ]
+        ],
+        [
+          [
+            124,
+            31
+          ]
+        ],
+        [
+          [
+            124
+          ]
+        ],
+        [
+          [
+            124
+          ]
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        [
+          "bfloat16"
+        ],
+        [
+          "bfloat16"
+        ],
+        [
+          "bfloat16"
+        ],
+        [
+          "bfloat16"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 63,
+        "hiddenSize": 31,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ]
+      ],
+      "note": "S-bfloat16-case18 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + Cast×13 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 19,
+      "input_shape": [
+        [
+          14,
+          10,
+          128
+        ],
+        [
+          [
+            256,
+            128
+          ]
+        ],
+        [
+          [
+            256,
+            16
+          ]
+        ],
+        [
+          [
+            256
+          ]
+        ],
+        [
+          [
+            256
+          ]
+        ],
+        [
+          [
+            16,
+            64
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32",
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ],
+        [
+          "float32"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 128,
+        "hiddenSize": 64,
+        "numLayers": 1,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 16
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ]
+        ]
+      ],
+      "note": "S-float32-case19 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    },
+    {
+      "operator": "LSTM",
+      "case_id": 20,
+      "input_shape": [
+        [
+          22,
+          10,
+          128
+        ],
+        [
+          [
+            256,
+            128
+          ],
+          [
+            256,
+            16
+          ]
+        ],
+        [
+          [
+            256,
+            16
+          ],
+          [
+            256,
+            16
+          ]
+        ],
+        [
+          [
+            256
+          ],
+          [
+            256
+          ]
+        ],
+        [
+          [
+            256
+          ],
+          [
+            256
+          ]
+        ],
+        [
+          [
+            16,
+            64
+          ],
+          [
+            16,
+            64
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32",
+        [
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32"
+        ],
+        [
+          "float32",
+          "float32"
+        ]
+      ],
+      "attrs": {
+        "inputSize": 128,
+        "hiddenSize": 64,
+        "numLayers": 2,
+        "bias": true,
+        "batchFirst": false,
+        "dropout": 0.0,
+        "bidirectional": false,
+        "projSize": 16
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.01,
+            0.01
+          ],
+          [
+            -0.01,
+            0.01
+          ]
+        ],
+        [
+          [
+            -0.1,
+            0.1
+          ],
+          [
+            -0.1,
+            0.1
+          ]
+        ]
+      ],
+      "note": "S-float32-case20 | baseline_kernels: ZerosLike×3 + ConcatD×1 + Add×1 + Transpose×1 + DynamicRNN×1 + TransData×5"
+    }
+  ],
+  "case_count": 20
+}

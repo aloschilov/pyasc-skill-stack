@@ -1,0 +1,1227 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "Conv2D",
+  "function_name": "conv_2d",
+  "level": "level3",
+  "category": "Contraction",
+  "difficulty": "L3",
+  "description": "计算2D卷积",
+  "desc_md": "# Conv2D 算子 API 描述\n\n## 1. 算子简介\n\n计算2D卷积。\n\n**主要应用场景**：\n- 图像分类、目标检测、语义分割等视觉任务的核心运算\n- CNN 网络中特征提取的基础模块\n- 信号处理中的2D滤波操作\n\n**算子特征**：\n- 难度等级：L3（Contraction）\n- 三输入（特征图、卷积核、偏置）单输出，支持膨胀卷积\n- 输入 x 为 [N, C_in, H, W]，卷积核 filter 为 [C_out, C_in, K_h, K_w]\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\ny = \\text{CONV}(x, \\text{filter}) + \\text{bias}\n$$\n\n即对输入特征图 $x$ 使用卷积核 $\\text{filter}$ 进行2D卷积运算，并加上偏置 $\\text{bias}$。卷积运算支持通过 strides 控制步长、pads 控制填充、dilations 控制膨胀率。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.conv_2d(Tensor x, Tensor filter, Tensor bias, int[] strides, int[] pads, int[] dilations) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入特征图，shape 为 [N, C_in, H, W] |\n| filter | Tensor | 必选 | 卷积核，shape 为 [C_out, C_in, K_h, K_w] |\n| bias | Tensor | 必选 | 偏置 |\n| strides | int[] | 必选 | 步长 |\n| pads | int[] | 必选 | 填充 |\n| dilations | int[] | [1, 1] | 膨胀率 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 由输入尺寸、卷积核、步长、填充和膨胀率决定 | 与输入 x 相同 | 输出特征图 |\n\n### 数据类型\n\n| 输入 (x, filter, bias) dtype | 输出 dtype |\n|-----------------------------|-----------|\n| float16 | float16 |\n| float32 | float32 |\n| bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- x 的 shape 格式为 [N, C_in, H, W]\n- filter 的 shape 格式为 [C_out, C_in, K_h, K_w]\n- x、filter、bias 的 dtype 须一致\n- strides 指定卷积的步长\n- pads 指定四方向填充 [pad_top, pad_bottom, pad_left, pad_right]\n- dilations 指定膨胀率，默认 [1, 1]\n- 不支持分组卷积；如需分组/depthwise，使用 `depthwise_conv_2d`\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `N`（batch） | 1 ~ 256 | cases.csv 实测 2 ~ 8 |\n| `C_in`（输入通道） | 1 ~ 2048 | cases.csv 实测 7 ~ 2048 |\n| `C_out`（输出通道） | 1 ~ 2048 | cases.csv 实测 7 ~ 2048 |\n| `H`, `W`（空间） | 8 ~ 256 | cases.csv 实测 13 ~ 128 |\n| `K_h`, `K_w`（卷积核） | 1 ~ 16 | cases.csv 实测 1 / 3 / 5 |\n| `strides[i]` | 1 ~ 4 | cases.csv 实测 (1,1) 和 (2,2) |\n| `pads[i]` | 0 ~ 8 | cases.csv 实测 0 ~ 2 |\n| `dilations[i]` | 1 ~ 16 | cases.csv 实测 1 / 2 / 3 |\n\n约束：输出 spatial 维度 `(H_out, W_out)` 必须满足 `H_out = (H + pad_top + pad_bottom - dilation_h*(K_h-1) - 1) / stride_h + 1 ≥ 1`，`W_out` 同理。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nConv2D算子Torch Golden参考实现\n\n计算2D卷积\n公式: y = CONV(x, filter) + bias\n\"\"\"\ndef conv_2d(\n    x: torch.Tensor, filter: torch.Tensor, bias: torch.Tensor, strides: list, pads: list, dilations: list = [1, 1]\n) -> torch.Tensor:\n    \"\"\"\n    计算2D卷积\n    \n    公式: y = CONV(x, filter) + bias\n    \n    Args:\n        x: 输入特征图\n        filter: 卷积核\n        bias: 偏置\n        strides: 步长\n        pads: 填充 [pad_top, pad_bottom, pad_left, pad_right]\n        dilations: 膨胀率\n    \n    Returns:\n        输出特征图\n    \"\"\"\n\n    # pads 格式: [pad_top, pad_bottom, pad_left, pad_right]\n    # PyTorch conv2d padding 格式: (left, right, top, bottom) 或 (pad_h, pad_w) 对称模式\n    # 检查是否对称填充\n    if pads[0] == pads[1] and pads[2] == pads[3]:\n        # 对称模式: (pad_height, pad_width)\n        padding = (pads[0], pads[2])\n    else:\n        # 非对称模式: (left, right, top, bottom)\n        padding = (pads[2], pads[3], pads[0], pads[1])\n    \n    stride = (strides[0], strides[1])\n    dilation = (dilations[0], dilations[1])\n    \n    y = torch.nn.functional.conv2d(x, filter, bias, stride=stride, padding=padding, dilation=dilation)\n    return y\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx = torch.randn(1, 64, 56, 56, dtype=torch.float16, device=\"npu\")\nweight = torch.randn(128, 64, 3, 3, dtype=torch.float16, device=\"npu\")\nbias = torch.randn(128, dtype=torch.float16, device=\"npu\")\n\ny = cann_bench.conv_2d(x, weight, bias, strides=[1, 1], pads=[1, 1, 1, 1], dilations=[1, 1])\n```\n",
+  "proto": {
+    "name": "Conv2D",
+    "category": "Contraction",
+    "difficulty": "L3",
+    "formula": "y = CONV(x, filter) + bias",
+    "description": "计算2D卷积",
+    "shape_support": "x: [N, C_in, H, W], filter: [C_out, C_in, K_h, K_w]",
+    "attrs": [
+      {
+        "name": "strides",
+        "type": "ListInt",
+        "description": "步长",
+        "required": true
+      },
+      {
+        "name": "pads",
+        "type": "ListInt",
+        "description": "填充",
+        "required": true
+      },
+      {
+        "name": "dilations",
+        "type": "ListInt",
+        "default": [
+          1,
+          1
+        ],
+        "description": "膨胀率",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入特征图",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "filter",
+        "description": "卷积核",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "bias",
+        "description": "偏置",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出特征图",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "conv_2d(Tensor x, Tensor filter, Tensor bias, int[] strides, int[] pads, int[] dilations) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nConv2D算子Torch Golden参考实现\n\n计算2D卷积\n公式: y = CONV(x, filter) + bias\n\"\"\"\ndef conv_2d(\n    x: torch.Tensor, filter: torch.Tensor, bias: torch.Tensor, strides: list, pads: list, dilations: list = [1, 1]\n) -> torch.Tensor:\n    \"\"\"\n    计算2D卷积\n\n    公式: y = CONV(x, filter) + bias\n\n    Args:\n        x: 输入特征图\n        filter: 卷积核\n        bias: 偏置\n        strides: 步长\n        pads: 填充\n        dilations: 膨胀率\n\n    Returns:\n        输出特征图\n    \"\"\"\n\n    # pads 格式: [pad_top, pad_bottom, pad_left, pad_right]\n    # PyTorch conv2d padding 格式: (left, right, top, bottom) 或 (pad_h, pad_w) 对称模式\n    # 检查是否对称填充\n    if pads[0] == pads[1] and pads[2] == pads[3]:\n        # 对称模式: (pad_height, pad_width)\n        padding = (pads[0], pads[2])\n    else:\n        # 非对称模式: (left, right, top, bottom)\n        padding = (pads[2], pads[3], pads[0], pads[1])\n    stride = (strides[0], strides[1])\n    dilation = (dilations[0], dilations[1])\n\n    y = torch.nn.functional.conv2d(x, filter, bias, stride=stride, padding=padding, dilation=dilation)\n    return y\n",
+  "cases_yaml": [
+    {
+      "operator": "Conv2D",
+      "case_id": 1,
+      "input_shape": [
+        [
+          2,
+          64,
+          32,
+          32
+        ],
+        [
+          64,
+          64,
+          3,
+          3
+        ],
+        [
+          64
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "S-float16-256K-对齐-3x3k-same_pad | baseline_kernels: TransData×2 + MemSet×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 2,
+      "input_shape": [
+        [
+          4,
+          128,
+          64,
+          64
+        ],
+        [
+          128,
+          128,
+          3,
+          3
+        ],
+        [
+          128
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.01,
+          0.01
+        ]
+      ],
+      "note": "S-float32-8M-对齐-3x3k | baseline_kernels: TransData×3 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 3,
+      "input_shape": [
+        [
+          2,
+          256,
+          128,
+          128
+        ],
+        [
+          256,
+          256,
+          5,
+          5
+        ],
+        [
+          256
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          -3,
+          3
+        ],
+        [
+          -0.3,
+          0.3
+        ]
+      ],
+      "note": "M-bfloat16-33M-对齐-5x5k | baseline_kernels: TransData×3 + MemSet×1 + Cast×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8,
+          512,
+          64,
+          64
+        ],
+        [
+          512,
+          512,
+          3,
+          3
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          2,
+          2
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M-float16-67M-对齐-stride=2-downsample | baseline_kernels: TransData×2 + MemSet×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4,
+          1024,
+          32,
+          32
+        ],
+        [
+          1024,
+          1024,
+          3,
+          3
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "dilations": [
+          2,
+          2
+        ]
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.05,
+          0.05
+        ]
+      ],
+      "note": "M-float32-134M-对齐-dilation=2 | baseline_kernels: TransData×3 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 6,
+      "input_shape": [
+        [
+          2,
+          2048,
+          16,
+          16
+        ],
+        [
+          2048,
+          2048,
+          1,
+          1
+        ],
+        [
+          2048
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          -10,
+          10
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-bfloat16-1G-对齐-1x1k-valid | baseline_kernels: TransData×3 + MemSet×1 + Cast×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 7,
+      "input_shape": [
+        [
+          3,
+          63,
+          31,
+          31
+        ],
+        [
+          63,
+          63,
+          3,
+          3
+        ],
+        [
+          63
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.01,
+          0.01
+        ]
+      ],
+      "note": "S-float16-200K-质数非对齐-微小值域 | baseline_kernels: TransData×2 + MemSet×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 8,
+      "input_shape": [
+        [
+          2,
+          127,
+          61,
+          61
+        ],
+        [
+          127,
+          127,
+          3,
+          3
+        ],
+        [
+          127
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -1,
+          2
+        ],
+        [
+          -1,
+          2
+        ],
+        [
+          -0.1,
+          0.2
+        ]
+      ],
+      "note": "S-float32-2M-质数非对齐-非对称 | baseline_kernels: TransData×3 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 9,
+      "input_shape": [
+        [
+          3,
+          47,
+          23,
+          23
+        ],
+        [
+          47,
+          47,
+          5,
+          5
+        ],
+        [
+          47
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "strides": [
+          2,
+          2
+        ],
+        "pads": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -5,
+          10
+        ],
+        [
+          -5,
+          10
+        ],
+        [
+          -0.5,
+          0.5
+        ]
+      ],
+      "note": "S-bfloat16-50K-质数非对齐-stride=2 | baseline_kernels: TransData×3 + MemSet×1 + Cast×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 10,
+      "input_shape": [
+        [
+          5,
+          97,
+          43,
+          43
+        ],
+        [
+          97,
+          97,
+          3,
+          3
+        ],
+        [
+          97
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          2,
+          2
+        ]
+      },
+      "value_range": [
+        [
+          -50,
+          100
+        ],
+        [
+          -50,
+          100
+        ],
+        [
+          -5,
+          5
+        ]
+      ],
+      "note": "S-float16-2M-质数非对齐-dilation=2 | baseline_kernels: TransData×2 + MemSet×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 11,
+      "input_shape": [
+        [
+          2,
+          65,
+          33,
+          33
+        ],
+        [
+          65,
+          65,
+          3,
+          3
+        ],
+        [
+          65
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          -10,
+          10
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-500K-非对齐-float16边界值 | baseline_kernels: TransData×2 + MemSet×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 12,
+      "input_shape": [
+        [
+          3,
+          7,
+          13,
+          13
+        ],
+        [
+          7,
+          7,
+          3,
+          3
+        ],
+        [
+          7
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.05,
+          0.05
+        ]
+      ],
+      "note": "S-float32-10K-质数非对齐-float32边界值 | baseline_kernels: TransData×3 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 13,
+      "input_shape": [
+        [
+          2,
+          63,
+          31,
+          31
+        ],
+        [
+          63,
+          63,
+          3,
+          3
+        ],
+        [
+          63
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "note": "S-float32-200K-非对齐-inf特殊值 | baseline_kernels: TransData×3 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 14,
+      "input_shape": [
+        [
+          2,
+          11,
+          13,
+          17
+        ],
+        [
+          11,
+          11,
+          3,
+          3
+        ],
+        [
+          11
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "note": "S-float16-5K-质数非对齐-nan特殊值 | baseline_kernels: TransData×2 + MemSet×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 15,
+      "input_shape": [
+        [
+          4,
+          63,
+          31,
+          31
+        ],
+        [
+          63,
+          63,
+          3,
+          3
+        ],
+        [
+          63
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "S-bfloat16-400K-非对齐-零值 | baseline_kernels: TransData×3 + MemSet×1 + Cast×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 16,
+      "input_shape": [
+        [
+          2,
+          64,
+          31,
+          31
+        ],
+        [
+          64,
+          64,
+          3,
+          3
+        ],
+        [
+          64
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.05,
+          0.05
+        ]
+      ],
+      "note": "S-float16-200K-混合非对齐-微小值域 | baseline_kernels: TransData×2 + MemSet×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 17,
+      "input_shape": [
+        [
+          3,
+          127,
+          63,
+          63
+        ],
+        [
+          127,
+          127,
+          5,
+          5
+        ],
+        [
+          127
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "strides": [
+          2,
+          2
+        ],
+        "pads": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -1,
+          3
+        ],
+        [
+          -1,
+          3
+        ],
+        [
+          -0.1,
+          0.3
+        ]
+      ],
+      "note": "S-float32-2M-非对齐-stride=2-5x5k | baseline_kernels: TransData×3 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 18,
+      "input_shape": [
+        [
+          2,
+          255,
+          127,
+          127
+        ],
+        [
+          255,
+          255,
+          3,
+          3
+        ],
+        [
+          255
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          3,
+          3
+        ]
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          -10,
+          10
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-bfloat16-16M-非对齐-dilation=3 | baseline_kernels: TransData×3 + MemSet×1 + Cast×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4,
+          31,
+          31,
+          31
+        ],
+        [
+          31,
+          31,
+          3,
+          3
+        ],
+        [
+          31
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "value_range": [
+        [
+          -0.2,
+          0.2
+        ],
+        [
+          -0.2,
+          0.2
+        ],
+        [
+          -0.02,
+          0.02
+        ]
+      ],
+      "note": "S-float16-100K-质数非对齐-微小值域 | baseline_kernels: TransData×2 + MemSet×1 + Conv2D×1"
+    },
+    {
+      "operator": "Conv2D",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          127,
+          127,
+          127
+        ],
+        [
+          127,
+          127,
+          3,
+          3
+        ],
+        [
+          127
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          2,
+          2
+        ]
+      },
+      "value_range": [
+        [
+          -3,
+          6
+        ],
+        [
+          -3,
+          6
+        ],
+        [
+          -0.3,
+          0.6
+        ]
+      ],
+      "note": "M-float32-4M-质数非对齐-dilation=2-非对称中值域 | baseline_kernels: TransData×3 + Conv2D×1"
+    }
+  ],
+  "case_count": 20
+}

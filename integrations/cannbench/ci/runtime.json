@@ -1,0 +1,9 @@
+{
+  "pyasc_commit": "0a631f70968c3cb7c33ce45330a85768dd5a6f06",
+  "runtime_wheel_sha256": "77e1563eff38b98b696a08e81751fde308a1600a2fc7f5a5aef9f05bb5509d05",
+  "compile_image": "pyasc-cannbench-local-eval:0a631f70-v2",
+  "compile_image_id": "sha256:e5eeb7ec348639cd2911e895b94d3297e721b388c15019973d76e7b74f1906ac",
+  "vm_runtime_wheel": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/runtime-dist/pyasc-1.1.1-cp312-cp312-linux_x86_64.whl",
+  "vm_pybind11_wheel": "/home/aloschilov/workspace/pyasc-skill-stack/integrations/cannbench/submission/vendor/runtime-wheels/pybind11-2.13.6-py3-none-any.whl",
+  "pybind11_sha256": "237c41e29157b962835d356b370ededd57594a26d5894a795960f0047cb5caf5"
+}

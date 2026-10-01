@@ -68,7 +68,7 @@ for path in sorted(root.rglob("*.json")):
         data = json.loads(path.read_text())
     except (json.JSONDecodeError, OSError):
         continue
-    if data.get("kind") != "generative":
+    if not isinstance(data, dict) or data.get("kind") != "generative":
         continue
     if str(data.get("schema_version", "")) < "4":
         continue

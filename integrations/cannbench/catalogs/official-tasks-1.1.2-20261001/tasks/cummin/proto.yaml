@@ -1,0 +1,56 @@
+{
+  "operator": {
+    "name": "Cummin",
+    "category": "Reduction",
+    "difficulty": "L2",
+    "formula": "y[i] = min(x[0], x[1], ..., x[i]) 沿指定轴",
+    "description": "计算输入张量中的累积最小值",
+    "shape_support": "输入输出shape相同",
+    "attrs": [
+      {
+        "name": "dim",
+        "type": "int64",
+        "description": "计算累积最小值的轴",
+        "required": true
+      }
+    ],
+    "inputs": [
+      {
+        "name": "input",
+        "description": "输入张量",
+        "dtype": [
+          "float16",
+          "float32",
+          "int32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "values",
+        "description": "累积最小值张量，shape 与 input 相同，dtype 与 input 相同",
+        "dtype": [
+          "float16",
+          "float32",
+          "int32",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "indices",
+        "description": "累积最小值对应的索引张量，shape 与 input 相同，dtype 为 int64",
+        "dtype": [
+          "int64"
+        ],
+        "compare": false,
+        "index_gather": {
+          "input": "input",
+          "dim_attr": "dim",
+          "value_output": "values"
+        }
+      }
+    ],
+    "schema": "cummin(Tensor input, int dim) -> (Tensor values, Tensor indices)"
+  }
+}

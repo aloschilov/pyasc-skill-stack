@@ -1,0 +1,80 @@
+{
+  "operator": {
+    "name": "DequantSwigluQuant",
+    "category": "FusedComposite",
+    "difficulty": "L3",
+    "formula": "dequant_out = (x.float() * weight_scale + 0) * activation_scale.unsqueeze(-1)   # x=int32 path\ndequant_out = x                                                                  # x=bfloat16 path\nA, B = split(dequant_out, last_dim, 2)\nswiglu_out = SiLU(A) * B   if activate_left else   SiLU(B) * A\nif quant_scale is not None: swiglu_out = swiglu_out * quant_scale\ny, scale  = Quantize(swiglu_out)   # static (quant_mode=0) or dynamic per-token (=1)\n",
+    "description": "反量化 + SwiGLU + 动态量化（per-token）三步融合（精简版，去掉 group_index/swiglu_mode/bias/quant_offset/static-quant-mode）",
+    "shape_support": "x: [TokensNum, 2H]; 输出 y: [TokensNum, H], scale: [TokensNum]",
+    "precision_thresholds": {
+      "int8": 1.0
+    },
+    "attrs": [
+      {
+        "name": "activate_left",
+        "type": "bool",
+        "default": false,
+        "description": "False: SwiGLU = SiLU(B) * A，B 为 split 后的右半边\nTrue : SwiGLU = SiLU(A) * B，A 为 split 后的左半边\n",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "主输入张量；尾轴必须为偶数",
+        "dtype": [
+          "int32",
+          "bfloat16",
+          "float16"
+        ],
+        "shape": "[TokensNum, 2H]"
+      },
+      {
+        "name": "weight_scale",
+        "description": "权重量化的反量化系数；当 x=int32 时必须非 None，当 x=bfloat16/float16 时必须 None",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[1, 2H]",
+        "optional": true
+      },
+      {
+        "name": "activation_scale",
+        "description": "per-token 激活量化的反量化系数；当 x=int32 时必须非 None，当 x=bfloat16/float16 时必须 None",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[TokensNum]",
+        "optional": true
+      },
+      {
+        "name": "quant_scale",
+        "description": "smooth quant 系数，量化前对 swiglu_out 逐元素乘",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[1, H]",
+        "optional": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "量化后的输出张量",
+        "dtype": [
+          "int8"
+        ],
+        "shape": "[TokensNum, H]"
+      },
+      {
+        "name": "scale",
+        "description": "per-token 量化 scale；动态量化模式下为实测值",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[TokensNum]"
+      }
+    ],
+    "schema": "dequant_swiglu_quant(Tensor x, Tensor? weight_scale=None, Tensor? activation_scale=None, Tensor? quant_scale=None, bool activate_left=False) -> (Tensor y, Tensor scale)"
+  }
+}

@@ -1,0 +1,691 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "Maximum",
+  "function_name": "maximum",
+  "level": "level2",
+  "category": "Broadcast",
+  "difficulty": "L2",
+  "description": "返回两个输入张量中的最大值，支持广播",
+  "desc_md": "# Maximum 算子 API 描述\n\n## 1. 算子简介\n\n返回两个输入张量中的最大值，支持广播。\n\n**主要应用场景**：\n- ReLU 激活函数实现（与零取最大值）\n- 梯度裁剪中的阈值限制\n- 多路径特征融合中的逐元素最大值选择\n- 数值计算中的下界约束\n\n**算子特征**：\n- 难度等级：L2（Broadcast）\n- 双输入单输出，逐元素运算，输入支持广播\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\ny = \\max(x_1, x_2)\n$$\n\n逐元素比较 $x_1$ 和 $x_2$，返回每个位置上的较大值。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.maximum(Tensor x1, Tensor x2) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x1 | Tensor | 必选 | 第1个输入张量 |\n| x2 | Tensor | 必选 | 第2个输入张量 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 广播后的 shape | 与输入一致 | 输出张量，两个输入中的最大值 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| bfloat16 | bfloat16 |\n| float16 | float16 |\n| float32 | float32 |\n| int8 | int8 |\n| int32 | int32 |\n| int64 | int64 |\n\n### 规则与约束\n\n- 两个输入 shape 按 [PyTorch 标准广播](https://pytorch.org/docs/stable/notes/broadcasting.html) 对齐：右对齐，对位维度需相等或一边为 1（不存在视为 1），输出 shape 取每对维度 max。例如 `[2,3,17,1024,101]` × `[1,1,1,1,101]` → `[2,3,17,1024,101]`\n- 两个输入张量的 dtype 必须一致\n- 支持浮点类型（bfloat16、float16、float32）和整数类型（int8、int32、int64）\n- 当输入包含 NaN 时，行为与 PyTorch `torch.maximum` 一致（NaN 会传播）\n- 当输入包含 inf/-inf 时，按正常数值比较规则处理\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `x1` rank | 1 ~ 8 | cases.csv 实测 1D ~ 5D |\n| `x2` rank | 1 ~ 8 | cases.csv 实测 1D ~ 5D；按 PyTorch 标准广播右对齐，rank 可与 `x1` 不同 |\n| `x1` 各维度大小 | 1 ~ 2097152 | cases.csv 实测 2 ~ 1000007 |\n| `x2` 各维度大小 | 1 ~ 2097152 | cases.csv 实测 1 ~ 1000007；为 1 表示该维参与广播 |\n| 广播后总元素数 | ≤ 2^28（约 256M） | cases.csv 实测最大 8192×16384 = 128M（case 6） |\n\n约束：\n- `x1` 与 `x2` 的 dtype 必须严格相等\n- `x1` 与 `x2` 的 shape 按 [PyTorch 标准广播](https://pytorch.org/docs/stable/notes/broadcasting.html) 右对齐：对位维度需相等或一边为 1（不存在视为 1）；输出 shape 取每对维度 max\n- 输出 tensor 的 shape 与 dtype 由广播规则与输入共同决定\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nMaximum算子Torch Golden参考实现\n\n返回两个输入张量中的最大值，支持广播\n公式: y = max(x1, x2)\n\"\"\"\ndef maximum(\n    x1: torch.Tensor, x2: torch.Tensor\n) -> torch.Tensor:\n    \"\"\"\n    返回两个输入张量中的最大值，支持广播\n    \n    公式: y = max(x1, x2)\n    \n    Args:\n        x1: 第1个输入张量\n        x2: 第2个输入张量\n    \n    Returns:\n        输出张量，两个输入中的最大值\n    \"\"\"\n\n    y = torch.maximum(x1, x2)\n    return y\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx1 = torch.randn(1024, 1024, dtype=torch.float16, device=\"npu\")\nx2 = torch.randn(1024, 1024, dtype=torch.float16, device=\"npu\")\ny = cann_bench.maximum(x1, x2)\n\n# 广播场景：标量广播\nx1 = torch.randn(2, 8, 256, 256, dtype=torch.float32, device=\"npu\")\nx2 = torch.tensor([0.0], dtype=torch.float32, device=\"npu\")\ny = cann_bench.maximum(x1, x2)  # 类似 ReLU\n\n# 整数类型\nx1 = torch.randint(-128, 127, (512, 512, 4), dtype=torch.int8, device=\"npu\")\nx2 = torch.randint(-10, 10, (1, 512, 1), dtype=torch.int8, device=\"npu\")\ny = cann_bench.maximum(x1, x2)\n```\n",
+  "proto": {
+    "name": "Maximum",
+    "category": "Broadcast",
+    "difficulty": "L2",
+    "formula": "y = max(x1, x2)",
+    "description": "返回两个输入张量中的最大值，支持广播",
+    "shape_support": "输入支持广播",
+    "attrs": [],
+    "inputs": [
+      {
+        "name": "x1",
+        "description": "第1个输入张量",
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32",
+          "int8",
+          "int32",
+          "int64"
+        ]
+      },
+      {
+        "name": "x2",
+        "description": "第2个输入张量",
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32",
+          "int8",
+          "int32",
+          "int64"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出张量，两个输入中的最大值",
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32",
+          "int8",
+          "int32",
+          "int64"
+        ]
+      }
+    ],
+    "schema": "maximum(Tensor x1, Tensor x2) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nMaximum算子Torch Golden参考实现\n\n返回两个输入张量中的最大值，支持广播\n公式: y = max(x1, x2)\n\"\"\"\ndef maximum(\n    x1: torch.Tensor, x2: torch.Tensor\n) -> torch.Tensor:\n    \"\"\"\n    返回两个输入张量中的最大值，支持广播\n    \n    公式: y = max(x1, x2)\n    \n    Args:\n        x1: 第1个输入张量\n        x2: 第2个输入张量\n    \n    Returns:\n        输出张量，两个输入中的最大值\n    \"\"\"\n\n    y = torch.maximum(x1, x2)\n    return y\n",
+  "cases_yaml": [
+    {
+      "operator": "Maximum",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-1M-对齐-对称小值域 | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          -2,
+          2
+        ]
+      ],
+      "note": "M-float32-4M-对齐-对称小值域 | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          -3,
+          3
+        ]
+      ],
+      "note": "M-bfloat16-16M-对齐-对称小值域 | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8192,
+          8192
+        ],
+        [
+          8192,
+          8192
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          -1000,
+          1000
+        ]
+      ],
+      "note": "L-int32-67M-对齐-对称中值域 | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ]
+      ],
+      "dtype": [
+        "int64",
+        "int64"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -100000,
+          100000
+        ],
+        [
+          -100000,
+          100000
+        ]
+      ],
+      "note": "L-int64-268M-对齐-对称大值域 | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 6,
+      "input_shape": [
+        [
+          8192,
+          16384
+        ],
+        [
+          8192,
+          16384
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ]
+      ],
+      "note": "L-int8-536M-对齐-int8全范围 | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1023,
+          1023
+        ],
+        [
+          1023,
+          1023
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "S-float16-1M-非对齐-对称微小值域 | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1009,
+          1021
+        ],
+        [
+          1009,
+          1021
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          2
+        ],
+        [
+          -1,
+          2
+        ]
+      ],
+      "note": "S-float32-1M-质数非对齐-非对称小值域 | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 9,
+      "input_shape": [
+        [
+          1537,
+          769
+        ],
+        [
+          1537,
+          769
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -5,
+          10
+        ],
+        [
+          -5,
+          10
+        ]
+      ],
+      "note": "S-bfloat16-1M-非对齐-非对称中值域 | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 10,
+      "input_shape": [
+        [
+          363,
+          367,
+          373
+        ],
+        [
+          363,
+          367,
+          373
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -50,
+          100
+        ],
+        [
+          -50,
+          100
+        ]
+      ],
+      "note": "L-float16-50M-质数非对齐-非对称大值域-3D | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 11,
+      "input_shape": [
+        [
+          2049,
+          513
+        ],
+        [
+          1,
+          513
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "S-float32-1M-非对齐-尾轴Broadcast | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 12,
+      "input_shape": [
+        [
+          3,
+          127,
+          687,
+          37
+        ],
+        [
+          1,
+          1,
+          687,
+          1
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          -10,
+          10
+        ]
+      ],
+      "note": "M-float32-31M-非对齐-多轴Broadcast-4D | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 13,
+      "input_shape": [
+        [
+          2,
+          3,
+          5,
+          1024,
+          256
+        ],
+        [
+          1,
+          1,
+          1,
+          1024,
+          1
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -10000,
+          10000
+        ],
+        [
+          -1000,
+          1000
+        ]
+      ],
+      "note": "M-int32-7M-非对齐-5D-多轴Broadcast | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 14,
+      "input_shape": [
+        [
+          1000007
+        ],
+        [
+          1000007
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          "-inf",
+          "inf"
+        ],
+        [
+          "-inf",
+          "inf"
+        ]
+      ],
+      "note": "S-float32-1M-质数非对齐-inf特殊值-1D | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 15,
+      "input_shape": [
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ],
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          "nan",
+          "nan"
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-float16-10M-质数非对齐-nan特殊值-5D | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 16,
+      "input_shape": [
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ],
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "M-float32-3M-质数非对齐-零值-5D | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 17,
+      "input_shape": [
+        [
+          512,
+          2049
+        ],
+        [
+          512,
+          2049
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.5,
+          0.5
+        ]
+      ],
+      "note": "S-bfloat16-1M-非对齐-对称微小值域 | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 18,
+      "input_shape": [
+        [
+          255,
+          8193
+        ],
+        [
+          8193
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -65504,
+          65504
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-2M-非对齐-float16边界值-跨rank-Broadcast-2D×1D | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4097,
+          511
+        ],
+        [
+          1,
+          511
+        ]
+      ],
+      "dtype": [
+        "int64",
+        "int64"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -32768,
+          32767
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "S-int64-2M-非对齐-小整数范围-Broadcast | baseline_kernels: Maximum×1"
+    },
+    {
+      "operator": "Maximum",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          3,
+          17,
+          1024,
+          101
+        ],
+        [
+          1,
+          1,
+          1,
+          1024,
+          1
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -20,
+          40
+        ],
+        [
+          -10,
+          10
+        ]
+      ],
+      "note": "M-float32-10M-非对齐-非对称大值域-5D-Broadcast | baseline_kernels: Maximum×1"
+    }
+  ],
+  "case_count": 20
+}

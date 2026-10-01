@@ -1,0 +1,608 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "ResizeBilinear",
+  "function_name": "resize_bilinear",
+  "level": "level2",
+  "category": "FusedComposite",
+  "difficulty": "L2",
+  "description": "使用双线性插值调整 4D 图像 (N, C, H, W) 的空间维度大小",
+  "desc_md": "# ResizeBilinear 算子 API 描述\n\n## 1. 算子简介\n\n使用双线性插值调整图像大小。\n\n**主要应用场景**：\n- 图像预处理中的缩放与分辨率调整\n- 特征金字塔网络（FPN）中的上采样操作\n- 语义分割中的特征图恢复到原始分辨率\n- 目标检测中不同尺度特征的对齐\n\n**算子特征**：\n- 难度等级：L2（FusedComposite）\n- 单输入单输出，输入为 4D 张量 (N, C, H, W)，输出空间维度由 output_size 或 scale_factor 指定\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\ny = \\text{resize\\_bilinear}(x, \\text{size})\n$$\n\n对输入张量的空间维度 (H, W) 进行双线性插值缩放。对于输出位置 $(i, j)$，根据其在输入空间中的映射坐标 $(h, w)$，利用周围 4 个最近邻像素的值进行加权平均：\n\n$$\ny(i, j) = (1-\\alpha)(1-\\beta) \\cdot x(\\lfloor h \\rfloor, \\lfloor w \\rfloor) + \\alpha(1-\\beta) \\cdot x(\\lceil h \\rceil, \\lfloor w \\rfloor) + (1-\\alpha)\\beta \\cdot x(\\lfloor h \\rfloor, \\lceil w \\rceil) + \\alpha\\beta \\cdot x(\\lceil h \\rceil, \\lceil w \\rceil)\n$$\n\n其中 $\\alpha = h - \\lfloor h \\rfloor$，$\\beta = w - \\lfloor w \\rfloor$。\n\n- **align_corners=true**：输入输出的角点像素对齐，坐标映射为 $h = i \\times \\frac{H_{in}-1}{H_{out}-1}$\n- **align_corners=false**：坐标映射为 $h = (i + 0.5) \\times \\frac{H_{in}}{H_{out}} - 0.5$\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.resize_bilinear(Tensor x, int[]? output_size=None, bool align_corners=false, float[]? scale_factor=None) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入张量，形状为 (N, C, H, W) |\n| output_size | int[] | None | 输出尺寸 [output_height, output_width]，与 scale_factor 二选一 |\n| align_corners | bool | false | 是否对齐角点 |\n| scale_factor | float[] | None | 缩放因子 [scale_height, scale_width]，与 output_size 互斥 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | (N, C, H_out, W_out) | 与输入 x 相同 | 输出张量，调整大小后的结果 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| float16 | float16 |\n| float32 | float32 |\n| bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- 输入 x 必须为 4D 张量，形状为 (N, C, H, W)\n- output_size 和 scale_factor 互斥，两者不能同时指定\n- output_size 为 [output_height, output_width]，指定输出空间维度大小\n- scale_factor 为 [scale_height, scale_width]，指定缩放比例\n- 输出 dtype 与输入 dtype 一致\n- 支持上采样（输出大于输入）和下采样（输出小于输入）\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围（仅 4D 输入 `(N, C, H, W)`）：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `N`（batch） | 1 ~ 256 | cases.csv 实测 1 ~ 127 |\n| `C`（通道） | 1 ~ 1024 | cases.csv 实测 1 ~ 363 |\n| `H`（输入高） | 1 ~ 8192 | cases.csv 实测 13 ~ 4097 |\n| `W`（输入宽） | 1 ~ 8192 | cases.csv 实测 67 ~ 4001 |\n| `output_size[0]`（输出高） | 1 ~ 4096 | cases.csv 实测 64 ~ 2048 |\n| `output_size[1]`（输出宽） | 1 ~ 4096 | cases.csv 实测 64 ~ 1024 |\n| `align_corners` | {false, true} | cases.csv 实测两种取值都覆盖 |\n| `scale_factor` | null 或 长度=2 的正浮点数组 | cases.csv 实测均为 null（与 `output_size` 互斥，二者只能取一） |\n\n约束：\n- 输入张量 rank 严格为 4，shape 为 `(N, C, H, W)`\n- `output_size` 与 `scale_factor` 互斥，必须恰好提供其一；两者长度均固定为 2（高、宽）\n- 输出 shape 的非空间维（N, C）与输入一致，空间维由 `output_size` 或 `[H * scale_factor[0], W * scale_factor[1]]` 计算得到\n- 不在本算子范围：1D/3D/5D 输入（linear/trilinear 模式）—— 由 PyTorch `interpolate` 的其它分支负责，不在本基准评测范围内\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\nfrom typing import List, Optional\n\n\"\"\"\nResizeBilinear 算子 Torch Golden 参考实现\n\n使用双线性插值调整 4D 图像 (N, C, H, W) 的空间维度大小\n公式: y = resize_bilinear(x, size)\n\n参考 PyTorch API: torch.nn.functional.interpolate (mode='bilinear')\n    https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.interpolate.html\n\"\"\"\n\n\ndef resize_bilinear(\n    x: torch.Tensor,\n    output_size: Optional[List[int]] = None,\n    align_corners: bool = False,\n    scale_factor: Optional[List[float]] = None,\n) -> torch.Tensor:\n    \"\"\"\n    使用双线性插值调整图像大小（仅 4D 输入）。\n\n    Args:\n        x: 输入张量，形状为 (N, C, H, W)\n        output_size: 输出尺寸 [output_height, output_width]，与 scale_factor 互斥\n        align_corners: 是否对齐角点\n        scale_factor: 缩放因子 [scale_height, scale_width]，与 output_size 互斥\n\n    Returns:\n        输出张量 (N, C, H_out, W_out)，dtype 与 x 一致\n    \"\"\"\n    if x.dim() != 4:\n        raise ValueError(f\"ResizeBilinear requires 4D input (N, C, H, W), got {x.dim()}D\")\n    return torch.nn.functional.interpolate(\n        x,\n        size=output_size,\n        scale_factor=scale_factor,\n        mode='bilinear',\n        align_corners=align_corners,\n    )\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx = torch.randn(2, 8, 512, 512, dtype=torch.float16, device=\"npu\")\ny = cann_bench.resize_bilinear(x, output_size=[256, 256], align_corners=False)  # 下采样\n\nx = torch.randn(4, 4, 64, 64, dtype=torch.float32, device=\"npu\")\ny = cann_bench.resize_bilinear(x, output_size=[128, 128], align_corners=True)  # 上采样 + 角点对齐\n\nx = torch.randn(1, 16, 128, 128, dtype=torch.bfloat16, device=\"npu\")\ny = cann_bench.resize_bilinear(x, output_size=[256, 256])  # bfloat16 上采样\n```\n",
+  "proto": {
+    "name": "ResizeBilinear",
+    "category": "FusedComposite",
+    "difficulty": "L2",
+    "formula": "y = resize_bilinear(x, size)",
+    "description": "使用双线性插值调整 4D 图像 (N, C, H, W) 的空间维度大小",
+    "shape_support": "x: [N, C, H, W]（仅 4D）",
+    "attrs": [
+      {
+        "name": "output_size",
+        "type": "ListInt",
+        "description": "输出尺寸 [output_height, output_width]",
+        "required": false
+      },
+      {
+        "name": "align_corners",
+        "type": "bool",
+        "default": false,
+        "description": "是否对齐角点",
+        "required": false
+      },
+      {
+        "name": "scale_factor",
+        "type": "ListFloat",
+        "description": "缩放因子 [scale_height, scale_width]，与 output_size 互斥",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入张量",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出张量，调整大小后的结果",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "resize_bilinear(Tensor x, int[]? output_size=None, bool align_corners=False, float[]? scale_factor=None) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\nfrom typing import List, Optional\n\n\"\"\"\nResizeBilinear 算子 Torch Golden 参考实现\n\n使用双线性插值调整 4D 图像 (N, C, H, W) 的空间维度大小\n公式: y = resize_bilinear(x, size)\n\n参考 PyTorch API: torch.nn.functional.interpolate (mode='bilinear')\n    https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.interpolate.html\n\"\"\"\n\n\ndef resize_bilinear(\n    x: torch.Tensor,\n    output_size: Optional[List[int]] = None,\n    align_corners: bool = False,\n    scale_factor: Optional[List[float]] = None,\n) -> torch.Tensor:\n    \"\"\"\n    使用双线性插值调整图像大小（仅 4D 输入）。\n\n    Args:\n        x: 输入张量，形状为 (N, C, H, W)\n        output_size: 输出尺寸 [output_height, output_width]，与 scale_factor 互斥\n        align_corners: 是否对齐角点\n        scale_factor: 缩放因子 [scale_height, scale_width]，与 output_size 互斥\n\n    Returns:\n        输出张量 (N, C, H_out, W_out)，dtype 与 x 一致\n    \"\"\"\n    if x.dim() != 4:\n        raise ValueError(f\"ResizeBilinear requires 4D input (N, C, H, W), got {x.dim()}D\")\n    return torch.nn.functional.interpolate(\n        x,\n        size=output_size,\n        scale_factor=scale_factor,\n        mode='bilinear',\n        align_corners=align_corners,\n    )\n",
+  "cases_yaml": [
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 1,
+      "input_shape": [
+        [
+          2,
+          8,
+          512,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "output_size": [
+          256,
+          256
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-8M-对齐-下采样2x-对称小值域 | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 2,
+      "input_shape": [
+        [
+          1,
+          16,
+          1024,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "output_size": [
+          512,
+          512
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        -2,
+        2
+      ],
+      "note": "M-float32-16M-对齐-下采样2x-对称小值域 | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4,
+          4,
+          2048,
+          2048
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "output_size": [
+          1024,
+          1024
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        -3,
+        3
+      ],
+      "note": "L-bfloat16-32M-对齐-下采样2x-对称小值域 | baseline_kernels: Cast×4 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 4,
+      "input_shape": [
+        [
+          1,
+          32,
+          256,
+          256
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "output_size": [
+          512,
+          512
+        ],
+        "align_corners": true
+      },
+      "value_range": [
+        -10,
+        10
+      ],
+      "note": "S-float16-2M-对齐-上采样2x-对齐角点-对称中值域 | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 5,
+      "input_shape": [
+        [
+          8,
+          8,
+          128,
+          128
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "output_size": [
+          1024,
+          1024
+        ],
+        "align_corners": true
+      },
+      "value_range": [
+        -100,
+        100
+      ],
+      "note": "S-float32-8M-对齐-上采样8x-对齐角点-对称大值域 | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 6,
+      "input_shape": [
+        [
+          1,
+          23,
+          1023,
+          1023
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "output_size": [
+          511,
+          511
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        -0.1,
+        0.1
+      ],
+      "note": "M-bfloat16-23M-非对齐-下采样-对称微小值域 | baseline_kernels: Cast×4 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 7,
+      "input_shape": [
+        [
+          2,
+          16,
+          256,
+          256
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "output_size": [
+          512,
+          512
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        -1,
+        2
+      ],
+      "note": "S-float16-2M-对齐-上采样2x-align_corners=false（FPN 典型） | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 8,
+      "input_shape": [
+        [
+          3,
+          7,
+          1537,
+          769
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "output_size": [
+          128,
+          128
+        ],
+        "align_corners": true
+      },
+      "value_range": [
+        -5,
+        10
+      ],
+      "note": "M-float32-24M-非对齐-下采样-对齐角点-非对称中值域 | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 9,
+      "input_shape": [
+        [
+          1,
+          363,
+          367,
+          373
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "output_size": [
+          64,
+          64
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        -50,
+        100
+      ],
+      "note": "M-bfloat16-49M-质数非对齐-上采样-非对称大值域 | baseline_kernels: Cast×4 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 10,
+      "input_shape": [
+        [
+          2,
+          16,
+          2049,
+          513
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "output_size": [
+          1024,
+          256
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        -65504,
+        65504
+      ],
+      "note": "M-float16-33M-非对齐-float16边界值 | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 11,
+      "input_shape": [
+        [
+          1,
+          3,
+          1025,
+          1025
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "output_size": [
+          512,
+          512
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        -88,
+        88
+      ],
+      "note": "M-float32-3M-质数非对齐-float32边界值 | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 12,
+      "input_shape": [
+        [
+          4,
+          4,
+          2003,
+          2003
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "output_size": [
+          1001,
+          1001
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "L-bfloat16-32M-质数非对齐-inf特殊值 | baseline_kernels: Cast×4 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 13,
+      "input_shape": [
+        [
+          11,
+          13,
+          17,
+          67
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "output_size": [
+          256,
+          256
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "S-float32-163K-质数非对齐-nan特殊值-4D | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 14,
+      "input_shape": [
+        [
+          3,
+          7,
+          13,
+          4001
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "output_size": [
+          128,
+          128
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        0,
+        0
+      ],
+      "note": "S-float16-1M-质数非对齐-零值-4D | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 15,
+      "input_shape": [
+        [
+          1,
+          64,
+          512,
+          2049
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "output_size": [
+          256,
+          1024
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        -0.5,
+        0.5
+      ],
+      "note": "L-float32-65M-非对齐-对称微小值域-扁平C | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 16,
+      "input_shape": [
+        [
+          127,
+          1,
+          1024,
+          1024
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "output_size": [
+          512,
+          512
+        ],
+        "align_corners": true
+      },
+      "value_range": [
+        -1,
+        3
+      ],
+      "note": "L-bfloat16-130M-非对齐-非对称小值域-对齐角点 | baseline_kernels: Cast×4 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 17,
+      "input_shape": [
+        [
+          1,
+          8,
+          4097,
+          511
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "output_size": [
+          2048,
+          256
+        ],
+        "align_corners": false
+      },
+      "value_range": [
+        -1000,
+        1000
+      ],
+      "note": "M-float16-16M-非对齐-对称大值域 | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 18,
+      "input_shape": [
+        [
+          2,
+          8,
+          256,
+          256
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "output_size": null,
+        "align_corners": false,
+        "scale_factor": [
+          2.0,
+          2.0
+        ]
+      },
+      "value_range": [
+        -0.2,
+        0.2
+      ],
+      "note": "S-float16-1M-对齐-scale_factor=[2.0/2.0]-上采样路径覆盖 | baseline_kernels: Cast×1 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 19,
+      "input_shape": [
+        [
+          1,
+          16,
+          256,
+          256
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "output_size": [
+          512,
+          512
+        ],
+        "align_corners": true
+      },
+      "value_range": [
+        -3,
+        6
+      ],
+      "note": "S-bfloat16-1M-对齐-上采样2x-align_corners=true（LLaMA decoder 典型） | baseline_kernels: Cast×4 + TransData×3 + ResizeBilinearV2×1"
+    },
+    {
+      "operator": "ResizeBilinear",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          8,
+          384,
+          384
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "output_size": null,
+        "align_corners": false,
+        "scale_factor": [
+          0.5,
+          2.0
+        ]
+      },
+      "value_range": [
+        -20,
+        40
+      ],
+      "note": "M-float32-2M-非对齐-scale_factor非对称（0.5x高 / 2x宽）—— scale_factor 路径覆盖 | baseline_kernels: Cast×1 + UpsampleBilinear2d×1"
+    }
+  ],
+  "case_count": 20
+}

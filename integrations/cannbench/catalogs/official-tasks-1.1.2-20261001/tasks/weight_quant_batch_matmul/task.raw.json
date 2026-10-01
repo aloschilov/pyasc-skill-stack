@@ -1,0 +1,1075 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "WeightQuantBatchMatmul",
+  "function_name": "weight_quant_batch_matmul",
+  "level": "level3",
+  "category": "Contraction",
+  "difficulty": "L3",
+  "description": "权重量化批量矩阵乘法算子，支持权重的反量化计算",
+  "desc_md": "# WeightQuantBatchMatmul 算子 API 描述\n\n## 1. 算子简介\n\n权重量化批量矩阵乘法算子，支持权重的反量化计算。\n\n**主要应用场景**：\n- 大语言模型推理中的权重量化加速\n- 低精度（INT8）量化模型的矩阵乘法计算\n- 模型压缩与部署场景中的量化矩阵运算\n\n**算子特征**：\n- 难度等级：L3（Contraction）\n- 多输入（x、weight、antiquantScale、可选 antiquantOffset、可选 bias）单输出\n- weight 为量化权重（INT8），通过反量化参数转换为浮点后参与矩阵乘法\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\ny = x \\times \\text{ANTIQUANT}(weight) + bias\n$$\n\n其中反量化公式：\n\n$$\n\\text{ANTIQUANT}(weight) = (weight + \\text{antiquantOffset}) \\times \\text{antiquantScale}\n$$\n\n**计算步骤**：\n1. 对量化权重矩阵进行反量化（ANTIQUANT）操作\n2. 执行矩阵乘法 $x \\times \\text{ANTIQUANT}(weight)$\n3. 加上偏置 bias（可选）\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.weight_quant_batch_matmul(Tensor x, Tensor weight, Tensor antiquantScale, Tensor? antiquantOffset=None, Tensor? bias=None) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 左输入矩阵，shape 为 [M, K]，dtype 为 float16/bfloat16 |\n| weight | Tensor | 必选 | 右输入矩阵（量化权重），shape 为 [K, N]，dtype 为 int8 |\n| antiquantScale | Tensor | 必选 | 反量化scale参数，shape 为 [N] 或 [1, N]，dtype 与 x 相同 |\n| antiquantOffset | Tensor | None | 反量化offset参数（可选），shape 与 antiquantScale 相同 |\n| bias | Tensor | None | 偏置张量（可选），shape 为 [N] 或 [1, N]，dtype 为 float16（x=float16 时）或 float32（x=bfloat16 时） |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | [M, N] | 与 x 相同 | 输出张量 |\n\n### 数据类型\n\n| x dtype | weight dtype | antiquantScale dtype | antiquantOffset dtype | bias dtype | 输出 dtype |\n|---------|-------------|---------------------|----------------------|-----------|-----------|\n| float16 | int8 | float16 | float16 | float16 | float16 |\n| bfloat16 | int8 | bfloat16 | bfloat16 | float32 | bfloat16 |\n\n### 规则与约束\n\n- x 的 shape 为 [M, K]，weight 的 shape 为 [K, N]，矩阵乘法要求 K 维度相等\n- antiquantScale 的 shape 为 [N] 或 [1, N]，对应 weight 的 N 维度\n- antiquantOffset（可选）shape 与 antiquantScale 相同\n- bias（可选）shape 为 [N] 或 [1, N]\n- antiquantScale / antiquantOffset 的 dtype 与 x 相同（float16 / bfloat16）\n- bias 的 dtype 规则：x 为 float16 时 bias 必须 float16；x 为 bfloat16 时 bias 必须 float32\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围（参考 `torch_npu.npu_weight_quant_batchmatmul` per-channel int8 量化）：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `M`（x 行 / 输出行） | 1 ~ 512 | 主要 decode 场景；cases.csv 实测 1 ~ 128 |\n| `K`（contraction 维度） | 1 ~ 65535 | x 与 weight 的 K 必须相等；典型 hidden / intermediate 量级；cases.csv 实测 2048 ~ 28672 |\n| `N`（weight 列 / 输出列） | 1 ~ 65535 | antiquantScale / antiquantOffset / bias 的最后一维等于 N；典型 hidden / intermediate 量级；cases.csv 实测 1408 ~ 14336 |\n| `antiquantOffset` | optional | cases.csv 实测 null 与非 null 两种 |\n| `bias` | optional | cases.csv 实测 null 与非 null 两种 |\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nWeightQuantBatchMatmul 算子 Torch Golden 参考实现\n\n权重量化批量矩阵乘法算子\n公式: y = x @ ANTIQUANT(weight) + bias\n      ANTIQUANT(weight) = (weight + antiquantOffset) * antiquantScale\n\"\"\"\ndef weight_quant_batch_matmul(\n    x: torch.Tensor,\n    weight: torch.Tensor,\n    antiquantScale: torch.Tensor,\n    antiquantOffset: torch.Tensor = None,\n    bias: torch.Tensor = None\n) -> torch.Tensor:\n    \"\"\"\n    权重量化批量矩阵乘法算子\n\n    公式: y = x @ ANTIQUANT(weight) + bias\n          ANTIQUANT(weight) = (weight + antiquantOffset) * antiquantScale\n\n    Args:\n        x: 左输入矩阵，shape 为 [M, K]，dtype 为 float16/bfloat16\n        weight: 右输入矩阵（量化权重），shape 为 [K, N]，dtype 为 int8\n        antiquantScale: 反量化scale参数，shape 为 [N] 或 [1, N]\n        antiquantOffset: 反量化offset参数（可选），shape 与 antiquantScale 相同\n        bias: 偏置张量（可选），shape 为 [N] 或 [1, N]\n\n    Returns:\n        输出张量，shape 为 [M, N]，dtype 与 x 相同\n    \"\"\"\n\n    # 反量化 weight: (weight + antiquantOffset) * antiquantScale\n    weight_float = weight.float()  # [K, N]\n    scale_float = antiquantScale.float()  # [N] 或 [1, N]\n\n    if antiquantOffset is not None:\n        offset_float = antiquantOffset.float()\n        weight_dequant = (weight_float + offset_float) * scale_float\n    else:\n        weight_dequant = weight_float * scale_float\n\n    # 矩阵乘法: [M, K] @ [K, N] = [M, N]\n    x_float = x.float()\n    y_float = torch.matmul(x_float, weight_dequant)\n\n    # 加偏置（可选）\n    if bias is not None:\n        bias_float = bias.float()\n        y_float = y_float + bias_float\n\n    y = y_float.to(x.dtype)\n    return y\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\n# LLaMA-7B attention O proj, single decode (M=1)\n# x: [M, K] = [1, 4096]\nx = torch.randn(1, 4096, dtype=torch.float16, device=\"npu\")\n# weight: [K, N] = [4096, 4096]\nweight = torch.randint(-128, 127, (4096, 4096), dtype=torch.int8, device=\"npu\")\n# antiquantScale: [N] = [4096]\nantiquantScale = torch.randn(4096, dtype=torch.float16, device=\"npu\") * 0.05 + 0.05\n# antiquantOffset: [N] = [4096] (可选)\nantiquantOffset = torch.randn(4096, dtype=torch.float16, device=\"npu\") * 0.1\n# bias: [N] = [4096] (可选)\nbias = torch.randn(4096, dtype=torch.float16, device=\"npu\") * 0.1\n\ny = cann_bench.weight_quant_batch_matmul(x, weight, antiquantScale, antiquantOffset, bias)\n# y shape: [M, N] = [1, 4096]\n```\n",
+  "proto": {
+    "name": "WeightQuantBatchMatmul",
+    "category": "Contraction",
+    "difficulty": "L3",
+    "formula": "y = x @ ANTIQUANT(weight) + bias, ANTIQUANT(weight) = (weight + antiquantOffset) * antiquantScale",
+    "description": "权重量化批量矩阵乘法算子，支持权重的反量化计算",
+    "shape_support": "x: [M, K], weight: [K, N], antiquantScale: [N], y: [M, N]",
+    "attrs": null,
+    "inputs": [
+      {
+        "name": "x",
+        "description": "左输入矩阵，shape 为 [M, K]",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "weight",
+        "description": "右输入矩阵（量化权重），shape 为 [K, N]",
+        "dtype": [
+          "int8"
+        ]
+      },
+      {
+        "name": "antiquantScale",
+        "description": "反量化scale参数，shape 为 [N] 或 [1, N]",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "antiquantOffset",
+        "description": "反量化offset参数（可选），shape 与 antiquantScale 相同",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "optional": true
+      },
+      {
+        "name": "bias",
+        "description": "偏置张量（可选），shape 为 [N] 或 [1, N]；x=float16 时为 float16，x=bfloat16 时为 float32",
+        "dtype": [
+          "float16",
+          "float32"
+        ],
+        "optional": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出张量，shape 为 [M, N]",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "weight_quant_batch_matmul(Tensor x, Tensor weight, Tensor antiquantScale, Tensor? antiquantOffset=None, Tensor? bias=None) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nWeightQuantBatchMatmul 算子 Torch Golden 参考实现\n\n权重量化批量矩阵乘法算子\n公式: y = x @ ANTIQUANT(weight) + bias\n      ANTIQUANT(weight) = (weight + antiquantOffset) * antiquantScale\n\"\"\"\ndef weight_quant_batch_matmul(\n    x: torch.Tensor,\n    weight: torch.Tensor,\n    antiquantScale: torch.Tensor,\n    antiquantOffset: torch.Tensor = None,\n    bias: torch.Tensor = None\n) -> torch.Tensor:\n    \"\"\"权重量化批量矩阵乘法算子 —— 同时充当同精度参考 (bench b) 与 golden-npu-mock ST 候选。\n\n    公式: y = x @ ANTIQUANT(weight) + bias，ANTIQUANT(weight) = (weight + antiquantOffset) * antiquantScale。\n\n    A16W8 weight-only 量化的标准约定 (与 torchao / Marlin 等 GPU 库一致): int8 权重反量化到\n    **输出精度 T = x.dtype** (fp16/bf16)，再在 **fp32 累加器** 上做 matmul，输出舍回 T。这是一个\n    正确 A16W8 kernel 在该输出精度下应有的误差下限 (库算子 meet-or-exceed 它)，供 checker 的\n    小值域/相消同精度对照，使 |b - oracle| 不再恒为 0。数学真值 (fp64) 见 `_oracle`；oracle/bench\n    golden 拆分的约定见 docs/guide/contributing.md。\n\n    Args:\n        x: 左输入矩阵，shape 为 [M, K]，dtype 为 float16/bfloat16\n        weight: 右输入矩阵 (量化权重)，shape 为 [K, N]，dtype 为 int8\n        antiquantScale: 反量化 scale 参数，shape 为 [N] 或 [1, N]\n        antiquantOffset: 反量化 offset 参数 (可选)，shape 与 antiquantScale 相同\n        bias: 偏置张量 (可选)，shape 为 [N] 或 [1, N]\n\n    Returns:\n        输出张量，shape 为 [M, N]，dtype 与 x 相同\n    \"\"\"\n    # 反量化跟随输出精度 T：int8 权重升到 T 后 (weight + offset) * scale 在 T 上算，保留硬件同款舍入\n    T = x.dtype\n    weight_dequant = weight.to(T)\n    scale = antiquantScale.to(T)\n    if antiquantOffset is not None:\n        weight_dequant = (weight_dequant + antiquantOffset.to(T)) * scale\n    else:\n        weight_dequant = weight_dequant * scale\n\n    # fp32 累加器 (tensor-core 约定)：T 操作数升 fp32 相乘累加，不改变操作数已有的 T 舍入\n    y = torch.matmul(x.float(), weight_dequant.float())\n    if bias is not None:\n        y = y + bias.float()\n    return y.to(T)\n\n\ndef weight_quant_batch_matmul_oracle(\n    x: torch.Tensor,\n    weight: torch.Tensor,\n    antiquantScale: torch.Tensor,\n    antiquantOffset: torch.Tensor = None,\n    bias: torch.Tensor = None,\n) -> torch.Tensor:\n    \"\"\"Oracle: A16W8 的数学真值 (g)。唯一的近似是 int8 权重量化本身；反量化\n    (weight + offset) * scale 与 matmul 全程跟随输入精度、不硬编码 .float()/.double() —— 在\n    golden_precision=fp64_cpu 下 x 为 fp64，故整条在 fp64 计算，是精确反量化的 fp64 真值上界\n    (不再把 fp64 下采成 fp32)。int8 weight 用 .to(x.dtype) 反量化跟随计算精度。\n    \"\"\"\n    cdt = x.dtype\n    weight_dq = weight.to(cdt)\n    scale_c = antiquantScale.to(cdt)\n    if antiquantOffset is not None:\n        weight_dq = (weight_dq + antiquantOffset.to(cdt)) * scale_c\n    else:\n        weight_dq = weight_dq * scale_c\n    y = torch.matmul(x, weight_dq)\n    if bias is not None:\n        y = y + bias.to(cdt)\n    return y.to(x.dtype)\n",
+  "cases_yaml": [
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          2048
+        ],
+        [
+          2048
+        ],
+        [
+          2048
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int8",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=1-K=2048-N=2048-fp16-2k*2k-attnO-基线"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 2,
+      "input_shape": [
+        [
+          4,
+          2048
+        ],
+        [
+          2048,
+          4096
+        ],
+        [
+          4096
+        ],
+        [
+          4096
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int8",
+        "bfloat16",
+        "bfloat16",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=4-K=2048-N=4096-bf16-小模型-FFN-up"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 3,
+      "input_shape": [
+        [
+          8,
+          4096
+        ],
+        [
+          4096,
+          2048
+        ],
+        [
+          2048
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int8",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ]
+      ],
+      "note": "M=8-K=4096-N=2048-fp16-小模型-FFN-down-无offset无bias"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 4,
+      "input_shape": [
+        [
+          1,
+          2048
+        ],
+        [
+          2048,
+          1408
+        ],
+        [
+          1408
+        ],
+        [
+          1408
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int8",
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=1-K=2048-N=1408-fp16-Qwen1.5-MoE-A2.7B-routed-expert-有offset无bias"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 5,
+      "input_shape": [
+        [
+          2,
+          5120
+        ],
+        [
+          5120,
+          1536
+        ],
+        [
+          1536
+        ],
+        [
+          1536
+        ],
+        [
+          1536
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int8",
+        "bfloat16",
+        "bfloat16",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=2-K=5120-N=1536-bf16-DeepSeek-V2-routed-expert"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 6,
+      "input_shape": [
+        [
+          4,
+          7168
+        ],
+        [
+          7168,
+          2048
+        ],
+        [
+          2048
+        ],
+        [
+          2048
+        ],
+        [
+          2048
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int8",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=4-K=7168-N=2048-fp16-DeepSeek-V3-routed-expert"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 7,
+      "input_shape": [
+        [
+          8,
+          4096
+        ],
+        [
+          4096,
+          6400
+        ],
+        [
+          6400
+        ],
+        null,
+        [
+          6400
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int8",
+        "bfloat16",
+        null,
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        null,
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=8-K=4096-N=6400-bf16-Phi-3.5-MoE-expert-无offset有bias"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          4096
+        ],
+        [
+          4096
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int8",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=1-K=4096-N=4096-fp16-LLaMA-7B-attnO-single-decode"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 9,
+      "input_shape": [
+        [
+          2,
+          4096
+        ],
+        [
+          4096,
+          12288
+        ],
+        [
+          12288
+        ],
+        [
+          12288
+        ],
+        [
+          12288
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int8",
+        "bfloat16",
+        "bfloat16",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=2-K=4096-N=12288-bf16-LLaMA-7B-QKV-MHA"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 10,
+      "input_shape": [
+        [
+          4,
+          4096
+        ],
+        [
+          4096,
+          6144
+        ],
+        [
+          6144
+        ],
+        [
+          6144
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int8",
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=4-K=4096-N=6144-fp16-LLaMA3-8B-GQA-QKV-有offset无bias"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 11,
+      "input_shape": [
+        [
+          8,
+          3584
+        ],
+        [
+          3584,
+          4608
+        ],
+        [
+          4608
+        ],
+        [
+          4608
+        ],
+        [
+          4608
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int8",
+        "bfloat16",
+        "bfloat16",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=8-K=3584-N=4608-bf16-Qwen2-7B-GQA-QKV"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 12,
+      "input_shape": [
+        [
+          16,
+          4096
+        ],
+        [
+          4096,
+          11008
+        ],
+        [
+          11008
+        ],
+        [
+          11008
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int8",
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=16-K=4096-N=11008-fp16-LLaMA-7B-FFN-gate-up-有offset无bias"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 13,
+      "input_shape": [
+        [
+          32,
+          11008
+        ],
+        [
+          11008,
+          4096
+        ],
+        [
+          4096
+        ],
+        [
+          4096
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int8",
+        "bfloat16",
+        "bfloat16",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=32-K=11008-N=4096-bf16-LLaMA-7B-FFN-down"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 14,
+      "input_shape": [
+        [
+          64,
+          4096
+        ],
+        [
+          4096,
+          14336
+        ],
+        [
+          14336
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int8",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ]
+      ],
+      "note": "M=64-K=4096-N=14336-fp16-Qwen2-7B-FFN-gate-无offset无bias"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 15,
+      "input_shape": [
+        [
+          96,
+          5120
+        ],
+        [
+          5120,
+          13824
+        ],
+        [
+          13824
+        ],
+        null,
+        [
+          13824
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int8",
+        "bfloat16",
+        null,
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        null,
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=96-K=5120-N=13824-bf16-LLaMA-13B-FFN-gate-up-无offset有bias"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 16,
+      "input_shape": [
+        [
+          128,
+          5120
+        ],
+        [
+          5120,
+          5120
+        ],
+        [
+          5120
+        ],
+        [
+          5120
+        ],
+        [
+          5120
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int8",
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=128-K=5120-N=5120-fp16-LLaMA-13B-attnO-decode-边界"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 17,
+      "input_shape": [
+        [
+          64,
+          14336
+        ],
+        [
+          14336,
+          4096
+        ],
+        [
+          4096
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int8",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=64-K=14336-N=4096-bf16-Qwen2-7B-FFN-down-有offset无bias"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 18,
+      "input_shape": [
+        [
+          1,
+          8192
+        ],
+        [
+          8192,
+          8192
+        ],
+        [
+          8192
+        ],
+        [
+          8192
+        ],
+        [
+          8192
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int8",
+        "bfloat16",
+        "bfloat16",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=1-K=8192-N=8192-bf16-LLaMA-70B-attnO-single-decode"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 19,
+      "input_shape": [
+        [
+          8,
+          8192
+        ],
+        [
+          8192,
+          10240
+        ],
+        [
+          10240
+        ],
+        [
+          10240
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int8",
+        "float16",
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=8-K=8192-N=10240-fp16-LLaMA-70B-GQA-QKV-有offset无bias"
+    },
+    {
+      "operator": "WeightQuantBatchMatmul",
+      "case_id": 20,
+      "input_shape": [
+        [
+          32,
+          28672
+        ],
+        [
+          28672,
+          8192
+        ],
+        [
+          8192
+        ],
+        [
+          8192
+        ],
+        [
+          8192
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int8",
+        "bfloat16",
+        "bfloat16",
+        "float32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "M=32-K=28672-N=8192-bf16-LLaMA-70B-FFN-down-最大K"
+    }
+  ],
+  "case_count": 20
+}

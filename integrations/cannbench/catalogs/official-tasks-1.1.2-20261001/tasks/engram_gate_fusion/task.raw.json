@@ -1,0 +1,1949 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "EngramGateFusion",
+  "function_name": "engram_gate_fusion",
+  "level": "level3",
+  "category": "VVFusion",
+  "difficulty": "L3",
+  "description": "DeepSeek Engram 模块 (arXiv:2601.07372) 的 7 步融合算子，双路 RMSNorm + 缩放点积门控 + Sigmoid + 门控广播乘法 + 因果扩张深度可分离卷积 (ShortConv) + SiLU + 残差。支持 Prefill 与 Decode 两阶段，Decode 通过 conv_state 缓存历史卷积上下文。",
+  "desc_md": "# EngramGateFusion 算子 API 描述\n\n## 1. 算子简介\n\nEngramGateFusion 来自 DeepSeek Engram 模块（arXiv:2601.07372），该模块通过 N-gram 哈希查表为 Transformer 提供**条件记忆**。Engram forward 关键路径包含双路 RMSNorm、缩放点积门控、Sigmoid 非线性、门控广播乘法、因果扩张深度可分离卷积（ShortConv）、SiLU 与残差加法共七个子步骤。\n\n**融合目标**：将七个子步骤合并为一个 Ascend 自定义算子，消除中间 tensor 的 HBM 反复读写，降低 kernel launch 开销。\n\n**主要应用场景**：\n- DeepSeek Engram 模块的条件记忆计算\n- LLM 推理中的 N-gram 条件门控\n- Prefill 和 Decode 两个阶段均需支持（Decode 通过 `conv_state` 缓存历史卷积上下文）\n\n**算子特征**：\n- 难度等级：L3（VVFusion）\n- 7 必选张量输入 + 1 可选状态输入 + 5 个超参数\n- 双输出：融合后的特征 + 下一步 Decode 所需的 ShortConv 状态\n\n## 2. 算子定义\n\n### 数学公式\n\n设超参数：$HC$（hyper-connection 通道数）、$D$（hidden size）、$K$（卷积核大小）、$\\text{dil}$（扩张率）、$\\varepsilon$（RMSNorm epsilon）。\n\n**Step 1 & 2：双路 RMSNorm**\n\n$$\n\\hat{k}_{b,l,hc,d} = \\text{RMSNorm}(\\mathbf{keys}_{b,l,hc,:},\\; \\mathbf{w}^{(1)}_{hc,:},\\; \\varepsilon)_d\n\\qquad\n\\hat{q}_{b,l,hc,d} = \\text{RMSNorm}(\\mathbf{hidden}_{b,l,hc,:},\\; \\mathbf{w}^{(2)}_{hc,:},\\; \\varepsilon)_d\n$$\n\n$$\n\\text{RMSNorm}(\\mathbf{x}, \\mathbf{w}, \\varepsilon) = \\frac{\\mathbf{x}}{\\sqrt{\\frac{1}{D}\\sum_{d} x_d^2 + \\varepsilon}} \\odot \\mathbf{w}\n$$\n\n**Step 3：缩放点积门控**\n\n$$\nr_{b,l,hc} = \\frac{\\sum_{d=0}^{D-1}\\hat{k}_{b,l,hc,d} \\cdot \\hat{q}_{b,l,hc,d}}{\\sqrt{D}}\n$$\n\n**Step 4：非线性变换 + Sigmoid**\n\n$$\ng_{b,l,hc} = \\sigma\\!\\left(\\sqrt{\\max(|r_{b,l,hc}|,\\;10^{-6})} \\cdot \\text{sign}(r_{b,l,hc})\\right)\n$$\n\n**Step 5：门控广播乘法**\n\n$$\nV^{g}_{b,l,hc,d} = g_{b,l,hc} \\cdot \\mathbf{value}_{b,l,d}\n$$\n\n**Step 6：ShortConv（因果扩张深度可分离卷积 + SiLU）**\n\n$$\n\\mathbf{y}_{b,c,l} = \\text{SiLU}\\!\\left(\\sum_{k=0}^{K-1} W^{(\\text{conv})}_{c,k} \\cdot \\tilde{V}^g_{b,c,\\;l-k\\cdot\\text{dil}}\\right), \\quad \\tilde{V}^g = \\text{RMSNorm}(V^g, \\mathbf{w}^{(c)}, \\varepsilon)\n$$\n\n**Step 7：残差相加**\n\n$$\n\\mathbf{output}_{b,l,hc,d} = V^{g}_{b,l,hc,d} + \\text{conv\\_out}_{b,l,hc,d}\n$$\n\n### 关键性质\n\n- **因果性**：ShortConv 仅做左侧 padding，位置 $l$ 的输出仅依赖 $l$ 及之前的位置\n- **Decode 状态缓存**：单步 Decode 需使用 `conv_state`（长度为 $(K-1)\\cdot\\text{dil}$ 的历史缓存）以保留历史上下文\n- **无 bias**：所有 RMSNorm 和 Conv1d 均无 bias 参数\n- **门控保护**：`clamp_min(1e-6)` 用于避免极小值附近不稳定并与参考实现保持一致\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.engram_gate_fusion(\n    Tensor keys,\n    Tensor hidden_states,\n    Tensor value,\n    Tensor norm1_weight,\n    Tensor norm2_weight,\n    Tensor conv_norm_weight,\n    Tensor conv_weight,\n    Tensor? conv_state=None,\n    int hc_mult=4,\n    int hidden_size=1024,\n    int kernel_size=4,\n    int dilation=3,\n    float norm_eps=1e-5\n) -> (Tensor output, Tensor conv_state_out)\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 必需 | Shape | dtype | 描述 |\n|------|------|------|-------|-------|------|\n| keys | Tensor | 是 | [B, L, HC, D] | bfloat16 | key_proj 输出 |\n| hidden_states | Tensor | 是 | [B, L, HC, D] | bfloat16 | Transformer 隐层（query） |\n| value | Tensor | 是 | [B, L, D] | bfloat16 | value_proj 输出 |\n| norm1_weight | Tensor | 是 | [HC, D] | float32 | key-RMSNorm 的 γ 权重 |\n| norm2_weight | Tensor | 是 | [HC, D] | float32 | query-RMSNorm 的 γ 权重 |\n| conv_norm_weight | Tensor | 是 | [HC, D] | float32 | ShortConv 内 RMSNorm 的 γ 权重 |\n| conv_weight | Tensor | 是 | [HC·D, 1, K] | float32 | 深度可分离 Conv1d 权重（无 bias） |\n| conv_state | Tensor | 否 | [B, HC·D, (K-1)·dil] | bfloat16 | Decode 阶段的 ShortConv 历史缓存；Prefill 可为 None |\n\n### 超参数说明\n\n| 参数 | 类型 | 默认值 | 约束 |\n|------|------|--------|------|\n| hc_mult | int | 4 | hyper-connection 通道数 HC，须等于 `keys.shape[2]` |\n| hidden_size | int | 1024 | 每通道隐层维度 D，须等于 `keys.shape[3]` |\n| kernel_size | int | 4 | ShortConv 卷积核大小 K，须等于 `conv_weight.shape[2]` |\n| dilation | int | 3 | ShortConv 扩张率 = max_ngram_size |\n| norm_eps | float | 1e-5 | 所有 RMSNorm 的 ε |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| output | [B, L, HC, D] | bfloat16 | 融合后的 Engram 输出 |\n| conv_state_out | [B, HC·D, (K-1)·dil] | bfloat16 | 更新后的 ShortConv 缓存，供下一步 Decode 使用 |\n\n### 数据类型\n\n| 输入 | dtype |\n|------|-------|\n| 激活（keys / hidden_states / value / conv_state） | bfloat16 |\n| 权重（norm1_weight / norm2_weight / conv_norm_weight / conv_weight） | float32（计算时可 cast 到激活类型） |\n| 输出（output / conv_state_out） | bfloat16（与 value 一致） |\n\n### 规则与约束\n\n- `keys`, `hidden_states` 必须为 4D 张量，shape 为 [B, L, HC, D]\n- `value` 必须为 3D 张量，shape 为 [B, L, D]\n- 维度联动：`HC == hc_mult`，`D == hidden_size`\n- `keys` / `hidden_states` / `value` 的 B、L、D 必须一致\n- `conv_weight` shape 须为 [HC·D, 1, K]，且 K == kernel_size\n- L 为动态维度，算子须支持可变序列长度\n- 若为 Decode 单步模式（L=1），必须提供 `conv_state`；Prefill 模式 `conv_state` 可为 None（内部左 padding 处理）\n- `raw_gate` 中 `clamp_min(1e-6)` 不可省略\n- 所有 RMSNorm 与 Conv1d 均无 bias 参数\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `B`（batch，`keys` / `hidden_states` / `value` / `conv_state` 共享） | 1 ~ 256 | cases.csv 实测 1 ~ 8 |\n| `L`（序列长度，`keys` / `hidden_states` / `value` 共享） | 1 ~ 4096 | cases.csv 实测 1 ~ 2048；Decode 单步 `L=1` 必须提供 `conv_state` |\n| `HC`（hyper-connection，`keys` / `hidden_states` / `norm1_weight` / `norm2_weight` / `conv_norm_weight` 共享） | 1 ~ 16 | cases.csv 实测 2 / 4 / 8；须等于 `hc_mult` |\n| `D`（hidden size，`keys` / `hidden_states` / `value` / `norm*_weight` 共享） | 64 ~ 2048 | cases.csv 实测 256 / 512 / 769 / 1024；须等于 `hidden_size`；不要求 2 的幂（实测含质数 769） |\n| `conv_weight.shape[0]`（深度可分离 Conv1d 通道） | = `HC * D` | cases.csv 实测 1024 / 2048 / 3076 / 4096 / 8192 |\n| `conv_weight.shape[1]` | 固定 1 | depthwise，`groups = HC*D` |\n| `K`（`conv_weight.shape[2]`，卷积核） | 1 ~ 16 | cases.csv 实测 4 / 8；须等于 `kernel_size` |\n| `conv_state.shape[2]` | = `(K-1) * dilation` | cases.csv 实测 9（K=4, dil=3） |\n| `hc_mult` | 1 ~ 16 | cases.csv 实测 2 / 4 / 8 |\n| `hidden_size` | 64 ~ 2048 | cases.csv 实测 256 / 512 / 769 / 1024 |\n| `kernel_size` | 1 ~ 16 | cases.csv 实测 4 / 8 |\n| `dilation` | 1 ~ 16 | cases.csv 实测 1 / 3 |\n| `norm_eps` | (0, 1) | cases.csv 实测 1e-5 |\n| 激活值域（`keys` / `hidden_states` / `value` / `conv_state`） | bfloat16 可表示范围 | cases.csv 实测 [-0.1, 0.1] / [-0.01, 0.01] |\n| 权重值域（`norm*_weight` / `conv_weight`） | float32 可表示范围 | cases.csv 实测 [-0.1, 0.1] / [-0.01, 0.01] |\n\n约束：`HC == hc_mult`、`D == hidden_size`、`conv_weight.shape == [HC*D, 1, kernel_size]`；Decode 模式（`L=1`）必须传入 shape 为 `[B, HC*D, (K-1)*dilation]` 的 `conv_state`，Prefill 模式 `conv_state` 可为 None（内部左 padding）。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n### 关键精度策略\n\n- 点积门控（`raw_gate`）在 FP32 中进行乘法与累加\n- `sqrt`、`sigmoid` 在 FP32 中计算后再转换到激活 dtype\n- 卷积输入与 `conv_weight` 需同 dtype（推荐将 `conv_weight` cast 到激活 dtype）\n\n## 5. 标准 Golden 代码\n\n```python\nimport math\nimport torch\nimport torch.nn.functional as F\n\n\ndef engram_gate_fusion(\n    keys: torch.Tensor,\n    hidden_states: torch.Tensor,\n    value: torch.Tensor,\n    norm1_weight: torch.Tensor,\n    norm2_weight: torch.Tensor,\n    conv_norm_weight: torch.Tensor,\n    conv_weight: torch.Tensor,\n    conv_state: torch.Tensor = None,\n    hc_mult: int = 4,\n    hidden_size: int = 1024,\n    kernel_size: int = 4,\n    dilation: int = 3,\n    norm_eps: float = 1e-5,\n):\n    \"\"\"EngramGateFusion: dual RMSNorm gate + broadcast multiply + ShortConv + residual.\n\n    Returns (output, conv_state_out).\"\"\"\n    B, L, HC, D = keys.shape\n    state_len = (kernel_size - 1) * dilation\n\n    assert HC == hc_mult and D == hidden_size\n    assert hidden_states.shape == (B, L, HC, D)\n    assert value.shape == (B, L, D)\n    assert norm1_weight.shape == (HC, D)\n    assert norm2_weight.shape == (HC, D)\n    assert conv_norm_weight.shape == (HC, D)\n    assert conv_weight.shape == (HC * D, 1, kernel_size)\n    if conv_state is not None:\n        assert conv_state.shape == (B, HC * D, state_len)\n\n    input_dtype = keys.dtype\n    output_dtype = input_dtype\n    compute_dtype = torch.float32\n\n    def rms_norm(x, w, eps):\n        x_hp = x.to(compute_dtype)\n        w_view = w.view(1, 1, HC, D).to(compute_dtype)\n        rms = x_hp.pow(2).mean(dim=-1, keepdim=True).add(eps).sqrt()\n        return x_hp / rms * w_view\n\n    # Step 1 & 2: dual RMSNorm\n    normed_keys = rms_norm(keys, norm1_weight, norm_eps)\n    normed_qs = rms_norm(hidden_states, norm2_weight, norm_eps)\n\n    # Step 3: scaled dot-product gate\n    raw_gate = (normed_keys * normed_qs).sum(dim=-1) / math.sqrt(D)\n\n    # Step 4: nonlinear + sigmoid gate\n    safe_abs = raw_gate.abs().clamp_min(1e-6)\n    gate = torch.sigmoid(safe_abs.sqrt() * raw_gate.sign()).unsqueeze(-1)\n\n    # Step 5: broadcast gating\n    value_hp = value.to(compute_dtype)\n    value_gated = gate * value_hp.unsqueeze(2)\n\n    # Step 6: ShortConv\n    normed_vg = rms_norm(value_gated, conv_norm_weight, norm_eps)\n    x = normed_vg.permute(0, 2, 3, 1).reshape(B, HC * D, L)\n\n    if conv_state is None:\n        x_cat = F.pad(x, (state_len, 0))\n    else:\n        x_cat = torch.cat([conv_state.to(compute_dtype), x], dim=-1)\n\n    conv_state_out_hp = x_cat[:, :, -state_len:].contiguous() if state_len > 0 else x_cat[:, :, :0]\n\n    y = F.conv1d(\n        x_cat,\n        conv_weight.to(compute_dtype),\n        dilation=dilation,\n        groups=HC * D,\n    )\n    y = F.silu(y)\n    conv_out = y.reshape(B, HC, D, L).permute(0, 3, 1, 2)\n\n    # Step 7: residual\n    output_hp = value_gated + conv_out\n\n    output = output_hp.to(output_dtype)\n    conv_state_out = conv_state_out_hp.to(output_dtype)\n    return output, conv_state_out\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport torch_npu\n\nB, L, HC, D, K, dil = 1, 13, 4, 1024, 4, 3\nstate_len = (K - 1) * dil  # = 9\n\nkeys           = torch.randn(B, L, HC, D, dtype=torch.bfloat16, device=\"npu\")\nhidden_states  = torch.randn(B, L, HC, D, dtype=torch.bfloat16, device=\"npu\")\nvalue          = torch.randn(B, L, D,     dtype=torch.bfloat16, device=\"npu\")\nnorm1_weight   = torch.randn(HC, D,        dtype=torch.float32,  device=\"npu\")\nnorm2_weight   = torch.randn(HC, D,        dtype=torch.float32,  device=\"npu\")\nconv_norm_w    = torch.randn(HC, D,        dtype=torch.float32,  device=\"npu\")\nconv_weight    = torch.randn(HC * D, 1, K, dtype=torch.float32,  device=\"npu\")\n\n# Prefill (no state)\noutput, conv_state = torch_npu.npu_engram_gate_fusion(\n    keys, hidden_states, value,\n    norm1_weight, norm2_weight, conv_norm_w, conv_weight,\n    conv_state=None,\n    hc_mult=HC, hidden_size=D, kernel_size=K, dilation=dil, norm_eps=1e-5,\n)\n\n# Decode (single token, with state from previous step)\nout_dec, conv_state = torch_npu.npu_engram_gate_fusion(\n    keys[:, :1], hidden_states[:, :1], value[:, :1],\n    norm1_weight, norm2_weight, conv_norm_w, conv_weight,\n    conv_state=conv_state,\n    hc_mult=HC, hidden_size=D, kernel_size=K, dilation=dil, norm_eps=1e-5,\n)\n```\n\n## 7. 参考\n\n- DeepSeek-AI (2025). \"Engram: A Framework for Conditional Memory in Large Language Models\". arXiv:2601.07372.\n- 相关算子：`torch_npu.npu_rms_norm`，`torch.nn.functional.conv1d`\n",
+  "proto": {
+    "name": "EngramGateFusion",
+    "category": "VVFusion",
+    "difficulty": "L3",
+    "formula": "output = value_gated + SiLU(DepthwiseConv1d(RMSNorm(value_gated, conv_norm_w), conv_w, dil)); value_gated = sigmoid(sqrt(clamp(|raw_gate|,1e-6))*sign(raw_gate)) * value, raw_gate = sum(RMSNorm(keys,w1) * RMSNorm(hidden,w2), dim=-1)/sqrt(D)",
+    "description": "DeepSeek Engram 模块 (arXiv:2601.07372) 的 7 步融合算子，双路 RMSNorm + 缩放点积门控 + Sigmoid + 门控广播乘法 + 因果扩张深度可分离卷积 (ShortConv) + SiLU + 残差。支持 Prefill 与 Decode 两阶段，Decode 通过 conv_state 缓存历史卷积上下文。",
+    "shape_support": "keys/hidden_states: [B, L, HC, D]，value: [B, L, D]，norm*_weight: [HC, D]，conv_weight: [HC*D, 1, K]，conv_state (可选): [B, HC*D, (K-1)*dil]",
+    "attrs": [
+      {
+        "name": "hc_mult",
+        "type": "int",
+        "default": 4,
+        "description": "hyper-connection 通道数 HC，须等于 keys.shape[2]",
+        "required": false
+      },
+      {
+        "name": "hidden_size",
+        "type": "int",
+        "default": 1024,
+        "description": "每通道隐层维度 D，须等于 keys.shape[3]",
+        "required": false
+      },
+      {
+        "name": "kernel_size",
+        "type": "int",
+        "default": 4,
+        "description": "ShortConv 卷积核大小 K",
+        "required": false
+      },
+      {
+        "name": "dilation",
+        "type": "int",
+        "default": 3,
+        "description": "ShortConv 扩张率（max_ngram_size）",
+        "required": false
+      },
+      {
+        "name": "norm_eps",
+        "type": "float",
+        "default": 1e-05,
+        "description": "所有 RMSNorm 的 epsilon",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "keys",
+        "description": "key_proj 输出，shape [B, L, HC, D]",
+        "dtype": [
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "hidden_states",
+        "description": "Transformer 隐层 (query)，shape [B, L, HC, D]",
+        "dtype": [
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "value",
+        "description": "value_proj 输出，shape [B, L, D]",
+        "dtype": [
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "norm1_weight",
+        "description": "key-RMSNorm 的 γ 权重，shape [HC, D]",
+        "dtype": [
+          "float32"
+        ]
+      },
+      {
+        "name": "norm2_weight",
+        "description": "query-RMSNorm 的 γ 权重，shape [HC, D]",
+        "dtype": [
+          "float32"
+        ]
+      },
+      {
+        "name": "conv_norm_weight",
+        "description": "ShortConv 内 RMSNorm 的 γ 权重，shape [HC, D]",
+        "dtype": [
+          "float32"
+        ]
+      },
+      {
+        "name": "conv_weight",
+        "description": "深度可分离 Conv1d 权重（无 bias），shape [HC*D, 1, K]",
+        "dtype": [
+          "float32"
+        ]
+      },
+      {
+        "name": "conv_state",
+        "description": "Decode 阶段的 ShortConv 历史缓存，shape [B, HC*D, (K-1)*dil]；Prefill 可为 None",
+        "dtype": [
+          "bfloat16"
+        ],
+        "optional": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "output",
+        "description": "融合后的 Engram 输出，shape [B, L, HC, D]",
+        "dtype": [
+          "bfloat16"
+        ]
+      },
+      {
+        "name": "conv_state_out",
+        "description": "更新后的 ShortConv 缓存，shape [B, HC*D, (K-1)*dil]",
+        "dtype": [
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "engram_gate_fusion(Tensor keys, Tensor hidden_states, Tensor value, Tensor norm1_weight, Tensor norm2_weight, Tensor conv_norm_weight, Tensor conv_weight, Tensor? conv_state=None, int hc_mult=4, int hidden_size=1024, int kernel_size=4, int dilation=3, float norm_eps=1e-5) -> (Tensor output, Tensor conv_state_out)"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport math\nimport torch\nimport torch.nn.functional as F\n\n\"\"\"\nEngramGateFusion Torch Golden 参考实现\n\nDeepSeek Engram 模块 (arXiv:2601.07372) 的 7 步融合算子：\n  1-2. 双路 RMSNorm\n  3.   缩放点积门控\n  4.   sqrt + sigmoid 非线性门控\n  5.   门控广播乘法\n  6.   ShortConv（RMSNorm → 深度可分离扩张 Conv1d → SiLU），支持 Decode 状态缓存\n  7.   残差相加\n\n精度策略：\n  - 标杆计算时（测试框架传入 FP64 输入）：全程 FP64 计算，输出截断到 BF16\n  - 算子计算时（NPU 上 BF16 输入）：升精度到 FP32 计算，输出截断到 BF16\n  - 计算精度不低于 FP32（确保数值稳定）\n\n返回 (output, conv_state_out)。\n\"\"\"\n\n\ndef engram_gate_fusion(\n    keys: torch.Tensor,\n    hidden_states: torch.Tensor,\n    value: torch.Tensor,\n    norm1_weight: torch.Tensor,\n    norm2_weight: torch.Tensor,\n    conv_norm_weight: torch.Tensor,\n    conv_weight: torch.Tensor,\n    conv_state: torch.Tensor = None,\n    hc_mult: int = 4,\n    hidden_size: int = 1024,\n    kernel_size: int = 4,\n    dilation: int = 3,\n    norm_eps: float = 1e-5,\n):\n    \"\"\"EngramGateFusion: dual RMSNorm gate + broadcast multiply + ShortConv + residual.\n\n    Args:\n        keys:             [B, L, HC, D]\n        hidden_states:    [B, L, HC, D]\n        value:            [B, L, D]\n        norm1_weight:     [HC, D], float32\n        norm2_weight:     [HC, D], float32\n        conv_norm_weight: [HC, D], float32\n        conv_weight:      [HC*D, 1, K], float32\n        conv_state:       [B, HC*D, (K-1)*dilation], 输入精度 or None\n\n    Returns:\n        output: [B, L, HC, D]\n        conv_state_out: [B, HC*D, (K-1)*dilation]\n    \"\"\"\n    B, L, HC, D = keys.shape\n    state_len = (kernel_size - 1) * dilation\n\n    assert HC == hc_mult and D == hidden_size\n    assert hidden_states.shape == (B, L, HC, D)\n    assert value.shape == (B, L, D)\n    assert norm1_weight.shape == (HC, D)\n    assert norm2_weight.shape == (HC, D)\n    assert conv_norm_weight.shape == (HC, D)\n    assert conv_weight.shape == (HC * D, 1, kernel_size)\n    if conv_state is not None:\n        assert conv_state.shape == (B, HC * D, state_len)\n\n    # 计算精度：所有路径下都用 FP32 做内部计算（消除半精度累积误差）；\n    # 输出再转回 input_dtype。\n    input_dtype = keys.dtype\n    output_dtype = input_dtype\n    compute_dtype = torch.float32\n\n    def rms_norm(x, w, eps):\n        \"\"\"RMSNorm：输入升精度，全程高精度计算\"\"\"\n        x_hp = x.to(compute_dtype)\n        w_view = w.view(1, 1, HC, D).to(compute_dtype)\n        rms = x_hp.pow(2).mean(dim=-1, keepdim=True).add(eps).sqrt()\n        return x_hp / rms * w_view\n\n    # ============================================================\n    # Step 1 & 2: 双路 RMSNorm（高精度计算）\n    # ============================================================\n    normed_keys = rms_norm(keys, norm1_weight, norm_eps)\n    normed_qs = rms_norm(hidden_states, norm2_weight, norm_eps)\n\n    # ============================================================\n    # Step 3: 缩放点积门控（高精度累加）\n    # ============================================================\n    raw_gate = (normed_keys * normed_qs).sum(dim=-1) / math.sqrt(D)\n\n    # ============================================================\n    # Step 4: sqrt + sigmoid 非线性门控（高精度）\n    # ============================================================\n    safe_abs = raw_gate.abs().clamp_min(1e-6)\n    gate = torch.sigmoid(safe_abs.sqrt() * raw_gate.sign()).unsqueeze(-1)\n\n    # ============================================================\n    # Step 5: 门控广播乘法（高精度）\n    # ============================================================\n    value_hp = value.to(compute_dtype)\n    value_gated = gate * value_hp.unsqueeze(2)\n\n    # ============================================================\n    # Step 6: ShortConv（高精度）\n    # ============================================================\n    normed_vg = rms_norm(value_gated, conv_norm_weight, norm_eps)\n    x = normed_vg.permute(0, 2, 3, 1).reshape(B, HC * D, L)\n\n    if conv_state is None:\n        x_cat = F.pad(x, (state_len, 0))\n    else:\n        x_cat = torch.cat([conv_state.to(compute_dtype), x], dim=-1)\n\n    # conv_state_out：高精度计算后截断到 BF16\n    conv_state_out_hp = x_cat[:, :, -state_len:].contiguous() if state_len > 0 else x_cat[:, :, :0]\n\n    # Conv1d：权重升精度\n    y = F.conv1d(\n        x_cat,\n        conv_weight.to(compute_dtype),\n        dilation=dilation,\n        groups=HC * D,\n    )\n    y = F.silu(y)\n    conv_out = y.reshape(B, HC, D, L).permute(0, 3, 1, 2)\n\n    # ============================================================\n    # Step 7: 残差相加（高精度）\n    # ============================================================\n    output_hp = value_gated + conv_out\n\n    # ============================================================\n    # 输出截断：高精度 → BF16（预期输出精度）\n    # ============================================================\n    output = output_hp.to(output_dtype)\n    conv_state_out = conv_state_out_hp.to(output_dtype)\n\n    return output, conv_state_out",
+  "cases_yaml": [
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1,
+          13,
+          4,
+          1024
+        ],
+        [
+          1,
+          13,
+          4,
+          1024
+        ],
+        [
+          1,
+          13,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "demo_shape-B1L13HC4D1024K4dil3-原始 demo 配置 (B=1,L=13,HC=4,D=1024)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 2,
+      "input_shape": [
+        [
+          1,
+          1,
+          4,
+          1024
+        ],
+        [
+          1,
+          1,
+          4,
+          1024
+        ],
+        [
+          1,
+          1,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        [
+          1,
+          4096,
+          9
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        "bfloat16"
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "single_token_decode-B1L1HC4D1024K4dil3-decode-Decode 单步推理 (L=1, 需 conv_state)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 3,
+      "input_shape": [
+        [
+          1,
+          16,
+          4,
+          1024
+        ],
+        [
+          1,
+          16,
+          4,
+          1024
+        ],
+        [
+          1,
+          16,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "short_seq-B1L16HC4D1024K4dil3-短序列 (L=16)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 4,
+      "input_shape": [
+        [
+          1,
+          128,
+          4,
+          1024
+        ],
+        [
+          1,
+          128,
+          4,
+          1024
+        ],
+        [
+          1,
+          128,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "medium_seq_single-B1L128HC4D1024K4dil3-中等序列单 batch (L=128)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4,
+          128,
+          4,
+          1024
+        ],
+        [
+          4,
+          128,
+          4,
+          1024
+        ],
+        [
+          4,
+          128,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "medium_seq_batch-B4L128HC4D1024K4dil3-中等序列批量 (B=4,L=128)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 6,
+      "input_shape": [
+        [
+          4,
+          512,
+          4,
+          1024
+        ],
+        [
+          4,
+          512,
+          4,
+          1024
+        ],
+        [
+          4,
+          512,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "prefill_medium-B4L512HC4D1024K4dil3-Prefill 中等长度 (B=4,L=512)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1,
+          2048,
+          4,
+          1024
+        ],
+        [
+          1,
+          2048,
+          4,
+          1024
+        ],
+        [
+          1,
+          2048,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "long_ctx-B1L2048HC4D1024K4dil3-长上下文 (L=2048)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 8,
+      "input_shape": [
+        [
+          8,
+          256,
+          4,
+          1024
+        ],
+        [
+          8,
+          256,
+          4,
+          1024
+        ],
+        [
+          8,
+          256,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "large_batch-B8L256HC4D1024K4dil3-大批量推理 (B=8,L=256)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 9,
+      "input_shape": [
+        [
+          2,
+          77,
+          4,
+          1024
+        ],
+        [
+          2,
+          77,
+          4,
+          1024
+        ],
+        [
+          2,
+          77,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "non_aligned_len-B2L77HC4D1024K4dil3-非对齐序列长度 (L=77 质数)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 10,
+      "input_shape": [
+        [
+          1,
+          64,
+          4,
+          512
+        ],
+        [
+          1,
+          64,
+          4,
+          512
+        ],
+        [
+          1,
+          64,
+          512
+        ],
+        [
+          4,
+          512
+        ],
+        [
+          4,
+          512
+        ],
+        [
+          4,
+          512
+        ],
+        [
+          2048,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 512,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "small_hidden-B1L64HC4D512K4dil3-小 hidden size 变体 (D=512)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 11,
+      "input_shape": [
+        [
+          1,
+          8,
+          4,
+          1024
+        ],
+        [
+          1,
+          8,
+          4,
+          1024
+        ],
+        [
+          1,
+          8,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        [
+          1,
+          4096,
+          9
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        "bfloat16"
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "decode_state_prefill-B1L8HC4D1024K4dil3-decode-8-token chunk with state (Decode-after-Prefill 场景)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 12,
+      "input_shape": [
+        [
+          2,
+          64,
+          4,
+          1024
+        ],
+        [
+          2,
+          64,
+          4,
+          1024
+        ],
+        [
+          2,
+          64,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "alignment_aligned-B2L64HC4D1024K4dil3-标准对齐基线 (B=2,L=64,HC=4,D=1024)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 13,
+      "input_shape": [
+        [
+          2,
+          127,
+          4,
+          769
+        ],
+        [
+          2,
+          127,
+          4,
+          769
+        ],
+        [
+          2,
+          127,
+          769
+        ],
+        [
+          4,
+          769
+        ],
+        [
+          4,
+          769
+        ],
+        [
+          4,
+          769
+        ],
+        [
+          3076,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 769,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "prime_seq_prime_D-B2L127HC4D769K4dil3-质数 L=127 + 质数 D=769 (kernel 边界)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 14,
+      "input_shape": [
+        [
+          1,
+          4,
+          4,
+          256
+        ],
+        [
+          1,
+          4,
+          4,
+          256
+        ],
+        [
+          1,
+          4,
+          256
+        ],
+        [
+          4,
+          256
+        ],
+        [
+          4,
+          256
+        ],
+        [
+          4,
+          256
+        ],
+        [
+          1024,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 256,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "tiny_smoke-B1L4HC4D256K4dil3-最小冒烟 (B=1,L=4,D=256)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 15,
+      "input_shape": [
+        [
+          1,
+          128,
+          8,
+          1024
+        ],
+        [
+          1,
+          128,
+          8,
+          1024
+        ],
+        [
+          1,
+          128,
+          1024
+        ],
+        [
+          8,
+          1024
+        ],
+        [
+          8,
+          1024
+        ],
+        [
+          8,
+          1024
+        ],
+        [
+          8192,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 8,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "wide_HC-B1L128HC8D1024K4dil3-HC=8 hyper-connection 变体"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 16,
+      "input_shape": [
+        [
+          1,
+          128,
+          2,
+          1024
+        ],
+        [
+          1,
+          128,
+          2,
+          1024
+        ],
+        [
+          1,
+          128,
+          1024
+        ],
+        [
+          2,
+          1024
+        ],
+        [
+          2,
+          1024
+        ],
+        [
+          2,
+          1024
+        ],
+        [
+          2048,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 2,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "narrow_HC-B1L128HC2D1024K4dil3-HC=2 hyper-connection 变体"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 17,
+      "input_shape": [
+        [
+          1,
+          128,
+          4,
+          1024
+        ],
+        [
+          1,
+          128,
+          4,
+          1024
+        ],
+        [
+          1,
+          128,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          8
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 8,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "large_kernel-B1L128HC4D1024K8dil3-K=8 较大卷积核"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 18,
+      "input_shape": [
+        [
+          1,
+          128,
+          4,
+          1024
+        ],
+        [
+          1,
+          128,
+          4,
+          1024
+        ],
+        [
+          1,
+          128,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 1,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "small_dilation-B1L128HC4D1024K4dil1-dilation=1 普通因果卷积"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 19,
+      "input_shape": [
+        [
+          1,
+          64,
+          4,
+          1024
+        ],
+        [
+          1,
+          64,
+          4,
+          1024
+        ],
+        [
+          1,
+          64,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        null
+      ],
+      "note": "boundary_bf16_values-B1L64HC4D1024K4dil3-bfloat16 大值域 (|x|<=100)"
+    },
+    {
+      "operator": "EngramGateFusion",
+      "case_id": 20,
+      "input_shape": [
+        [
+          1,
+          64,
+          4,
+          1024
+        ],
+        [
+          1,
+          64,
+          4,
+          1024
+        ],
+        [
+          1,
+          64,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          4096,
+          1,
+          4
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "float32",
+        "float32",
+        "float32",
+        "float32",
+        null
+      ],
+      "attrs": {
+        "hc_mult": 4,
+        "hidden_size": 1024,
+        "kernel_size": 4,
+        "dilation": 3,
+        "norm_eps": 1e-05
+      },
+      "value_range": [
+        [
+          -0.01,
+          0.01
+        ],
+        [
+          -0.01,
+          0.01
+        ],
+        [
+          -0.01,
+          0.01
+        ],
+        [
+          -0.01,
+          0.01
+        ],
+        [
+          -0.01,
+          0.01
+        ],
+        [
+          -0.01,
+          0.01
+        ],
+        [
+          -0.01,
+          0.01
+        ],
+        null
+      ],
+      "note": "tiny_values-B1L64HC4D1024K4dil3-微小值域，测试 RMSNorm + gate 数值稳定性"
+    }
+  ],
+  "case_count": 20
+}

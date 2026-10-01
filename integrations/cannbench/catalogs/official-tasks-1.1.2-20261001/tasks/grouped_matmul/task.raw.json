@@ -1,0 +1,1026 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "GroupedMatmul",
+  "function_name": "grouped_matmul",
+  "level": "level3",
+  "category": "Contraction",
+  "difficulty": "L3",
+  "description": "分组矩阵乘法算子，x 沿 M 轴合并为单 tensor，weight 按 expert 维堆叠为 [E, K, N]，通过 group_list（cumsum）切分每组在 M 轴上的行",
+  "desc_md": "# GroupedMatmul 算子 API 描述\n\n## 1. 算子简介\n\n分组矩阵乘法算子。激活 `x` 沿 `M` 轴合并为单 tensor `[M, K]`；权重 `weight` 按 expert 维堆叠为 `[E, K, N]`（或 `[E, N, K]`）；通过 `group_list`（cumsum 语义）描述每组 token 在 `M` 轴上的边界。\n\n**主要应用场景**：\n- MoE（Mixture of Experts）模型中多专家的并行矩阵运算\n- 多头注意力机制中的分组线性变换\n- 批量处理同一 K、N 维度、按 M 切分多组的矩阵乘法\n\n**算子特征**：\n- 难度等级：L3（Contraction）\n- 输入 / 输出容器与 `level4/grouped_matmul_swiglu_quant` 对齐：`x` 单 tensor + `weight` 堆叠 + `group_list` 切组\n- 所有组的 `K` 与 `N` 在 expert 维上一致，仅 `M` 各组可不同\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\n\\begin{aligned}\n&\\text{对每个专家 } g \\in [0, E),\\ \\text{根据 } group\\_list\\ (\\text{cumsum}) \\text{ 取属于该组的 token 行 } rows_g: \\\\\n&y[rows_g] = x[rows_g] \\cdot weight[g] \\ (+\\ bias[g])\n\\end{aligned}\n$$\n\n其中：\n- `x` shape 为 `[M, K]`，所有组沿 `M` 轴合并\n- `weight` shape 为 `[E, K, N]`（`transpose_weight=false`）或 `[E, N, K]`（`transpose_weight=true`）\n- `bias` shape 为 `[E, N]`（可选）\n- `group_list` 长度 `E`，cumsum 语义，最后一个值等于 `M`\n- `y` shape 为 `[M, N]`\n\n### group_list 语义\n\n`group_list = [c_0, c_1, ..., c_{E-1}]`，表示前 g+1 个 expert 累计接收 `c_g` 个 token。每组的行范围为 `[c_{g-1}, c_g)`（约定 `c_{-1} = 0`）。允许 `c_g == c_{g-1}`，表示该 expert 为空组（跳过计算）。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.grouped_matmul(\n    Tensor x,\n    Tensor weight,\n    Tensor? bias,\n    int[] group_list,\n    int split_item = 0,\n    bool transpose_weight = False,\n) -> Tensor[] y\n```\n\n### 输入参数\n\n| 参数 | 类型 | Shape | 描述 |\n|------|------|-------|------|\n| x | Tensor | `[M, K]` | 激活矩阵，所有组沿 `M` 合并 |\n| weight | Tensor | `[E, K, N]` 或 `[E, N, K]` | 专家权重，按 expert 维堆叠 |\n| bias | Tensor?（可选） | `[E, N]` | 偏置 |\n| group_list | List[int] | 长度 `E` | 累计 token 数（cumsum），最后值等于 `M` |\n| split_item | int | — | 输出切分模式（详见下） |\n| transpose_weight | bool | — | 是否转置权重 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | Tensor[] | 与 x 相同 | split_item=0/1 时长度 E（每组 `[m_i, N]`），split_item=2/3 时长度 1（`[M, N]`） |\n\n### 数据类型\n\n| 输入 (x) dtype | 输入 (weight) dtype | 输入 (bias) dtype | 输出 (y) dtype |\n|---------------|-------------------|-----------------|---------------|\n| float16 | float16 | float16 | float16 |\n| bfloat16 | bfloat16 | bfloat16 | bfloat16 |\n| float32 | float32 | float32 | float32 |\n\n### split_item 取值\n\n| split_item | 输出形式 | 说明 |\n|------------|---------|------|\n| 0 / 1 | `Tensor[]` 长度 E | 按 `group_list` 把 `y` 切回每组 `[m_i, N]`；空组返回长度 0 的 `[0, N]` 张量 |\n| 2 / 3 | `Tensor[]` 长度 1 | 返回沿 M 轴拼接好的 `[M, N]` 单元素列表 |\n\n### 规则与约束\n\n- **K 一致性**：`x.shape[1]` 必须等于 `weight` 中 K 维（`weight.shape[1]` 或 `weight.shape[2]`，由 `transpose_weight` 决定）\n- **N 一致性**：所有 expert 共享同一 `N`\n- **group_list**：长度等于 `E`，严格非递减，最后一个值等于 `M`\n- **空组**：允许 `group_list[i] == group_list[i-1]`，对应 expert `i` 不参与计算\n- **transpose_weight**：\n  - false：weight 形状 `[E, K, N]`，每片 `weight[g]` 直接参与 matmul\n  - true：weight 形状 `[E, N, K]`，每片 `weight[g]` 需 transpose 最后两维后参与 matmul\n- **维度限制**：每维大小在 32 字节对齐后应小于 int32 最大值\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `E`（expert / 组数） | 1 ~ 128 | cases.csv 实测 1 ~ 8；等于 `weight.shape[0]` 与 `group_list` 长度 |\n| `M`（token 总数 / x 行数） | 1 ~ 16384 | cases.csv 实测 64 ~ 7001（含非 2 幂奇数 1009 / 1023 / 1031 / 2047 / 7001）；等于 `group_list[-1]` |\n| `K`（contraction 维） | 1 ~ 8192 | cases.csv 实测 32 ~ 1040（含非 2 幂奇数 127 / 511、非 2 幂 1023 / 1040） |\n| `N`（输出维） | 1 ~ 8192 | cases.csv 实测 32 ~ 2048（含非 2 幂奇数 255 / 1023、非 2 幂 1056） |\n| `m_i`（每组 token 数） | 0 ~ `M` | cases.csv 实测 0 ~ 1751；允许 `m_i = 0` 表示空组（case_7 含 idx=2,5 两个空组） |\n| `group_list` | 长度 `E`，单调非递减，末值 = `M` | cumsum 语义；相邻相等表示空组；元素类型 int64 |\n| `split_item` | {0, 1, 2, 3} | cases.csv 实测 0 / 2 / 3；0/1 → `Tensor[]` 长度 `E`，2/3 → `Tensor[]` 长度 1（`[M, N]`） |\n| `transpose_weight` | {false, true} | cases.csv 实测均覆盖；false → weight `[E, K, N]`，true → weight `[E, N, K]` 需对最后两维 transpose |\n| `bias` | 可选（None 或 `[E, N]`） | cases.csv 实测含 bias / 无 bias 均覆盖；提供时 dtype 与 x 一致或 fp32 |\n\n约束：\n- `x.shape[1] == K`，且 `weight` 中对应维（`weight.shape[1]` 若 tw=false，否则 `weight.shape[2]`）必须等于 `K`\n- `weight.shape[0] == E`，所有 expert 共享同一 `N`\n- `group_list[-1] == M`，`group_list[i] >= group_list[i-1]`\n- 每维大小在 32 字节对齐后应小于 int32 最大值\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\nfrom typing import List, Optional\n\n\"\"\"\nGroupedMatmul 算子 Torch Golden 参考实现\n\n分组矩阵乘法算子，x 沿 M 轴合并、weight 按 expert 维堆叠。\n公式：对每个专家 g ∈ [0, E)，根据 group_list（cumsum）取属于该组的 token 行 rows_g：\n        y[rows_g] = x[rows_g] @ weight[g] (+ bias[g])\n\"\"\"\n\n\ndef grouped_matmul(\n    x: torch.Tensor,\n    weight: torch.Tensor,\n    bias: Optional[torch.Tensor] = None,\n    group_list=None,\n    split_item: int = 0,\n    transpose_weight: bool = False,\n) -> List[torch.Tensor]:\n    M, K = x.shape\n    E = weight.shape[0]\n    if transpose_weight:\n        N = weight.shape[1]\n    else:\n        N = weight.shape[2]\n\n    if isinstance(group_list, torch.Tensor):\n        ends = group_list.to(torch.int64).tolist()\n    else:\n        ends = list(group_list)\n    starts = [0] + ends[:-1]\n\n    y = torch.zeros((M, N), dtype=x.dtype, device=x.device)\n    x_f = x.float()\n    for g in range(E):\n        s, e = starts[g], ends[g]\n        if s == e:\n            continue\n        w_g = weight[g].float()\n        if transpose_weight:\n            mm = torch.matmul(x_f[s:e], w_g.transpose(-2, -1))\n        else:\n            mm = torch.matmul(x_f[s:e], w_g)\n        if bias is not None:\n            mm = mm + bias[g].float().unsqueeze(0)\n        y[s:e] = mm.to(x.dtype)\n\n    if split_item in (0, 1):\n        return [y[starts[g]:ends[g]] for g in range(E)]\n    return [y]\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nM, K, N, E = 128, 256, 512, 4\n\nx = torch.randn(M, K, dtype=torch.float16, device=\"npu\")\nweight = torch.randn(E, K, N, dtype=torch.float16, device=\"npu\")\nbias = torch.randn(E, N, dtype=torch.float16, device=\"npu\")\ngroup_list = [32, 64, 96, 128]   # cumsum 语义，最后值 = M\n\n# split_item=2: 输出 Tensor[] 长度 1，[M, N]\ny_list = cann_bench.grouped_matmul(x, weight, bias, group_list, split_item=2, transpose_weight=False)\n# y_list = [Tensor[128,512]]\ny = y_list[0]  # 取单 tensor\n\n# split_item=0: 输出 Tensor[] 长度 E\ny_list = cann_bench.grouped_matmul(x, weight, bias, group_list, split_item=0, transpose_weight=False)\n# y_list = [Tensor[32,512], Tensor[32,512], Tensor[32,512], Tensor[32,512]]\n\n# transpose_weight=True: weight 形状 [E, N, K]，需 transpose 后 matmul\nweight_t = torch.randn(E, N, K, dtype=torch.float16, device=\"npu\")\ny_list = cann_bench.grouped_matmul(x, weight_t, bias, group_list, split_item=2, transpose_weight=True)\n```\n",
+  "proto": {
+    "name": "GroupedMatmul",
+    "category": "Contraction",
+    "difficulty": "L3",
+    "formula": "对每个专家 g ∈ [0, E):\n  rows_g = group_list 指定属于第 g 组的 token 行（cumsum 语义）\n  y[rows_g] = x[rows_g] @ weight[g] (+ bias[g])\n",
+    "description": "分组矩阵乘法算子，x 沿 M 轴合并为单 tensor，weight 按 expert 维堆叠为 [E, K, N]，通过 group_list（cumsum）切分每组在 M 轴上的行",
+    "shape_support": "x: [M, K], weight: [E, K, N] (transpose_weight=false) 或 [E, N, K] (transpose_weight=true), bias: [E, N]; 输出 y: [M, N]",
+    "attrs": [
+      {
+        "name": "group_list",
+        "type": "List[int]",
+        "description": "每组 token 的累计行数（cumsum 语义），长度为 E，最后一个值等于 M；允许相邻值相等表示空组",
+        "required": true
+      },
+      {
+        "name": "split_item",
+        "type": "int",
+        "default": 0,
+        "description": "输出切分模式，0/1=输出 List[Tensor] 长度 E（按 group_list 切回每组），2/3=输出单 tensor [M, N]",
+        "required": false
+      },
+      {
+        "name": "transpose_weight",
+        "type": "bool",
+        "default": false,
+        "description": "是否转置权重，false 时 weight 为 [E, K, N]（直接 matmul），true 时为 [E, N, K]（需在最后两维 transpose 后 matmul）",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "激活矩阵（GMM 左矩阵），所有组沿 M 轴合并为单 tensor",
+        "dtype": [
+          "float16",
+          "bfloat16",
+          "float32"
+        ],
+        "shape": "[M, K]"
+      },
+      {
+        "name": "weight",
+        "description": "专家权重（GMM 右矩阵），按 expert 维堆叠；transpose_weight=false 时为 [E, K, N]，true 时为 [E, N, K]",
+        "dtype": [
+          "float16",
+          "bfloat16",
+          "float32"
+        ],
+        "shape": "[E, K, N] 或 [E, N, K]"
+      },
+      {
+        "name": "bias",
+        "description": "偏置（可选），按 expert 维堆叠",
+        "dtype": [
+          "float16",
+          "bfloat16",
+          "float32"
+        ],
+        "shape": "[E, N]",
+        "optional": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出 tensor list，split_item=0/1 时长度 E（每组 [m_i, N]），split_item=2/3 时长度 1（单 tensor [M, N]）",
+        "dtype": [
+          "float16",
+          "bfloat16",
+          "float32"
+        ],
+        "shape": "List[Tensor]：split_item=0/1 时长度 E，每组 [m_i, N]；split_item=2/3 时长度 1，[M, N]"
+      }
+    ],
+    "schema": "grouped_matmul(Tensor x, Tensor weight, Tensor? bias, int[] group_list, int split_item=0, bool transpose_weight=False) -> Tensor[] y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\nfrom typing import List, Optional\n\n\"\"\"\nGroupedMatmul 算子 Torch Golden 参考实现\n\n分组矩阵乘法算子，x 沿 M 轴合并、weight 按 expert 维堆叠。\n公式：对每个专家 g ∈ [0, E)，根据 group_list（cumsum）取属于该组的 token 行 rows_g：\n        y[rows_g] = x[rows_g] @ weight[g] (+ bias[g])\n\"\"\"\n\n\ndef grouped_matmul(\n    x: torch.Tensor,\n    weight: torch.Tensor,\n    bias: Optional[torch.Tensor] = None,\n    group_list=None,  # List[int]，cumsum 语义；不加 type annotation 避免 param_builder 误判\n    split_item: int = 0,\n    transpose_weight: bool = False,\n) -> List[torch.Tensor]:\n    \"\"\"\n    分组矩阵乘法算子\n\n    Args:\n        x: 激活矩阵 [M, K]，所有组沿 M 轴合并\n        weight: 专家权重，按 expert 维堆叠\n                - transpose_weight=false: [E, K, N]，直接 matmul\n                - transpose_weight=true:  [E, N, K]，需在最后两维 transpose 后 matmul\n        bias: 偏置（可选） [E, N]\n        group_list: 累计 token 数列表（长度 E），cumsum 语义；最后一个值等于 M\n        split_item: 输出切分模式\n                    - 0/1: 输出 List[Tensor] 长度 E，按 group_list 切回每组 [m_i, N]\n                    - 2/3: 输出单 tensor [M, N]\n        transpose_weight: 是否转置权重（见上）\n\n    Returns:\n        split_item ∈ {0, 1}: List[Tensor] 长度 E，每个 [m_i, N]\n        split_item ∈ {2, 3}: List[Tensor] 长度 1，单 tensor [M, N]\n    \"\"\"\n    assert x.dim() == 2, \"x must be 2D [M, K]\"\n    assert weight.dim() == 3, \"weight must be 3D [E, K, N] or [E, N, K]\"\n\n    M, K = x.shape\n    E = weight.shape[0]\n    if transpose_weight:\n        # weight: [E, N, K]\n        assert weight.shape[2] == K, f\"K mismatch: x has {K}, weight (transposed) has {weight.shape[2]}\"\n        N = weight.shape[1]\n    else:\n        # weight: [E, K, N]\n        assert weight.shape[1] == K, f\"K mismatch: x has {K}, weight has {weight.shape[1]}\"\n        N = weight.shape[2]\n\n    if isinstance(group_list, torch.Tensor):\n        ends = group_list.to(torch.int64).tolist()\n    else:\n        ends = list(group_list)\n    assert len(ends) == E, f\"group_list length {len(ends)} != E {E}\"\n    assert ends[-1] == M, f\"group_list last value {ends[-1]} must equal M {M}\"\n    starts = [0] + ends[:-1]\n\n    y = torch.zeros((M, N), dtype=x.dtype, device=x.device)\n    x_f = x.float()\n    for g in range(E):\n        s, e = starts[g], ends[g]\n        if s == e:\n            continue\n        w_g = weight[g].float()\n        if transpose_weight:\n            # [m_i, K] @ [N, K]^T = [m_i, N]\n            mm = torch.matmul(x_f[s:e], w_g.transpose(-2, -1))\n        else:\n            # [m_i, K] @ [K, N] = [m_i, N]\n            mm = torch.matmul(x_f[s:e], w_g)\n        if bias is not None:\n            mm = mm + bias[g].float().unsqueeze(0)\n        y[s:e] = mm.to(x.dtype)\n\n    if split_item in (0, 1):\n        return [y[starts[g]:ends[g]] for g in range(E)]\n    return [y]\n\n\ndef grouped_matmul_oracle(\n    x: torch.Tensor,\n    weight: torch.Tensor,\n    bias: Optional[torch.Tensor] = None,\n    group_list=None,\n    split_item: int = 0,\n    transpose_weight: bool = False,\n) -> List[torch.Tensor]:\n    \"\"\"Oracle: A16W16 分组矩阵乘的数学真值 (g)。dtype-agnostic —— 不硬编码 .float()\n    (=float32,会把 fp64 下采成 fp32),整条 matmul 跟随输入精度;在 golden_precision=fp64_cpu\n    下即真 fp64 oracle。\n\n    注:本算子权重是 fp16/bf16(**非量化**),plain ``grouped_matmul`` 的 .float()(= fp16/bf16\n    操作数无损升 fp32 + fp32 累加,再舍回 T)**本身就是标准 A16W16 tensor-core 的同精度参考 (b)**\n    —— evaluator 的 bench 路径(``get_bench_function(rel_path) or golden_func``)缺 _bench 时回退到\n    plain golden 即正确,故本算子**默认让 plain golden 兼任 bench,只补 oracle**(仅当 bench 与\n    plain golden 不同时才需显式 _bench,如 weight_quant 的 bf16-dequant)。唯一病理是 plain golden\n    的 .float()(=float32)也把 fp64 oracle 封成 fp32,导致 |b−oracle|=0、相消/小值域严格分支误杀;\n    修正 oracle 为真 fp64 后,plain-golden bench 的 fp32 累加在相消 cell 相对 fp64 有非零误差,\n    严格分支放松。\n    \"\"\"\n    assert x.dim() == 2, \"x must be 2D [M, K]\"\n    assert weight.dim() == 3, \"weight must be 3D [E, K, N] or [E, N, K]\"\n\n    M, K = x.shape\n    E = weight.shape[0]\n    if transpose_weight:\n        assert weight.shape[2] == K, f\"K mismatch: x has {K}, weight (transposed) has {weight.shape[2]}\"\n        N = weight.shape[1]\n    else:\n        assert weight.shape[1] == K, f\"K mismatch: x has {K}, weight has {weight.shape[1]}\"\n        N = weight.shape[2]\n\n    if isinstance(group_list, torch.Tensor):\n        ends = group_list.to(torch.int64).tolist()\n    else:\n        ends = list(group_list)\n    assert len(ends) == E, f\"group_list length {len(ends)} != E {E}\"\n    assert ends[-1] == M, f\"group_list last value {ends[-1]} must equal M {M}\"\n    starts = [0] + ends[:-1]\n\n    y = torch.zeros((M, N), dtype=x.dtype, device=x.device)\n    for g in range(E):\n        s, e = starts[g], ends[g]\n        if s == e:\n            continue\n        w_g = weight[g]  # dtype-agnostic:不 .float(),跟随输入精度(oracle 下为 fp64)\n        if transpose_weight:\n            mm = torch.matmul(x[s:e], w_g.transpose(-2, -1))\n        else:\n            mm = torch.matmul(x[s:e], w_g)\n        if bias is not None:\n            mm = mm + bias[g].to(mm.dtype).unsqueeze(0)\n        y[s:e] = mm.to(x.dtype)\n\n    if split_item in (0, 1):\n        return [y[starts[g]:ends[g]] for g in range(E)]\n    return [y]\n",
+  "cases_yaml": [
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 1,
+      "input_shape": [
+        [
+          128,
+          256
+        ],
+        [
+          4,
+          256,
+          512
+        ],
+        [
+          4,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "group_list": [
+          32,
+          64,
+          96,
+          128
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "fp16-小规模均衡-E=4-M=128-K=256-N=512-带bias-split=0 | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 2,
+      "input_shape": [
+        [
+          256,
+          512
+        ],
+        [
+          8,
+          512,
+          1024
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "group_list": [
+          32,
+          64,
+          96,
+          128,
+          160,
+          192,
+          224,
+          256
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          -2,
+          2
+        ]
+      ],
+      "note": "bf16-8组均衡-M=256-K=512-N=1024-无bias-split=0 | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 3,
+      "input_shape": [
+        [
+          2048,
+          1024
+        ],
+        [
+          8,
+          2048,
+          1024
+        ],
+        [
+          8,
+          2048
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "group_list": [
+          256,
+          512,
+          768,
+          1024,
+          1280,
+          1536,
+          1792,
+          2048
+        ],
+        "split_item": 2,
+        "transpose_weight": true
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          -3,
+          3
+        ],
+        [
+          -0.3,
+          0.3
+        ]
+      ],
+      "note": "fp16-大规模-E=8-M=2048-K=1024-N=2048-transpose_weight=true-split=2-单输出tensor | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 4,
+      "input_shape": [
+        [
+          1009,
+          1024
+        ],
+        [
+          4,
+          1024,
+          1024
+        ],
+        [
+          4,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "group_list": [
+          253,
+          505,
+          757,
+          1009
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "fp16-质数非对齐-M=1009(prime)-E=4-K=1024-N=1024-带bias | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 5,
+      "input_shape": [
+        [
+          512,
+          1040
+        ],
+        [
+          4,
+          1040,
+          1024
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "group_list": [
+          128,
+          256,
+          384,
+          512
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          -2,
+          2
+        ]
+      ],
+      "note": "bf16-K=1040非2幂(16x65)-E=4-M=512-N=1024-无bias | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 6,
+      "input_shape": [
+        [
+          512,
+          1024
+        ],
+        [
+          4,
+          1056,
+          1024
+        ],
+        [
+          4,
+          1056
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "group_list": [
+          128,
+          256,
+          384,
+          512
+        ],
+        "split_item": 3,
+        "transpose_weight": true
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.05,
+          0.05
+        ]
+      ],
+      "note": "fp16-N=1056非2幂(32x33)-E=4-K=1024-tw=true-split=3-微小值域 | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 7,
+      "input_shape": [
+        [
+          128,
+          512
+        ],
+        [
+          8,
+          512,
+          512
+        ],
+        [
+          8,
+          512
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          22,
+          44,
+          44,
+          65,
+          86,
+          86,
+          107,
+          128
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          -2,
+          2
+        ],
+        [
+          -0.2,
+          0.2
+        ]
+      ],
+      "note": "bf16-空组-E=8-M=128-含2个empty group(idx=2,5)-带bias | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 8,
+      "input_shape": [
+        [
+          256,
+          256
+        ],
+        [
+          1,
+          256,
+          256
+        ],
+        [
+          1,
+          256
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          256
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "fp32-单expert退化-E=1-M=256-K=256-N=256-纯GMM | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 9,
+      "input_shape": [
+        [
+          1023,
+          511
+        ],
+        [
+          4,
+          1023,
+          511
+        ],
+        [
+          4,
+          1023
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "group_list": [
+          255,
+          511,
+          767,
+          1023
+        ],
+        "split_item": 2,
+        "transpose_weight": true
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "fp16-全质数非对齐-M=1023,K=511,N=1023-E=4-tw=true-split=2 | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 10,
+      "input_shape": [
+        [
+          2047,
+          1023
+        ],
+        [
+          8,
+          1023,
+          2047
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "group_list": [
+          256,
+          512,
+          768,
+          1023,
+          1279,
+          1535,
+          1791,
+          2047
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          -3,
+          3
+        ]
+      ],
+      "note": "bf16-大尺寸全质数-M=2047,K=1023,N=2047-E=8-无bias | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 11,
+      "input_shape": [
+        [
+          512,
+          511
+        ],
+        [
+          4,
+          128,
+          511
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          128,
+          256,
+          384,
+          512
+        ],
+        "split_item": 3,
+        "transpose_weight": true
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          -10,
+          10
+        ]
+      ],
+      "note": "fp32-K=511质数-E=4-M=512-N=128-tw=true-split=3-无bias | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 12,
+      "input_shape": [
+        [
+          64,
+          256
+        ],
+        [
+          2,
+          256,
+          512
+        ],
+        [
+          2,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "group_list": [
+          32,
+          64
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          -100,
+          100
+        ],
+        [
+          -10,
+          10
+        ]
+      ],
+      "note": "fp16-小冒烟-E=2-M=64-K=256-N=512-中等值域-带bias | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 13,
+      "input_shape": [
+        [
+          4096,
+          1024
+        ],
+        [
+          8,
+          2048,
+          1024
+        ],
+        [
+          8,
+          2048
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "group_list": [
+          512,
+          1024,
+          1536,
+          2048,
+          2560,
+          3072,
+          3584,
+          4096
+        ],
+        "split_item": 2,
+        "transpose_weight": true
+      },
+      "value_range": [
+        [
+          -50,
+          50
+        ],
+        [
+          -50,
+          50
+        ],
+        [
+          -5,
+          5
+        ]
+      ],
+      "note": "fp16-大batch性能-E=8-M=4096-K=1024-N=2048-tw=true-split=2 | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 14,
+      "input_shape": [
+        [
+          769,
+          127
+        ],
+        [
+          4,
+          127,
+          255
+        ],
+        [
+          4,
+          255
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          192,
+          385,
+          577,
+          769
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          -5,
+          10
+        ],
+        [
+          -5,
+          10
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "bf16-小尺寸全质数-M=769,K=127,N=255-E=4-非对称值域 | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 15,
+      "input_shape": [
+        [
+          1009,
+          1024
+        ],
+        [
+          8,
+          1024,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "group_list": [
+          307,
+          337,
+          367,
+          396,
+          425,
+          454,
+          483,
+          1009
+        ],
+        "split_item": 3,
+        "transpose_weight": true
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "fp16-不均衡分布+M质数-M=1009-E=8-K=1024-N=1024-tw=true-split=3-无bias | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 16,
+      "input_shape": [
+        [
+          1031,
+          128
+        ],
+        [
+          4,
+          128,
+          128
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "group_list": [
+          258,
+          515,
+          772,
+          1031
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          -65504,
+          65504
+        ],
+        [
+          -65504,
+          65504
+        ]
+      ],
+      "note": "fp16-边界值-M=1031(prime)-E=4-K=128-N=128-fp16-range-无bias | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 17,
+      "input_shape": [
+        [
+          1024,
+          127
+        ],
+        [
+          4,
+          127,
+          256
+        ],
+        [
+          4,
+          256
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          256,
+          512,
+          768,
+          1024
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "bf16-inf特殊值-K=127质数-E=4-M=1024-N=256-带bias | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 18,
+      "input_shape": [
+        [
+          200,
+          64
+        ],
+        [
+          4,
+          64,
+          128
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "group_list": [
+          50,
+          100,
+          150,
+          200
+        ],
+        "split_item": 0,
+        "transpose_weight": false
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "note": "bf16-nan特殊值-E=4-M=200-K=64-N=128-无bias | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 19,
+      "input_shape": [
+        [
+          64,
+          32
+        ],
+        [
+          4,
+          32,
+          32
+        ],
+        [
+          4,
+          32
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "group_list": [
+          16,
+          32,
+          48,
+          64
+        ],
+        "split_item": 0,
+        "transpose_weight": true
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "fp16-全零-E=4-M=64-K=32-N=32-tw=true-带bias | baseline_kernels: GroupedMatmul×1"
+    },
+    {
+      "operator": "GroupedMatmul",
+      "case_id": 20,
+      "input_shape": [
+        [
+          7001,
+          127
+        ],
+        [
+          4,
+          255,
+          127
+        ],
+        [
+          4,
+          255
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "group_list": [
+          1750,
+          3500,
+          5250,
+          7001
+        ],
+        "split_item": 2,
+        "transpose_weight": true
+      },
+      "value_range": [
+        [
+          -3,
+          6
+        ],
+        [
+          -3,
+          6
+        ],
+        [
+          -0.3,
+          0.6
+        ]
+      ],
+      "note": "fp16-大-全质数-M=7001,K=127,N=255-E=4-tw=true-split=2-非对称值域 | baseline_kernels: GroupedMatmul×1"
+    }
+  ],
+  "case_count": 20
+}

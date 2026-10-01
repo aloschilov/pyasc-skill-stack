@@ -1,0 +1,676 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "NMS",
+  "function_name": "nms",
+  "level": "level3",
+  "category": "SortSelect",
+  "difficulty": "L3",
+  "description": "对候选框执行非极大值抑制 (Non-Maximum Suppression)",
+  "desc_md": "# NMS 算子 API 描述\n\n## 1. 算子简介\n\n对候选框执行非极大值抑制 (Non-Maximum Suppression)，根据置信度分数和 IoU 阈值过滤重叠的候选框。\n\n**主要应用场景**：\n- 目标检测模型（如 YOLO、Faster R-CNN）的后处理去重\n- 实例分割中候选区域的筛选\n- 人脸检测等需要消除重叠检测框的场景\n\n**算子特征**：\n- 难度等级：L3（SortSelect）\n- 双输入单输出，根据置信度排序并基于 IoU 阈值迭代过滤重叠框，输出保留框的索引\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\n\\text{keep\\_indices} = \\text{NMS}(\\text{boxes}, \\text{scores}, \\text{iou\\_threshold})\n$$\n\n### 处理流程\n\n1. 按 scores 从高到低对候选框排序\n2. 选取得分最高的框加入保留列表\n3. 计算该框与剩余所有框的 IoU（交并比）\n4. 移除 IoU 大于 `iou_threshold` 的重叠框\n5. 重复步骤 2-4，直至所有框被处理\n\n其中 IoU 定义为：\n\n$$\n\\text{IoU}(A, B) = \\frac{|A \\cap B|}{|A \\cup B|}\n$$\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.nms(Tensor boxes, Tensor scores, float iou_threshold) -> Tensor keep_indices\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| boxes | Tensor | 必选 | 输入候选框，格式为 [x1, y1, x2, y2]，shape 为 [N, 4] |\n| scores | Tensor | 必选 | 每个候选框的置信度分数，shape 为 [N] |\n| iou_threshold | float | 必选 | IoU 阈值，用于过滤重叠框 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| keep_indices | [M] | int64 | NMS 后保留的框索引，M <= N |\n\n### 数据类型\n\n| 输入 (boxes) dtype | 输入 (scores) dtype | 输出 dtype |\n|-------------------|-------------------|-----------|\n| float32 | float32 | int64 |\n\n### 规则与约束\n\n- `boxes` 的形状必须为 [N, 4]，每行为 [x1, y1, x2, y2] 格式\n- `scores` 的形状必须为 [N]，且 N 与 boxes 的第一维一致\n- `iou_threshold` 取值范围为 (0, 1)，值越小过滤越严格\n- 输出 `keep_indices` 为 1D int64 张量，长度 M 取决于过滤后保留的框数\n- 输出索引按置信度从高到低排序\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `boxes` shape | `[N, 4]`，N ∈ [1, 8192] | cases.csv 实测 N ∈ [511, 4096]，包含对齐 (1024/4096) 与质数非对齐 (1009/3001/4001) |\n| `scores` shape | `[N]`，与 boxes 第一维一致 | cases.csv 实测 N ∈ [511, 4096] |\n| `boxes` dtype | float32 | cases.csv 实测仅 float32 |\n| `scores` dtype | float32 | cases.csv 实测仅 float32 |\n| `boxes` value | float32 有限值范围 | cases.csv 实测 [-65504, 65504]，含 float16 边界 / ±inf / nan / 全零等特殊值 |\n| `scores` value | [0, 1] | cases.csv 实测均为 [0, 1]（置信度语义） |\n| `iou_threshold` | (0, 1) | cases.csv 实测 0.05 ~ 0.9，覆盖严格 / 宽松阈值 |\n| 输出 `keep_indices` | `[M]`，M ≤ N，int64 | 长度由过滤结果决定，按 scores 从高到低排序 |\n\n约束：`scores.shape[0]` 必须等于 `boxes.shape[0]`；`iou_threshold` 须严格落在开区间 (0, 1) 内。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nNMS 算子 Torch Golden 参考实现\n\n对候选框执行非极大值抑制 (Non-Maximum Suppression)\n公式：keep_indices = nms(boxes, scores, iou_threshold)\n\"\"\"\ndef nms(\n    boxes: torch.Tensor,\n    scores: torch.Tensor,\n    iou_threshold: float\n) -> torch.Tensor:\n    \"\"\"\n    对候选框执行非极大值抑制\n\n    公式：keep_indices = nms(boxes, scores, iou_threshold)\n\n    Args:\n        boxes: 输入候选框，格式为 [x1, y1, x2, y2]，shape 为 [N, 4]\n        scores: 每个候选框的置信度分数，shape 为 [N]\n        iou_threshold: IoU 阈值，用于过滤重叠框\n\n    Returns:\n        keep_indices: NMS 后保留的框索引，shape 为 [M]\n    \"\"\"\n\n    # 确保输入格式正确\n    assert boxes.dim() == 2 and boxes.shape[1] == 4, \"boxes shape must be [N, 4]\"\n    assert scores.dim() == 1 and scores.shape[0] == boxes.shape[0], \"scores shape must be [N]\"\n\n    # 纯 PyTorch 实现 NMS，避免 torchvision ABI 兼容问题\n    areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])\n    _, order = scores.sort(descending=True)\n\n    keep = []\n    while order.numel() > 0:\n        if order.numel() == 0:\n            break\n        i = order[0].item()\n        keep.append(i)\n\n        if order.numel() == 1:\n            order = order.new_empty(0)\n            break\n\n        xx1 = boxes[order[1:], 0].clamp(min=boxes[i, 0])\n        yy1 = boxes[order[1:], 1].clamp(min=boxes[i, 1])\n        xx2 = boxes[order[1:], 2].clamp(max=boxes[i, 2])\n        yy2 = boxes[order[1:], 3].clamp(max=boxes[i, 3])\n\n        w = (xx2 - xx1).clamp(min=0)\n        h = (yy2 - yy1).clamp(min=0)\n        inter = w * h\n\n        iou = inter / (areas[i] + areas[order[1:]] - inter + 1e-6)\n        inds = (iou <= iou_threshold).nonzero(as_tuple=False).squeeze(1)\n\n        order = order[inds + 1]\n\n    return torch.tensor(keep, dtype=torch.long, device=boxes.device)\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nboxes = torch.rand(1000, 4, dtype=torch.float32, device=\"npu\") * 100\nscores = torch.rand(1000, dtype=torch.float32, device=\"npu\")\nkeep = cann_bench.nms(boxes, scores, iou_threshold=0.5)\n\n# 低 IoU 阈值（更严格的过滤）\nkeep = cann_bench.nms(boxes, scores, iou_threshold=0.3)\n```\n",
+  "proto": {
+    "name": "NMS",
+    "category": "SortSelect",
+    "difficulty": "L3",
+    "formula": "keep_indices = nms(boxes, scores, iou_threshold)",
+    "description": "对候选框执行非极大值抑制 (Non-Maximum Suppression)",
+    "shape_support": "boxes: [N,4], scores: [N], keep_indices: [M]",
+    "attrs": [
+      {
+        "name": "iou_threshold",
+        "type": "float",
+        "description": "IoU 阈值，用于过滤重叠框",
+        "required": true
+      }
+    ],
+    "inputs": [
+      {
+        "name": "boxes",
+        "description": "输入候选框，格式为 [x1, y1, x2, y2]",
+        "dtype": [
+          "float32"
+        ]
+      },
+      {
+        "name": "scores",
+        "description": "每个候选框的置信度分数",
+        "dtype": [
+          "float32"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "keep_indices",
+        "description": "NMS 后保留的框索引",
+        "dtype": [
+          "int64"
+        ]
+      }
+    ],
+    "schema": "nms(Tensor boxes, Tensor scores, float iou_threshold) -> Tensor keep_indices"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nNMS 算子 Torch Golden 参考实现\n\n对候选框执行非极大值抑制 (Non-Maximum Suppression)\n公式：keep_indices = nms(boxes, scores, iou_threshold)\n\"\"\"\ndef nms(\n    boxes: torch.Tensor,\n    scores: torch.Tensor,\n    iou_threshold: float\n) -> torch.Tensor:\n    \"\"\"\n    对候选框执行非极大值抑制\n\n    公式：keep_indices = nms(boxes, scores, iou_threshold)\n\n    Args:\n        boxes: 输入候选框，格式为 [x1, y1, x2, y2]，shape 为 [N, 4]\n        scores: 每个候选框的置信度分数，shape 为 [N]\n        iou_threshold: IoU 阈值，用于过滤重叠框\n\n    Returns:\n        keep_indices: NMS 后保留的框索引，shape 为 [M]\n    \"\"\"\n\n    # 确保输入格式正确\n    assert boxes.dim() == 2 and boxes.shape[1] == 4, \"boxes shape must be [N, 4]\"\n    assert scores.dim() == 1 and scores.shape[0] == boxes.shape[0], \"scores shape must be [N]\"\n\n    # Pure PyTorch NMS (no torchvision, to dodge ABI issues).\n    #\n    # Greedy NMS is sequential, but the original element-by-element loop did a\n    # `.item()` + `nonzero` every step — each forces a device->host sync, so on NPU\n    # it serialises ~2N stream syncs and the op runs for tens of minutes (golden-\n    # candidate ST timed out at 1801s). Split the work instead: compute the full IoU\n    # matrix in ONE vectorised pass (stays on the input device — NPU when this runs\n    # as a candidate), then do the inherently-sequential greedy pick on CPU after a\n    # SINGLE device->host copy. Keep set is bit-identical to the per-element loop.\n    n = scores.shape[0]\n    dev = boxes.device\n    areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])\n\n    # Pairwise IoU[i, j] — the heavy arithmetic, vectorised on `dev`.\n    x1 = torch.maximum(boxes[:, None, 0], boxes[None, :, 0])\n    y1 = torch.maximum(boxes[:, None, 1], boxes[None, :, 1])\n    x2 = torch.minimum(boxes[:, None, 2], boxes[None, :, 2])\n    y2 = torch.minimum(boxes[:, None, 3], boxes[None, :, 3])\n    inter = (x2 - x1).clamp(min=0) * (y2 - y1).clamp(min=0)\n    iou = inter / (areas[:, None] + areas[None, :] - inter + 1e-6)\n\n    _, order = scores.sort(descending=True)\n\n    # Greedy selection on CPU: one sync (the .cpu() copies), then none.\n    iou_cpu = iou.cpu()\n    order_cpu = order.cpu()\n    suppressed = torch.zeros(n, dtype=torch.bool)\n    keep = []\n    for idx_t in order_cpu:\n        idx = int(idx_t)\n        if suppressed[idx]:\n            continue\n        keep.append(idx)\n        # Original loop keeps survivors with iou <= thr, so suppress the rest.\n        # Use ~(iou <= thr) (not iou > thr) so nan/inf IoU suppress, matching it.\n        # No explicit self-mark needed: each idx is visited once (order is a\n        # permutation), so suppressed[idx] is never read after this point.\n        suppressed |= ~(iou_cpu[idx] <= iou_threshold)\n\n    return torch.tensor(keep, dtype=torch.long, device=dev)\n\n\ndef get_input(\n    boxes: torch.Tensor,\n    scores: torch.Tensor,\n    iou_threshold: float = 0.5,\n    **kwargs,\n):\n    \"\"\"规整测试输入,使 NMS 良定义且可被真实单算子复现(同时替换 golden 与候选输入,公平)。\n\n    两处规整:\n    1. **合法框**:cases.csv 对 boxes 的 [x1,y1,x2,y2] 用同一 value_range **独立**取值,\n       故约半数框 x1>x2 / y1>y2 —— 退化(负面积)框。golden 的 IoU 在负面积上是实现特定\n       行为,**任何真实 NMS 单算子(npu_nms_v4 等)都无法复现** → 基线只能用 torch 重拼\n       golden。这里把每个框归一到 x1≤x2, y1≤y2,使 NMS 良定义、真实单算子能匹配 golden。\n    2. **去并列分数**:keep 顺序在分数并列时不确定(tie-break 在 golden 与候选间不稳定)——\n       case 15(value_range [0,0] 全并列)、case 9/13([0,1] 内 bit-identical)。仅在存在并列\n       时把分数替换为确定性互异序列。\n\n    kernel_eval 用输入名+attrs 作为关键字调用本函数，并用返回值（按 golden 签名的\n    Tensor 顺序）同时替换 golden 与候选的输入，故比较公平。\n\n    Returns:\n        [boxes, scores]，顺序与 nms 签名的 (boxes, scores) 张量一致。\n    \"\"\"\n    # 1) 合法框:逐框排序 x 对、y 对 → x1≤x2, y1≤y2(对已合法的框为幂等,零扰动)。\n    x1 = torch.minimum(boxes[:, 0], boxes[:, 2])\n    x2 = torch.maximum(boxes[:, 0], boxes[:, 2])\n    y1 = torch.minimum(boxes[:, 1], boxes[:, 3])\n    y2 = torch.maximum(boxes[:, 1], boxes[:, 3])\n    boxes = torch.stack([x1, y1, x2, y2], dim=1)\n\n    # 2) 去并列分数(仅在存在并列时)。\n    n = int(scores.shape[0])\n    if n > 1 and int(scores.reshape(-1).unique().numel()) < n:\n        g = torch.Generator().manual_seed(0)  # 确定性，跨 eval 复现\n        ranks = (torch.randperm(n, generator=g) + 1).to(torch.float32) / float(n)\n        scores = ranks.reshape(scores.shape).to(dtype=scores.dtype, device=scores.device)\n    return [boxes, scores]\n",
+  "cases_yaml": [
+    {
+      "operator": "NMS",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          4
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.5
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-1K-对齐-iou=0.5"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 2,
+      "input_shape": [
+        [
+          4096,
+          4
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.3
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-4K-对齐-iou=0.3"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          4
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.7
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-4K-对齐-iou=0.7"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 4,
+      "input_shape": [
+        [
+          4096,
+          4
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.1
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-4K-对齐-iou=0.1极低阈值"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4096,
+          4
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.9
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-4K-对齐-iou=0.9极高阈值"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 6,
+      "input_shape": [
+        [
+          4096,
+          4
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.05
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-4K-对齐-iou=0.05-极低阈值"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1023,
+          4
+        ],
+        [
+          1023
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.5
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-1K-非对齐-iou=0.5-微小值域"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1009,
+          4
+        ],
+        [
+          1009
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.3
+      },
+      "value_range": [
+        [
+          -1,
+          2
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-1K-质数非对齐-iou=0.3-非对称"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 9,
+      "input_shape": [
+        [
+          1537,
+          4
+        ],
+        [
+          1537
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.7
+      },
+      "value_range": [
+        [
+          -5,
+          10
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-2K-非对齐-iou=0.7-非对称"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 10,
+      "input_shape": [
+        [
+          3001,
+          4
+        ],
+        [
+          3001
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.4
+      },
+      "value_range": [
+        [
+          -50,
+          100
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-3K-质数非对齐-iou=0.4"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 11,
+      "input_shape": [
+        [
+          2049,
+          4
+        ],
+        [
+          2049
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.5
+      },
+      "value_range": [
+        [
+          -65504,
+          65504
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-2K-非对齐-float16边界值"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 12,
+      "input_shape": [
+        [
+          4001,
+          4
+        ],
+        [
+          4001
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.6
+      },
+      "value_range": [
+        [
+          -88,
+          88
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-4K-质数非对齐-float32边界值"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 13,
+      "input_shape": [
+        [
+          3001,
+          4
+        ],
+        [
+          3001
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.5
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-3K-质数非对齐-inf特殊值"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 14,
+      "input_shape": [
+        [
+          4096,
+          4
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.5
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-5K-质数非对齐-nan特殊值"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 15,
+      "input_shape": [
+        [
+          4096,
+          4
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.5
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "S-float32-4K-质数非对齐-零值"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 16,
+      "input_shape": [
+        [
+          511,
+          4
+        ],
+        [
+          511
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.2
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-512-非对齐-iou=0.2-微小值域"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 17,
+      "input_shape": [
+        [
+          2047,
+          4
+        ],
+        [
+          2047
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.8
+      },
+      "value_range": [
+        [
+          -1,
+          3
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-2K-非对齐-iou=0.8-非对称"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 18,
+      "input_shape": [
+        [
+          4095,
+          4
+        ],
+        [
+          4095
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.35
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-4K-非对齐-iou=0.35-大值域"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4096,
+          4
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.45
+      },
+      "value_range": [
+        [
+          -0.2,
+          0.2
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-4K-对齐-iou=0.45-微小值域"
+    },
+    {
+      "operator": "NMS",
+      "case_id": 20,
+      "input_shape": [
+        [
+          4096,
+          4
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "iou_threshold": 0.55
+      },
+      "value_range": [
+        [
+          -20,
+          40
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "note": "S-float32-7K-质数非对齐-iou=0.55-非对称中值域"
+    }
+  ],
+  "case_count": 20
+}
