@@ -1,0 +1,839 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "MHA",
+  "function_name": "mha",
+  "level": "level4",
+  "category": "FusedComposite",
+  "difficulty": "L4",
+  "description": "多头注意力 (Multi-Head Attention)，对已分头的 Q/K/V 执行缩放点积注意力",
+  "desc_md": "# MHA 算子 API 描述\n\n## 1. 算子简介\n\n多头注意力 (Multi-Head Attention) 算子，对已分头的 Q/K/V 执行缩放点积注意力计算，广泛应用于 Transformer 架构。\n\n**主要应用场景**：\n- Transformer 编码器和解码器中的自注意力与交叉注意力\n- 大语言模型和视觉 Transformer 中的核心注意力模块\n- 多模态模型中的跨模态注意力融合\n\n**算子特征**：\n- 难度等级：L4（FusedComposite）\n- 多输入（query, key, value）单输出，执行缩放点积注意力\n- 输入为已分头的张量，不包含 QKV 投影和输出投影步骤\n- 支持可配置的缩放因子\n- 支持 `is_causal` 因果掩码：仅计算 attention 矩阵 [S, S_kv] 中从右下角向左上方延伸 45° 对角线及其下方部分（其余位置在 softmax 前置 -inf）\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\ny = \\text{softmax}\\left(Q \\times K^T \\times \\text{scaleValue}\\right) \\times V\n$$\n\n其中：\n- $Q$、$K$、$V$ 为已分头的查询、键、值张量\n- $\\text{scaleValue}$ 为缩放因子（<=0 时自动使用 $1/\\sqrt{D}$，$D$ 为每头维度）\n- softmax 沿最后一维计算\n\n具体子步骤：\n1. **缩放点积**：$\\text{scores} = Q \\times K^T \\times \\text{scaleValue}$\n2. **因果掩码（可选）**：当 `is_causal=True` 时，对 `scores[..., i, j]` 满足 $j > i + (S_{kv} - S)$ 的位置置为 $-\\infty$（即仅保留从右下角向左上方 45° 延伸的对角线及其下方部分），$S=S_{kv}$ 时退化为标准下三角掩码\n3. **Softmax 归一化**：$\\text{attn\\_weights} = \\text{softmax}(\\text{scores}, \\text{dim}=-1)$\n4. **加权求和**：$y = \\text{attn\\_weights} \\times V$\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.mha(Tensor query, Tensor key, Tensor value, float scaleValue=-1.0, bool is_causal=False) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| query | Tensor | 必选 | 查询张量（已分头），shape 为 [B, S, N, D] |\n| key | Tensor | 必选 | 键张量（已分头），shape 为 [B, S_kv, N, D] |\n| value | Tensor | 必选 | 值张量（已分头），shape 为 [B, S_kv, N, D] |\n| scaleValue | float | -1.0 | 缩放因子，<=0 时自动使用 1/sqrt(D) |\n| is_causal | bool | False | 是否启用因果掩码。False 时全计算；True 时仅计算 [S, S_kv] attention 矩阵中从右下角向左上方 45° 延伸的对角线及其下方部分（即满足 $j \\le i + (S_{kv} - S)$ 的位置），上方部分在 softmax 前置 -inf |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | [B, S, N, D] | 与输入 query 相同 | 多头注意力输出张量 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| float16 | float16 |\n| bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- 所有输入 Tensor（query, key, value）的 dtype 必须一致\n- `query` 的 shape 为 [B, S, N, D]，`key` 和 `value` 的 shape 为 [B, S_kv, N, D]\n- N 为注意力头数，D 为每头维度，均从输入 shape 中推断\n- `scaleValue` 通常设置为 $1/\\sqrt{D}$，当 <= 0 时自动使用该值\n- `is_causal=True` 时要求 $S \\le S_{kv}$（否则 mask 会将部分 query 行全部屏蔽，导致 softmax 出现 NaN）\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `B`（batch） | 1 ~ 128 | cases.csv 实测 1 ~ 128 |\n| `S`（query 序列长度） | 1 ~ 2048 | cases.csv 实测 1 ~ 1024；decode 场景 S=1 或 2，prefill 场景 S 与 S_kv 同量级 |\n| `S_kv`（key/value 序列长度） | 1 ~ 4096 | cases.csv 实测 128 ~ 2048；`is_causal=True` 时要求 S ≤ S_kv |\n| `N`（注意力头数） | 1 ~ 64 | cases.csv 实测 8 ~ 32 |\n| `D`（每头维度） | 64 ~ 256，64 对齐 | cases.csv 实测 64 / 128 / 256 |\n| `scaleValue` | 任意 float | cases.csv 实测 -1.0（auto = 1/sqrt(D)）和 0.08838（显式 ≈ 1/sqrt(128)）；<=0 时回退到 1/sqrt(D) |\n| `is_causal` | {False, True} | cases.csv 实测两值均覆盖（True 走右下角对齐因果掩码，False 全计算） |\n| 输入 value range | 任意有限实数 | cases.csv 实测 [-1, 1]（常态高斯采样）和 [0, 0]（全零退化输入） |\n| 输入 dtype | float16, bfloat16 | Q/K/V 三个 tensor dtype 必须一致 |\n\n约束：`query.shape = [B, S, N, D]`，`key.shape = value.shape = [B, S_kv, N, D]`，四个共享维度 B/N/D 必须严格相等；`is_causal=True` 时要求 `S ≤ S_kv`，否则部分 query 行会被全部屏蔽导致 softmax 出现 NaN。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nMHA算子Torch Golden参考实现\n\n多头注意力 (Multi-Head Attention)，对已分头的 Q/K/V 执行缩放点积注意力\n公式: y = softmax(Q @ K^T * scaleValue) @ V\n\"\"\"\n\n\ndef mha(\n    query: torch.Tensor,\n    key: torch.Tensor,\n    value: torch.Tensor,\n    scaleValue: float = -1.0,\n    is_causal: bool = False,\n) -> torch.Tensor:\n    \"\"\"\n    多头注意力 (Multi-Head Attention)\n\n    Args:\n        query: 查询张量 [B, S, N, D]（已分头）\n        key: 键张量 [B, S_kv, N, D]（已分头）\n        value: 值张量 [B, S_kv, N, D]（已分头）\n        scaleValue: 缩放因子，<=0 时自动使用 1/sqrt(D)\n        is_causal: 是否启用因果掩码（右下角对齐），True 时 scores[..., i, j] 满足\n            j > i + (S_kv - S) 的位置在 softmax 前置为 -inf。要求 S <= S_kv。\n\n    Returns:\n        输出张量 [B, S, N, D]\n    \"\"\"\n    B, S, N, D = query.shape\n    S_kv = key.shape[1]\n\n    if scaleValue <= 0:\n        scaleValue = 1.0 / (D ** 0.5)\n\n    # 转置为 [B, N, S, D]\n    q = query.transpose(1, 2)\n    k = key.transpose(1, 2)\n    v = value.transpose(1, 2)\n\n    # 缩放点积注意力\n    scores = torch.matmul(q, k.transpose(-2, -1)) * scaleValue\n    if is_causal:\n        i = torch.arange(S, device=scores.device).unsqueeze(-1)\n        j = torch.arange(S_kv, device=scores.device).unsqueeze(0)\n        causal_mask = j > (i + (S_kv - S))  # 右下角对齐：上三角置 -inf\n        scores = scores.masked_fill(causal_mask, float('-inf'))\n    # F217: 全 mask 行 (整行 = -inf) 在 softmax 时得 0/0 = NaN，对齐\n    # sparse_flash_attention 加显式保护 → 全 mask 行权重置 0。\n    scores_max = scores.max(dim=-1, keepdim=True).values\n    all_masked = torch.isinf(scores_max) & (scores_max < 0)\n    attn_weights = torch.nn.functional.softmax(scores, dim=-1)\n    attn_weights = torch.where(all_masked, torch.zeros_like(attn_weights), attn_weights)\n    attn_output = torch.matmul(attn_weights, v)\n\n    # 转回 [B, S, N, D]；transpose 只改 stride, 而输出契约要求 contiguous (issue #146)\n    return attn_output.transpose(1, 2).contiguous()\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nB, S, S_kv, N, D = 2, 128, 128, 8, 64\nquery = torch.randn(B, S, N, D, dtype=torch.float16, device=\"npu\")\nkey = torch.randn(B, S_kv, N, D, dtype=torch.float16, device=\"npu\")\nvalue = torch.randn(B, S_kv, N, D, dtype=torch.float16, device=\"npu\")\ny = cann_bench.mha(query, key, value, scaleValue=-1.0, is_causal=False)\n```\n",
+  "proto": {
+    "name": "MHA",
+    "category": "FusedComposite",
+    "difficulty": "L4",
+    "formula": "y = softmax(Q @ K^T * scaleValue) @ V",
+    "description": "多头注意力 (Multi-Head Attention)，对已分头的 Q/K/V 执行缩放点积注意力",
+    "shape_support": "query [B, S, N, D]，key/value [B, S_kv, N, D]",
+    "attrs": [
+      {
+        "name": "scaleValue",
+        "type": "float",
+        "default": -1.0,
+        "description": "缩放因子，<=0 时自动使用 1/sqrt(D)",
+        "required": false
+      },
+      {
+        "name": "is_causal",
+        "type": "bool",
+        "default": false,
+        "description": "是否启用因果掩码（右下角对齐），True 时仅计算 attention 矩阵中 j <= i + (S_kv - S) 的位置",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "query",
+        "description": "查询张量（已分头）",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "[B, S, N, D]"
+      },
+      {
+        "name": "key",
+        "description": "键张量（已分头）",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "[B, S_kv, N, D]"
+      },
+      {
+        "name": "value",
+        "description": "值张量（已分头）",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "[B, S_kv, N, D]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "注意力输出张量",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "[B, S, N, D]"
+      }
+    ],
+    "schema": "mha(Tensor query, Tensor key, Tensor value, float scaleValue=-1.0, bool is_causal=False) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nMHA算子Torch Golden参考实现\n\n多头注意力 (Multi-Head Attention)，对已分头的 Q/K/V 执行缩放点积注意力\n公式: y = softmax(Q @ K^T * scaleValue) @ V\n\"\"\"\n\n\ndef mha(\n    query: torch.Tensor,\n    key: torch.Tensor,\n    value: torch.Tensor,\n    scaleValue: float = -1.0,\n    is_causal: bool = False,\n) -> torch.Tensor:\n    \"\"\"\n    多头注意力 (Multi-Head Attention)\n\n    Args:\n        query: 查询张量 [B, S, N, D]（已分头）\n        key: 键张量 [B, S_kv, N, D]（已分头）\n        value: 值张量 [B, S_kv, N, D]（已分头）\n        scaleValue: 缩放因子，<=0 时自动使用 1/sqrt(D)\n        is_causal: 是否启用因果掩码（右下角对齐），True 时 scores[..., i, j] 满足\n            j > i + (S_kv - S) 的位置在 softmax 前置为 -inf。要求 S <= S_kv。\n\n    Returns:\n        输出张量 [B, S, N, D]\n    \"\"\"\n    B, S, N, D = query.shape\n    S_kv = key.shape[1]\n\n    if scaleValue <= 0:\n        scaleValue = 1.0 / (D ** 0.5)\n\n    # 转置为 [B, N, S, D]\n    q = query.transpose(1, 2)\n    k = key.transpose(1, 2)\n    v = value.transpose(1, 2)\n\n    # 缩放点积注意力\n    scores = torch.matmul(q, k.transpose(-2, -1)) * scaleValue\n    if is_causal:\n        i = torch.arange(S, device=scores.device).unsqueeze(-1)\n        j = torch.arange(S_kv, device=scores.device).unsqueeze(0)\n        causal_mask = j > (i + (S_kv - S))  # 右下角对齐：上三角置 -inf\n        scores = scores.masked_fill(causal_mask, float('-inf'))\n    # F217: 全 mask 行 (整行 = -inf) 在 softmax 时得 0/0 = NaN，对齐\n    # sparse_flash_attention 加显式保护 → 全 mask 行权重置 0。\n    scores_max = scores.max(dim=-1, keepdim=True).values\n    all_masked = torch.isinf(scores_max) & (scores_max < 0)\n    attn_weights = torch.nn.functional.softmax(scores, dim=-1)\n    attn_weights = torch.where(all_masked, torch.zeros_like(attn_weights), attn_weights)\n    attn_output = torch.matmul(attn_weights, v)\n\n    # 转回 [B, S, N, D]；transpose 只改 stride, 而输出契约要求 contiguous (issue #146)\n    return attn_output.transpose(1, 2).contiguous()\n",
+  "cases_yaml": [
+    {
+      "operator": "MHA",
+      "case_id": 1,
+      "input_shape": [
+        [
+          2,
+          128,
+          8,
+          64
+        ],
+        [
+          2,
+          128,
+          8,
+          64
+        ],
+        [
+          2,
+          128,
+          8,
+          64
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-B2S128N8D64-prefill-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 2,
+      "input_shape": [
+        [
+          4,
+          256,
+          16,
+          64
+        ],
+        [
+          4,
+          256,
+          16,
+          64
+        ],
+        [
+          4,
+          256,
+          16,
+          64
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "M-bfloat16-B4S256N16D64-prefill-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 3,
+      "input_shape": [
+        [
+          2,
+          512,
+          32,
+          128
+        ],
+        [
+          2,
+          512,
+          32,
+          128
+        ],
+        [
+          2,
+          512,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "M-bfloat16-B2S512N32D128-prefill-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 4,
+      "input_shape": [
+        [
+          2,
+          256,
+          8,
+          256
+        ],
+        [
+          2,
+          256,
+          8,
+          256
+        ],
+        [
+          2,
+          256,
+          8,
+          256
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-B2S256N8D256-D256-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 5,
+      "input_shape": [
+        [
+          2,
+          128,
+          12,
+          64
+        ],
+        [
+          2,
+          256,
+          12,
+          64
+        ],
+        [
+          2,
+          256,
+          12,
+          64
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-B2Sq128Skv256N12D64-cross | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 6,
+      "input_shape": [
+        [
+          2,
+          512,
+          16,
+          128
+        ],
+        [
+          2,
+          128,
+          16,
+          128
+        ],
+        [
+          2,
+          128,
+          16,
+          128
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-bfloat16-B2Sq512Skv128N16D128-cross | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 7,
+      "input_shape": [
+        [
+          4,
+          1024,
+          32,
+          128
+        ],
+        [
+          4,
+          1024,
+          32,
+          128
+        ],
+        [
+          4,
+          1024,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-B4S1024N32D128-long-prefill-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 8,
+      "input_shape": [
+        [
+          4,
+          1024,
+          32,
+          128
+        ],
+        [
+          4,
+          1024,
+          32,
+          128
+        ],
+        [
+          4,
+          1024,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-bfloat16-B4S1024N32D128-very-long-prefill-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 9,
+      "input_shape": [
+        [
+          4,
+          1024,
+          16,
+          256
+        ],
+        [
+          4,
+          1024,
+          16,
+          256
+        ],
+        [
+          4,
+          1024,
+          16,
+          256
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-B4S1024N16D256-long-prefill-D256-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 10,
+      "input_shape": [
+        [
+          1,
+          1,
+          32,
+          128
+        ],
+        [
+          1,
+          2048,
+          32,
+          128
+        ],
+        [
+          1,
+          2048,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "M-float16-B1S1Skv2048N32D128-decode-single-batch | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 11,
+      "input_shape": [
+        [
+          16,
+          1,
+          32,
+          128
+        ],
+        [
+          16,
+          1024,
+          32,
+          128
+        ],
+        [
+          16,
+          1024,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-B16S1Skv2048N32D128-decode | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 12,
+      "input_shape": [
+        [
+          32,
+          1,
+          32,
+          128
+        ],
+        [
+          32,
+          512,
+          32,
+          128
+        ],
+        [
+          32,
+          512,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-bfloat16-B32S1Skv2048N32D128-decode | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 13,
+      "input_shape": [
+        [
+          60,
+          1,
+          32,
+          128
+        ],
+        [
+          60,
+          512,
+          32,
+          128
+        ],
+        [
+          60,
+          512,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-B60S1Skv2048N32D128-decode-large-batch | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 14,
+      "input_shape": [
+        [
+          128,
+          1,
+          32,
+          128
+        ],
+        [
+          128,
+          128,
+          32,
+          128
+        ],
+        [
+          128,
+          128,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-B128S1Skv4096N32D128-decode-large-batch | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 15,
+      "input_shape": [
+        [
+          60,
+          1,
+          16,
+          256
+        ],
+        [
+          60,
+          512,
+          16,
+          256
+        ],
+        [
+          60,
+          512,
+          16,
+          256
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-B60S1Skv2048N16D256-decode-large-batch-D256 | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 16,
+      "input_shape": [
+        [
+          60,
+          2,
+          32,
+          128
+        ],
+        [
+          60,
+          512,
+          32,
+          128
+        ],
+        [
+          60,
+          512,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-B60Sq2Skv2048N32D128-MTP-large-batch-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 17,
+      "input_shape": [
+        [
+          96,
+          2,
+          32,
+          128
+        ],
+        [
+          96,
+          256,
+          32,
+          128
+        ],
+        [
+          96,
+          256,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-bfloat16-B96Sq2Skv4096N32D128-MTP-large-batch-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 18,
+      "input_shape": [
+        [
+          60,
+          2,
+          16,
+          256
+        ],
+        [
+          60,
+          512,
+          16,
+          256
+        ],
+        [
+          60,
+          512,
+          16,
+          256
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "L-float16-B60Sq2Skv2048N16D256-MTP-large-batch-D256 | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 19,
+      "input_shape": [
+        [
+          2,
+          128,
+          32,
+          128
+        ],
+        [
+          2,
+          128,
+          32,
+          128
+        ],
+        [
+          2,
+          128,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": 0.08838,
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-B2S128N32D128-explicit-scale-causal | baseline_kernels: FusedInferAttentionScore×1"
+    },
+    {
+      "operator": "MHA",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          128,
+          32,
+          128
+        ],
+        [
+          2,
+          128,
+          32,
+          128
+        ],
+        [
+          2,
+          128,
+          32,
+          128
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "scaleValue": -1.0,
+        "is_causal": false
+      },
+      "value_range": [
+        0,
+        0
+      ],
+      "note": "S-float16-B2S128N32D128-zero-input | baseline_kernels: FusedInferAttentionScore×1"
+    }
+  ],
+  "case_count": 20
+}

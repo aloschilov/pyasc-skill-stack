@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import html as html_lib
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,6 +29,9 @@ CAPABILITIES_FILE = REPO_ROOT / "capabilities.yaml"
 EVIDENCE_DIR = REPO_ROOT / "evidence"
 SKILLS_VALUE_FILE = EVIDENCE_DIR / "skills-value-summary.json"
 PERF_SUMMARY_FILE = EVIDENCE_DIR / "perf-summary.json"
+CANNBENCH_SUMMARY_FILE = EVIDENCE_DIR / "cannbench/ci-current/hardware-summary.json"
+CANNBENCH_CATALOG_FILE = REPO_ROOT / "integrations/cannbench/catalogs/official-tasks-1.1.2-20261001/manifest.json"
+
 VF_FUSION_SUMMARY_FILE = EVIDENCE_DIR / "vf-fusion-summary.json"
 
 
@@ -1916,7 +1920,7 @@ function renderPerfBanner() {
   cells.sort((a, b) => (a.cell || "").localeCompare(b.cell || ""));
 
   let html = '<div class="pb-head">'
-    + '<span class="pb-title">Performance vs hand-written AscendC</span>'
+    + '<span class="pb-title">Historical simulator diagnostic vs AscendC</span>'
     + '<span class="perf-ratio">' + (c.pass || 0) + '/' + total + '</span>'
     + '<span class="pb-sub">cells clear the ratio \u2265 ' + gate + ' gate '
     + '(ref_ticks / gen_ticks on the Ascend950PR_9599 camodel). Source: ' + srcLabel + '.</span>'
@@ -2272,10 +2276,48 @@ init();
 </html>"""
 
 
+def render_cannbench_panel() -> str:
+    catalog = (_load_evidence(CANNBENCH_SUMMARY_FILE.parent / "catalog/manifest.json")
+               or _load_evidence(CANNBENCH_CATALOG_FILE) or {})
+    summary = _load_evidence(CANNBENCH_SUMMARY_FILE) or {}
+    esc = lambda value: html_lib.escape(str(value), quote=True)
+    measured = {o.get("operator"): o for o in summary.get("operators", [])}
+    required = catalog.get("required_cases", 0)
+    correct = summary.get("correct_cases", 0)
+    timed = summary.get("measured_cases", 0)
+    state = "PASSED" if summary.get("gate_passed") else "INCOMPLETE / FAILED"
+    skill_state = "PASSED" if summary.get("skill_stack_gate_passed") else "UNVERIFIED / INCOMPLETE"
+    gm = summary.get("true_geometric_mean_speedup")
+    gm_text = f"{gm:.6f}×" if isinstance(gm, (int, float)) else "unavailable for the complete catalog"
+    rows = []
+    for operator in catalog.get("operators", []):
+        result = measured.get(operator["operator"], {})
+        op_gm = result.get("geometric_mean_speedup")
+        ratio = f"{op_gm:.6f}×" if isinstance(op_gm, (int, float)) else "—"
+        rows.append("<tr><td>" + esc(operator["operator"]) + "</td><td>" + esc(operator.get("level", ""))
+            + "</td><td>" + esc(result.get("correct_cases", 0)) + "/" + esc(operator["case_count"])
+            + "</td><td>" + esc(result.get("measured_cases", 0)) + "/" + esc(operator["case_count"])
+            + "</td><td>" + esc(result.get("status", "missing")) + "</td><td>" + ratio + "</td></tr>")
+    errors = "".join("<li>" + esc(e) + "</li>" for e in summary.get("errors", [])[:12])
+    return f"""<section id="cannbench-gate" style="margin:24px;padding:20px;border:1px solid #666;border-radius:10px">
+<h2>CANNBench hardware acceptance — {esc(catalog.get('benchmark_version', '?'))}</h2>
+<p>Source of truth: official CANNBench catalog, {esc(catalog.get('required_operators', 0))} operators / {esc(required)} cases.</p>
+<p><strong>{state}</strong> · Correctness: {esc(correct)}/{esc(required)} · Hardware timings: {esc(timed)}/{esc(required)} · True GM: {esc(gm_text)}</p>
+<p>Measured report: {esc(summary.get('generated_at', 'No hardware report for this revision'))}. Ratio = reference µs / candidate µs. The API aggregate is not used.</p>
+<p><strong>Skill-stack acceptance: {skill_state}</strong>. {esc(summary.get('generation_provenance', 'No complete skill-generated submission identity binding'))}.</p>
+<ul>{errors}</ul><div style="overflow:auto;max-height:600px"><table><thead><tr><th>Operator</th><th>Level</th><th>Correct</th><th>Measured</th><th>Status</th><th>True GM</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>
+<p><a href="cannbench/manifest.json">Full catalog manifest</a> · <a href="cannbench/hardware-summary.json">Hardware metrics and case results</a> · <a href="https://cannbench.com/workspace/jobs">CANNBench jobs</a></p>
+</section>"""
+
+
 def main() -> None:
+    global CANNBENCH_SUMMARY_FILE
     parser = argparse.ArgumentParser(description="Generate capabilities dashboard HTML.")
     parser.add_argument("--output-dir", default="_site", help="Output directory (default: _site)")
+    parser.add_argument("--cannbench-evidence", type=Path, help="Exact captured CANNBench artifact directory for a local preview")
     args = parser.parse_args()
+    if args.cannbench_evidence:
+        CANNBENCH_SUMMARY_FILE = args.cannbench_evidence / "hardware-summary.json"
 
     if not CAPABILITIES_FILE.exists():
         print(f"ERROR: {CAPABILITIES_FILE} not found", file=sys.stderr)
@@ -2284,13 +2326,28 @@ def main() -> None:
     cap = _load_yaml(CAPABILITIES_FILE)
     data = build_data(cap)
 
-    data_json = json.dumps(data, indent=None, ensure_ascii=False)
+    data_json = json.dumps(data, indent=None, ensure_ascii=False).replace("<", "\\u003c")
     html = HTML_TEMPLATE.replace("__DATA_PLACEHOLDER__", data_json)
+    html = html.replace("<body>", "<body>" + render_cannbench_panel(), 1)
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     (out_dir / "index.html").write_text(html, encoding="utf-8")
+    public = out_dir / "cannbench"
+    public.mkdir(exist_ok=True)
+    catalog_source = CANNBENCH_SUMMARY_FILE.parent / "catalog/manifest.json"
+    if not catalog_source.exists():
+        catalog_source = CANNBENCH_CATALOG_FILE
+    for source, name in ((catalog_source, "manifest.json"), (CANNBENCH_SUMMARY_FILE, "hardware-summary.json")):
+        if source.exists():
+            (public / name).write_bytes(source.read_bytes())
+    if not (public / "hardware-summary.json").exists():
+        (public / "hardware-summary.json").write_text(json.dumps({
+            "schema_version": 1, "source": "cannbench-hardware", "gate_passed": False,
+            "generated_at": None, "errors": ["No hardware report for this revision"],
+            "correct_cases": 0, "measured_cases": 0, "operators": [],
+        }, indent=2) + "\n")
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
 
     print(f"Dashboard written to {out_dir / 'index.html'}")

@@ -1,0 +1,874 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "GridSampler3D",
+  "function_name": "grid_sampler_3d",
+  "level": "level2",
+  "category": "FusedComposite",
+  "difficulty": "L2",
+  "description": "根据 grid 中坐标信息填充输出",
+  "desc_md": "# GridSampler3D 算子 API 描述\n\n## 1. 算子简介\n\n根据 grid 中坐标信息填充输出，实现 3D 空间的网格采样。\n\n**主要应用场景**：\n- 3D 医学图像处理中的空间变换与配准\n- 3D 目标检测中的特征对齐与采样\n- 体素数据的插值与重采样\n- 空间变换网络（STN）中的可微分采样\n\n**算子特征**：\n- 难度等级：L2（FusedComposite）\n- 双输入单输出，输入为 5D 张量 (N, C, D, H, W) 和采样网格 (N, D, H, W, 3)\n- 支持多种插值模式和填充模式\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\ny = \\text{grid\\_sample}(x, \\text{grid})\n$$\n\n根据 grid 中指定的归一化坐标 $(\\theta_d, \\theta_h, \\theta_w) \\in [-1, 1]^3$，从输入张量 $x$ 中采样得到输出 $y$。\n\n- **bilinear 模式**：在 5D 输入下实际为三线性插值（trilinear interpolation），根据 8 个相邻体素加权计算采样值\n- **nearest 模式**：取最近邻体素的值\n- **align_corners**：控制坐标映射方式；为 true 时 $-1$ 和 $1$ 映射到角点像素中心，为 false 时映射到角点像素边界\n\n> **不支持 bicubic**：PyTorch 的 `grid_sample` 仅在 4D 输入下支持 bicubic，5D（3D 体数据）下传入 `bicubic` 会直接报错 `RuntimeError: bicubic interpolation only supports 4D input`。本算子仅支持 `bilinear` / `nearest`。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.grid_sampler_3d(Tensor x, Tensor grid, str interpolation_mode=\"bilinear\", str padding_mode=\"zeros\", bool align_corners=false) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入张量，形状为 (N, C, D, H, W) |\n| grid | Tensor | 必选 | 采样网格，形状为 (N, D_out, H_out, W_out, 3) |\n| interpolation_mode | str | \"bilinear\" | 插值模式（'bilinear': 三线性，'nearest': 最近邻）。5D 输入下不支持 'bicubic' |\n| padding_mode | str | \"zeros\" | 填充模式（'zeros': 零填充，'border': 边界填充，'reflection': 反射填充） |\n| align_corners | bool | false | 是否对齐角点 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | (N, C, D_out, H_out, W_out) | 与输入 x 相同 | 输出张量，采样结果 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| float16 | float16 |\n| float32 | float32 |\n\n### 规则与约束\n\n- 输入 x 必须为 5D 张量，形状为 (N, C, D, H, W)\n- grid 必须为 5D 张量，形状为 (N, D_out, H_out, W_out, 3)，最后一维为 3 表示 (d, h, w) 坐标\n- x 和 grid 的 batch 维度 N 必须一致\n- x 和 grid 的 dtype 必须一致\n- grid 中的坐标值通常归一化到 [-1, 1] 范围\n- interpolation_mode 可选 'bilinear'、'nearest'（不支持 'bicubic'，5D 输入 PyTorch 限制）\n- padding_mode 可选 'zeros'、'border'、'reflection'\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `N`（batch） | 1 ~ 32 | cases.csv 实测 2 ~ 5；x 与 grid 的 N 必须一致 |\n| `C`（输入通道） | 1 ~ 512 | cases.csv 实测 7 ~ 256 |\n| `D`（输入深度） | 1 ~ 256 | cases.csv 实测 8 ~ 64 |\n| `H`（输入高度） | 1 ~ 256 | cases.csv 实测 8 ~ 127 |\n| `W`（输入宽度） | 1 ~ 4096 | cases.csv 实测 8 ~ 4001 |\n| `D_out`, `H_out`, `W_out`（grid 空间） | 1 ~ 256 | cases.csv 实测 7 ~ 127 |\n| `grid.shape[-1]` | = 3 | 最后一维固定为 3，表示 (d, h, w) 归一化坐标 |\n| `interpolation_mode` | `bilinear` / `nearest` | cases.csv 全覆盖；5D 输入不支持 `bicubic`（PyTorch 限制） |\n| `padding_mode` | `zeros` / `border` / `reflection` | cases.csv 全覆盖 |\n| `align_corners` | `true` / `false` | cases.csv 全覆盖 |\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nGridSampler3D算子Torch Golden参考实现\n\n根据grid中坐标信息填充输出\n公式: y = grid_sample(x, grid)\n\"\"\"\ndef grid_sampler_3d(\n    x: torch.Tensor, grid: torch.Tensor, interpolation_mode: str = 'bilinear', padding_mode: str = 'zeros', align_corners: bool = False\n) -> torch.Tensor:\n    \"\"\"\n    根据grid中坐标信息填充输出\n    \n    公式: y = grid_sample(x, grid)\n    \n    Args:\n        x: 输入张量\n        grid: 采样网格\n        interpolation_mode: 插值模式 ('bilinear': 三线性, 'nearest': 最近邻)。5D 输入下不支持 'bicubic'（PyTorch 限制）\n        padding_mode: 填充模式 ('zeros': 零填充, 'border': 边界填充, 'reflection': 反射填充)\n        align_corners: 是否对齐角点\n    \n    Returns:\n        输出张量，采样结果\n    \"\"\"\n\n    return torch.nn.functional.grid_sample(\n        x, grid, mode=interpolation_mode, padding_mode=padding_mode, align_corners=align_corners\n    )\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx = torch.randn(2, 32, 16, 64, 64, dtype=torch.float16, device=\"npu\")\ngrid = torch.rand(2, 8, 8, 8, 3, dtype=torch.float16, device=\"npu\") * 2 - 1  # 归一化到 [-1, 1]\ny = cann_bench.grid_sampler_3d(x, grid, interpolation_mode=\"bilinear\", padding_mode=\"zeros\", align_corners=True)\n\n# nearest 插值 + border 填充\ny = cann_bench.grid_sampler_3d(x, grid, interpolation_mode=\"nearest\", padding_mode=\"border\", align_corners=False)\n```\n",
+  "proto": {
+    "name": "GridSampler3D",
+    "category": "FusedComposite",
+    "difficulty": "L2",
+    "formula": "y = grid_sample(x, grid)",
+    "description": "根据 grid 中坐标信息填充输出",
+    "shape_support": "输入 5D (N, C, D, H, W)",
+    "attrs": [
+      {
+        "name": "interpolation_mode",
+        "type": "string",
+        "default": "bilinear",
+        "description": "插值模式 ('bilinear': 三线性 (5D 输入下 PyTorch 的 'bilinear' 实际即 trilinear)，'nearest': 最近邻)。不支持 'bicubic'（PyTorch 5D grid_sample 限制）",
+        "required": false
+      },
+      {
+        "name": "padding_mode",
+        "type": "string",
+        "default": "zeros",
+        "description": "填充模式 ('zeros': 零填充，'border': 边界填充，'reflection': 反射填充)",
+        "required": false
+      },
+      {
+        "name": "align_corners",
+        "type": "BOOL",
+        "default": false,
+        "description": "是否对齐角点",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入张量",
+        "dtype": [
+          "float16",
+          "float32"
+        ]
+      },
+      {
+        "name": "grid",
+        "description": "采样网格，形状为 (N, D, H, W, 3)",
+        "dtype": [
+          "float16",
+          "float32"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出张量，采样结果",
+        "dtype": [
+          "float16",
+          "float32"
+        ]
+      }
+    ],
+    "schema": "grid_sampler_3d(Tensor x, Tensor grid, str interpolation_mode=\"bilinear\", str padding_mode=\"zeros\", bool align_corners=false) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nGridSampler3D算子Torch Golden参考实现\n\n根据grid中坐标信息填充输出\n公式: y = grid_sample(x, grid)\n\"\"\"\ndef grid_sampler_3d(\n    x: torch.Tensor, grid: torch.Tensor, interpolation_mode: str = 'bilinear', padding_mode: str = 'zeros', align_corners: bool = False\n) -> torch.Tensor:\n    \"\"\"\n    根据grid中坐标信息填充输出\n    \n    公式: y = grid_sample(x, grid)\n    \n    Args:\n        x: 输入张量\n        grid: 采样网格\n        interpolation_mode: 插值模式 ('bilinear': 三线性, 'nearest': 最近邻)。5D 输入下不支持 'bicubic'（PyTorch 限制）\n        padding_mode: 填充模式 ('zeros': 零填充, 'border': 边界填充, 'reflection': 反射填充)\n        align_corners: 是否对齐角点\n    \n    Returns:\n        输出张量，采样结果\n    \"\"\"\n\n    return torch.nn.functional.grid_sample(\n        x, grid, mode=interpolation_mode, padding_mode=padding_mode, align_corners=align_corners\n    )\n",
+  "cases_yaml": [
+    {
+      "operator": "GridSampler3D",
+      "case_id": 1,
+      "input_shape": [
+        [
+          2,
+          32,
+          32,
+          32,
+          32
+        ],
+        [
+          2,
+          32,
+          32,
+          32,
+          3
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "zeros",
+        "align_corners": false
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-2M-对齐-bilinear-zeros-align=false | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 2,
+      "input_shape": [
+        [
+          4,
+          64,
+          16,
+          16,
+          16
+        ],
+        [
+          4,
+          16,
+          16,
+          16,
+          3
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "zeros",
+        "align_corners": false
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float32-4M-对齐-bilinear-zeros-align=false | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 3,
+      "input_shape": [
+        [
+          2,
+          128,
+          8,
+          8,
+          8
+        ],
+        [
+          2,
+          8,
+          8,
+          8,
+          3
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "interpolation_mode": "nearest",
+        "padding_mode": "zeros",
+        "align_corners": true
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-1M-对齐-nearest-zeros-align=true | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 4,
+      "input_shape": [
+        [
+          4,
+          64,
+          32,
+          32,
+          32
+        ],
+        [
+          4,
+          32,
+          32,
+          32,
+          3
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "border",
+        "align_corners": true
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-float32-16M-对齐-bilinear-border-align=true | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 5,
+      "input_shape": [
+        [
+          2,
+          128,
+          64,
+          64,
+          64
+        ],
+        [
+          2,
+          64,
+          64,
+          64,
+          3
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "interpolation_mode": "nearest",
+        "padding_mode": "reflection",
+        "align_corners": false
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "L-float16-67M-对齐-nearest-reflection-align=false | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 6,
+      "input_shape": [
+        [
+          4,
+          256,
+          32,
+          32,
+          32
+        ],
+        [
+          4,
+          32,
+          32,
+          32,
+          3
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "border",
+        "align_corners": false
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "L-float32-134M-对齐-bilinear-border-align=false | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 7,
+      "input_shape": [
+        [
+          3,
+          31,
+          31,
+          31,
+          31
+        ],
+        [
+          3,
+          31,
+          31,
+          31,
+          3
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "zeros",
+        "align_corners": false
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-3M-质数非对齐-bilinear-zeros-align=false | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 8,
+      "input_shape": [
+        [
+          2,
+          63,
+          15,
+          15,
+          15
+        ],
+        [
+          2,
+          15,
+          15,
+          15,
+          3
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "interpolation_mode": "nearest",
+        "padding_mode": "zeros",
+        "align_corners": true
+      },
+      "value_range": [
+        [
+          -1,
+          2
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float32-1M-非对齐-nearest-zeros-align=true | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 9,
+      "input_shape": [
+        [
+          3,
+          47,
+          23,
+          23,
+          23
+        ],
+        [
+          3,
+          23,
+          23,
+          23,
+          3
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "reflection",
+        "align_corners": false
+      },
+      "value_range": [
+        [
+          -5,
+          10
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-2M-质数非对齐-bilinear-reflection-align=false | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 10,
+      "input_shape": [
+        [
+          5,
+          97,
+          43,
+          43,
+          43
+        ],
+        [
+          5,
+          43,
+          43,
+          43,
+          3
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "zeros",
+        "align_corners": true
+      },
+      "value_range": [
+        [
+          -50,
+          100
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "L-float32-50M-质数非对齐-bilinear-zeros-align=true | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 11,
+      "input_shape": [
+        [
+          2,
+          33,
+          33,
+          33,
+          33
+        ],
+        [
+          2,
+          33,
+          33,
+          33,
+          3
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "border",
+        "align_corners": true
+      },
+      "value_range": [
+        [
+          -65504,
+          65504
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-2M-非对齐-float16边界值-bilinear-border | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 12,
+      "input_shape": [
+        [
+          3,
+          7,
+          13,
+          17,
+          4001
+        ],
+        [
+          3,
+          7,
+          13,
+          17,
+          3
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "interpolation_mode": "nearest",
+        "padding_mode": "zeros",
+        "align_corners": false
+      },
+      "value_range": [
+        [
+          -88,
+          88
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-float32-1M-质数非对齐-float32边界值-nearest | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 13,
+      "input_shape": [
+        [
+          2,
+          31,
+          31,
+          31,
+          31
+        ],
+        [
+          2,
+          31,
+          31,
+          31,
+          3
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "zeros",
+        "align_corners": false
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-2M-非对齐-inf特殊值-bilinear-zeros | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 14,
+      "input_shape": [
+        [
+          2,
+          11,
+          13,
+          17,
+          19
+        ],
+        [
+          2,
+          11,
+          13,
+          17,
+          3
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "zeros",
+        "align_corners": false
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float32-100K-质数非对齐-nan特殊值-bilinear | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 15,
+      "input_shape": [
+        [
+          4,
+          63,
+          31,
+          31,
+          31
+        ],
+        [
+          4,
+          31,
+          31,
+          31,
+          3
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "interpolation_mode": "nearest",
+        "padding_mode": "zeros",
+        "align_corners": false
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "M-float16-12M-非对齐-零值测试-nearest | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 16,
+      "input_shape": [
+        [
+          2,
+          16,
+          63,
+          63,
+          63
+        ],
+        [
+          2,
+          16,
+          63,
+          63,
+          3
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "zeros",
+        "align_corners": false
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-float32-2M-混合非对齐-bilinear-zeros-align=false | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 17,
+      "input_shape": [
+        [
+          3,
+          63,
+          63,
+          127,
+          127
+        ],
+        [
+          3,
+          127,
+          63,
+          127,
+          3
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "reflection",
+        "align_corners": true
+      },
+      "value_range": [
+        [
+          -1,
+          3
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "L-float16-200M-非对齐-bilinear-reflection-align=true | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 18,
+      "input_shape": [
+        [
+          2,
+          32,
+          15,
+          15,
+          15
+        ],
+        [
+          2,
+          15,
+          15,
+          15,
+          3
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "interpolation_mode": "nearest",
+        "padding_mode": "border",
+        "align_corners": true
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float32-1M-混合非对齐-nearest-border-align=true | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4,
+          31,
+          31,
+          31,
+          31
+        ],
+        [
+          4,
+          31,
+          31,
+          31,
+          3
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "zeros",
+        "align_corners": true
+      },
+      "value_range": [
+        [
+          -0.2,
+          0.2
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-4M-质数非对齐-bilinear-zeros-align=true | baseline_kernels: Transpose×1 + GridSample×1"
+    },
+    {
+      "operator": "GridSampler3D",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          63,
+          63,
+          127,
+          127
+        ],
+        [
+          2,
+          63,
+          63,
+          127,
+          3
+        ]
+      ],
+      "dtype": [
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "interpolation_mode": "bilinear",
+        "padding_mode": "border",
+        "align_corners": true
+      },
+      "value_range": [
+        [
+          -3,
+          6
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "L-float32-268M-质数非对齐-bilinear-border-align=true | baseline_kernels: Transpose×1 + GridSample×1"
+    }
+  ],
+  "case_count": 20
+}

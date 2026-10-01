@@ -1,0 +1,679 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "Gcd",
+  "function_name": "gcd",
+  "level": "level2",
+  "category": "Broadcast",
+  "difficulty": "L2",
+  "description": "计算两个整数的最大公约数",
+  "desc_md": "# Gcd 算子 API 描述\n\n## 1. 算子简介\n\n计算两个整数的最大公约数。\n\n**主要应用场景**：\n- 整数约分与最简分数计算\n- 数组维度对齐与分块策略中的公因子计算\n- 密码学中的模运算与欧几里得算法相关场景\n\n**算子特征**：\n- 难度等级：L2（Broadcast）\n- 双输入单输出，逐元素运算，输入支持广播\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\ny = \\gcd(x_1, x_2)\n$$\n\n其中 $\\gcd(a, b)$ 表示 $a$ 与 $b$ 的最大公约数，即同时整除 $a$ 和 $b$ 的最大正整数。当 $a = b = 0$ 时，$\\gcd(0, 0) = 0$。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.gcd(Tensor x1, Tensor x2) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x1 | Tensor | 必选 | 第1个输入张量 |\n| x2 | Tensor | 必选 | 第2个输入张量 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 广播后的 shape | 与输入一致 | 输出张量，最大公约数 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| int16 | int16 |\n| int32 | int32 |\n| int64 | int64 |\n\n### 规则与约束\n\n- 两个输入张量的 shape 需满足广播规则，输出 shape 为广播后的 shape\n- 两个输入张量的 dtype 必须一致\n- 仅支持整数类型（int16、int32、int64）\n- Golden 实现使用 `torch.gcd` 直接计算，输出 dtype 与输入保持一致\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `rank`（输入张量维度数） | 1 ~ 8 | cases.csv 实测 1D ~ 5D；x1 与 x2 rank 可不同，按广播规则对齐 |\n| `shape[i]`（每一维大小） | 1 ~ 2097152 | cases.csv 实测 1 ~ 1048583；x1 与 x2 对应维度需满足广播（相等或一方为 1） |\n| 广播后总元素数 | 1 ~ 2^27 | cases.csv 实测最大约 67M（8192×8192，case 4） |\n| 输入 dtype | int16 / int32 / int64 | x1/x2/y 必须同 dtype；不支持浮点 |\n| `x1`/`x2` 元素值（int16） | -32768 ~ 32767 | cases.csv 实测覆盖 int16 完整范围（case 4） |\n| `x1`/`x2` 元素值（int32） | -2^31 ~ 2^31-1 | cases.csv 实测覆盖 int32 完整范围（case 5） |\n| `x1`/`x2` 元素值（int64） | -2^63 ~ 2^63-1 | cases.csv 实测 ≤ ±100000（case 3/9/20） |\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nGcd算子Torch Golden参考实现\n\n计算两个整数的最大公约数\n公式: y = gcd(x1, x2)\n\"\"\"\ndef gcd(\n    x1: torch.Tensor, x2: torch.Tensor\n) -> torch.Tensor:\n    \"\"\"\n    计算两个整数的最大公约数\n\n    公式: y = gcd(x1, x2)\n\n    Args:\n        x1: 第1个输入张量\n        x2: 第2个输入张量\n\n    Returns:\n        输出张量，最大公约数（dtype 与输入一致）\n    \"\"\"\n\n    y = torch.gcd(x1, x2)\n    return y\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx1 = torch.randint(-1000, 1000, (1024, 1024), dtype=torch.int32, device=\"npu\")\nx2 = torch.randint(-1000, 1000, (1024, 1024), dtype=torch.int32, device=\"npu\")\ny = cann_bench.gcd(x1, x2)\n\n# 广播场景\nx1 = torch.randint(-100, 100, (2048, 512), dtype=torch.int16, device=\"npu\")\nx2 = torch.randint(-10, 10, (1, 512), dtype=torch.int16, device=\"npu\")\ny = cann_bench.gcd(x1, x2)\n```\n",
+  "proto": {
+    "name": "Gcd",
+    "category": "Broadcast",
+    "difficulty": "L2",
+    "formula": "y = gcd(x1, x2)",
+    "description": "计算两个整数的最大公约数",
+    "shape_support": "输入支持广播",
+    "attrs": [],
+    "inputs": [
+      {
+        "name": "x1",
+        "description": "第1个输入张量",
+        "dtype": [
+          "int16",
+          "int32",
+          "int64"
+        ]
+      },
+      {
+        "name": "x2",
+        "description": "第2个输入张量",
+        "dtype": [
+          "int16",
+          "int32",
+          "int64"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出张量，最大公约数",
+        "dtype": [
+          "int16",
+          "int32",
+          "int64"
+        ]
+      }
+    ],
+    "schema": "gcd(Tensor x1, Tensor x2) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nGcd算子Torch Golden参考实现\n\n计算两个整数的最大公约数\n公式: y = gcd(x1, x2)\n\"\"\"\ndef gcd(\n    x1: torch.Tensor, x2: torch.Tensor\n) -> torch.Tensor:\n    \"\"\"\n    计算两个整数的最大公约数\n\n    公式: y = gcd(x1, x2)\n\n    Args:\n        x1: 第1个输入张量\n        x2: 第2个输入张量\n\n    Returns:\n        输出张量，最大公约数（dtype 与输入一致）\n    \"\"\"\n    # NPU 的 int16 GCD 并行实现存在内存/线程同步问题\n    # 使用 int32 计算避免 NPU 和 CPU 结果不一致\n    if x1.dtype == torch.int16:\n        x1_32 = x1.int()\n        x2_32 = x2.int()\n        result = torch.gcd(x1_32, x2_32)\n        return result.to(torch.int16)\n\n    # NPU broadcast GCD 存在 bug，先显式广播再计算\n    x1_bc, x2_bc = torch.broadcast_tensors(x1, x2)\n    y = torch.gcd(x1_bc, x2_bc)\n    return y",
+  "cases_yaml": [
+    {
+      "operator": "Gcd",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "dtype": [
+        "int16",
+        "int16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          -1000,
+          1000
+        ]
+      ],
+      "note": "S-int16-1M-对齐-对称小值域 | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -10000,
+          10000
+        ],
+        [
+          -10000,
+          10000
+        ]
+      ],
+      "note": "M-int32-4M-对齐-对称小值域 | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ]
+      ],
+      "dtype": [
+        "int64",
+        "int64"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -100000,
+          100000
+        ],
+        [
+          -100000,
+          100000
+        ]
+      ],
+      "note": "L-int64-16M-对齐-对称小值域 | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8192,
+          8192
+        ],
+        [
+          8192,
+          8192
+        ]
+      ],
+      "dtype": [
+        "int16",
+        "int16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -32768,
+          32767
+        ],
+        [
+          -32768,
+          32767
+        ]
+      ],
+      "note": "L-int16-67M-对齐-int16全范围 | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4096,
+          8192
+        ],
+        [
+          4096,
+          8192
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -2147483648,
+          2147483647
+        ],
+        [
+          -2147483648,
+          2147483647
+        ]
+      ],
+      "note": "L-int32-268M-对齐-int32全范围 | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 6,
+      "input_shape": [
+        [
+          1023,
+          1023
+        ],
+        [
+          1023,
+          1023
+        ]
+      ],
+      "dtype": [
+        "int64",
+        "int64"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "M-int64-1M-非对齐-对称小值域 | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1009,
+          1021
+        ],
+        [
+          1009,
+          1021
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-int32-1M-质数非对齐-单位值gcd=1 | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1537,
+          769
+        ],
+        [
+          1537,
+          769
+        ]
+      ],
+      "dtype": [
+        "int16",
+        "int16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -50,
+          50
+        ],
+        [
+          -10,
+          10
+        ]
+      ],
+      "note": "S-int16-1M-非对齐-非对称小值域 | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 9,
+      "input_shape": [
+        [
+          363,
+          367,
+          186
+        ],
+        [
+          363,
+          367,
+          186
+        ]
+      ],
+      "dtype": [
+        "int64",
+        "int64"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -10000,
+          10000
+        ],
+        [
+          -1000,
+          1000
+        ]
+      ],
+      "note": "L-int64-50M-质数非对齐-非对称大值域-3D | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 10,
+      "input_shape": [
+        [
+          2049,
+          513
+        ],
+        [
+          2049,
+          513
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          100,
+          100
+        ],
+        [
+          100,
+          100
+        ]
+      ],
+      "note": "S-int32-1M-非对齐-相同值gcd=n | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 11,
+      "input_shape": [
+        [
+          1023,
+          1024
+        ],
+        [
+          1,
+          1024
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -10000,
+          10000
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "S-int32-1M-非对齐-尾轴Broadcast | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 12,
+      "input_shape": [
+        [
+          3,
+          127,
+          687,
+          37
+        ],
+        [
+          1,
+          1,
+          687,
+          1
+        ]
+      ],
+      "dtype": [
+        "int16",
+        "int16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          -10,
+          10
+        ]
+      ],
+      "note": "M-int16-31M-非对齐-多轴Broadcast-4D | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 13,
+      "input_shape": [
+        [
+          2,
+          3,
+          5,
+          1024,
+          256
+        ],
+        [
+          1,
+          1,
+          1,
+          1024,
+          1
+        ]
+      ],
+      "dtype": [
+        "int64",
+        "int64"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -10000,
+          10000
+        ],
+        [
+          -1000,
+          1000
+        ]
+      ],
+      "note": "M-int64-7M-非对齐-5D-多轴Broadcast | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 14,
+      "input_shape": [
+        [
+          1048583
+        ],
+        [
+          1048583
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "S-int32-1M-质数非对齐-零值gcd=0-1D | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 15,
+      "input_shape": [
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ],
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "note": "M-int32-10M-质数非对齐-单位值gcd=1-5D | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 16,
+      "input_shape": [
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ],
+        [
+          1
+        ]
+      ],
+      "dtype": [
+        "int16",
+        "int16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          1,
+          100
+        ]
+      ],
+      "note": "S-int16-3M-质数非对齐-标量Broadcast-5D | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 17,
+      "input_shape": [
+        [
+          512,
+          2049
+        ],
+        [
+          512,
+          2049
+        ]
+      ],
+      "dtype": [
+        "int64",
+        "int64"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -10000,
+          10000
+        ],
+        [
+          -1000,
+          1000
+        ]
+      ],
+      "note": "M-int64-1M-非对齐-对称中值域 | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 18,
+      "input_shape": [
+        [
+          255,
+          8193
+        ],
+        [
+          1,
+          8193
+        ]
+      ],
+      "dtype": [
+        "int32",
+        "int32"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "S-int32-2M-非对齐-Broadcast | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4097,
+          511
+        ],
+        [
+          4097,
+          1
+        ]
+      ],
+      "dtype": [
+        "int16",
+        "int16"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          2,
+          10000
+        ],
+        [
+          2,
+          10000
+        ]
+      ],
+      "note": "S-int16-2M-非对齐-正数范围-Broadcast | baseline_kernels: Gcd×1"
+    },
+    {
+      "operator": "Gcd",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          3,
+          17,
+          1024,
+          101
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
+          101
+        ]
+      ],
+      "dtype": [
+        "int64",
+        "int64"
+      ],
+      "attrs": {},
+      "value_range": [
+        [
+          -100000,
+          100000
+        ],
+        [
+          -10000,
+          10000
+        ]
+      ],
+      "note": "M-int64-10M-非对齐-非对称大值域-5D-Broadcast | baseline_kernels: Gcd×1"
+    }
+  ],
+  "case_count": 20
+}

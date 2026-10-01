@@ -1,0 +1,1038 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "QuantMatmul",
+  "function_name": "quant_matmul",
+  "level": "level3",
+  "category": "Contraction",
+  "difficulty": "L3",
+  "description": "量化矩阵乘法算子，int8 输入，float16/bfloat16 输出，支持 per-tensor/per-channel 量化",
+  "desc_md": "# QuantMatmul 算子 API 描述\n\n## 1. 算子简介\n\n量化矩阵乘法算子。对 int8 量化的矩阵乘进行反量化，输出 float16/bfloat16。\n\n**主要应用场景**：\n- 大语言模型 W8A8 推理中的 Linear 层\n- KV cache 量化流水线中的量化 GEMM\n- 静态 per-channel 或动态 per-token 量化方案\n\n**算子特征**：\n- 难度等级：L3（Contraction）\n- 输入：int8（2–6 维）\n- 输出：float16 或 bfloat16\n- 支持 per-tensor / per-channel 量化，可选 per-token 缩放\n\n## 2. 算子定义\n\n### 数学公式\n\n- **无 bias**：\n$$\nout = x1 \\mathbin{@} x2 * scale\n$$\n\n- **bias 为 int32（pre-scale）**：\n$$\nout = (x1 \\mathbin{@} x2 + bias) * scale\n$$\n\n- **bias 为 bfloat16/float16/float32（post-scale）**：\n$$\nout = x1 \\mathbin{@} x2 * scale + bias\n$$\n\n- **带 pertoken_scale**：\n$$\nout = (x1 \\mathbin{@} x2 * scale) * pertoken\\_scale\n$$\n\n- **带 offset（非对称量化）**：\n$$\nout = x1 \\mathbin{@} x2 * scale + offset\n$$\n\n### 步骤说明\n\n1. **矩阵乘**：`mm[...,m,n] = x1[...,m,k] @ x2[...,k,n]`，int8 在硬件上累加到 int32。\n2. **int32 bias（pre-scale）**：若 bias 为 int32，先与累加结果相加。\n3. **反量化 scale**：按 scale 形状广播，支持 per-tensor `[1]` 或 per-channel `[n]`。\n4. **offset（非对称量化）**：可选，反量化后加上 zero-point 偏移；对称量化时为 None。\n5. **pertoken_scale**：可选，沿 m 维广播的 per-token 缩放。\n6. **浮点 bias（post-scale）**：若 bias 为 bf16/fp16/fp32，在反量化后相加。\n7. **cast**：按 output_dtype 输出 float16 或 bfloat16。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.quant_matmul(\n    Tensor x1,\n    Tensor x2,\n    Tensor scale,\n    *,\n    Tensor? offset=None,\n    Tensor? pertoken_scale=None,\n    Tensor? bias=None,\n    str? output_dtype=None,\n) -> Tensor out\n```\n\n### 输入参数\n\n| 参数 | 类型 | Shape | dtype | 描述 |\n|------|------|-------|-------|------|\n| x1 | Tensor (必选) | `[..., m, k]`，2–6 维 | int8 | 左矩阵 |\n| x2 | Tensor (必选) | `[..., k, n]`，2–6 维；最后一维 ≤ 65535 | int8 | 右矩阵 |\n| scale | Tensor (必选) | `[t]` (t=1 或 n) | float32 / bfloat16 | 量化缩放因子 |\n| offset | Tensor (可选) | `[t]` (t=1 或 n) | float32 | 非对称量化偏移 (zero-point)；对称量化为 None |\n| pertoken_scale | Tensor (可选) | `[m]` | float32 | per-token 缩放因子 |\n| bias | Tensor (可选) | `[n]` / `[1, n]` / `[batch, 1, n]` | int32 / bfloat16 / float16 / float32 | 偏置项 |\n| output_dtype | str (可选) | - | - | 输出 dtype：\"float16\"（默认）或 \"bfloat16\" |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| out | `[..., m, n]` | float16 / bfloat16 | 计算结果 |\n\n### 数据类型组合\n\n| x1 | x2 | scale | offset | pertoken_scale | bias | output_dtype |\n|----|----|-------|--------|----------------|------|--------------|\n| int8 | int8 | float32 | float32/None | float32/None | int32/None | float16 |\n| int8 | int8 | float32 | float32/None | float32/None | int32/bfloat16/float16/float32/None | bfloat16 |\n| int8 | int8 | bfloat16 | float32/None | None | int32/None | bfloat16 |\n\n### 规则与约束\n\n- `x1.shape[-1] == x2.shape[-2] == k`；`x2.shape[-1] ≤ 65535`\n- bias：输出 2/4/5/6 维时必须 1D；输出 3 维时可为 1D 或 3D\n- scale 为 bfloat16 时，output_dtype 必须为 bfloat16\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `batch`（前导批维度） | 1 ~ 256 | 2-6 维输入；2D 时无 batch；cases.csv 实测 2D 与 3D B=8 |\n| `m`（x1 倒数第二维） | 1 ~ 4096 | cases.csv 实测 1 ~ 4096 |\n| `k`（x1 最后一维 / x2 倒数第二维） | 16 ~ 16384 | `x1.shape[-1] == x2.shape[-2]`；cases.csv 实测 256 ~ 7168 |\n| `n`（x2 最后一维） | 16 ~ 65535 | 硬件限制 ≤ 65535；cases.csv 实测 512 ~ 14336 |\n| `scale.shape[0]` | 1 或 n | per-tensor=1 / per-channel=n；cases.csv 实测 1 / n |\n| `offset.shape[0]` | 1 或 n | 非对称量化时与 scale 同形；cases.csv 均为对称量化（offset=None） |\n| `pertoken_scale.shape[0]` | = m | cases.csv 实测 1024 |\n| `bias.shape[-1]` | = n | 1D `[n]` 或 3D `[batch, 1, n]` |\n| `output_dtype` | `float16` / `bfloat16` | cases.csv 全部覆盖 |\n\n约束：x1/x2 必须同为 int8；scale 为 bfloat16 时 output_dtype 必须为 bfloat16。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 |\n|----------|---------|----------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\nfrom typing import Optional\n\ndef quant_matmul(\n    x1: torch.Tensor,\n    x2: torch.Tensor,\n    scale: torch.Tensor,\n    offset: Optional[torch.Tensor] = None,\n    pertoken_scale: Optional[torch.Tensor] = None,\n    bias: Optional[torch.Tensor] = None,\n    output_dtype: Optional[str] = None,\n) -> torch.Tensor:\n    \"\"\"\n    量化矩阵乘法\n\n    Args:\n        x1: [..., m, k] int8 左矩阵\n        x2: [..., k, n] int8 右矩阵\n        scale: [t] 反量化 scale (float32 / bfloat16)\n        offset: [t] 非对称量化偏移 (float32, t=1 或 n)，反量化时 out += offset；\n                对称量化时为 None\n        pertoken_scale: [m] per-token scale (float32)\n        bias: [n] 或 [batch, 1, n] 偏置，int32 走 pre-scale，浮点走 post-scale\n        output_dtype: 输出类型 \"float16\"（默认）或 \"bfloat16\"\n\n    Returns:\n        out: [..., m, n] float16 或 bfloat16\n    \"\"\"\n    # 矩阵乘：int8/int32 输入直接走 fp64 matmul。\n    # PR-001: int8 × int8 单乘积 ≤ 127² = 16129；K 个累加最大 |mm| = 16129·K，\n    # 即便 K=65535 也只到 ~1.06e9，远小于 fp64 整数精确上界 2^53 (≈9e15)，\n    # 故 fp64 matmul 对该量程是 *精确* 的（与 int64 累加逐位相等）。\n    # 不用 int64 matmul：CPU 上 int64 GEMM 无 BLAS，朴素实现比 fp64 慢 ~1000x\n    # （大 shape 单次可达 ~60s），会令评测在 golden 阶段超时。fp64 走 BLAS，\n    # 精度不变而速度恢复。fp32 不可用（24-bit 尾数，K>1024 会溢出）。\n    if x1.dtype in (torch.int8, torch.int32) and x2.dtype in (torch.int8, torch.int32):\n        mm = torch.matmul(x1.double(), x2.double())\n    else:\n        # bf16/fp16 输入路径维持原 fp32 等效计算\n        mm = torch.matmul(x1.float(), x2.float()).double()\n\n    # int32 bias 在反量化前累加 (pre-scale)\n    if bias is not None and bias.dtype == torch.int32:\n        mm = mm + bias.double()\n\n    # 反量化 scale\n    y = mm * scale.double()\n\n    # 非对称量化偏移 (zero-point 校正)：out = mm*scale + offset\n    # offset 与 scale 配对（NPU 侧由 npu_trans_quant_param(scale, offset) 打包）；\n    # 对称量化时 offset=None，此步为 no-op。\n    if offset is not None:\n        y = y + offset.double()\n\n    # pertoken_scale 沿 m 维广播\n    if pertoken_scale is not None:\n        y = y * pertoken_scale.double().unsqueeze(-1)\n\n    # 浮点 bias 在反量化后相加 (post-scale)\n    if bias is not None and bias.dtype != torch.int32:\n        y = y + bias.double()\n\n    # 输出 dtype，默认 float16\n    if output_dtype is None or output_dtype == \"float16\":\n        return y.to(torch.float16)\n    elif output_dtype == \"bfloat16\":\n        return y.to(torch.bfloat16)\n    else:\n        raise ValueError(f\"unsupported output_dtype: {output_dtype}\")\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\n# int8 输入，float16 输出，per-channel scale\nx1 = torch.randint(-128, 127, (1024, 3584), dtype=torch.int8, device=\"npu\")\nx2 = torch.randint(-128, 127, (3584, 3584), dtype=torch.int8, device=\"npu\")\nscale = torch.rand(3584, dtype=torch.float32, device=\"npu\") * 0.01\nout = cann_bench.quant_matmul(x1, x2, scale, output_dtype=\"float16\")\n\n# 带 int32 bias + pertoken_scale，bfloat16 输出\nx1 = torch.randint(-128, 127, (1024, 4096), dtype=torch.int8, device=\"npu\")\nx2 = torch.randint(-128, 127, (4096, 14336), dtype=torch.int8, device=\"npu\")\nscale = torch.rand(14336, dtype=torch.float32, device=\"npu\") * 0.01\nbias = torch.randint(-100, 100, (14336,), dtype=torch.int32, device=\"npu\")\npertoken = torch.rand(1024, dtype=torch.float32, device=\"npu\")\nout = cann_bench.quant_matmul(x1, x2, scale, pertoken_scale=pertoken,\n                               bias=bias, output_dtype=\"bfloat16\")\n```\n\n### CANN 底层实现\n\n- **aclnnQuantMatmulV4**: 基础量化矩阵乘\n",
+  "proto": {
+    "name": "QuantMatmul",
+    "category": "Contraction",
+    "difficulty": "L3",
+    "formula": "无bias: out = x1 @ x2 * scale\nint32 bias (pre-scale): out = (x1 @ x2 + bias) * scale\n浮点 bias (post-scale): out = x1 @ x2 * scale + bias\npertoken: out = (x1 @ x2 * scale) * pertoken_scale\noffset (非对称量化): out = x1 @ x2 * scale + offset\n",
+    "description": "量化矩阵乘法算子，int8 输入，float16/bfloat16 输出，支持 per-tensor/per-channel 量化",
+    "shape_support": "x1: [..., m, k]; x2: [..., k, n]; scale: [t]; 输出: [..., m, n]",
+    "attrs": [
+      {
+        "name": "output_dtype",
+        "type": "string",
+        "default": null,
+        "description": "输出数据类型，取值 \"float16\"（默认）或 \"bfloat16\"",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x1",
+        "description": "左矩阵，int8",
+        "dtype": [
+          "int8"
+        ],
+        "shape": "[..., m, k]，2-6维"
+      },
+      {
+        "name": "x2",
+        "description": "右矩阵，与 x1 dtype 一致",
+        "dtype": [
+          "int8"
+        ],
+        "shape": "[..., k, n]，最后一维≤65535"
+      },
+      {
+        "name": "scale",
+        "description": "量化缩放因子，per-tensor[t=1] 或 per-channel[t=n]",
+        "dtype": [
+          "float32",
+          "bfloat16"
+        ],
+        "shape": "[t]"
+      },
+      {
+        "name": "offset",
+        "description": "非对称量化偏移 (zero-point 校正)，反量化时 out += offset；per-tensor[t=1] 或 per-channel[t=n]",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[t]",
+        "optional": true
+      },
+      {
+        "name": "pertoken_scale",
+        "description": "per-token 缩放因子，shape=[m]",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[m]",
+        "optional": true
+      },
+      {
+        "name": "bias",
+        "description": "偏置项，int32 走 pre-scale，浮点走 post-scale",
+        "dtype": [
+          "int32",
+          "bfloat16",
+          "float16",
+          "float32"
+        ],
+        "shape": "[n] 或 [1, n] 或 [batch, 1, n]",
+        "optional": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out",
+        "description": "计算结果",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "[..., m, n]"
+      }
+    ],
+    "schema": "quant_matmul(Tensor x1, Tensor x2, Tensor scale, *, Tensor? offset=None, Tensor? pertoken_scale=None, Tensor? bias=None, str? output_dtype=None) -> Tensor out"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\nfrom typing import Optional\n\n\"\"\"\nQuantMatmul 算子 Torch Golden 参考实现\n\n输入 int8，输出 float16/bfloat16。\n\n计算公式：\n    无bias:             out = x1 @ x2 * scale\n    int32 bias:         out = (x1 @ x2 + bias) * scale\n    浮点bias(post-scale): out = x1 @ x2 * scale + bias\n    pertoken:           out = (x1 @ x2 * scale) * pertoken_scale\n    offset(非对称量化):  out = x1 @ x2 * scale + offset\n\"\"\"\n\n\ndef quant_matmul(\n    x1: torch.Tensor,\n    x2: torch.Tensor,\n    scale: torch.Tensor,\n    offset: Optional[torch.Tensor] = None,\n    pertoken_scale: Optional[torch.Tensor] = None,\n    bias: Optional[torch.Tensor] = None,\n    output_dtype: Optional[str] = None,\n) -> torch.Tensor:\n    \"\"\"\n    量化矩阵乘法\n\n    Args:\n        x1: [..., m, k] int8 左矩阵\n        x2: [..., k, n] int8 右矩阵\n        scale: [t] 反量化 scale (float32 / bfloat16)\n        offset: [t] 非对称量化偏移 (float32, t=1 或 n)，反量化时 out += offset；\n                对称量化时为 None\n        pertoken_scale: [m] per-token scale (float32)\n        bias: [n] 或 [batch, 1, n] 偏置，int32 走 pre-scale，浮点走 post-scale\n        output_dtype: 输出类型 \"float16\"（默认）或 \"bfloat16\"\n\n    Returns:\n        out: [..., m, n] float16 或 bfloat16\n    \"\"\"\n    # 矩阵乘：int8/int32 输入直接走 fp64 matmul。\n    # PR-001: int8 × int8 单乘积 ≤ 127² = 16129；K 个累加最大 |mm| = 16129·K，\n    # 即便 K=65535 也只到 ~1.06e9，远小于 fp64 整数精确上界 2^53 (≈9e15)，\n    # 故 fp64 matmul 对该量程是 *精确* 的（与 int64 累加逐位相等）。\n    # 不用 int64 matmul：CPU 上 int64 GEMM 无 BLAS，朴素实现比 fp64 慢 ~1000x\n    # （大 shape 单次可达 ~60s），会令评测在 golden 阶段超时。fp64 走 BLAS，\n    # 精度不变而速度恢复。fp32 不可用（24-bit 尾数，K>1024 会溢出）。\n    if x1.dtype in (torch.int8, torch.int32) and x2.dtype in (torch.int8, torch.int32):\n        mm = torch.matmul(x1.double(), x2.double())\n    else:\n        # bf16/fp16 输入路径维持原 fp32 等效计算\n        mm = torch.matmul(x1.float(), x2.float()).double()\n\n    # int32 bias 在反量化前累加 (pre-scale)\n    if bias is not None and bias.dtype == torch.int32:\n        mm = mm + bias.double()\n\n    # 反量化 scale\n    y = mm * scale.double()\n\n    # 非对称量化偏移 (zero-point 校正)：out = mm*scale + offset\n    # offset 与 scale 配对（NPU 侧由 npu_trans_quant_param(scale, offset) 打包）；\n    # 对称量化时 offset=None，此步为 no-op。\n    if offset is not None:\n        y = y + offset.double()\n\n    # pertoken_scale 沿 m 维广播\n    if pertoken_scale is not None:\n        y = y * pertoken_scale.double().unsqueeze(-1)\n\n    # 浮点 bias 在反量化后相加 (post-scale)\n    if bias is not None and bias.dtype != torch.int32:\n        y = y + bias.double()\n\n    # 输出 dtype，默认 float16\n    if output_dtype is None or output_dtype == \"float16\":\n        return y.to(torch.float16)\n    elif output_dtype == \"bfloat16\":\n        return y.to(torch.bfloat16)\n    else:\n        raise ValueError(f\"unsupported output_dtype: {output_dtype}\")\n",
+  "cases_yaml": [
+    {
+      "operator": "QuantMatmul",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          3584
+        ],
+        [
+          3584,
+          3584
+        ],
+        [
+          3584
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "Qwen2-7B-o_proj-fp16-per-channel | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 2,
+      "input_shape": [
+        [
+          1024,
+          3584
+        ],
+        [
+          3584,
+          4608
+        ],
+        [
+          4608
+        ],
+        null,
+        null,
+        [
+          4608
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        null,
+        null,
+        "int32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        null,
+        null,
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "Qwen2-7B-qkv-fp16-int32-bias | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 3,
+      "input_shape": [
+        [
+          999,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "non-aligned-M=999-fp16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 4,
+      "input_shape": [
+        [
+          1024,
+          4096
+        ],
+        [
+          4096,
+          14336
+        ],
+        [
+          14336
+        ],
+        null,
+        null,
+        [
+          14336
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        null,
+        null,
+        "int32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        null,
+        null,
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "int32-bias-fp16-large-N | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 5,
+      "input_shape": [
+        [
+          1024,
+          4096
+        ],
+        [
+          4096,
+          11008
+        ],
+        [
+          11008
+        ],
+        null,
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        null,
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "bias": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        null,
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "pertoken-scale-fp16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 6,
+      "input_shape": [
+        [
+          1024,
+          4096
+        ],
+        [
+          4096,
+          14336
+        ],
+        [
+          14336
+        ],
+        null,
+        [
+          1024
+        ],
+        [
+          14336
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        null,
+        "float32",
+        "int32"
+      ],
+      "attrs": {
+        "offset": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        null,
+        [
+          0.001,
+          0.01
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "pertoken+int32-bias-fp16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1024,
+          3584
+        ],
+        [
+          3584,
+          3584
+        ],
+        [
+          3584
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "bfloat16"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "bfloat16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "Qwen2-7B-o_proj-bf16-per-channel | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1024,
+          4096
+        ],
+        [
+          4096,
+          14336
+        ],
+        [
+          14336
+        ],
+        null,
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        null,
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "bias": null,
+        "output_dtype": "bfloat16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        null,
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "pertoken-bf16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 9,
+      "input_shape": [
+        [
+          1024,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          4096
+        ],
+        null,
+        null,
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        null,
+        null,
+        "bfloat16"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "output_dtype": "bfloat16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        null,
+        null,
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "bf16-bias-post-scale-bf16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 10,
+      "input_shape": [
+        [
+          1024,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          2048
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "small-fp16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 11,
+      "input_shape": [
+        [
+          1024,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          2048
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "bfloat16"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "bfloat16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "bf16-scale-bf16-out | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 12,
+      "input_shape": [
+        [
+          1024,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "fp32-scale-fp16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 13,
+      "input_shape": [
+        [
+          8,
+          128,
+          2048
+        ],
+        [
+          8,
+          2048,
+          4096
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "3D-batched-B=8-per-channel-fp16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 14,
+      "input_shape": [
+        [
+          1,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          1
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "decode-M=1-per-tensor-fp16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 15,
+      "input_shape": [
+        [
+          1,
+          7168
+        ],
+        [
+          7168,
+          7168
+        ],
+        [
+          1
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "bfloat16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "decode-M=1-per-tensor-bf16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 16,
+      "input_shape": [
+        [
+          512,
+          513
+        ],
+        [
+          513,
+          1024
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "non-aligned-K=513-fp16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 17,
+      "input_shape": [
+        [
+          1024,
+          4096
+        ],
+        [
+          4096,
+          1025
+        ],
+        [
+          1025
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "bfloat16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "non-aligned-N=1025-bf16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 18,
+      "input_shape": [
+        [
+          32,
+          256
+        ],
+        [
+          256,
+          512
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "small-smoke-M=32 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "float16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "big-M=4096-fp16 | baseline_kernels: QuantBatchMatmulV3×1"
+    },
+    {
+      "operator": "QuantMatmul",
+      "case_id": 20,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ],
+        [
+          4096,
+          4096
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32"
+      ],
+      "attrs": {
+        "offset": null,
+        "pertoken_scale": null,
+        "bias": null,
+        "output_dtype": "bfloat16"
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "big-M=4096-bf16 | baseline_kernels: QuantBatchMatmulV3×1"
+    }
+  ],
+  "case_count": 20
+}

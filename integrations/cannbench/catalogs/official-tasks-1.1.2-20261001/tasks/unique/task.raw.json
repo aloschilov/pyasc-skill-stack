@@ -1,0 +1,509 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "Unique",
+  "function_name": "unique",
+  "level": "level3",
+  "category": "SortSelect",
+  "difficulty": "L3",
+  "description": "去除张量中的重复元素",
+  "desc_md": "# Unique 算子 API 描述\n\n## 1. 算子简介\n\n去除张量中的重复元素。\n\n**主要应用场景**：\n- 数据去重与统计唯一值数量\n- 构建词表或标签映射时提取不重复元素\n- 稀疏表示和索引压缩中提取唯一键值及逆索引\n\n**算子特征**：\n- 难度等级：L3（SortSelect）\n- 单输入双输出（唯一值张量和可选的逆索引），支持 ND 格式输入\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\ny, inverse = \\text{unique}(x, \\text{return\\_inverse})\n$$\n\n对输入张量 x 进行去重操作，返回唯一值张量 y。当 return_inverse=True 时，同时返回逆索引 inverse，满足 $x = y[inverse]$。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.unique(Tensor x, bool return_inverse) -> (Tensor y, Tensor inverse)\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入张量，支持 ND 格式 |\n| return_inverse | bool | false | 是否返回逆索引，用于重建原始张量 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 由唯一值数量决定 | 与输入 x 相同 | 输出张量，唯一值 |\n| inverse | 与输入 x 展平后相同 | int64 | 逆索引，满足 x = y[inverse]（仅当 return_inverse=True 时返回） |\n\n**返回行为**（对标 PyTorch `torch.unique`）：\n- `return_inverse=True`：返回 `(y, inverse)` 元组\n- `return_inverse=False`：仅返回 `y`（单个 Tensor）\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype（y） | 输出 dtype（inverse） |\n|-----------|---------------|---------------------|\n| bfloat16 | bfloat16 | int64 |\n| float16 | float16 | int64 |\n| float32 | float32 | int64 |\n| int8 | int8 | int64 |\n| int32 | int32 | int64 |\n| int64 | int64 | int64 |\n| uint8 | uint8 | int64 |\n\n### 规则与约束\n\n- 输入支持 ND 格式张量，去重前会将输入展平为一维\n- 输出唯一值张量 `y` 的元素按数值升序排列（与 `torch.unique(..., sorted=True)` 默认行为一致），其长度取决于输入中不重复元素的数量\n- 当 `return_inverse=false` 时，`inverse` 输出为 None\n- 输出 `y` 的 dtype 与输入 `x` 相同；`inverse` 的 dtype 固定为 int64\n- 浮点去重语义**要求 NPU 实现遵循 `torch.unique`**：按 IEEE 754 数值相等去重（`+0.0` 与 `-0.0` 必须合并为同一唯一值，PyTorch CPU 实现保留首次出现者，通常落到 `+0.0` 这一 sign）；`+inf` 与 `-inf` 视为不同唯一值（bit pattern 与 IEEE 值都不同）；本基准的输入生成器不引入 NaN，无需考虑 NaN 去重语义。若 NPU 将 `±0.0` 视为不同唯一值，`y` 长度会与 Golden 不匹配，bit-exact 检查直接因 shape mismatch 失败\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `rank`（输入维度数） | 1 ~ 8 | 去重前展平为一维；cases.csv 实测 1 ~ 5 |\n| `numel`（元素总数） | 1 ~ 2^30 | cases.csv 实测 ~917K ~ 256M |\n| `return_inverse` | {true, false} | cases.csv 双向覆盖 |\n\n约束（§3 规则与约束之外的结构性不变量，避免与上文重复）：\n- shape 关系：输出 `y` 始终为 1D（无论 `x.rank`），长度 `len(y) <= numel(x)`；`return_inverse=True` 时 `inverse.shape == (numel(x),)`，与 `x.flatten()` 等长。\n- 重建不变量：`return_inverse=True` 时严格有 `x.flatten() == y[inverse]`（逐元素相等）。\n- 索引值域：`inverse` 元素 ∈ [0, len(y) - 1]，每个 `[0, len(y))` 中的 ID 至少出现一次（满射）。\n\n## 4. 精度要求\n\n采用**逐位精确（bit-exact）**标准进行验证：对每个输出张量，要求 NPU 输出与 Golden 参考输出 **逐元素按位完全相等**。\n\n### 判定方式\n\n| 输出 | dtype | 判定条件 |\n|---|---|---|\n| `y` (整数) | int8 / int32 / int64 / uint8 | `torch.equal(actual, golden) == True`（整数 dtype 字节天然唯一） |\n| `y` (浮点) | bfloat16 / float16 / float32 | `torch.equal(actual.view(int_dtype), golden.view(int_dtype)) == True`，其中 `int_dtype` 与浮点宽度对应（fp16/bf16 → int16，fp32 → int32），严格区分 `±0.0`、`±inf` 与 NaN payload |\n| `inverse` | int64 | `torch.equal(actual, golden) == True` |\n\n实现机制：`proto.yaml` 中将全部 dtype 阈值设为 `0`，触发 `src/kernel_eval/utils/precision.py` 的 bit-exact 分支（整数路径 `torch.equal`、浮点路径 `.view(int_dtype)` 后 `torch.equal`）。\n\n### 选用理由\n\n- `y` 的所有元素都直接来自 `x`（没有任何算术运算），bit-exact 比较良定义；\n- `inverse` 为离散整数索引，天然适合按位比较；\n- 输入空间离散（浮点 dtype 的 bit pattern 集合有限，整数 dtype 完全离散），不存在浮点累积误差来源。\n\n### Bit-exact 前置条件\n\n- **形状一致**：NPU 与 Golden 必须给出相同长度的 `y`（即对相同输入产生相同的去重计数），否则比较直接判失败；\n- **排序约定**：双方均按数值升序输出 `y`；NPU 实现需遵循 `torch.unique` 的排序语义；\n- **特殊值处理**：cases 仅覆盖 ±inf（不含 NaN），±inf 在升序约定下分别位于 `y` 的首/末位置。\n\n### 字节级严格性\n\n`torch.unique` 按 IEEE 754 数值相等做去重，但保留哪个 sign（`+0.0` 还是 `-0.0`）由实现决定。\n本算子要求 NPU 与 Golden 在 sign 选择上一致——为防止双方选择分歧而被\"数值相等\"路径放过，\nbit-exact 判定通过 `src/kernel_eval/utils/precision.py` 中浮点 `threshold == 0` 的字节级\n分支实现：对 fp16 / bf16 / fp32 输出执行 `out.view(int_dtype) == golden.view(int_dtype)`\n的逐位比较（harness 已在 Golden fp64 → 目标 dtype 的 round-trip 中处理 dtype 转换）。\n因此以下场景均会被显式判失败：\n\n- `+0.0` 与 `-0.0` 的 sign 分歧（`0x00000000` vs `0x80000000` 等）；\n- `+inf` 与 `-inf` 的 sign 分歧；\n- NaN 的 payload 差异（虽然本基准不引入 NaN，但路径同样按字节严格）。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\nfrom typing import Tuple, Union\n\ndef unique(\n    x: torch.Tensor,\n    return_inverse: bool = False\n) -> Union[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:\n    \"\"\"\n    去除张量中的重复元素\n\n    公式：y, inverse = unique(x, return_inverse)\n\n    Args:\n        x: 输入张量\n        return_inverse: 是否返回逆索引，用于重建原始张量\n\n    Returns:\n        return_inverse=True:  (y, inverse)  唯一值 + 逆索引\n        return_inverse=False: y             仅唯一值\n    \"\"\"\n\n    y, inverse = torch.unique(x, return_inverse=True)\n    if return_inverse:\n        return y, inverse\n    return y\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx = torch.tensor([1, 2, 3, 2, 1, 4, 3], dtype=torch.int32, device=\"npu\")\ny, inverse = cann_bench.unique(x, True)  # y=[1,2,3,4], inverse=[0,1,2,1,0,3,2]\n\nx = torch.randn(1024, 1024, dtype=torch.float16, device=\"npu\")\ny = cann_bench.unique(x, False)  # 仅返回唯一值\n```\n",
+  "proto": {
+    "name": "Unique",
+    "category": "SortSelect",
+    "difficulty": "L3",
+    "formula": "y, inverse = unique(x, return_inverse)",
+    "description": "去除张量中的重复元素",
+    "shape_support": "输入 ND 格式",
+    "precision_thresholds": {
+      "bfloat16": 0,
+      "float16": 0,
+      "float32": 0,
+      "int8": 0,
+      "int32": 0,
+      "int64": 0,
+      "uint8": 0
+    },
+    "attrs": [
+      {
+        "name": "return_inverse",
+        "type": "bool",
+        "default": false,
+        "description": "是否返回逆索引，用于重建原始张量",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入张量",
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32",
+          "int8",
+          "int32",
+          "int64",
+          "uint8"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出张量，唯一值",
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32",
+          "int8",
+          "int32",
+          "int64",
+          "uint8"
+        ]
+      },
+      {
+        "name": "inverse",
+        "description": "逆索引，满足 x = y[inverse]",
+        "optional": true,
+        "dtype": [
+          "int64"
+        ]
+      }
+    ],
+    "schema": "unique(Tensor x, bool return_inverse) -> (Tensor y, Tensor inverse)"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\nfrom typing import Tuple, Union\n\n\"\"\"\nUnique 算子 Torch Golden 参考实现\n\n去除张量中的重复元素\n公式：y, inverse = unique(x, return_inverse)\n\"\"\"\ndef unique(\n    x: torch.Tensor,\n    return_inverse: bool = False\n) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:\n    \"\"\"\n    去除张量中的重复元素\n\n    公式：y, inverse = unique(x, return_inverse)\n\n    Args:\n        x: 输入张量\n        return_inverse: 是否返回逆索引，用于重建原始张量\n\n    Returns:\n        return_inverse=True:  (y, inverse)  唯一值 + 逆索引\n        return_inverse=False: y             仅唯一值\n    \"\"\"\n\n    y, inverse = torch.unique(x, return_inverse=True)\n    if return_inverse:\n        return y, inverse\n    return y\n",
+  "cases_yaml": [
+    {
+      "operator": "Unique",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1048576
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "return_inverse": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-1M-对齐-1D-无逆索引"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2048,
+          2048
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "return_inverse": true
+      },
+      "value_range": [
+        -2,
+        2
+      ],
+      "note": "M-float32-4M-对齐-2D-带逆索引"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "return_inverse": false
+      },
+      "value_range": [
+        -3,
+        3
+      ],
+      "note": "M-bfloat16-16M-对齐-2D-无逆索引"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8192,
+          8192
+        ]
+      ],
+      "dtype": [
+        "int32"
+      ],
+      "attrs": {
+        "return_inverse": true
+      },
+      "value_range": [
+        -10000,
+        10000
+      ],
+      "note": "L-int32-67M-对齐-2D-带逆索引-中值域"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4096,
+          8192
+        ]
+      ],
+      "dtype": [
+        "int64"
+      ],
+      "attrs": {
+        "return_inverse": false
+      },
+      "value_range": [
+        -100000,
+        100000
+      ],
+      "note": "L-int64-33M元素-256MB-对齐-2D-无逆索引-大值域"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 6,
+      "input_shape": [
+        [
+          16384,
+          16384
+        ]
+      ],
+      "dtype": [
+        "uint8"
+      ],
+      "attrs": {
+        "return_inverse": true
+      },
+      "value_range": [
+        0,
+        255
+      ],
+      "note": "L-uint8-268M元素-对齐-2D-带逆索引-全范围"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1023,
+          1023
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "return_inverse": false
+      },
+      "value_range": [
+        -0.1,
+        0.1
+      ],
+      "note": "S-float16-1M-非对齐-2D-微小值域"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1009,
+          1021
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "return_inverse": true
+      },
+      "value_range": [
+        -1,
+        2
+      ],
+      "note": "S-float32-1M-质数非对齐-2D-非对称-带逆索引"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 9,
+      "input_shape": [
+        [
+          1537,
+          769
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "return_inverse": false
+      },
+      "value_range": [
+        -5,
+        10
+      ],
+      "note": "S-bfloat16-1M-非对齐-2D-非对称"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 10,
+      "input_shape": [
+        [
+          363,
+          367,
+          373
+        ]
+      ],
+      "dtype": [
+        "int8"
+      ],
+      "attrs": {
+        "return_inverse": true
+      },
+      "value_range": [
+        -128,
+        127
+      ],
+      "note": "M-int8-50M-质数非对齐-3D-int8全范围-带逆索引"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 11,
+      "input_shape": [
+        [
+          2049,
+          513
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "return_inverse": false
+      },
+      "value_range": [
+        -65504,
+        65504
+      ],
+      "note": "S-float16-1M-非对齐-2D-float16边界值"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 12,
+      "input_shape": [
+        [
+          3,
+          7,
+          13,
+          4001
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "return_inverse": true
+      },
+      "value_range": [
+        -88,
+        88
+      ],
+      "note": "S-float32-1M-质数非对齐-4D-exp溢出边界-带逆索引"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 13,
+      "input_shape": [
+        [
+          2,
+          7,
+          256,
+          256
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "return_inverse": false
+      },
+      "value_range": [
+        -0.01,
+        0.01
+      ],
+      "note": "S-bfloat16-917K-对齐-4D-微小值域"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 14,
+      "input_shape": [
+        [
+          1000003
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "return_inverse": false
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "S-float32-1M-质数非对齐-1D-inf特殊值"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 15,
+      "input_shape": [
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "return_inverse": true
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "M-float16-10M-质数非对齐-5D-inf极值-带逆索引"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 16,
+      "input_shape": [
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ]
+      ],
+      "dtype": [
+        "int32"
+      ],
+      "attrs": {
+        "return_inverse": false
+      },
+      "value_range": [
+        0,
+        0
+      ],
+      "note": "M-int32-3M-质数非对齐-5D-零值"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 17,
+      "input_shape": [
+        [
+          512,
+          2049
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "return_inverse": true
+      },
+      "value_range": [
+        -0.5,
+        0.5
+      ],
+      "note": "S-float32-1M-非对齐-2D-细长-微小值域-带逆索引"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 18,
+      "input_shape": [
+        [
+          255,
+          8193
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "return_inverse": false
+      },
+      "value_range": [
+        -1,
+        3
+      ],
+      "note": "S-bfloat16-2M-非对齐-2D-非对称"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4097,
+          511
+        ]
+      ],
+      "dtype": [
+        "int64"
+      ],
+      "attrs": {
+        "return_inverse": true
+      },
+      "value_range": [
+        -1000,
+        1000
+      ],
+      "note": "M-int64-2M-非对齐-2D-大值域-带逆索引"
+    },
+    {
+      "operator": "Unique",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          511,
+          2049
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "return_inverse": false
+      },
+      "value_range": [
+        -3,
+        6
+      ],
+      "note": "S-float16-2M-非对齐-3D-非对称中值域"
+    }
+  ],
+  "case_count": 20
+}

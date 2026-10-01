@@ -1,0 +1,1195 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "Dilation2D",
+  "function_name": "dilation_2d",
+  "level": "level3",
+  "category": "Contraction",
+  "difficulty": "L3",
+  "description": "2D形态学膨胀操作，对每个位置在膨胀窗口内取 input + filter 的最大值",
+  "desc_md": "# Dilation2D 算子 API 描述\n\n## 1. 算子简介\n\n2D形态学膨胀操作，使用最大池化在局部邻域内获取最大值。\n\n**主要应用场景**：\n- 图像形态学处理中的膨胀操作\n- 目标边缘扩展和连通区域填充\n- 医学影像分割中的形态学后处理\n- 文字识别中的笔画膨胀增强\n\n**算子特征**：\n- 难度等级：L3（Contraction）\n- 双输入（图像和结构元素/卷积核）单输出\n- 输入 shape 为 [batch, height, width, depth]（NHWC 格式），输出 shape 由 padding 和 stride 决定\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\ny[b, y, x, c] = \\max_{dy, dx} \\left( x[b, y \\cdot \\text{stride\\_h} + \\text{rate\\_h} \\cdot dy, x \\cdot \\text{stride\\_w} + \\text{rate\\_w} \\cdot dx, c] + \\text{filter}[dy, dx, c] \\right)\n$$\n\n对每个输出位置 $(b, y, x, c)$，在以 rates 确定的空洞采样窗口内，计算输入与结构元素逐元素加法，然后取最大值。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.dilation_2d(Tensor x, Tensor filter, int[] strides, int[] rates, str padding_mode, int[] pads, bool ceil_mode, str data_format) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入图像 |\n| filter | Tensor | 必选 | 结构元素/卷积核 |\n| strides | int[] | 必选 | 滑动窗口的步长 [1, stride_h, stride_w, 1]，首尾固定为1 |\n| rates | int[] | 必选 | 膨胀率 [1, rate_h, rate_w, 1]，首尾固定为1，用于空洞膨胀 |\n| padding_mode | str | \"SAME\" | 填充模式：'SAME' 或 'VALID' |\n| pads | int[] | [0, 0, 0, 0] | 填充值 [pad_top, pad_bottom, pad_left, pad_right] |\n| ceil_mode | bool | False | 是否向上取整计算输出尺寸（**仅 VALID / 自定义 pads 模式生效**；SAME 模式输出固定为 ceil(in/stride)）|\n| data_format | str | \"NHWC\" | 数据格式，如 'NHWC' |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 由输入尺寸、strides、rates 和 padding 决定 | 与输入 x 相同 | 膨胀后的图像 |\n\n### 数据类型\n\n| 输入 (x, filter) dtype | 输出 dtype |\n|-----------------------|-----------|\n| float16 | float16 |\n\n### 规则与约束\n\n- 输入 x 默认为 NHWC 格式，shape 为 [batch, height, width, depth]\n- filter 为结构元素，shape 为 [filter_h, filter_w, channels]\n- strides 格式为 [1, stride_rows, stride_cols, 1]，首尾维度固定为 1\n- rates 格式为 [1, rate_rows, rate_cols, 1]，首尾维度固定为 1，控制空洞膨胀\n- padding_mode 支持 'SAME' 和 'VALID' 两种模式\n- SAME 模式下自动计算 padding 使输出尺寸为 ceil(input_size / stride)\n- VALID 模式下可通过 pads 参数手动指定填充\n- ceil_mode 控制输出尺寸计算时是否向上取整；**仅在 VALID 或 explicit-pads 模式下生效**。SAME 模式的输出尺寸由 TF 语义固定为 `ceil(in/stride)`，无论 ceil_mode 取何值都不变\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `N`（batch） | 1 ~ 16 | cases.csv 实测 2 ~ 7 |\n| `H`（输入高度） | 8 ~ 1024 | cases.csv 实测 11 ~ 509 |\n| `W`（输入宽度） | 8 ~ 1024 | cases.csv 实测 13 ~ 512 |\n| `C`（depth / 通道数） | 1 ~ 1024 | cases.csv 实测 17 ~ 512；x 与 filter 的最后一维必须一致 |\n| `filter_h`, `filter_w`（结构元素 H/W） | 1 ~ 16 | cases.csv 实测 3 / 5 |\n| `strides` | `[1, stride_h, stride_w, 1]`，`stride_h`, `stride_w` ∈ 1 ~ 8 | cases.csv 实测 stride_h/w ∈ {1, 2}；首尾维度固定为 1 |\n| `rates` | `[1, rate_h, rate_w, 1]`，`rate_h`, `rate_w` ∈ 1 ~ 8 | cases.csv 实测 rate_h/w ∈ {1, 2, 3, 4}；首尾维度固定为 1 |\n| `padding_mode` | {\"SAME\", \"VALID\"} | cases.csv 实测 SAME / VALID 均覆盖 |\n| `pads` | `[pad_top, pad_bottom, pad_left, pad_right]`，每项 0 ~ 8 | cases.csv 实测 全为 [0,0,0,0]（SAME 模式下自动推导填充） |\n| `ceil_mode` | {false, true} | cases.csv 实测 false / true 均覆盖；**SAME 模式下被忽略**（与 ceil_mode=false 等价）|\n| `data_format` | {\"NHWC\"} | cases.csv 实测 仅 NHWC |\n\n约束：\n\n- 输入 `x` 的通道数 `C` 必须与 `filter` 最后一维一致（逐通道结构元素）。\n- 有效卷积核尺寸 `effective_filter = (filter_size - 1) * rate + 1`，VALID 模式下需满足 `effective_filter_h ≤ H + pad_top + pad_bottom`，`effective_filter_w` 同理，否则输出空间维度 ≤ 0。\n- SAME 模式下输出空间尺寸 `out = ceil(in / stride)`；VALID 模式下 `out = floor((in - effective_filter) / stride) + 1`。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nDilation2D 算子 Torch Golden 参考实现\n\n2D形态学膨胀操作，对每个位置在膨胀窗口内取 input + filter 的最大值\n公式: y[b, y, x, c] = max_{dy,dx} (x[b, y*stride_h + rate_h*dy, x*stride_w + rate_w*dx, c] + filter[dy, dx, c])\n\"\"\"\ndef dilation_2d(\n    x: torch.Tensor, filter: torch.Tensor, strides: list, rates: list,\n    padding_mode: str = 'SAME', pads: list = [0, 0, 0, 0],\n    ceil_mode: bool = False, data_format: str = 'NHWC'\n) -> torch.Tensor:\n    \"\"\"\n    2D形态学膨胀操作，对每个位置在膨胀窗口内取 input + filter 的最大值\n\n    公式: y[b, y, x, c] = max_{dy,dx} (x[b, y*stride_h + rate_h*dy, x*stride_w + rate_w*dx, c] + filter[dy, dx, c])\n\n    Args:\n        x: 输入图像，shape 为 [batch, height, width, depth] (NHWC) 或 [batch, depth, height, width] (NCHW)\n        filter: 结构元素/卷积核，shape 为 [filter_h, filter_w, depth]\n        strides: 步长 [1, stride_h, stride_w, 1]，首尾固定为1\n        rates: 膨胀率 [1, rate_h, rate_w, 1]，首尾固定为1\n        padding_mode: 填充模式：'SAME' 或 'VALID'\n        pads: 填充值 [pad_top, pad_bottom, pad_left, pad_right]\n        ceil_mode: 是否向上取整计算输出尺寸\n        data_format: 数据格式，'NHWC' 或 'NCHW'\n\n    Returns:\n        膨胀后的图像\n    \"\"\"\n\n    if data_format == 'NHWC':\n        x = x.permute(0, 3, 1, 2)  # NHWC -> NCHW\n        filter = filter.permute(2, 0, 1)  # [H, W, C] -> [C, H, W]\n\n    batch, channels, in_h, in_w = x.shape\n    filter_h, filter_w = filter.shape[1], filter.shape[2]\n    stride_h, stride_w = strides[1], strides[2]\n    rate_h, rate_w = rates[1], rates[2]\n\n    effective_filter_h = (filter_h - 1) * rate_h + 1\n    effective_filter_w = (filter_w - 1) * rate_w + 1\n\n    if padding_mode == 'SAME':\n        # SAME 模式的输出尺寸由 TF/TensorFlow 语义固定为 ceil(in/stride)，与 ceil_mode 参数无关；\n        # 原代码在 SAME 下叠加 ceil_mode 会导致 (in - 1) % stride != 0 时输出多 1\n        # (F205 P0)。ceil_mode 仅在 VALID / else 分支生效。\n        out_h = (in_h + stride_h - 1) // stride_h\n        out_w = (in_w + stride_w - 1) // stride_w\n        pad_h = max((out_h - 1) * stride_h + effective_filter_h - in_h, 0)\n        pad_w = max((out_w - 1) * stride_w + effective_filter_w - in_w, 0)\n        pad_top = pad_h // 2\n        pad_bottom = pad_h - pad_top\n        pad_left = pad_w // 2\n        pad_right = pad_w - pad_left\n        # 形态学膨胀：padding 区域填充负无穷大，使 max 操作忽略这些位置\n        x = torch.nn.functional.pad(x, [pad_left, pad_right, pad_top, pad_bottom], value=float('-inf'))\n    elif padding_mode == 'VALID':\n        # VALID 模式不需要 padding（或使用指定 pads）\n        if pads and sum(pads) > 0:\n            x = torch.nn.functional.pad(x, [pads[2], pads[3], pads[0], pads[1]], value=float('-inf'))\n        out_h = (in_h - effective_filter_h + stride_h) // stride_h\n        out_w = (in_w - effective_filter_w + stride_w) // stride_w\n    else:\n        if pads and sum(pads) > 0:\n            x = torch.nn.functional.pad(x, [pads[2], pads[3], pads[0], pads[1]], value=float('-inf'))\n        out_h = (x.shape[2] - effective_filter_h + stride_h) // stride_h\n        out_w = (x.shape[3] - effective_filter_w + stride_w) // stride_w\n        if ceil_mode:\n            out_h = (x.shape[2] - effective_filter_h + stride_h - 1) // stride_h + 1\n            out_w = (x.shape[3] - effective_filter_w + stride_w - 1) // stride_w + 1\n\n    # 形态学膨胀: 使用 unfold 获取 patches\n    # unfold 的 dilation 参数会自动按 rate 步长采样\n    # kernel_size 使用实际的 filter 尺寸，而不是 effective 尺寸\n    patches = torch.nn.functional.unfold(\n        x,\n        kernel_size=(filter_h, filter_w),\n        dilation=(rate_h, rate_w),\n        stride=(stride_h, stride_w)\n    )\n\n    # patches shape: [batch, channels * filter_h * filter_w, out_h * out_w]\n    patches = patches.view(batch, channels, filter_h, filter_w, out_h, out_w)\n\n    # 形态学膨胀：input_patch + filter，然后取最大值\n    # filter shape: [C, H, W] -> expand to [batch, C, filter_h, filter_w, out_h, out_w]\n    filter_expanded = filter.unsqueeze(0).unsqueeze(4).unsqueeze(5).expand(batch, -1, -1, -1, out_h, out_w)\n\n    # 对每个 patch 位置，计算 input + filter，然后取最大值\n    # patches shape: [batch, C, filter_h, filter_w, out_h, out_w]\n    # 需要在 filter_h (dim=2) 和 filter_w (dim=3) 维度上取 max\n    y = (patches + filter_expanded).amax(dim=(2, 3))  # [batch, C, out_h, out_w]\n\n    if data_format == 'NHWC':\n        y = y.permute(0, 2, 3, 1)  # NCHW -> NHWC\n\n    # permute 只改 stride, 而输出契约要求 contiguous (issue #146)\n    return y.contiguous()\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx = torch.randn(2, 64, 64, 64, dtype=torch.float16, device=\"npu\")  # NHWC: [N, H, W, C]\nfilter = torch.randn(3, 3, 64, dtype=torch.float16, device=\"npu\")   # [filter_h, filter_w, C]\n\ny = cann_bench.dilation_2d(x, filter, strides=[1, 1, 1, 1], rates=[1, 1, 1, 1], padding_mode='SAME', pads=[0, 0, 0, 0], ceil_mode=False, data_format='NHWC')\n```\n",
+  "proto": {
+    "name": "Dilation2D",
+    "category": "Contraction",
+    "difficulty": "L3",
+    "formula": "y[b, y, x, c] = max_{dy,dx} (x[b, y*stride_h + rate_h*dy, x*stride_w + rate_w*dx, c] + filter[dy, dx, c])",
+    "description": "2D形态学膨胀操作，对每个位置在膨胀窗口内取 input + filter 的最大值",
+    "shape_support": "输入shape: [batch, height, width, depth]，输出shape根据padding和stride决定",
+    "attrs": [
+      {
+        "name": "strides",
+        "type": "listInt",
+        "description": "滑动窗口的步长 [1, stride_h, stride_w, 1]，首尾固定为1",
+        "required": true
+      },
+      {
+        "name": "rates",
+        "type": "listInt",
+        "description": "膨胀率 [1, rate_h, rate_w, 1]，首尾固定为1，用于空洞膨胀",
+        "required": true
+      },
+      {
+        "name": "padding_mode",
+        "type": "string",
+        "default": "SAME",
+        "description": "填充模式：'SAME' 或 'VALID'",
+        "required": false
+      },
+      {
+        "name": "pads",
+        "type": "listInt",
+        "default": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "description": "填充值 [pad_top, pad_bottom, pad_left, pad_right]",
+        "required": false
+      },
+      {
+        "name": "ceil_mode",
+        "type": "bool",
+        "default": false,
+        "description": "是否向上取整计算输出尺寸",
+        "required": false
+      },
+      {
+        "name": "data_format",
+        "type": "string",
+        "default": "NHWC",
+        "description": "数据格式，如 'NHWC'",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入图像",
+        "dtype": [
+          "float16"
+        ]
+      },
+      {
+        "name": "filter",
+        "description": "结构元素/卷积核",
+        "dtype": [
+          "float16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "膨胀后的图像",
+        "dtype": [
+          "float16"
+        ]
+      }
+    ],
+    "schema": "dilation_2d(Tensor x, Tensor filter, int[] strides, int[] rates, str padding_mode, int[] pads, bool ceil_mode, str data_format) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nDilation2D 算子 Torch Golden 参考实现\n\n2D形态学膨胀操作，对每个位置在膨胀窗口内取 input + filter 的最大值\n公式: y[b, y, x, c] = max_{dy,dx} (x[b, y*stride_h + rate_h*dy, x*stride_w + rate_w*dx, c] + filter[dy, dx, c])\n\"\"\"\ndef dilation_2d(\n    x: torch.Tensor, filter: torch.Tensor, strides: list, rates: list,\n    padding_mode: str = 'SAME', pads: list = [0, 0, 0, 0],\n    ceil_mode: bool = False, data_format: str = 'NHWC'\n) -> torch.Tensor:\n    \"\"\"\n    2D形态学膨胀操作，对每个位置在膨胀窗口内取 input + filter 的最大值\n\n    公式: y[b, y, x, c] = max_{dy,dx} (x[b, y*stride_h + rate_h*dy, x*stride_w + rate_w*dx, c] + filter[dy, dx, c])\n\n    Args:\n        x: 输入图像，shape 为 [batch, height, width, depth] (NHWC) 或 [batch, depth, height, width] (NCHW)\n        filter: 结构元素/卷积核，shape 为 [filter_h, filter_w, depth]\n        strides: 步长 [1, stride_h, stride_w, 1]，首尾固定为1\n        rates: 膨胀率 [1, rate_h, rate_w, 1]，首尾固定为1\n        padding_mode: 填充模式：'SAME' 或 'VALID'\n        pads: 填充值 [pad_top, pad_bottom, pad_left, pad_right]\n        ceil_mode: 是否向上取整计算输出尺寸\n        data_format: 数据格式，'NHWC' 或 'NCHW'\n\n    Returns:\n        膨胀后的图像\n    \"\"\"\n\n    if data_format == 'NHWC':\n        x = x.permute(0, 3, 1, 2)  # NHWC -> NCHW\n        filter = filter.permute(2, 0, 1)  # [H, W, C] -> [C, H, W]\n\n    batch, channels, in_h, in_w = x.shape\n    filter_h, filter_w = filter.shape[1], filter.shape[2]\n    stride_h, stride_w = strides[1], strides[2]\n    rate_h, rate_w = rates[1], rates[2]\n\n    effective_filter_h = (filter_h - 1) * rate_h + 1\n    effective_filter_w = (filter_w - 1) * rate_w + 1\n\n    if padding_mode == 'SAME':\n        # SAME 模式的输出尺寸由 TF/TensorFlow 语义固定为 ceil(in/stride)，与 ceil_mode 参数无关；\n        # 原代码在 SAME 下叠加 ceil_mode 会导致 (in - 1) % stride != 0 时输出多 1\n        # (F205 P0)。ceil_mode 仅在 VALID / else 分支生效。\n        out_h = (in_h + stride_h - 1) // stride_h\n        out_w = (in_w + stride_w - 1) // stride_w\n        pad_h = max((out_h - 1) * stride_h + effective_filter_h - in_h, 0)\n        pad_w = max((out_w - 1) * stride_w + effective_filter_w - in_w, 0)\n        pad_top = pad_h // 2\n        pad_bottom = pad_h - pad_top\n        pad_left = pad_w // 2\n        pad_right = pad_w - pad_left\n        # 形态学膨胀：padding 区域填充负无穷大，使 max 操作忽略这些位置\n        x = torch.nn.functional.pad(x, [pad_left, pad_right, pad_top, pad_bottom], value=float('-inf'))\n    elif padding_mode == 'VALID':\n        # VALID 模式不需要 padding（或使用指定 pads）\n        if pads and sum(pads) > 0:\n            x = torch.nn.functional.pad(x, [pads[2], pads[3], pads[0], pads[1]], value=float('-inf'))\n        out_h = (in_h - effective_filter_h + stride_h) // stride_h\n        out_w = (in_w - effective_filter_w + stride_w) // stride_w\n    else:\n        if pads and sum(pads) > 0:\n            x = torch.nn.functional.pad(x, [pads[2], pads[3], pads[0], pads[1]], value=float('-inf'))\n        out_h = (x.shape[2] - effective_filter_h + stride_h) // stride_h\n        out_w = (x.shape[3] - effective_filter_w + stride_w) // stride_w\n        if ceil_mode:\n            out_h = (x.shape[2] - effective_filter_h + stride_h - 1) // stride_h + 1\n            out_w = (x.shape[3] - effective_filter_w + stride_w - 1) // stride_w + 1\n\n    # 形态学膨胀: 使用 unfold 获取 patches\n    # unfold 的 dilation 参数会自动按 rate 步长采样\n    # kernel_size 使用实际的 filter 尺寸，而不是 effective 尺寸\n    patches = torch.nn.functional.unfold(\n        x,\n        kernel_size=(filter_h, filter_w),\n        dilation=(rate_h, rate_w),\n        stride=(stride_h, stride_w)\n    )\n\n    # patches shape: [batch, channels * filter_h * filter_w, out_h * out_w]\n    patches = patches.view(batch, channels, filter_h, filter_w, out_h, out_w)\n\n    # 形态学膨胀：input_patch + filter，然后取最大值\n    # filter shape: [C, H, W] -> expand to [batch, C, filter_h, filter_w, out_h, out_w]\n    filter_expanded = filter.unsqueeze(0).unsqueeze(4).unsqueeze(5).expand(batch, -1, -1, -1, out_h, out_w)\n\n    # 对每个 patch 位置，计算 input + filter，然后取最大值\n    # patches shape: [batch, C, filter_h, filter_w, out_h, out_w]\n    # 需要在 filter_h (dim=2) 和 filter_w (dim=3) 维度上取 max\n    y = (patches + filter_expanded).amax(dim=(2, 3))  # [batch, C, out_h, out_w]\n\n    if data_format == 'NHWC':\n        y = y.permute(0, 2, 3, 1)  # NCHW -> NHWC\n\n    # permute 只改 stride, 而输出契约要求 contiguous (issue #146)\n    return y.contiguous()\n",
+  "cases_yaml": [
+    {
+      "operator": "Dilation2D",
+      "case_id": 1,
+      "input_shape": [
+        [
+          2,
+          64,
+          64,
+          64
+        ],
+        [
+          3,
+          3,
+          64
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "S-float16-512K-对齐-3x3-stride=1-dilation=1-SAME"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 2,
+      "input_shape": [
+        [
+          4,
+          128,
+          128,
+          128
+        ],
+        [
+          5,
+          5,
+          128
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          -0.2,
+          0.2
+        ]
+      ],
+      "note": "M-float16-8M-对齐-5x5-stride=1-dilation=1-SAME"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 3,
+      "input_shape": [
+        [
+          2,
+          256,
+          256,
+          256
+        ],
+        [
+          3,
+          3,
+          256
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "rates": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          -0.3,
+          0.3
+        ]
+      ],
+      "note": "M-float16-33M-对齐-stride=2-dilation=2"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 4,
+      "input_shape": [
+        [
+          4,
+          509,
+          127,
+          131
+        ],
+        [
+          3,
+          3,
+          131
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          3,
+          3,
+          1
+        ],
+        "padding_mode": "VALID",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-float16-33M-非对齐-dilation=3-VALID"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 5,
+      "input_shape": [
+        [
+          7,
+          67,
+          251,
+          257
+        ],
+        [
+          3,
+          3,
+          257
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "rates": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": true,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          -10,
+          10
+        ]
+      ],
+      "note": "M-float16-30M-非对齐-stride=2-ceil_mode=true"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 6,
+      "input_shape": [
+        [
+          2,
+          128,
+          512,
+          512
+        ],
+        [
+          3,
+          3,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          4,
+          4,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "L-float16-268M-对齐-dilation=4-大值域"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 7,
+      "input_shape": [
+        [
+          3,
+          63,
+          63,
+          63
+        ],
+        [
+          3,
+          3,
+          63
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.01,
+          0.01
+        ]
+      ],
+      "note": "S-float16-700K-非对齐-stride=1-dilation=1-微小值域"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 8,
+      "input_shape": [
+        [
+          2,
+          63,
+          61,
+          63
+        ],
+        [
+          3,
+          3,
+          63
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -1,
+          2
+        ],
+        [
+          -0.1,
+          0.2
+        ]
+      ],
+      "note": "S-float16-400K-质数非对齐-dilation=2-非对称"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 9,
+      "input_shape": [
+        [
+          3,
+          47,
+          23,
+          23
+        ],
+        [
+          3,
+          3,
+          23
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "rates": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "padding_mode": "VALID",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -5,
+          10
+        ],
+        [
+          -0.5,
+          1
+        ]
+      ],
+      "note": "S-float16-50K-质数非对齐-stride=2-VALID-非对称"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 10,
+      "input_shape": [
+        [
+          5,
+          97,
+          43,
+          43
+        ],
+        [
+          3,
+          3,
+          43
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          3,
+          3,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -50,
+          100
+        ],
+        [
+          -5,
+          10
+        ]
+      ],
+      "note": "S-float16-4M-质数非对齐-dilation=3"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 11,
+      "input_shape": [
+        [
+          2,
+          65,
+          63,
+          63
+        ],
+        [
+          3,
+          3,
+          63
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -65504,
+          65504
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "S-float16-500K-非对齐-float16边界值"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 12,
+      "input_shape": [
+        [
+          3,
+          47,
+          31,
+          97
+        ],
+        [
+          3,
+          3,
+          97
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -88,
+          88
+        ],
+        [
+          -8,
+          8
+        ]
+      ],
+      "note": "S-float16-300K-质数非对齐-float32边界值"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 13,
+      "input_shape": [
+        [
+          2,
+          63,
+          63,
+          63
+        ],
+        [
+          3,
+          3,
+          63
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "note": "S-float16-500K-非对齐-inf特殊值"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 14,
+      "input_shape": [
+        [
+          2,
+          11,
+          13,
+          17
+        ],
+        [
+          3,
+          3,
+          17
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "note": "S-float16-5K-质数非对齐-nan特殊值"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 15,
+      "input_shape": [
+        [
+          4,
+          63,
+          31,
+          31
+        ],
+        [
+          3,
+          3,
+          31
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "note": "S-float16-200K-非对齐-零值"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 16,
+      "input_shape": [
+        [
+          2,
+          64,
+          63,
+          63
+        ],
+        [
+          3,
+          3,
+          63
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "rates": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.05,
+          0.05
+        ]
+      ],
+      "note": "S-float16-500K-混合非对齐-stride=2-dilation=2-微小值域"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 17,
+      "input_shape": [
+        [
+          3,
+          127,
+          63,
+          63
+        ],
+        [
+          3,
+          3,
+          63
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          4,
+          4,
+          1
+        ],
+        "padding_mode": "VALID",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -1,
+          3
+        ],
+        [
+          -0.1,
+          0.3
+        ]
+      ],
+      "note": "S-float16-2M-非对齐-dilation=4-VALID-非对称"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 18,
+      "input_shape": [
+        [
+          2,
+          255,
+          127,
+          127
+        ],
+        [
+          3,
+          3,
+          127
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "rates": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": true,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "M-float16-8M-非对齐-stride=2-ceil_mode-大值域"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4,
+          31,
+          31,
+          31
+        ],
+        [
+          3,
+          3,
+          31
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          3,
+          3,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -0.2,
+          0.2
+        ],
+        [
+          -0.02,
+          0.02
+        ]
+      ],
+      "note": "S-float16-100K-质数非对齐-dilation=3-微小值域"
+    },
+    {
+      "operator": "Dilation2D",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          127,
+          127,
+          127
+        ],
+        [
+          3,
+          3,
+          127
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16"
+      ],
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "rates": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "padding_mode": "SAME",
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "ceil_mode": false,
+        "data_format": "NHWC"
+      },
+      "value_range": [
+        [
+          -3,
+          6
+        ],
+        [
+          -0.3,
+          0.6
+        ]
+      ],
+      "note": "S-float16-4M-质数非对齐-dilation=2-非对称中值域"
+    }
+  ],
+  "case_count": 20
+}

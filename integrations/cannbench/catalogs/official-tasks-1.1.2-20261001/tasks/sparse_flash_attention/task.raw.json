@@ -1,0 +1,1013 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "SparseFlashAttention",
+  "function_name": "sparse_flash_attention",
+  "level": "level4",
+  "category": "FusedComposite",
+  "difficulty": "L4",
+  "description": "稀疏注意力算子，支持 GQA（N1 != N2）、不同 head dim（Dk != Dv）和 BSND/BNSD 布局",
+  "desc_md": "# SparseFlashAttention 算子 API 描述\n\n## 1. 算子简介\n\n大序列长度推理场景的高效稀疏注意力计算算子。与标准 FlashAttention 对全部 KV 位置计算注意力不同，SparseFlashAttention 通过 `sparseIndices` 指定每个 query 位置需要关注的 KV 子集，仅对选中的 KV 位置执行缩放点积注意力，从而降低计算和内存开销。\n\n支持 Grouped Query Attention（GQA）：query 头数 N1 可以大于 KV 头数 N2（要求 N1 整除 N2），每 N1/N2 个 query 头共享同一组 KV 头及其稀疏索引。同时支持 query/key 和 value 使用不同的 head dim（Dk 和 Dv）。\n\n**主要应用场景**：\n- 大语言模型长序列推理中的高效注意力计算\n- 长文本理解与生成任务中降低注意力计算复杂度（从 O(S1×S2) 降至 O(S1×topK)）\n- 需要稀疏注意力模式的 Transformer 推理加速\n- GQA / MLA 架构下的稀疏注意力\n\n**算子特征**：\n- 难度等级：L4（FusedComposite）\n- 四输入（query, key, value, sparseIndices）单输出\n- 融合稀疏索引 gather、缩放点积注意力与 softmax 计算\n- 支持 GQA（N1 ≥ N2，N1 % N2 == 0）和不同 head dim（Dk、Dv）\n- 支持 BSND 和 BNSD 两种张量布局\n- 支持 `is_causal` 因果掩码：在稀疏 gather 之上再叠加 [S1, S2] attention 矩阵的右下角对角线掩码，sparseIndices 选中但落在对角线之上（即 KV 序列位置满足 idx > s1 + (S2 - S1)）的条目在 softmax 前置 -inf\n- **value 与 key 在数值上同源**（MLA 推理 latent KV cache 语义）：\n  - 当 `Dk == Dv` 时，`value == key`（K 与 V 完全相同）\n  - 当 `Dk > Dv`（典型 MLA: Dk=576=512_nope+64_rope, Dv=512），`value == key[..., :Dv]`（V 是 K 的前 Dv 维前缀切片）\n  - 接口保留 value 为独立入参以兼容通用 attention API，调用方需保证此关系\n\n## 2. 算子定义\n\n### 稀疏机制\n\n对于每个 KV 头组 `(b, n2, s1)`，`sparseIndices` 中对应位置给出该 query 需要关注的 topK 个 KV 序列位置索引（值域 `[0, S2)`）。该组内的 N1/N2 个 query 头共享相同的稀疏索引，attention 计算仅在这 topK 个选中的 KV 位置上进行。\n\n`sparseIndices` 的前三维布局与 `inputLayout` 一致：\n- BSND 布局：sparseIndices shape 为 `[B, S1, N2, topK]`\n- BNSD 布局：sparseIndices shape 为 `[B, N2, S1, topK]`\n\n### 数学公式\n\n$$\nK_{sel} = \\text{gather}(K, \\text{sparseIndices}) \\quad V_{sel} = \\text{gather}(V, \\text{sparseIndices})\n$$\n\n$$\ny = \\text{softmax}\\left(Q \\times K_{sel}^T \\times \\text{scaleValue}\\right) \\times V_{sel}\n$$\n\n具体子步骤：\n1. **稀疏 Gather**：根据 `sparseIndices` 从 key/value 中提取选中的 KV 子集\n   - 以 BNSD 为例：$K_{sel}[b, n2, s1, i, :] = K[b, n2, \\text{sparseIndices}[b, n2, s1, i], :]$，shape `[B, N2, S1, topK, Dk]`\n   - $V_{sel}$ 同理，shape `[B, N2, S1, topK, Dv]`\n2. **GQA 扩展**：将 `K_sel` 和 `V_sel` 沿 head 维度复制 G=N1/N2 次，扩展到 `[B, N1, S1, topK, ...]`\n3. **缩放点积**：$\\text{scores} = Q \\cdot K_{sel}^T \\times \\text{scaleValue}$，shape `[B, N1, S1, topK]`\n4. **因果掩码（可选）**：当 `is_causal=True` 时，对每个 query 位置 `s1` 和每个 topK 槽位 `i`，若 `sparseIndices[..., s1, i] > s1 + (S2 - S1)`（即所选 KV 位置落在 [S1, S2] attention 矩阵右下角对角线之上），则该位置 scores 置为 $-\\infty$\n5. **Softmax 归一化**：$\\text{attn\\_weights} = \\text{softmax}(\\text{scores}, \\text{dim}=-1)$，在 topK 维上归一化\n6. **加权求和**：$y = \\text{attn\\_weights} \\times V_{sel}$\n\n### 布局说明\n\n| inputLayout | query | key | value | sparseIndices | output |\n|-------------|-------|-----|-------|---------------|--------|\n| BSND | [B, S1, N1, Dk] | [B, S2, N2, Dk] | [B, S2, N2, Dv] | [B, S1, N2, topK] | [B, S1, N1, Dv] |\n| BNSD | [B, N1, S1, Dk] | [B, N2, S2, Dk] | [B, N2, S2, Dv] | [B, N2, S1, topK] | [B, N1, S1, Dv] |\n\n### 与标准 FlashAttention 的区别\n\n| 项目 | FlashAttention | SparseFlashAttention |\n|------|---------------|---------------------|\n| 注意力范围 | 全部 S2 个 KV 位置 | sparseIndices 指定的 topK 个 KV 位置 |\n| 计算复杂度 | O(S1 × S2 × D) | O(S1 × topK × D)，topK << S2 |\n| 额外输入 | 无 | sparseIndices |\n| softmax 范围 | S2 维 | topK 维（仅选中的 KV 位置） |\n| GQA 支持 | 是 | 是（N1 % N2 == 0） |\n| head dim | Q/K 共享 Dk，V 可用不同 Dv | 同左 |\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\nsparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparseIndices, float scaleValue, str inputLayout=\"BSND\", bool is_causal=False) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 必需 | dtype | shape | 描述 |\n|------|------|------|-------|-------|------|\n| query | Tensor | 是 | float16/bfloat16 | BSND: [B, S1, N1, Dk]；BNSD: [B, N1, S1, Dk] | 查询张量 |\n| key | Tensor | 是 | float16/bfloat16 | BSND: [B, S2, N2, Dk]；BNSD: [B, N2, S2, Dk] | 键张量，head dim 与 query 一致 |\n| value | Tensor | 是 | float16/bfloat16 | BSND: [B, S2, N2, Dv]；BNSD: [B, N2, S2, Dv] | 值张量，head dim 可与 key 不同。语义上要求 `value == key[..., :Dv]`（同一份 latent KV cache 的前缀视图，Dk==Dv 时退化为 `value == key`） |\n| sparseIndices | Tensor | 是 | int32 | BSND: [B, S1, N2, topK]；BNSD: [B, N2, S1, topK] | 按 KV 头分组的稀疏索引，前三维布局与 inputLayout 一致 |\n| scaleValue | float | 是 | - | 标量 | 缩放因子，通常为 1/sqrt(Dk) |\n| inputLayout | str | 否 | - | - | 张量布局格式，\"BSND\"（默认）或 \"BNSD\" |\n| is_causal | bool | 否 | - | - | 是否启用因果掩码（右下角对齐），默认 False。True 时在稀疏选择之上额外屏蔽 KV 序列位置 `idx > s1 + (S2 - S1)` 的条目 |\n\n### 输出\n\n| 参数 | dtype | shape | 描述 |\n|------|-------|-------|------|\n| y | 与 query 一致 | BSND: [B, S1, N1, Dv]；BNSD: [B, N1, S1, Dv] | 稀疏注意力输出，布局与输入一致 |\n\n### 数据类型\n\n| query/key/value dtype | sparseIndices dtype | 输出 dtype |\n|----------------------|--------------------|-----------| \n| bfloat16 | int32 | bfloat16 |\n| float16 | int32 | float16 |\n\n### 规则与约束\n\n- query、key、value 的 dtype 必须一致\n- query 和 key 的 head dim 必须一致（Dk），value 的 head dim（Dv）可以不同\n- N1 必须整除 N2（GQA 分组约束），N1 == N2 时退化为 MHA\n- sparseIndices 的值域为 `[0, S2)`，即 KV 序列长度范围内的有效索引\n- 同一 `(b, n2, s1)` 下的 topK 个索引必须互不重复。Golden 用 scatter 把索引转成 bool mask\n  再屏蔽 scores，与逐条 gather 仅在无重复时等价；出现重复索引则该位置只被计入一次，\n  结果与\"按 topK 槽位逐条累加\"的语义不同\n- topK（每个 query 关注的 KV 数量）可任意取值，1 ≤ topK ≤ S2\n- scaleValue 通常设置为 $1/\\sqrt{Dk}$\n- inputLayout 必须为 \"BSND\" 或 \"BNSD\"，所有张量（含 sparseIndices 和输出）的布局保持一致\n- `is_causal=True` 时要求 $S1 \\le S2$；若某个 query 行的全部 topK 槽位都被因果掩码屏蔽（极端情况），该行 softmax 输出按全 0 处理\n- **语义约束 `value == key[..., :Dv]`**：value 必须等于 key 的前 Dv 维前缀（同一份 latent KV cache 的不同视图）。当 `Dk == Dv` 时退化为 `value == key`；当 `Dk == Dv + 64`（MLA 典型 Dk=576/Dv=512）时 value 即 key_nope。算子接口保留 value 为独立入参以兼容通用 attention API，调用方有责任保证此关系；本规范的 Golden 实现不强制检查\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `B`（batch） | 1 ~ 64 | cases.csv 实测 1 ~ 32 |\n| `S1`（query 序列长度） | 1 ~ 2048 | cases.csv 实测 1 ~ 1024；S1=1 对应 decode，S1=2/4 对应 MTP，S1 较大对应 prefill |\n| `S2`（KV 序列长度） | 1 ~ 16384 | cases.csv 实测 1024 ~ 8192；`is_causal=True` 时要求 `S1 ≤ S2` |\n| `N1`（query 头数） | 1 ~ 256 | cases.csv 实测 32 ~ 128 |\n| `N2`（KV 头数） | 1 ~ 64 | cases.csv 实测 1 / 8；必须满足 `N1 % N2 == 0`（GQA 分组约束），`N1 == N2` 时退化为 MHA |\n| `Dk`（query/key head dim） | 64 对齐 | cases.csv 实测 128 / 192 / 512 / 576；典型 MHA/GQA Dk=128 或 192，典型 MLA Dk=512（nope）或 Dk=576（nope=512+rope=64） |\n| `Dv`（value head dim） | 64 对齐，Dv ≤ Dk | cases.csv 实测 128 / 512；语义上 `value == key[..., :Dv]` |\n| `topK`（稀疏选中数量） | 1 ~ 2048 | cases.csv 实测 512 / 1024；要求 `1 ≤ topK ≤ S2` |\n| `sparseIndices` 取值 | [0, S2) | int32，必须为 KV 序列长度范围内的有效索引 |\n| `scaleValue` | 任意正浮点 | cases.csv 实测 0.04167 ~ 0.08838，约 `1/sqrt(Dk)` |\n| `inputLayout` | {\"BSND\", \"BNSD\"} | cases.csv 实测两种均覆盖；所有张量（含 sparseIndices 和输出）的布局保持一致 |\n| `is_causal` | {True, False} | cases.csv 实测两种均覆盖；True 时屏蔽 `sparseIndices[..., s1, i] > s1 + (S2 - S1)` 的位置 |\n| dtype | float16 / bfloat16 | cases.csv 实测两种均覆盖；query/key/value dtype 必须一致；sparseIndices 固定 int32 |\n\n约束：`N1 % N2 == 0`；`Dv ≤ Dk` 且语义上要求 `value == key[..., :Dv]`；`is_causal=True` 时要求 `S1 ≤ S2`；若某 query 行的全部 topK 槽位都被因果掩码屏蔽，该行 softmax 输出按全 0 处理。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nSparseFlashAttention算子Torch Golden参考实现\n\n稀疏注意力，支持 GQA（N1 != N2）、不同 head dim（Dk != Dv）和 BSND/BNSD 布局\nquery 仅与 sparseIndices 指定的 KV 子集计算注意力\n\n语义约束:\n    value 与 key 在数值上同源 (MLA latent KV cache):\n      - Dk == Dv 时: value == key (完全相同)\n      - Dk >  Dv 时: value == key[..., :Dv] (前缀切片，典型 MLA Dk=576 Dv=512)\n    接口保留独立入参以兼容通用 attention API；调用方需保证此关系，\n    本 Golden 实现不做强制检查。\n\n公式: mask = scatter(sparseIndices) -> bool[B, N2, S1, S2]\n      scores = Q @ K^T * scaleValue，mask 外位置置 -inf\n      y = softmax(scores) @ V          (V 语义上等于 K[..., :Dv])\n假定 sparseIndices 在同一 (b, n2, s1) 下无重复值\n\"\"\"\n\n\ndef sparse_flash_attention(\n    query: torch.Tensor,\n    key: torch.Tensor,\n    value: torch.Tensor,\n    sparseIndices: torch.Tensor,\n    scaleValue: float,\n    inputLayout: str = \"BSND\",\n    is_causal: bool = False,\n) -> torch.Tensor:\n    \"\"\"\n    稀疏 FlashAttention，支持 GQA、不同 head dim 和 BSND/BNSD 布局\n\n    语义约束: value 与 key 在数值上同源 (MLA latent KV cache):\n        - Dk == Dv 时: value == key\n        - Dk >  Dv 时: value == key[..., :Dv]   (典型 MLA: Dk=576, Dv=512)\n        本 Golden 不做强制检查，调用方需保证此关系。\n\n    Args:\n        query: 查询张量，BSND: [B, S1, N1, Dk]，BNSD: [B, N1, S1, Dk]\n        key: 键张量，BSND: [B, S2, N2, Dk]，BNSD: [B, N2, S2, Dk]\n        value: 值张量，BSND: [B, S2, N2, Dv]，BNSD: [B, N2, S2, Dv]；语义上等于 key[..., :Dv]\n        sparseIndices: 稀疏索引（int32），BSND: [B, S1, N2, topK]，BNSD: [B, N2, S1, topK]\n        scaleValue: 缩放因子\n        inputLayout: 张量布局，\"BSND\" 或 \"BNSD\"\n        is_causal: 是否启用因果掩码（右下角对齐），True 时在稀疏选择之上额外屏蔽\n            KV 序列位置 idx > s1 + (S2 - S1) 的条目。要求 S1 <= S2。\n\n    Returns:\n        注意力输出，布局与输入一致\n    \"\"\"\n    # 统一转为 BNSD 内部计算\n    if inputLayout == \"BSND\":\n        q = query.permute(0, 2, 1, 3)              # [B, N1, S1, Dk]\n        k = key.permute(0, 2, 1, 3)                 # [B, N2, S2, Dk]\n        v = value.permute(0, 2, 1, 3)               # [B, N2, S2, Dv]\n        si = sparseIndices.permute(0, 2, 1, 3)      # [B, N2, S1, topK]\n    else:  # BNSD\n        q, k, v, si = query, key, value, sparseIndices\n\n    B, N1, S1, Dk = q.shape\n    N2 = k.shape[1]\n    S2 = k.shape[2]\n    G = N1 // N2\n\n    # 用 scatter 把稀疏索引转成 bool mask: [B, N2, S1, S2]\n    mask = torch.zeros(B, N2, S1, S2, dtype=torch.bool, device=q.device)\n    mask.scatter_(-1, si.long(), True)\n\n    # 因果掩码（右下角对齐）：j > i + (S2 - S1) 的列从可选集合中剔除\n    if is_causal:\n        s1_idx = torch.arange(S1, device=q.device).unsqueeze(-1)  # [S1, 1]\n        s2_idx = torch.arange(S2, device=q.device).unsqueeze(0)   # [1, S2]\n        causal_keep = s2_idx <= (s1_idx + (S2 - S1))               # [S1, S2]\n        mask = mask & causal_keep  # 广播到 [B, N2, S1, S2]\n\n    # GQA: 通过 reshape 把 N1 拆成 (N2, G)，避免物化 K/V 的 head 扩展\n    q_g = q.reshape(B, N2, G, S1, Dk)\n\n    # 计算完整 scores 后用 mask 屏蔽未选位置: [B, N2, G, S1, S2]\n    # 在同一 (b, n2, s1) 下 sparseIndices 无重复，mask 与 gather 语义等价\n    scores = torch.einsum('bngsd,bnkd->bngsk', q_g, k) * scaleValue\n    scores.masked_fill_(~mask.unsqueeze(2), float('-inf'))\n\n    # 原地 softmax，避免同时持有 scores 和 attn_weights 两份张量\n    # 处理全 mask 行：当某行全被 mask 时，max 为 -inf，需要特殊处理\n    scores_max = scores.max(dim=-1, keepdim=True).values\n    all_masked = torch.isinf(scores_max) & (scores_max < 0)  # 检测全 -inf 行\n    scores -= scores_max\n    scores.exp_()\n    scores_sum = scores.sum(dim=-1, keepdim=True)\n    # 全 mask 行保持为 0，不进行除法\n    scores = torch.where(all_masked, torch.zeros_like(scores), scores / scores_sum)\n\n    # 加权求和: [B, N2, G, S1, Dv] -> [B, N1, S1, Dv]\n    out = torch.einsum('bngsk,bnkd->bngsd', scores, v)\n    out = out.reshape(B, N1, S1, -1)\n\n    # 转回原始布局\n    if inputLayout == \"BSND\":\n        out = out.permute(0, 2, 1, 3)   # [B, S1, N1, Dv]\n\n    # permute 只改 stride, 而输出契约要求 contiguous (issue #146)；\n    # BNSD 路径的 einsum 输出本就连续, .contiguous() 原样返回, 无额外拷贝\n    return out.contiguous()\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\n\nB, S1, S2, N1, N2, Dk, Dv, topK = 2, 1024, 8192, 32, 8, 128, 128, 512\n\n# BSND 布局\nquery = torch.randn(B, S1, N1, Dk, dtype=torch.float16, device=\"npu\")\nkey = torch.randn(B, S2, N2, Dk, dtype=torch.float16, device=\"npu\")\nvalue = torch.randn(B, S2, N2, Dv, dtype=torch.float16, device=\"npu\")\nsparseIndices = torch.stack([\n    torch.randperm(S2)[:topK] for _ in range(B * N2 * S1)\n]).reshape(B, S1, N2, topK).to(dtype=torch.int32, device=\"npu\")\ny = sparse_flash_attention(query, key, value, sparseIndices,\n                            scaleValue=1.0 / (Dk ** 0.5),\n                            inputLayout=\"BSND\",\n                            is_causal=False)\n# y.shape: [B, S1, N1, Dv]\n```\n",
+  "proto": {
+    "name": "SparseFlashAttention",
+    "category": "FusedComposite",
+    "difficulty": "L4",
+    "formula": "K_sel, V_sel = gather(K, V, sparseIndices)  # 按 KV 头组稀疏索引提取\nK_sel, V_sel = repeat(K_sel, V_sel, G)      # GQA 扩展到 N1 个 query 头\ny = softmax(Q @ K_sel^T * scaleValue) @ V_sel\n",
+    "description": "稀疏注意力算子，支持 GQA（N1 != N2）、不同 head dim（Dk != Dv）和 BSND/BNSD 布局",
+    "shape_support": "BSND: query [B,S1,N1,Dk], key [B,S2,N2,Dk], value [B,S2,N2,Dv], sparseIndices [B,S1,N2,topK]; BNSD: 对应 permute",
+    "attrs": [
+      {
+        "name": "scaleValue",
+        "type": "float",
+        "description": "缩放因子，通常为 1/sqrt(Dk)",
+        "required": true
+      },
+      {
+        "name": "inputLayout",
+        "type": "str",
+        "default": "BSND",
+        "description": "张量布局格式，\"BSND\" 或 \"BNSD\"，所有张量（含 sparseIndices 和输出）的布局保持一致",
+        "required": false
+      },
+      {
+        "name": "is_causal",
+        "type": "bool",
+        "default": false,
+        "description": "是否启用因果掩码（右下角对齐），True 时在稀疏 gather 之上额外屏蔽 sparseIndices[..., s1, i] > s1 + (S2 - S1) 的位置",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "query",
+        "description": "查询张量",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "BSND: [B, S1, N1, Dk]; BNSD: [B, N1, S1, Dk]"
+      },
+      {
+        "name": "key",
+        "description": "键张量，head dim 与 query 一致",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "BSND: [B, S2, N2, Dk]; BNSD: [B, N2, S2, Dk]"
+      },
+      {
+        "name": "value",
+        "description": "值张量，head dim 可与 key 不同。语义上 value == key[..., :Dv]（同一份 latent KV cache 的前缀视图）；Dk==Dv 时退化为 value == key；接口保留独立入参以兼容通用 attention API",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "BSND: [B, S2, N2, Dv]; BNSD: [B, N2, S2, Dv]"
+      },
+      {
+        "name": "sparseIndices",
+        "description": "按 KV 头分组的稀疏索引，同组内 N1/N2 个 query 头共享，前三维布局与 inputLayout 一致",
+        "dtype": [
+          "int32"
+        ],
+        "shape": "BSND: [B, S1, N2, topK]; BNSD: [B, N2, S1, topK]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "稀疏注意力计算输出张量，布局与输入一致",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ],
+        "shape": "BSND: [B, S1, N1, Dv]; BNSD: [B, N1, S1, Dv]"
+      }
+    ],
+    "schema": "sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparseIndices, float scaleValue, str inputLayout=\"BSND\", bool is_causal=False) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nSparseFlashAttention算子Torch Golden参考实现\n\n稀疏注意力，支持 GQA（N1 != N2）、不同 head dim（Dk != Dv）和 BSND/BNSD 布局\nquery 仅与 sparseIndices 指定的 KV 子集计算注意力\n\n语义约束:\n    value 与 key 在数值上同源 (MLA latent KV cache):\n      - Dk == Dv 时: value == key (完全相同)\n      - Dk >  Dv 时: value == key[..., :Dv] (前缀切片，典型 MLA Dk=576 Dv=512)\n    接口保留独立入参以兼容通用 attention API；调用方需保证此关系，\n    本 Golden 实现不做强制检查。\n\n公式: mask = scatter(sparseIndices) -> bool[B, N2, S1, S2]\n      scores = Q @ K^T * scaleValue，mask 外位置置 -inf\n      y = softmax(scores) @ V          (V 语义上等于 K[..., :Dv])\n假定 sparseIndices 在同一 (b, n2, s1) 下无重复值\n\"\"\"\n\n\ndef sparse_flash_attention(\n    query: torch.Tensor,\n    key: torch.Tensor,\n    value: torch.Tensor,\n    sparseIndices: torch.Tensor,\n    scaleValue: float,\n    inputLayout: str = \"BSND\",\n    is_causal: bool = False,\n) -> torch.Tensor:\n    \"\"\"\n    稀疏 FlashAttention，支持 GQA、不同 head dim 和 BSND/BNSD 布局\n\n    语义约束: value 与 key 在数值上同源 (MLA latent KV cache):\n        - Dk == Dv 时: value == key\n        - Dk >  Dv 时: value == key[..., :Dv]   (典型 MLA: Dk=576, Dv=512)\n        本 Golden 不做强制检查，调用方需保证此关系。\n\n    Args:\n        query: 查询张量，BSND: [B, S1, N1, Dk]，BNSD: [B, N1, S1, Dk]\n        key: 键张量，BSND: [B, S2, N2, Dk]，BNSD: [B, N2, S2, Dk]\n        value: 值张量，BSND: [B, S2, N2, Dv]，BNSD: [B, N2, S2, Dv]；语义上等于 key[..., :Dv]\n        sparseIndices: 稀疏索引（int32），BSND: [B, S1, N2, topK]，BNSD: [B, N2, S1, topK]\n        scaleValue: 缩放因子\n        inputLayout: 张量布局，\"BSND\" 或 \"BNSD\"\n        is_causal: 是否启用因果掩码（右下角对齐），True 时在稀疏选择之上额外屏蔽\n            KV 序列位置 idx > s1 + (S2 - S1) 的条目。要求 S1 <= S2。\n\n    Returns:\n        注意力输出，布局与输入一致\n    \"\"\"\n    # 统一转为 BNSD 内部计算\n    if inputLayout == \"BSND\":\n        q = query.permute(0, 2, 1, 3)              # [B, N1, S1, Dk]\n        k = key.permute(0, 2, 1, 3)                 # [B, N2, S2, Dk]\n        v = value.permute(0, 2, 1, 3)               # [B, N2, S2, Dv]\n        si = sparseIndices.permute(0, 2, 1, 3)      # [B, N2, S1, topK]\n    else:  # BNSD\n        q, k, v, si = query, key, value, sparseIndices\n\n    B, N1, S1, Dk = q.shape\n    N2 = k.shape[1]\n    S2 = k.shape[2]\n    G = N1 // N2\n\n    # 用 scatter 把稀疏索引转成 bool mask: [B, N2, S1, S2]\n    mask = torch.zeros(B, N2, S1, S2, dtype=torch.bool, device=q.device)\n    mask.scatter_(-1, si.long(), True)\n\n    # 因果掩码（右下角对齐）：j > i + (S2 - S1) 的列从可选集合中剔除\n    if is_causal:\n        s1_idx = torch.arange(S1, device=q.device).unsqueeze(-1)  # [S1, 1]\n        s2_idx = torch.arange(S2, device=q.device).unsqueeze(0)   # [1, S2]\n        causal_keep = s2_idx <= (s1_idx + (S2 - S1))               # [S1, S2]\n        mask = mask & causal_keep  # 广播到 [B, N2, S1, S2]\n\n    # GQA: 通过 reshape 把 N1 拆成 (N2, G)，避免物化 K/V 的 head 扩展\n    q_g = q.reshape(B, N2, G, S1, Dk)\n\n    # 计算完整 scores 后用 mask 屏蔽未选位置: [B, N2, G, S1, S2]\n    # 在同一 (b, n2, s1) 下 sparseIndices 无重复，mask 与 gather 语义等价\n    scores = torch.einsum('bngsd,bnkd->bngsk', q_g, k) * scaleValue\n    scores.masked_fill_(~mask.unsqueeze(2), float('-inf'))\n\n    # 原地 softmax，避免同时持有 scores 和 attn_weights 两份张量\n    # 处理全 mask 行：当某行全被 mask 时，max 为 -inf，需要特殊处理\n    scores_max = scores.max(dim=-1, keepdim=True).values\n    all_masked = torch.isinf(scores_max) & (scores_max < 0)  # 检测全 -inf 行\n    scores -= scores_max\n    scores.exp_()\n    scores_sum = scores.sum(dim=-1, keepdim=True)\n    # 全 mask 行保持为 0，不进行除法\n    scores = torch.where(all_masked, torch.zeros_like(scores), scores / scores_sum)\n\n    # 加权求和: [B, N2, G, S1, Dv] -> [B, N1, S1, Dv]\n    out = torch.einsum('bngsk,bnkd->bngsd', scores, v)\n    out = out.reshape(B, N1, S1, -1)\n\n    # 转回原始布局\n    if inputLayout == \"BSND\":\n        out = out.permute(0, 2, 1, 3)   # [B, S1, N1, Dv]\n\n    # permute 只改 stride, 而输出契约要求 contiguous (issue #146)；\n    # BNSD 路径的 einsum 输出本就连续, .contiguous() 原样返回, 无额外拷贝\n    return out.contiguous()\n\n\ndef get_input(\n    query: torch.Tensor,\n    key: torch.Tensor,\n    value: torch.Tensor,\n    sparseIndices: torch.Tensor,\n    scaleValue: float = 1.0,\n    inputLayout: str = \"BSND\",\n    is_causal: bool = False,\n    **kwargs,\n):\n    \"\"\"重建两个结构化输入，满足本算子的契约（同时替换 golden 与候选输入，比较公平）。\n\n    单区间 value_range 无法表达两条契约：\n      1. sparseIndices 在同一 (b, n2, s1) 下必须是 [0, S2) 内**无重复**的 topK 个索引\n         （golden 用 scatter 建 mask，重复会塌缩成更少的 True；见 golden 注释 L32/L95）。\n         通用生成器按 value_range 填随机 int，既越界又大量重复 -> mask 与 kernel 的\n         gather 语义不一致 -> 整体发散。\n      2. value 与 key 数值同源：value == key[..., :Dv]（同一份 latent KV cache 的前缀\n         视图，proto L? 明示；Dk==Dv 时退化为 value==key）。通用生成器给的是无关随机张量。\n\n    这里据 key/value/sparseIndices 的实际形状（不写死，覆盖 BSND/BNSD、GQA、Dk!=Dv）\n    重生成这两者；query、key 原样保留。索引不做排序（保持与 golden 的 scatter 语义一致，\n    无序无重复即可）。\n\n    Returns:\n        [query, key, value, sparseIndices]，顺序与 sparse_flash_attention 签名一致。\n    \"\"\"\n    # S2 sits on a different axis per layout (BSND key dim1, BNSD key dim2)\n    S2 = int(key.shape[1] if inputLayout == \"BSND\" else key.shape[2])\n    Dv = int(value.shape[-1])\n\n    # contract 2: value must be key's [:Dv] prefix view (same latent KV cache, not independent)\n    new_value = key[..., :Dv].clone().to(dtype=value.dtype, device=value.device)\n\n    # contract 1: golden's scatter mask collapses duplicate indices -> they must be distinct\n    lead = list(sparseIndices.shape[:-1])\n    topK = int(sparseIndices.shape[-1])\n    num_groups = 1\n    for d in lead:\n        num_groups *= int(d)\n    k = min(topK, S2)\n    g = torch.Generator().manual_seed(0)  # fixed seed: must be reproducible across eval runs\n    # argsort of random == permutation; first k are distinct (order irrelevant to scatter)\n    perm = torch.rand(num_groups, S2, generator=g).argsort(dim=1)\n    sel = perm[:, :k]\n    if k < topK:  # topK > S2 (degenerate): can't draw enough distinct -> pad with last col\n        sel = torch.cat([sel, sel[:, -1:].expand(num_groups, topK - k)], dim=1)\n    new_si = sel.reshape(*lead, topK).to(dtype=sparseIndices.dtype, device=sparseIndices.device)\n\n    return [query, key, new_value, new_si]\n",
+  "cases_yaml": [
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 1,
+      "input_shape": [
+        [
+          2,
+          256,
+          32,
+          128
+        ],
+        [
+          2,
+          4096,
+          8,
+          128
+        ],
+        [
+          2,
+          4096,
+          8,
+          128
+        ],
+        [
+          2,
+          256,
+          8,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.08838,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-GQA-B2S256Skv4096N32Nkv8Dk128-top512-causal"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2,
+          256,
+          32,
+          192
+        ],
+        [
+          2,
+          4096,
+          8,
+          192
+        ],
+        [
+          2,
+          4096,
+          8,
+          128
+        ],
+        [
+          2,
+          256,
+          8,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.07217,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-GQA-Dk192Dv128-top512"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 3,
+      "input_shape": [
+        [
+          2,
+          32,
+          1024,
+          128
+        ],
+        [
+          2,
+          8,
+          8192,
+          128
+        ],
+        [
+          2,
+          8,
+          8192,
+          128
+        ],
+        [
+          2,
+          8,
+          1024,
+          1024
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.08838,
+        "inputLayout": "BNSD",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "bfloat16-BNSD-GQA-top1024-causal"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 4,
+      "input_shape": [
+        [
+          2,
+          32,
+          512,
+          192
+        ],
+        [
+          2,
+          8,
+          4096,
+          192
+        ],
+        [
+          2,
+          8,
+          4096,
+          128
+        ],
+        [
+          2,
+          8,
+          512,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.07217,
+        "inputLayout": "BNSD",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BNSD-GQA-Dk192-top512"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 5,
+      "input_shape": [
+        [
+          1,
+          256,
+          64,
+          128
+        ],
+        [
+          1,
+          4096,
+          8,
+          128
+        ],
+        [
+          1,
+          4096,
+          8,
+          128
+        ],
+        [
+          1,
+          256,
+          8,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.08838,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-GQA-N64Nkv8-top512-causal"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 6,
+      "input_shape": [
+        [
+          16,
+          1,
+          32,
+          128
+        ],
+        [
+          16,
+          8192,
+          8,
+          128
+        ],
+        [
+          16,
+          8192,
+          8,
+          128
+        ],
+        [
+          16,
+          1,
+          8,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.08838,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-GQA-B16S1-decode-top512"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 7,
+      "input_shape": [
+        [
+          32,
+          32,
+          1,
+          192
+        ],
+        [
+          32,
+          8,
+          8192,
+          192
+        ],
+        [
+          32,
+          8,
+          8192,
+          128
+        ],
+        [
+          32,
+          8,
+          1,
+          1024
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.07217,
+        "inputLayout": "BNSD",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "bfloat16-BNSD-GQA-B32S1-decode-Dk192-top1024"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 8,
+      "input_shape": [
+        [
+          8,
+          4,
+          64,
+          128
+        ],
+        [
+          8,
+          4096,
+          8,
+          128
+        ],
+        [
+          8,
+          4096,
+          8,
+          128
+        ],
+        [
+          8,
+          4,
+          8,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.08838,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-GQA-B8S4-MTP-top512-causal"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 9,
+      "input_shape": [
+        [
+          1,
+          128,
+          128,
+          512
+        ],
+        [
+          1,
+          2048,
+          1,
+          512
+        ],
+        [
+          1,
+          2048,
+          1,
+          512
+        ],
+        [
+          1,
+          128,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.04419,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-MLA-Dk512Dv512-top512-causal | baseline_kernels: SparseFlashAttention×1"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 10,
+      "input_shape": [
+        [
+          1,
+          128,
+          128,
+          576
+        ],
+        [
+          1,
+          2048,
+          1,
+          576
+        ],
+        [
+          1,
+          2048,
+          1,
+          512
+        ],
+        [
+          1,
+          128,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.04167,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-MLA-Dk576Dv512-top512-causal | baseline_kernels: Slice×4 + SparseFlashAttention×1"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 11,
+      "input_shape": [
+        [
+          2,
+          128,
+          256,
+          512
+        ],
+        [
+          2,
+          1,
+          2048,
+          512
+        ],
+        [
+          2,
+          1,
+          2048,
+          512
+        ],
+        [
+          2,
+          1,
+          256,
+          512
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.04419,
+        "inputLayout": "BNSD",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "bfloat16-BNSD-MLA-Dk512-top512-causal | baseline_kernels: Transpose×2 + SparseFlashAttention×1"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 12,
+      "input_shape": [
+        [
+          2,
+          128,
+          128,
+          576
+        ],
+        [
+          2,
+          1,
+          1024,
+          576
+        ],
+        [
+          2,
+          1,
+          1024,
+          512
+        ],
+        [
+          2,
+          1,
+          128,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.04167,
+        "inputLayout": "BNSD",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BNSD-MLA-Dk576-top512 | baseline_kernels: Transpose×2 + Slice×4 + SparseFlashAttention×1"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 13,
+      "input_shape": [
+        [
+          1,
+          128,
+          128,
+          512
+        ],
+        [
+          1,
+          2048,
+          1,
+          512
+        ],
+        [
+          1,
+          2048,
+          1,
+          512
+        ],
+        [
+          1,
+          128,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.04419,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-MLA-top512-long-causal | baseline_kernels: SparseFlashAttention×1"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 14,
+      "input_shape": [
+        [
+          16,
+          1,
+          128,
+          512
+        ],
+        [
+          16,
+          8192,
+          1,
+          512
+        ],
+        [
+          16,
+          8192,
+          1,
+          512
+        ],
+        [
+          16,
+          1,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.04419,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-MLA-B16S1-decode-top512 | baseline_kernels: SparseFlashAttention×1"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 15,
+      "input_shape": [
+        [
+          32,
+          64,
+          1,
+          576
+        ],
+        [
+          32,
+          1,
+          8192,
+          576
+        ],
+        [
+          32,
+          1,
+          8192,
+          512
+        ],
+        [
+          32,
+          1,
+          1,
+          1024
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "bfloat16",
+        "bfloat16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.04167,
+        "inputLayout": "BNSD",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "bfloat16-BNSD-MLA-B32S1-decode-Dk576-top1024"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 16,
+      "input_shape": [
+        [
+          8,
+          4,
+          128,
+          512
+        ],
+        [
+          8,
+          4096,
+          1,
+          512
+        ],
+        [
+          8,
+          4096,
+          1,
+          512
+        ],
+        [
+          8,
+          4,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.04419,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-MLA-B8S4-MTP-top512 | baseline_kernels: SparseFlashAttention×1"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 17,
+      "input_shape": [
+        [
+          16,
+          64,
+          4,
+          576
+        ],
+        [
+          16,
+          1,
+          8192,
+          576
+        ],
+        [
+          16,
+          1,
+          8192,
+          512
+        ],
+        [
+          16,
+          1,
+          4,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.04167,
+        "inputLayout": "BNSD",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BNSD-MLA-B16S4-MTP-Dk576-top512-causal"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 18,
+      "input_shape": [
+        [
+          32,
+          1,
+          128,
+          512
+        ],
+        [
+          32,
+          4096,
+          1,
+          512
+        ],
+        [
+          32,
+          4096,
+          1,
+          512
+        ],
+        [
+          32,
+          1,
+          1,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.04419,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-MLA-B32S1-decode-large-batch | baseline_kernels: SparseFlashAttention×1"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 19,
+      "input_shape": [
+        [
+          8,
+          2,
+          32,
+          128
+        ],
+        [
+          8,
+          4096,
+          8,
+          128
+        ],
+        [
+          8,
+          4096,
+          8,
+          128
+        ],
+        [
+          8,
+          2,
+          8,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.08838,
+        "inputLayout": "BSND",
+        "is_causal": true
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "float16-BSND-GQA-B8S2-MTP-large-batch-causal"
+    },
+    {
+      "operator": "SparseFlashAttention",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          256,
+          32,
+          128
+        ],
+        [
+          2,
+          4096,
+          8,
+          128
+        ],
+        [
+          2,
+          4096,
+          8,
+          128
+        ],
+        [
+          2,
+          256,
+          8,
+          512
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "float16",
+        "float16",
+        "int32"
+      ],
+      "attrs": {
+        "scaleValue": 0.08838,
+        "inputLayout": "BSND",
+        "is_causal": false
+      },
+      "value_range": [
+        0,
+        0
+      ],
+      "note": "float16-BSND-GQA-zero-input"
+    }
+  ],
+  "case_count": 20
+}

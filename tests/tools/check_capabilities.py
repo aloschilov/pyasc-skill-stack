@@ -48,7 +48,7 @@ REPO_ROOT = SCRIPT_DIR.parent.parent
 CAPABILITIES_FILE = REPO_ROOT / "capabilities.yaml"
 EVIDENCE_DIR = REPO_ROOT / "evidence"
 VERIFY_SCRIPT = SCRIPT_DIR / "verify_kernel.py"
-PYTHON = "python3.10"
+PYTHON = sys.executable
 
 
 def _load_yaml(path: Path) -> dict:

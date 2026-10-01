@@ -1,0 +1,1246 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "GroupedMatmulSwigluQuant",
+  "function_name": "grouped_matmul_swiglu_quant",
+  "level": "level4",
+  "category": "FusedComposite",
+  "difficulty": "L4",
+  "description": "MoE FFN 场景下的分组矩阵乘 + SwiGLU + 量化融合算子，对齐 torch_npu.npu_grouped_matmul_swiglu_quant_v2 默认配置",
+  "desc_md": "# GroupedMatmulSwigluQuant 算子 API 描述\n\n## 1. 算子简介\n\n分组矩阵乘法（GroupedMatmul / GMM）、反量化、SwiGLU 激活与再量化的融合算子，将四个步骤合并为一次 Kernel 调用以减少中间数据搬运。语义对齐 `torch_npu.npu_grouped_matmul_swiglu_quant_v2` 的默认配置。\n\n**主要应用场景**：\n- 大语言模型中 MoE（Mixture of Experts）结构的 FFN 层前半段（Gate+Up 投影 + SwiGLU + 量化）\n- 量化推理流水线中 GMM → 激活 → 再量化的整体融合\n- 对 token 分组路由后，每组 token 使用独立专家权重的高性能推理\n\n**算子特征**：\n- 难度等级：L4（FusedComposite）\n- 多输入、双输出；涉及 GMM、per-token / per-channel 反量化、SwiGLU、再量化\n- 激活与权重均为 int8（x 已完成 per-token 量化），输出为 int8 + float32 scale\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\n\\begin{aligned}\n&\\text{对每个专家 } g \\in [0, E),\\ \\text{根据 } group\\_list\\ (\\text{cumsum}) \\text{ 取属于该组的 token 行 } rows_g: \\\\\n&mm_g = x[rows_g] \\cdot weight[g] \\\\\n&deq_g = mm_g \\odot x\\_scale[rows_g] \\odot weight\\_scale[g] \\\\\n&\\text{合并所有组得到 } deq \\in \\mathbb{R}^{M \\times N} \\\\\n&left, right = \\text{split}(deq,\\ \\text{last\\_dim}/2) \\\\\n&act = \\text{SiLU}(left) \\odot right \\\\\n&y,\\ y\\_scale = \\text{PerTokenQuant}(act)\n\\end{aligned}\n$$\n\n### 步骤拆解\n\n1. **分组矩阵乘法（GMM）**：`group_list` 采用 cumsum 语义，将 `x` 的 `M` 行划分到 `E` 个专家；第 `g` 组的 token 与 `weight[g]` 做矩阵乘。\n2. **反量化（Dequant）**：左 per-token + 右 per-channel，`deq[i, j] = mm[i, j] * x_scale[i] * weight_scale[g(i), j]`。\n3. **SwiGLU**：沿最后一维对半拆分为 `left, right`，计算 `SiLU(left) * right`，输出宽度减半为 `N/2`。\n4. **再量化（Quant）**：per-token，`y_scale[i] = max_j|act[i, j]| / 127`，`y[i, j] = clamp(round(act[i, j] / y_scale[i]), -128, 127)`。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.grouped_matmul_swiglu_quant(\n    Tensor x,\n    Tensor weight,\n    Tensor weight_scale,\n    Tensor x_scale,\n    Tensor group_list,\n) -> (Tensor y, Tensor y_scale)\n```\n\n### 输入参数\n\n| 参数 | 类型 | Shape | 描述 |\n|------|------|-------|------|\n| x | Tensor (int8) | `[M, K]` | 激活矩阵（GMM 左矩阵，已完成 per-token 量化），允许非连续 |\n| weight | Tensor (int8) | `[E, K, N]` | 专家权重（GMM 右矩阵）|\n| weight_scale | Tensor (float32) | `[E, N]` | 权重 per-channel 反量化因子 |\n| x_scale | Tensor (float32) | `[M]` | 激活 per-token 反量化因子 |\n| group_list | Tensor (int32) | `[E]` | 每个专家的 token 累计和（cumsum） |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | `[M, N/2]` | int8 | SwiGLU 后的 per-token int8 量化结果 |\n| y_scale | `[M]` | float32 | 输出 per-token 反量化因子 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| x: int8；weight: int8；*_scale: float32；group_list: int32 | y: int8；y_scale: float32 |\n\n### 规则与约束\n\n- `x` 的 `K` 维必须与 `weight` 的 `K` 维一致。\n- `weight` 的最后一维 `N` 必须为偶数，以便 SwiGLU 对半拆分。\n- `group_list` 为 cumsum 序列，长度为 `E`，最终累计值不得超过 `M`。\n- 输出 `y` 会被截断到 `[-128, 127]`。\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `M`（TokensNum，token 总数） | 1 ~ 8192 | cases.csv 实测 32 ~ 4096 |\n| `E`（专家数） | 1 ~ 64 | cases.csv 实测 1 / 2 / 4 / 8 / 16；`group_list` 长度即为 `E` |\n| `K`（输入隐藏维） | 64 ~ 8192 | cases.csv 实测 256 ~ 7168；建议 16 对齐（实测 1040=16×65 也可） |\n| `N`（GMM 输出宽度，SwiGLU 拆分前） | 64 ~ 16384 | cases.csv 实测 512 ~ 10240；必须满足 `N % 2 == 0`，SwiGLU 拆分后输出宽度为 `N/2` |\n| `N/2`（SwiGLU 输出宽度） | 32 ~ 8192 | 由 `N` 派生，cases.csv 实测 256 ~ 5120（如 N=1056 → N/2=528） |\n| `group_list[i]` | 0 ~ `M` | cumsum 单调非减序列；`group_list[-1] == M`；允许某组为空（相邻值相等，见 case 7） |\n| `x` value_range（int8） | [-128, 127] | cases.csv 实测主集合 [-128, 127]；case 20 收窄为 [-32, 32]（防止 K=4096 累加溢出） |\n| `weight` value_range（int8） | [-128, 127] | cases.csv 实测固定 [-128, 127] |\n| `weight_scale` / `x_scale` value_range（float32） | (0, 1] | cases.csv 实测 [1e-4, 1e-3] / [1e-3, 1e-2] / [1e-2, 1e-1]；要求严格为正 |\n\n约束：\n\n- `weight.shape[1] == x.shape[1] == K`，`weight.shape[0] == weight_scale.shape[0] == group_list.numel() == E`。\n- `N % 2 == 0`（SwiGLU 沿最后一维对半拆分）。\n- `group_list` 严格满足 `0 ≤ group_list[0] ≤ group_list[1] ≤ ... ≤ group_list[E-1] == M`。\n- `x_scale.numel() == M`，与 `x` 的 token 维严格对齐。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\nfrom typing import Tuple\n\n\ndef grouped_matmul_swiglu_quant(\n    x: torch.Tensor,\n    weight: torch.Tensor,\n    weight_scale: torch.Tensor,\n    x_scale: torch.Tensor,\n    group_list: torch.Tensor,\n) -> Tuple[torch.Tensor, torch.Tensor]:\n    M, K = x.shape\n    E, _, N = weight.shape\n    N_out = N // 2\n    ends = group_list.to(torch.int64).tolist()\n    starts = [0] + ends[:-1]\n\n    dequant = torch.empty((M, N), dtype=torch.float32, device=x.device)\n    x_scale_f = x_scale.float()\n    for g in range(E):\n        s, e = starts[g], ends[g]\n        if s == e:\n            continue\n        mm = torch.matmul(x[s:e].float(), weight[g].float())\n        xs = x_scale_f[s:e].unsqueeze(1)\n        ws = weight_scale[g].float().unsqueeze(0)\n        dequant[s:e] = mm * xs * ws\n\n    left, right = dequant[..., :N_out], dequant[..., N_out:]\n    act = torch.nn.functional.silu(left) * right\n\n    eps = torch.finfo(torch.float32).tiny\n    y_scale = act.abs().amax(dim=-1).clamp_min(eps) / 127.0\n    y = torch.clamp(torch.round(act / y_scale.unsqueeze(1)), -128, 127).to(torch.int8)\n    return y, y_scale.to(torch.float32)\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nM, K, N, E = 64, 256, 512, 4\n\nx = torch.randint(-128, 127, (M, K), dtype=torch.int8, device=\"npu\")\nweight = torch.randint(-128, 127, (E, K, N), dtype=torch.int8, device=\"npu\")\nweight_scale = torch.rand(E, N, dtype=torch.float32, device=\"npu\") * 0.01\nx_scale = torch.rand(M, dtype=torch.float32, device=\"npu\") * 0.01\n# cumsum 语义：四组累计 16/32/48/64\ngroup_list = torch.tensor([16, 32, 48, 64], dtype=torch.int32, device=\"npu\")\n\ny, y_scale = cann_bench.grouped_matmul_swiglu_quant(\n    x, weight, weight_scale, x_scale, group_list,\n)\n```\n\n### 参考文档\n\n- `torch_npu.npu_grouped_matmul_swiglu_quant_v2`：<https://www.hiascend.com/document/detail/zh/Pytorch/730/apiref/torchnpuCustomsapi/docs/context/torch_npu-npu_grouped_matmul_swiglu_quant_v2.md>\n",
+  "proto": {
+    "name": "GroupedMatmulSwigluQuant",
+    "category": "FusedComposite",
+    "difficulty": "L4",
+    "formula": "对每个专家 g ∈ [0, E):\n  rows_g  = group_list 指定属于第 g 组的 token 行（cumsum 语义）\n  mm_g    = x[rows_g] @ weight[g]\n  deq_g   = mm_g * x_scale[rows_g] * weight_scale[g]   # 反量化\nleft, right = split(deq, last_dim / 2)\nact = SiLU(left) * right                                # SwiGLU\ny, y_scale = PerTokenQuant(act)                         # 再量化\n",
+    "description": "MoE FFN 场景下的分组矩阵乘 + SwiGLU + 量化融合算子，对齐 torch_npu.npu_grouped_matmul_swiglu_quant_v2 默认配置",
+    "shape_support": "x: [M, K], weight: [E, K, N], weight_scale: [E, N], x_scale: [M]; 输出 y: [M, N/2], y_scale: [M]",
+    "precision_thresholds": {
+      "int8": 1,
+      "float32": 0.001
+    },
+    "attrs": [
+      {
+        "name": "group_list",
+        "type": "Tensor",
+        "description": "每个专家的 token 累计和（cumsum），shape [E]，int32/int64",
+        "required": true
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "矩阵乘法左矩阵（激活，已完成 per-token 量化），支持非连续 Tensor",
+        "dtype": [
+          "int8"
+        ],
+        "shape": "[M, K]"
+      },
+      {
+        "name": "weight",
+        "description": "矩阵乘法右矩阵（权重），FRACTAL_NZ 格式",
+        "dtype": [
+          "int8"
+        ],
+        "shape": "[E, K, N]"
+      },
+      {
+        "name": "weight_scale",
+        "description": "权重反量化因子（per-channel）",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[E, N]"
+      },
+      {
+        "name": "x_scale",
+        "description": "激活 per-token 反量化因子",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[M]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "SwiGLU 后的 per-token int8 量化输出",
+        "dtype": [
+          "int8"
+        ],
+        "shape": "[M, N/2]"
+      },
+      {
+        "name": "y_scale",
+        "description": "输出 per-token 反量化因子",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[M]"
+      }
+    ],
+    "schema": "grouped_matmul_swiglu_quant(Tensor x, Tensor weight, Tensor weight_scale, Tensor x_scale, Tensor group_list) -> (Tensor y, Tensor y_scale)"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You can not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\nfrom typing import Tuple, List, Union\n\n\"\"\"\nGroupedMatmulSwigluQuant 算子 Torch Golden 参考实现\n\n计算流程：\n    y, y_scale = Quant( SwiGLU( Dequant( GroupedMatmul(x, weight) ) ) )\n\n语义约定：\n  - GroupedMatmul 按 group_list 把 x 的行切成 E 组，每组与 weight[g] 做 matmul\n  - group_list 采用 cumsum 语义（累计和）\n  - Dequant 使用 x_scale (per-token) × weight_scale (per-channel)\n  - SwiGLU 沿最后一维对半拆分: left, right -> SiLU(left) * right\n  - 输出按 per-token 量化为 int8\n\"\"\"\n\n\ndef grouped_matmul_swiglu_quant(\n    x: torch.Tensor,\n    weight: torch.Tensor,\n    weight_scale: torch.Tensor,\n    x_scale: torch.Tensor,\n    group_list,  # List[int] from attrs, 不加 annotation 避免 param_builder 分类错误\n) -> Tuple[torch.Tensor, torch.Tensor]:\n    \"\"\"\n    分组矩阵乘法 + SwiGLU + 量化 融合算子的 Golden 实现。\n\n    Args:\n        x:            [M, K] 激活矩阵（已 per-token 量化），int8\n        weight:       [E, K, N] 权重，int8\n        weight_scale: [E, N] 权重反量化因子（per-channel），float32\n        x_scale:      [M] 激活 per-token 反量化因子，float32\n        group_list:   cumsum 语义的累计 token 数列表（长度 E），从 attrs 传入\n\n    Returns:\n        y:       [M, N/2] int8，SwiGLU 后的 per-token int8 量化结果\n        y_scale: [M] float32，per-token 反量化因子\n    \"\"\"\n    assert x.dim() == 2 and weight.dim() == 3, \"x must be 2D, weight must be 3D [E, K, N]\"\n    M, K = x.shape\n    E, Kw, N = weight.shape\n    assert K == Kw, f\"K mismatch: x has {K}, weight has {Kw}\"\n    assert N % 2 == 0, \"N must be even so SwiGLU can split the last dim in half\"\n    N_out = N // 2\n\n    # group_list 从 attrs 传入，可以是 List[int] 或 Tensor\n    if isinstance(group_list, torch.Tensor):\n        ends = group_list.to(torch.int64).tolist()\n    else:\n        ends = list(group_list)  # 确保是列表\n\n    assert len(ends) == E and ends[-1] <= M, \"group_list must be cumsum of length E and not exceed M\"\n    starts = [0] + ends[:-1]\n\n    dequant = torch.empty((M, N), dtype=torch.float32, device=x.device)\n    x_scale_f = x_scale.float()\n    for g in range(E):\n        s, e = starts[g], ends[g]\n        if s == e:\n            continue\n        mm = torch.matmul(x[s:e].float(), weight[g].float())\n        xs = x_scale_f[s:e].unsqueeze(1)\n        ws = weight_scale[g].float().unsqueeze(0)\n        dequant[s:e] = mm * xs * ws\n\n    x_left = dequant[..., :N_out]\n    x_right = dequant[..., N_out:]\n    activated = torch.nn.functional.silu(x_left) * x_right  # [M, N_out]\n\n    eps = torch.finfo(torch.float32).tiny\n    amax = activated.abs().amax(dim=-1).clamp_min(eps)  # [M]\n    y_scale = amax / 127.0\n    y = torch.clamp(torch.round(activated / y_scale.unsqueeze(1)), -128, 127).to(torch.int8)\n\n    return y, y_scale.to(torch.float32)",
+  "cases_yaml": [
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 1,
+      "input_shape": [
+        [
+          128,
+          7168
+        ],
+        [
+          8,
+          7168,
+          4096
+        ],
+        [
+          8,
+          4096
+        ],
+        [
+          128
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          16,
+          32,
+          48,
+          64,
+          80,
+          96,
+          112,
+          128
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "L-DSv3-EP16-per-card-decode-M=128-E=8-K=7168-N=4096-balanced(~16/expert) | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 2,
+      "input_shape": [
+        [
+          256,
+          7168
+        ],
+        [
+          8,
+          7168,
+          4096
+        ],
+        [
+          8,
+          4096
+        ],
+        [
+          256
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          32,
+          64,
+          96,
+          128,
+          160,
+          192,
+          224,
+          256
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "L-DSv3-EP16-per-card-decode-M=256-E=8-K=7168-N=4096-balanced(~32/expert) | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 3,
+      "input_shape": [
+        [
+          1024,
+          7168
+        ],
+        [
+          8,
+          7168,
+          4096
+        ],
+        [
+          8,
+          4096
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          128,
+          256,
+          384,
+          512,
+          640,
+          768,
+          896,
+          1024
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "L-DSv3-EP16-per-card-prefill-M=1024-E=8-K=7168-N=4096-balanced(~128/expert) | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 4,
+      "input_shape": [
+        [
+          2048,
+          7168
+        ],
+        [
+          8,
+          7168,
+          4096
+        ],
+        [
+          8,
+          4096
+        ],
+        [
+          2048
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          256,
+          512,
+          768,
+          1024,
+          1280,
+          1536,
+          1792,
+          2048
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "L-DSv3-EP16-per-card-prefill-M=2048-E=8-K=7168-N=4096-balanced(~256/expert) | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4096,
+          7168
+        ],
+        [
+          8,
+          7168,
+          4096
+        ],
+        [
+          8,
+          4096
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          512,
+          1024,
+          1536,
+          2048,
+          2560,
+          3072,
+          3584,
+          4096
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "L-DSv3-EP16-per-card-big-batch-M=4096-E=8-K=7168-N=4096 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 6,
+      "input_shape": [
+        [
+          512,
+          7168
+        ],
+        [
+          8,
+          7168,
+          4096
+        ],
+        [
+          8,
+          4096
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          307,
+          337,
+          367,
+          396,
+          425,
+          454,
+          483,
+          512
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "L-DSv3-EP16-per-card-imbalanced-M=512-E=8-one-hot-expert-token-skew | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 7,
+      "input_shape": [
+        [
+          128,
+          7168
+        ],
+        [
+          8,
+          7168,
+          4096
+        ],
+        [
+          8,
+          4096
+        ],
+        [
+          128
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          22,
+          44,
+          44,
+          65,
+          86,
+          86,
+          107,
+          128
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "L-DSv3-EP16-per-card-empty-expert-M=128-E=8-含2个空group(idx2和idx5) | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 8,
+      "input_shape": [
+        [
+          512,
+          7168
+        ],
+        [
+          16,
+          7168,
+          4096
+        ],
+        [
+          16,
+          4096
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          32,
+          64,
+          96,
+          128,
+          160,
+          192,
+          224,
+          256,
+          288,
+          320,
+          352,
+          384,
+          416,
+          448,
+          480,
+          512
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "L-DSv3-EP8-per-card-128专家8卡-M=512-E=16-K=7168-N=4096-balanced-32-per-expert | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 9,
+      "input_shape": [
+        [
+          32,
+          4096
+        ],
+        [
+          8,
+          4096,
+          10240
+        ],
+        [
+          8,
+          10240
+        ],
+        [
+          32
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          4,
+          8,
+          12,
+          16,
+          20,
+          24,
+          28,
+          32
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "L-Mixtral-like-scaled-M=32-E=8-K=4096-N=10240-受硬件N<=10240约束的缩减版 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 10,
+      "input_shape": [
+        [
+          1024,
+          3584
+        ],
+        [
+          8,
+          3584,
+          2816
+        ],
+        [
+          8,
+          2816
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          128,
+          256,
+          384,
+          512,
+          640,
+          768,
+          896,
+          1024
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "M-Qwen2-MoE-like-M=1024-E=8-K=3584-N=2816-moe_inter=1408 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 11,
+      "input_shape": [
+        [
+          256,
+          4096
+        ],
+        [
+          1,
+          4096,
+          4096
+        ],
+        [
+          1,
+          4096
+        ],
+        [
+          256
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          256
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "M-single-expert退化-E=1-M=256-K=4096-N=4096-纯GMM | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 12,
+      "input_shape": [
+        [
+          64,
+          256
+        ],
+        [
+          2,
+          256,
+          512
+        ],
+        [
+          2,
+          512
+        ],
+        [
+          64
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          32,
+          64
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "S-small-aligned-M=64-E=2-K=256-N=512-小规模冒烟 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 13,
+      "input_shape": [
+        [
+          1024,
+          2048
+        ],
+        [
+          4,
+          2048,
+          4096
+        ],
+        [
+          4,
+          4096
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          256,
+          512,
+          768,
+          1024
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "M-medium-aligned-M=1024-E=4-K=2048-N=4096-对齐中规模 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 14,
+      "input_shape": [
+        [
+          2048,
+          4096
+        ],
+        [
+          16,
+          4096,
+          4096
+        ],
+        [
+          16,
+          4096
+        ],
+        [
+          2048
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          128,
+          256,
+          384,
+          512,
+          640,
+          768,
+          896,
+          1024,
+          1152,
+          1280,
+          1408,
+          1536,
+          1664,
+          1792,
+          1920,
+          2048
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "L-large-aligned-M=2048-E=16-K=4096-N=4096-多专家大规模 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 15,
+      "input_shape": [
+        [
+          1009,
+          1024
+        ],
+        [
+          4,
+          1024,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          1009
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          253,
+          505,
+          757,
+          1009
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "S-prime-M-M=1009-E=4-K=1024-N=1024-M质数非对齐 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 16,
+      "input_shape": [
+        [
+          512,
+          1040
+        ],
+        [
+          4,
+          1040,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          128,
+          256,
+          384,
+          512
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "S-non-pow2-K-M=512-E=4-K=1040(16x65)-N=1024-K非2幂但16对齐 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 17,
+      "input_shape": [
+        [
+          512,
+          1024
+        ],
+        [
+          4,
+          1024,
+          1056
+        ],
+        [
+          4,
+          1056
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          128,
+          256,
+          384,
+          512
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "S-non-pow2-N-M=512-E=4-K=1024-N=1056(32x33)-SwiGLU拆分后=528 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 18,
+      "input_shape": [
+        [
+          512,
+          1024
+        ],
+        [
+          4,
+          1024,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          128,
+          256,
+          384,
+          512
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.0001,
+          0.001
+        ],
+        [
+          0.0001,
+          0.001
+        ]
+      ],
+      "note": "S-micro-dequant-scale-M=512-E=4-两端scale=1e-4到1e-3-微小反量化 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 19,
+      "input_shape": [
+        [
+          512,
+          1024
+        ],
+        [
+          4,
+          1024,
+          1024
+        ],
+        [
+          4,
+          1024
+        ],
+        [
+          512
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          128,
+          256,
+          384,
+          512
+        ]
+      },
+      "value_range": [
+        [
+          -128,
+          127
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.01,
+          0.1
+        ],
+        [
+          0.01,
+          0.1
+        ]
+      ],
+      "note": "S-large-dequant-scale-M=512-E=4-两端scale=0.01到0.1-大反量化 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    },
+    {
+      "operator": "GroupedMatmulSwigluQuant",
+      "case_id": 20,
+      "input_shape": [
+        [
+          1024,
+          4096
+        ],
+        [
+          8,
+          4096,
+          4096
+        ],
+        [
+          8,
+          4096
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int8",
+        "float32",
+        "float32"
+      ],
+      "attrs": {
+        "group_list": [
+          128,
+          256,
+          384,
+          512,
+          640,
+          768,
+          896,
+          1024
+        ]
+      },
+      "value_range": [
+        [
+          -32,
+          32
+        ],
+        [
+          -128,
+          127
+        ],
+        [
+          0.001,
+          0.01
+        ],
+        [
+          0.001,
+          0.01
+        ]
+      ],
+      "note": "L-narrow-activation-range-M=1024-E=8-x限定±32防止K=4096累加溢出 | baseline_kernels: TransData×1 + GroupedMatmulSwigluQuantV2×1"
+    }
+  ],
+  "case_count": 20
+}

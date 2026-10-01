@@ -1,0 +1,491 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "Softmax",
+  "function_name": "softmax",
+  "level": "level2",
+  "category": "Normalization",
+  "difficulty": "L2",
+  "description": "沿指定维度计算 Softmax 归一化",
+  "desc_md": "# Softmax 算子 API 描述\n\n## 1. 算子简介\n\n沿指定维度计算 Softmax 归一化。\n\n**主要应用场景**：\n- 分类模型的输出层，将 logits 转换为概率分布\n- 注意力机制中计算注意力权重\n- 强化学习中的策略概率输出\n\n**算子特征**：\n- 难度等级：L2（Normalization）\n- 单输入单输出，涉及指数运算、求和、除法等多步计算\n- 输出元素值在 [0, 1] 范围内，沿指定维度求和为 1\n\n## 2. 算子定义\n\n### 数学公式\n\n**基本公式**：\n\n$$\ny_i = \\frac{\\exp(x_i)}{\\sum_{j}\\exp(x_j)}\n$$\n\n数值稳定版本（内部实现）：\n\n$$\ny_i = \\frac{\\exp(x_i - \\max(x))}{\\sum_{j}\\exp(x_j - \\max(x))}\n$$\n\n其中：\n- `x_i` 为输入张量沿指定 dim 维度上的第 i 个元素\n- 输出满足 `0 <= y_i <= 1` 且 `sum(y) = 1`（沿 dim 维度）\n- 数值稳定版本减去最大值以避免指数溢出\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.softmax(Tensor x, int dim=-1) -> Tensor y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入张量 |\n| dim | int | -1 | 计算 Softmax 的维度 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 与输入 x 相同 | 与输入 x 相同 | Softmax 归一化后的张量 |\n\n### 数据类型\n\n| x dtype | 输出 dtype |\n|---------|-----------|\n| float16 | float16 |\n| float32 | float32 |\n| bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- x 可以为任意维度的张量\n- dim 指定计算 Softmax 的维度，支持负数索引\n- 输出 shape 和 dtype 与输入完全一致\n- 需注意数值稳定性：内部实现应使用减最大值技巧避免指数溢出\n- 特殊值行为（须与 `torch.nn.functional.softmax` 一致，均源自 `x - max(x)` 重整）：\n  - 某切片含任意 `+inf`（无论是否同时含其它有限/`-inf` 元素）：整切片输出 `NaN`（`inf - inf = NaN` 沿切片传播）\n  - 某切片全部为 `-inf`：整切片输出 `NaN`（`max = -inf`，`-inf - (-inf) = NaN`）\n  - 某切片含 `-inf` 与有限元素：`-inf` 位置输出 `0`，有限元素按正常 softmax 归一化\n  - 输入含 `NaN`：整切片输出 `NaN`\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `x` 维度数 | 1 ~ 8 | cases.csv 实测 2 ~ 5 维 |\n| `x` 各维度大小 | 1 ~ 2097152 | cases.csv 实测 2 ~ 1000003 |\n| `dim` | `[-rank, rank-1]` | cases.csv 实测 -1 / 0 / 1 / 2；支持负数索引 |\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nSoftmax 算子 Torch Golden 参考实现\n\n沿指定维度计算 Softmax 归一化\n\n公式:\n    y_i = exp(x_i) / sum(exp(x_j))\n\n参考 PyTorch API: torch.nn.functional.softmax\n    https://pytorch.org/docs/stable/generated/torch.nn.functional.softmax.html\n\nParameters:\n    - x: 任意维度输入张量\n    - dim: int, 默认 -1 - 计算 Softmax 的维度\n\"\"\"\n\n\ndef softmax(\n    x: torch.Tensor,\n    dim: int = -1\n) -> torch.Tensor:\n    \"\"\"\n    沿指定维度计算 Softmax 归一化\n\n    Args:\n        x: 输入张量，任意 shape\n        dim: 计算 Softmax 的维度，默认为 -1（最后一维）\n\n    Returns:\n        Softmax 归一化后的张量，shape 与输入相同\n        输出元素值在 [0, 1] 范围内，且沿 dim 维度求和为 1\n\n    Examples:\n        >>> x = torch.randn(1024, 2048)\n        >>> y = softmax(x, dim=-1)\n    \"\"\"\n    y = torch.nn.functional.softmax(x, dim=dim)\n\n    return y\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx = torch.randn(1024, 2048, dtype=torch.float32, device=\"npu\")\n\ny = cann_bench.softmax(x, dim=-1)\ny = cann_bench.softmax(x, dim=0)\ny = cann_bench.softmax(x, dim=1)\n```\n",
+  "proto": {
+    "name": "Softmax",
+    "category": "Normalization",
+    "difficulty": "L2",
+    "formula": "y_i = exp(x_i) / sum(exp(x_j))\n",
+    "description": "沿指定维度计算 Softmax 归一化",
+    "shape_support": "x (input): 任意维度张量，沿 dim 指定的维度计算 Softmax\n",
+    "attrs": [
+      {
+        "name": "dim",
+        "type": "Int",
+        "default": -1,
+        "description": "计算 Softmax 的维度",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入张量",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "Softmax 归一化后的张量，与输入 shape 和 dtype 相同",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "softmax(Tensor x, int dim=-1) -> Tensor y"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nSoftmax 算子 Torch Golden 参考实现\n\n沿指定维度计算 Softmax 归一化\n\n公式:\n    y_i = exp(x_i) / sum(exp(x_j))\n\n参考 PyTorch API: torch.nn.functional.softmax\n    https://pytorch.org/docs/stable/generated/torch.nn.functional.softmax.html\n\nParameters:\n    - x: 任意维度输入张量\n    - dim: int, 默认 -1 - 计算 Softmax 的维度\n\"\"\"\n\n\ndef softmax(\n    x: torch.Tensor,\n    dim: int = -1\n) -> torch.Tensor:\n    \"\"\"\n    沿指定维度计算 Softmax 归一化\n\n    Args:\n        x: 输入张量，任意 shape\n        dim: 计算 Softmax 的维度，默认为 -1（最后一维）\n\n    Returns:\n        Softmax 归一化后的张量，shape 与输入相同\n        输出元素值在 [0, 1] 范围内，且沿 dim 维度求和为 1\n\n    Examples:\n        >>> x = torch.randn(1024, 2048)\n        >>> y = softmax(x, dim=-1)\n    \"\"\"\n    y = torch.nn.functional.softmax(x, dim=dim)\n\n    return y\n",
+  "cases_yaml": [
+    {
+      "operator": "Softmax",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-1M-对齐-对称小值域-dim=-1 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2048,
+          2048
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -2,
+        2
+      ],
+      "note": "M-float32-4M-对齐-对称小值域-dim=-1 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -3,
+        3
+      ],
+      "note": "M-bfloat16-16M-对齐-对称小值域-dim=-1 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8192,
+          8192
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": 0
+      },
+      "value_range": [
+        -10,
+        10
+      ],
+      "note": "L-float16-67M-对齐-对称中值域-dim=0 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 5,
+      "input_shape": [
+        [
+          8192,
+          8192
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": 1
+      },
+      "value_range": [
+        -100,
+        100
+      ],
+      "note": "L-float32-268M-对齐-对称大值域-dim=1 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 6,
+      "input_shape": [
+        [
+          31,
+          67,
+          127,
+          257
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": 2
+      },
+      "value_range": [
+        -5,
+        5
+      ],
+      "note": "L-bfloat16-67M-非对齐-4D-dim=2 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1023,
+          2047
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -0.1,
+        0.1
+      ],
+      "note": "S-float16-2M-非对齐-对称微小值域-dim=-1 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 8,
+      "input_shape": [
+        [
+          2049,
+          4097
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "M-float32-8M-非对齐-dim=-1 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 9,
+      "input_shape": [
+        [
+          127,
+          257,
+          1023
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": -2
+      },
+      "value_range": [
+        -0.5,
+        0.5
+      ],
+      "note": "M-bfloat16-33M-质数非对齐-3D-dim=-2（负向非-1） | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 10,
+      "input_shape": [
+        [
+          1009,
+          1021
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -1,
+        2
+      ],
+      "note": "S-float16-1M-质数非对齐-dim=-1 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 11,
+      "input_shape": [
+        [
+          367,
+          373,
+          379
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": 1
+      },
+      "value_range": [
+        -50,
+        100
+      ],
+      "note": "L-float32-51M-质数非对齐-3D-dim=1 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 12,
+      "input_shape": [
+        [
+          11,
+          13,
+          17,
+          4001
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -3,
+        6
+      ],
+      "note": "M-bfloat16-9M-质数非对齐-4D-dim=-1 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 13,
+      "input_shape": [
+        [
+          1000003,
+          2
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "S-float16-2M-质数非对齐-inf特殊值 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 14,
+      "input_shape": [
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "M-float32-10M-质数非对齐-nan特殊值-5D | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 15,
+      "input_shape": [
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        0,
+        0
+      ],
+      "note": "S-bfloat16-3M-质数非对齐-零值特殊值-5D | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 16,
+      "input_shape": [
+        [
+          512,
+          2049
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": 0
+      },
+      "value_range": [
+        -0.5,
+        0.5
+      ],
+      "note": "S-float16-1M-非对齐-dim=0 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 17,
+      "input_shape": [
+        [
+          255,
+          8193
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": 1
+      },
+      "value_range": [
+        -1000,
+        1000
+      ],
+      "note": "S-float32-2M-非对齐-对称大值域-dim=1 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 18,
+      "input_shape": [
+        [
+          2,
+          511,
+          2049
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -0.2,
+        0.2
+      ],
+      "note": "S-bfloat16-2M-非对齐-对称微小值域-3D | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4,
+          255,
+          2049
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": 1
+      },
+      "value_range": [
+        -65504,
+        65504
+      ],
+      "note": "S-float16-2M-非对齐-float16边界值-dim=1 | baseline_kernels: SoftmaxV2×1"
+    },
+    {
+      "operator": "Softmax",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          3,
+          17,
+          1024,
+          101
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": 3
+      },
+      "value_range": [
+        -20,
+        40
+      ],
+      "note": "M-float32-10M-非对齐-非对称大值域-5D-dim=3（内部非末轴） | baseline_kernels: SoftmaxV2×1"
+    }
+  ],
+  "case_count": 20
+}

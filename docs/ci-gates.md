@@ -1,278 +1,56 @@
-# CI Gate Tiers
+# CI and CANNBench acceptance
 
-Three gate tiers ensure fast feedback on PRs while reserving expensive checks for merge and nightly runs.
+## Current pipeline
 
-## Tiers
+`CI` runs static/L1 checks and CANNBench acceptance unit tests on a GitHub-hosted Ubuntu runner. These checks require no CANN runtime. CANNBench execution belongs on the Ubuntu VM, through the dedicated `cannbench-vm` runner. That runner deliberately has no default labels, so historical queued `arm64` jobs cannot execute there.
 
-| Tier | Trigger | Time budget | What runs |
-|------|---------|-------------|-----------|
-| **pr** | Every push / PR | < 30s | L1 unit tests + JIT verification of golden kernels |
-| **merge** | Merge to main | < 5 min | PR tier + simulator execution of golden kernels |
-| **nightly** | Scheduled (daily) | 15-30 min | Merge tier + L2 behavior + L3 agentic integration |
+`CANNBench gate` captures the complete official site catalog and checks hardware evidence for every listed operator and case. On 2026-10-01, the accepted submission version was `official-tasks/1.1.2`: **53 operators, 1060 cases**. The checked-in snapshot includes the raw catalog, exact task inputs and SHA256 identities. A live capture checks the catalog before and after collecting all tasks. No missing operator, case, unsupported dtype or failed generation is removed from the denominator.
 
-## Entry point
+A manual run can generate the entire catalog using `gateway/glm-5.3` plus an independent model review. Workers receive the complete task and pinned API guide; they can edit only their own candidate/design files. A reviewer receives measured compiler feedback, and the reviewed source is compiled again. The daily schedule reads explicitly selected hardware jobs or the pending/latest durable job; it does not create submissions. `OPENCODE_API_KEY` is encrypted in GitHub Secrets, and `OPENCODE_BASE_URL` is a repository variable. They were imported from OpenCode on the VM without saving the key to this repository.
+
+Hardware results must match the catalog version and hardware, include the exact complete case set, final correctness and anti-cheat results, and finite positive candidate/reference timings. Duplicate measurements are rejected rather than merged by fastest case. The true geometric mean is recomputed from `baseline_perf_us / elapsed_us`; the misleading API aggregate is ignored. Local dispatch/lowering and Model smoke results do not satisfy hardware acceptance.
+
+The workflow has two separate results: hardware evidence and skill-stack acceptance. Skill-stack acceptance additionally requires all 53 fresh candidates, native skill traces, a different implementation/review model, exact task and candidate hashes, complete compiler coverage, an installed evaluator-wheel replay, and a durable identity binding to the submitted archive and returned hardware job. An imported historical job alone cannot satisfy this gate.
+
+A manual run with `generate=true` and `submit=true` requests one full-catalog hardware submission after every earlier qualification passes. A failed or partial generation creates no submission. POST has no retries; durable upload intent is written under the existing shared upload lock before sending. After an ambiguous response, the tool reconciles the unique tag by GET and refuses to repeat POST even when no match is visible. State and the hashed submitted archive live outside the runner checkout under `/home/aloschilov/ci-campaign-state/pyasc-cannbench`. Schedules reconcile pending uploads and refresh existing jobs using GET only, including after runner cancellation.
+
+These stages are implemented but full-catalog generation, installed-wheel replay and hardware acceptance have not yet completed. Infrastructure tests are not evidence of 53 correctly generated/accepted kernels.
+
+## Dashboard
+
+Pages downloads the evidence artifact from the matching CANNBench run, including failed gates, and renders every official operator. Missing and failed cases remain visible. Simulator comparison and historical skill-intervention results remain separate diagnostics. No evidence commit is needed for metrics publication. Generation artifacts are retained separately for 90 days. Each run has a unique artifact directory. A run that fails before uploading hardware evidence is published as missing/failed, preserving the full denominator.
+
+## Commands
+
+On the Mac, for static verification:
 
 ```bash
-bash tests/ci-gate.sh --tier pr        # Fast PR gate
-bash tests/ci-gate.sh --tier merge     # Merge gate (includes simulator)
-bash tests/ci-gate.sh --tier nightly   # Full nightly run
+python -m unittest discover -s tests/unit -p 'test_cannbench_*.py' -v
+python integrations/cannbench/ci/validate_catalog.py integrations/cannbench/catalogs/official-tasks-1.1.2-20261001
+bash tests/ci-gate.sh --tier pr
+python tests/tools/generate_dashboard.py --output-dir _site
 ```
 
-## PR gate (`--tier pr`)
+On the VM, with its existing CANNBench credentials:
 
-Runs in under 30 seconds. Suitable for pre-commit hooks and PR checks.
+```bash
+python3 integrations/cannbench/ci/run.py --output evidence/cannbench/ci-current --job-id job_13cb06f8dff9
+```
 
-1. `run-tests.sh --fast` -- L1 structural and content validation (skills, agents, teams)
-2. JIT verification of all golden kernels via `pytest_verify_kernel.py` -- confirms pyasc JIT compilation works without needing the simulator
-3. `check_evidence_paths.py` -- rejects machine-specific `/home/` or `/Users/` paths in committed perf evidence JSON
+The GeLU-only example intentionally fails the complete 1060-case gate. It is an example of retaining partial measured evidence, not acceptance of the catalog.
 
-No network, no simulator, no opencode required.
+A full campaign is explicitly requested on the VM with:
 
-## Merge gate (`--tier merge`)
+```bash
+python3 integrations/cannbench/ci/run.py --output evidence/cannbench/run-unique --generate --submit
+```
 
-Runs in under 5 minutes. Requires CANN simulator environment.
+Compilation and installed-wheel replay use the existing shared execution locks. The runtime wheel and compiler image are pinned by SHA256 in `integrations/cannbench/ci/runtime.json`; a changed image or wheel requires requalification. Runtime packaging includes `asc` and the current public `asctile` package; the historical packaging helper's `asc2` pin is not reused. The hardware job is the full numerical and performance oracle. No canonical module is promoted by this campaign.
 
-1. Everything in PR gate
-2. Simulator execution of all golden kernels via `run_and_verify.py --mode simulator` -- confirms numerical correctness with `np.testing.assert_allclose`
+The dedicated runner is managed by `pyasc-cannbench-runner.service` in the VM user manager, with linger enabled for reboot persistence. `runner_service.py` refuses to replace a different service or interrupt a busy runner.
 
-Requires: `source $HOME/Ascend/cann/set_env.sh` and `LD_LIBRARY_PATH` set. See [cann-setup.md](cann-setup.md).
+The output directory must be new. Never overwrite prior snapshots or durable submission state. Credentials stay on the VM. Preserve the historical shared simulator and upload locks. Reconcile an ambiguous submission by GET; never repeat POST automatically. No automatic commit/push.
 
-The GitHub Actions `merge-gate` job runs **natively on the self-hosted arm64
-Mac runner** (no x86 emulation), pulling the arm64 leg of the multiarch
-`pyasc-sim` image. It is still sharded via the 4-shard matrix, though on the
-single Mac runner the shards currently serialize; the matrix is retained while
-we gather wall-clock metrics before deciding on the shard count.
+## Legacy diagnostics
 
-`bfloat16` goldens are **first-class** here: the native arm64 pyasc build has
-full bf16 IR lowering, so `*_bf16.py` goldens (e.g. `layer_norm_v4_bf16`) are
-sharded and verified in the same loop as every other capability cell -- they
-are part of the blocking merge-gate, not a separate step. (The old GitHub-hosted
-amd64 build lacked bf16 IR lowering, which is why bf16 used to be carved out into
-a non-blocking `perf-gate` step; that carve-out is gone.)
-
-## Nightly gate (`--tier nightly`)
-
-Runs in 15-30 minutes. Requires opencode CLI and CANN simulator.
-
-1. Everything in merge gate
-2. `run-tests.sh --all` -- L2 behavior tests (agent trigger correctness, premature action detection) and L3 integration tests (full agent-in-the-loop kernel generation)
-
-Requires: opencode CLI on PATH, CANN simulator environment.
-
-The GitHub Actions `nightly-gate` job runs the Phase 0 protocol-axis matrix
-(P2/P3 — trimmed from P2/P3/P4/P6 to fit the single-runner 24h budget below)
-against the remote DashScope **`cloud-default`** profile (glm-5), gated on the
-`DASHSCOPE_API_KEY` secret. It is **report-only** (no P6 hard-fail threshold). Cloud inference needs no host Ollama, so the legs only serialize on
-the Mac runner for the camodel docker sim verify. The
-**`cloud-dashscope-gate`** job is also enabled. It runs a cross-vendor
-comparison matrix of three DashScope models — the two incumbents
-(`glm-5.1`, `qwen3.7-max`) plus `glm-5.2` — **skills-on only** (the skills-off
-cloud legs were dropped to fit the single-runner 24h budget below; the on/off
-A/B is still measured on `local-stability-gate`). Four further flagships
-(`deepseek-v4-pro`, `kimi-k2.7-code`,
-`MiniMax-M2.5`, `qwen3-coder-next`) were evaluated for the comparison set but
-the current DashScope key returns `Model.AccessDenied` for them (verified
-2026-07-24); their profile templates exist and are ready to add to the matrix
-once model access is granted. Every listed profile is measured over the
-**same** unified generative cell list (see "Unified kernel list" below), so all
-dashboard cards compare an identical set of kernels. It runs 3 skills-on cloud
-legs (one per model) on the single Mac nightly runner (`continue-on-error:
-true`); it is gated on the `DASHSCOPE_API_KEY` secret and self-skips if unset.
-It uses the same **1200 s** per-attempt agent budget as `nightly-gate` and
-`local-stability-gate` (previously a tighter 420 s that lost even trivial cells
-like `abs/float32` to `exit 124` timeouts), so cell measurement is
-apples-to-apples across every gate.
-
-The **`local-stability-gate`** runs **`qwen3-coder:30b`** skills on/off. The
-model must be pre-pulled on the Mac's native Ollama (`ollama pull
-qwen3-coder:30b`); legs skip cleanly when it is missing. (`gpt-oss:120b` was
-dropped from the matrix to fit the single-runner 24h budget below — it was dead
-weight at 0-1/19 and its ~68 GB footprint is the heaviest local model.)
-
-**24h queued-job budget (two parallel runners):** GitHub auto-cancels any job
-left queued for 24h. The full nightly serialized on a single runner overran that
-and partial-cancelled (`perf-gate` never ran). Two mitigations keep a complete
-nightly — including `perf-gate` — under the limit:
-
-1. **Two arm64 runners** on the Mac (`infra/self-hosted-runner/compose.arm64.yml`
-   now defines `runner` + `runner2`, each with its own path-aligned work dir
-   `${AR_BASE}/work` / `${AR_BASE2}/work`), so matrix legs fan out in parallel
-   instead of serializing. Freed up by dropping the 68 GB `gpt-oss:120b` local
-   model. Docker container names are uuid-suffixed, so concurrent sim containers
-   never clash.
-2. **`--max-attempts 2`** (was 3) across the generative gates — the 3rd attempt
-   almost never converted a failure, so dropping it trims ~1/3 of the
-   retry-heavy leg time at negligible pass-rate cost.
-
-The earlier trims (cloud skills-on only, local qwen3-coder-30b only, protocol
-P2/P3) still apply. Restore dropped legs incrementally as the two-runner
-headroom allows.
-
-**Per-job 6h execution cap (distinct from the 24h queue wall):** GitHub applies
-*two* independent limits. The **24h** wall above is how long a job may sit
-*queued* waiting for a runner (solved by the two runners). Separately, every job
-has an implicit **6h execution cap** (`timeout-minutes: 360` default) once it
-*starts*. With the two-runner fan-out the total nightly wall is ~21.7h (under
-24h), but five legs legitimately need 6.5-7.5h of run time and were being
-cancelled at exactly `6h0m0s` ("The job has exceeded the maximum execution time
-of 6h0m0s"): both `local-stability-gate` legs (~6.5h), the two slowest
-`cloud-dashscope-gate` legs (qwen3.7-max/glm-5.2, ~7.1h — only 16/19 cells
-reached at 6h), and `perf-gate` (~6.7h; `demo_vector_ops` ~3.1h then
-`demo_vf_fusion` cut off ~2.9h in). Every job now sets an explicit
-`timeout-minutes` above its measured runtime: `perf-gate`,
-`cloud-dashscope-gate`, `local-stability-gate` = **480** (8h, ~1h margin),
-`nightly-gate` = **300** (5h; P3 is ~3.3h), `merge-gate` = **60**, `pr-gate` /
-`skills-value-report` = **30**. The 8h caps still bound a genuinely hung leg
-rather than letting it run indefinitely.
-
-### Host memory (128 GB Mac)
-
-Every CI job now runs natively on the two self-hosted arm64 Mac runners
-(`pr-gate`, `merge-gate`, `perf-gate`, `nightly-gate`, `local-stability-gate`,
-`skills-value-report`); nightly-tier legs fan out across both (see the two-runner
-note above) while pr/merge tiers serialize on one. Both runners share the
-128 GB host with the ~46 GB Parallels VM (the dev Linux box), the Docker Desktop
-VM (camodel sims), and macOS. `gpt-oss:120b` alone is ~68 GB resident and `qwen3-coder:30b` is
-~18 GB, so **two co-resident models would overrun the host and thrash swap.**
-Because Ollama keeps a model warm for `keep_alive` (5 min default), the
-local-model legs (`local-stability-gate`) run a **Free host Ollama memory** step
-([tests/tools/free_ollama_memory.py](../tests/tools/free_ollama_memory.py))
-that unloads any model a prior leg left warm, bounding the peak Ollama
-footprint to the single model the upcoming leg loads. (`nightly-gate` runs on
-cloud DashScope and loads no local model.)
-
-Recommended host-side belt-and-braces (set on the Mac's native Ollama, which
-CI cannot configure): `OLLAMA_MAX_LOADED_MODELS=1` and a short
-`OLLAMA_KEEP_ALIVE` (e.g. `1m`). If the Parallels VM does not need to be up
-during a nightly, shrinking its RAM reservation frees the most headroom for
-`gpt-oss:120b`.
-
-### Host sleep prevention (caffeinate)
-
-macOS Energy Saver will sleep the Mac mid-nightly — one run was killed at
-~21.7h by host sleep, *not* by the 24h queue limit (the nightly wall is under
-24h). The runner host must be configured to prevent automatic sleeping while a
-nightly is in flight; this is host-side config that CI itself cannot enforce:
-
-- Preferred: run each runner agent under `caffeinate -is` so the host stays
-  awake only while the agent process is alive.
-- Alternative: System Settings → Energy Saver → "Prevent automatic sleeping
-  when the display is off" (permanent), or `sudo pmset -a sleep 0` (disables
-  sleep entirely; blunt but effective).
-
-## Perf gate (`perf-gate`, report-only)
-
-A separate **nightly, non-blocking** GitHub Actions job (`continue-on-error:
-true`) that measures perf-vs-AscendC for every demo cell and publishes the
-result to the dashboard. It is **not** part of `ci-gate.sh`; it runs only on the
-schedule / `workflow_dispatch tier=nightly`, alongside `nightly-gate`.
-
-For each cell the harness ([tests/tools/demo_vector_ops.py](../tests/tools/demo_vector_ops.py)
-`--all`) builds the canonical `ops-math`/`ops-nn` AscendC reference and the
-generated pyasc kernel on the same `Ascend950PR_9599` camodel, then computes
-`ratio = ref_ticks / gen_ticks`. The demo cell list is **derived automatically**
-from every `perf_ratio_demo` block in `capabilities.yaml` (via
-[tests/tools/load_capability_cells.py](../tests/tools/load_capability_cells.py)),
-so adding a new kernel only requires updating capabilities + harness op wiring,
-As of the unified-coverage pass, **every** generative cell carries a
-`perf_ratio_demo` block, so the perf gate measures all 19 cells (up from 11) —
-there is a perf ratio for every operation row, no "—" placeholders. Four new
-canonical `ops-nn` references were wired for this (`aclnnGelu`,
-`aclnnLeakyRelu`, `aclnnMatmul` via `mat_mul_v3`, `aclnnSoftmax` via
-`softmax_v2`) in [tests/tools/perf/ascendc_ref_runner.py](../tests/tools/perf/ascendc_ref_runner.py);
-their sources are already baked into the perf image's `/opt/ops-nn`, so no image
-rebuild is needed. Because the perf image strips `.git` from the vendored
-sources, `ascendc_ref_runner._ensure_thirdparty_siblings` creates the `ops-base`
-/ `ops-tensor` sibling dirs that `ops-nn`'s third-party cmake modules look for,
-so their pinned-SHA `git checkout` step is bypassed and ops-nn references build
-offline. **Cross-repo hazard (fixed):** ops-nn and ops-math resolve those
-sibling paths to the *same* absolute `/ops-base`, but ship different opbase
-trees (ops-nn a source tree, ops-math a packaged `pkg_inc` layout that its
-`FindOPBASE.cmake` needs). An ops-nn build left `/ops-base` pointing at its own
-source tree, so the subsequent ops-math opapi-shim build (which produces
-`libcust_opapi.so` for ops-nn's `l0op` symbols) failed with `Could NOT find
-OPBASE (missing: OPBASE_INC_DIR)` — silently zeroing out every ops-nn ratio.
-`_ensure_thirdparty_siblings` now **re-points** the shared symlink at the current
-repo's vendored copy on every build instead of skipping when it already exists.
-Two golden-kernel launches also needed explicit non-tensor args the auto-prober
-cannot infer (else the launch no-ops at `Total tick ~= 11`): `matmul` needs CUBE
-tiling scalars and `leaky_relu` needs `alpha=0.01` (matched to the reference's
-`negativeSlope`), both supplied by input builders in
-[tests/tools/perf/pyasc_gen_runner.py](../tests/tools/perf/pyasc_gen_runner.py).
-not a hand-maintained `CELLS` table. The 0.70 gate is **reported, never enforced**,
-so documented honest misses (`apply_adam` ~0.46, `batch_norm_v3` ~0.10) stay
-green.
-
-- **Image:** runs inside the docker_full perf image
-  `ghcr.io/<owner>/pyasc-sim-perf:py3.11`, which extends `pyasc-sim` with the
-  vendored `ops-math`/`ops-nn` reference repos, the `pyasc-v2-eval` tree, and
-  the `dav_3510`/`Ascend950PR_9599` simulators. Built **manually** on the host
-  that has the private clones via
-  [docker/build-perf-image.sh](../docker/build-perf-image.sh)
-  (`docker/build-perf-image.sh --push`); CI only `docker pull`s it.
-- **Output:** `evidence/perf-vs-ascendc/*.json` + an aggregated
-  `evidence/perf-summary.json` (via
-  [tests/tools/perf/aggregate_perf.py](../tests/tools/perf/aggregate_perf.py)),
-  uploaded as the `evidence-perf` artifact.
-- **Commit + publish:** the single-writer `skills-value-report` job merges the
-  `evidence-perf` artifact, re-aggregates, and commits `perf-summary.json` +
-  `perf-vs-ascendc/*.json` to `main`. The `pages.yml` `evidence/**` trigger then
-  redeploys the dashboard, whose perf panel renders `perf-summary.json` (falling
-  back to each cell's curated `perf_ratio_demo` in `capabilities.yaml` when no
-  measured summary is present, e.g. local/dev renders).
-- **Compiler SIMD-fusion A/B (same job):** the `perf-gate` job also runs
-  [tests/tools/demo_vf_fusion.py](../tests/tools/demo_vf_fusion.py) `--all`, which
-  recompiles each generated kernel with `--cce-simd-vf-fusion` **off vs on** on
-  the same camodel (verifying the "pyasc2 uses no micro-api; the compiler does
-  fusion" positioning — see
-  [docs/perf-vs-ascendc-demo.md](perf-vs-ascendc-demo.md)). It is also
-  report-only.
-  [tests/tools/perf/aggregate_vf_fusion.py](../tests/tools/perf/aggregate_vf_fusion.py)
-  writes `evidence/vf-fusion-summary.json` (per-cell `ticks_off`/`ticks_on`/
-  `fusion_speedup` + an `improved`/`neutral`/`regressed` verdict); both it and
-  `evidence/vf-fusion/*.json` ride the same `evidence-perf` artifact and are
-  committed by `skills-value-report`. The dashboard renders them in a **Compiler
-  SIMD fusion** panel. (bf16 golden verification no longer lives here -- it is a
-  first-class part of the blocking `merge-gate`; see Merge gate above.)
-
-Committed perf evidence uses **repo-relative paths** only (`golden/kernels/...`,
-`evidence/perf/_build_cache/logs/...`). The PR gate runs
-[tests/tools/check_evidence_paths.py](../tests/tools/check_evidence_paths.py) to
-reject `/home/` and `/Users/` prefixes in perf/vf-fusion JSON.
-
-The GitHub Actions `nightly-gate` (and local-stability matrix legs) discover
-generative cells from `capabilities.yaml` via
-[tests/tools/list_generative_cells.py](../tests/tools/list_generative_cells.py)
-(every cell with a non-empty `prompt` on `Ascend950PR_9599`).
-
-### Unified kernel list
-
-All model legs — `nightly-gate`, `local-stability-gate`, and
-`cloud-dashscope-gate` — enumerate their kernels from the **same**
-`list_generative_cells.py` call, so the generative cell list is a single source
-of truth (currently **19 cells**). Divergent dashboard denominators (e.g. some
-cards showing 12 cells, others 15) are therefore never a config drift; they are
-**stale evidence** from earlier eras when the matrix had fewer cells, because
-the aggregator counts each profile's own evidence files rather than the
-canonical list. To keep every profile comparable, a full-refresh nightly
-re-measures all profiles (cloud + local) over the current list in one run so
-every card reads N/N with the same N. The perf surface is unified the same way:
-every generative cell now carries a `perf_ratio_demo` block, so the perf gate
-reports a ratio for all 19 cells.
-
-## Environment variables
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `PYASC_PYTHON` | `python3.10` | Python interpreter with pyasc |
-| `ASCEND_HOME_PATH` | (from set_env.sh) | CANN toolkit root |
-| `LD_LIBRARY_PATH` | (must include simulator) | Simulator libraries |
-| `NODE_TLS_REJECT_UNAUTHORIZED` | `0` (for opencode) | Bypass TLS issues |
-| `PYASC_PERF_IMAGE` | `ghcr.io/<owner>/pyasc-sim-perf:py3.11` | docker_full perf image (perf-gate) |
-| `OPS_MATH_HOME` / `OPS_NN_HOME` | `/opt/ops-math` / `/opt/ops-nn` (in perf image) | Canonical AscendC reference repos |
-
-## Exit codes
-
-- `0` -- all checks passed
-- `1` -- one or more checks failed
-- `2` -- environment prerequisites missing (e.g., simulator not available for merge tier)
+The previous simulator/OpenCode intervention workflow is archived as `docs/ci/legacy-ci.yml` for reference. Its manually selected capability cells, simulator ticks, and report-only 0.70 threshold are historical diagnostics, not the current CANNBench kernel set or hardware gate. The standalone legacy helper scripts and evidence are preserved.

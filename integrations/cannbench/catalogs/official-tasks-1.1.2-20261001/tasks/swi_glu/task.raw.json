@@ -1,0 +1,487 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "SwiGlu",
+  "function_name": "swi_glu",
+  "level": "level1",
+  "category": "Elementwise",
+  "difficulty": "L1",
+  "description": "标准 SwiGLU 激活——输入在指定 dim 上等分成 x0 / x1,对 x0 做 SiLU (Swish_1),再与 x1 逐元素相乘",
+  "desc_md": "# SwiGlu 算子 API 描述\n\n## 1. 算子简介\n\n标准 SwiGLU 激活函数(Shazeer 2020 \"GLU Variants Improve Transformer\")。输入在指定 dim 上拆分为 x0 / x1 两等份,x0 经 SiLU 激活(`Swish_1(x) = x · sigmoid(x)`)后与 x1 做门控乘法。\n\n**主要应用场景**：\n- LLM FFN 中的 SwiGLU 门控(Llama / PaLM / Gemma 等)\n- 替代传统 GLU 与 ReLU FFN,提供更平滑的梯度与更强表达力\n\n**算子特征**：\n- 难度等级：L1（Elementwise）\n- P2 op：torch 无同名接口;reference 实现取自 `torch_npu.npu_swiglu` / ACLNN `aclnnSwiGlu`,两者都固定 Swish 的 β = 1(即 SiLU)\n- 单输入单输出,沿指定 dim 拆分 + 元素级运算\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\n\\text{output} = \\text{SiLU}(x_0) \\odot x_1 = \\left( x_0 \\cdot \\sigma(x_0) \\right) \\odot x_1\n\\quad \\text{其中} \\quad (x_0, x_1) = \\text{chunk}(input, 2, \\text{dim})\n$$\n\n`σ(·)` 为 sigmoid;`⊙` 为逐元素乘法。\n\n> **注**:历史上 Swish 有可调参数 β(`Swish_β(x) = x · sigmoid(β·x)`),但 SwiGLU 在文献与主流实现(Llama / PaLM / torch_npu / aclnnSwiGlu)中**统一固定 β = 1**(等价 SiLU)。本 spec 不暴露 β,与 reference 实现严格对齐。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.swi_glu(Tensor input, int dim=-1) -> Tensor output\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| input | Tensor | 必选 | 输入张量,dim 维 size 必须是偶数 |\n| dim | int64 | -1 | 拆分维度 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| output | 与 input 同 rank,dim 维 size 折半 | 与 input 相同 | SwiGLU 激活输出 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| float16  | float16  |\n| float32  | float32  |\n| bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- input 在 dim 维上 size 必须是偶数(否则无法等分 x0 / x1)\n- `dim` 支持负数索引(如 -1 表示最后一维)\n- output dtype 与 input 一致\n- FP16 / BF16 输入内部计算时升精度到 FP32,再 cast 回原 dtype(与 ACLNN 一致)\n\n### 支持范围\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `rank(input)` | 2 ~ 8 | cases.csv 实测 2 ~ 5 维 |\n| 每个维度大小 `dim_i` | ≥ 2 (split 维需偶) | cases.csv 实测最大 1,000,003 |\n| 张量总元素数 | 1 ~ 2^30 | cases.csv 实测最大约 134M (8192×16384) |\n| `dim` | -rank(input) ~ rank(input)-1 | cases.csv 实测 dim=-1 / 0 / 1 / 2 |\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**:\n\n1. 平均相对误差(MERE):采样点中相对误差平均值\n2. 最大相对误差(MARE):采样点中相对误差最大值\n\n**通过标准**:\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 |\n|----------|---------|----------|---------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 |\n\n当 MERE < Threshold,MARE < 10 × Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\nimport torch.nn.functional as F\n\n\ndef swi_glu(input: torch.Tensor, dim: int = -1) -> torch.Tensor:\n    \"\"\"标准 SwiGLU 激活的 Torch Golden 参考实现 (P2 op).\n\n    公式: output = silu(x0) * x1 = (x0 * sigmoid(x0)) * x1\n    其中 x0, x1 = input.chunk(2, dim=dim).\n    \"\"\"\n    out_dtype = input.dtype\n    x = input.to(torch.float)\n    x0, x1 = x.chunk(2, dim=dim)\n    output = F.silu(x0) * x1\n    return output.to(out_dtype)\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx = torch.randn(1024, 2048, dtype=torch.float32, device=\"npu\")\ny = cann_bench.swi_glu(x, dim=-1)         # 输出 shape [1024, 1024]\n\nx = torch.randn(8192, 16384, dtype=torch.float16, device=\"npu\")\ny = cann_bench.swi_glu(x, dim=0)          # 输出 shape [4096, 16384]\n```\n",
+  "proto": {
+    "name": "SwiGlu",
+    "category": "Elementwise",
+    "difficulty": "L1",
+    "formula": "output = silu(x0) * x1 = (x0 * sigmoid(x0)) * x1",
+    "description": "标准 SwiGLU 激活——输入在指定 dim 上等分成 x0 / x1,对 x0 做 SiLU (Swish_1),再与 x1 逐元素相乘",
+    "shape_support": "单输入,在指定 dim 上拆分成两等份;该 dim 的 size 必须是偶数",
+    "attrs": [
+      {
+        "name": "dim",
+        "type": "int64",
+        "description": "拆分维度,默认为最后一维",
+        "required": false,
+        "default": -1
+      }
+    ],
+    "inputs": [
+      {
+        "name": "input",
+        "description": "输入张量,会在 dim 上拆分成 x0 / x1 两等份",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "output",
+        "description": "输出张量,shape 同 input 但 dim 维大小折半",
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "swi_glu(Tensor input, int dim=-1) -> Tensor output"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\nimport torch.nn.functional as F\n\n\ndef swi_glu(input: torch.Tensor, dim: int = -1) -> torch.Tensor:\n    \"\"\"标准 SwiGLU 激活的 Torch Golden 参考实现 (P2 op).\n\n    公式: output = silu(x0) * x1 = (x0 * sigmoid(x0)) * x1\n    其中 x0, x1 = input.chunk(2, dim=dim).\n\n    标准 SwiGLU (Shazeer 2020 / Llama / PaLM) 固定 Swish 的 beta = 1\n    (即等价于 SiLU),没有可调 beta 参数。aclnnSwiGlu / torch_npu.npu_swiglu\n    也是同样定义,本 spec 与之对齐。\n\n    Args:\n        input: 输入张量,dim 维度上 size 必须是偶数\n        dim: 拆分维度,默认 -1\n\n    Returns:\n        output: 与 input 同 dtype/shape 但 dim 维度大小减半\n    \"\"\"\n    # FP16/BF16 升精度计算,与 ACLNN 内部一致.\n    out_dtype = input.dtype\n    x = input.to(torch.float)\n    x0, x1 = x.chunk(2, dim=dim)\n    output = F.silu(x0) * x1\n    return output.to(out_dtype)\n",
+  "cases_yaml": [
+    {
+      "operator": "SwiGlu",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          2048
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-2M-对齐-对称小值域-dim=-1 | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2048,
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -2,
+        2
+      ],
+      "note": "M-float32-8M-对齐-对称小值域-dim=-1 | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          8192
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -3,
+        3
+      ],
+      "note": "M-bfloat16-33M-对齐-对称小值域-dim=-1 | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8192,
+          16384
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": 0
+      },
+      "value_range": [
+        -10,
+        10
+      ],
+      "note": "L-float16-134M-对齐-中值域-dim=0 (split 行轴) | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 5,
+      "input_shape": [
+        [
+          2039,
+          65520
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -100,
+        100
+      ],
+      "note": "L-float32-132M-质数非对齐-对称大值域-dim=-1 (last dim 偶) | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 6,
+      "input_shape": [
+        [
+          1022,
+          2047
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": 0
+      },
+      "value_range": [
+        -0.1,
+        0.1
+      ],
+      "note": "S-bfloat16-2M-非对齐-对称微小值域-dim=0 (split 行轴 1022) | baseline_kernels: Slice×1 + SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1009,
+          2016
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -1,
+        2
+      ],
+      "note": "S-float16-2M-质数非对齐-非对称小值域-dim=-1 | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1538,
+          1537
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": 0
+      },
+      "value_range": [
+        -5,
+        10
+      ],
+      "note": "S-float32-2M-非对齐-非对称中值域-dim=0 (split 行轴 1538) | baseline_kernels: Slice×1 + SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 9,
+      "input_shape": [
+        [
+          363,
+          367,
+          14
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -50,
+        100
+      ],
+      "note": "S-bfloat16-2M-质数非对齐-非对称大值域-3D-dim=-1 | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 10,
+      "input_shape": [
+        [
+          2049,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": 1
+      },
+      "value_range": [
+        -65504,
+        65504
+      ],
+      "note": "S-float16-2M-非对齐-float16 边界值-dim=1 (split 列轴 1024) | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 11,
+      "input_shape": [
+        [
+          3,
+          7,
+          13,
+          1018
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -88,
+        88
+      ],
+      "note": "S-float32-2M-质数非对齐-float32 边界值-4D-dim=-1 | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 12,
+      "input_shape": [
+        [
+          1000003,
+          2
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": 1
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "S-bfloat16-2M-质数非对齐-inf 特殊值-dim=1 (split 列轴 2) | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 13,
+      "input_shape": [
+        [
+          11,
+          13,
+          16,
+          67
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": 2
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "S-float32-150K-质数非对齐-nan 特殊值-4D-dim=2 (split 第三维 16) | baseline_kernels: Slice×1 + SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 14,
+      "input_shape": [
+        [
+          3,
+          7,
+          11,
+          13,
+          1012
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        0,
+        0
+      ],
+      "note": "S-float16-3M-质数非对齐-零值-5D-dim=-1 | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 15,
+      "input_shape": [
+        [
+          512,
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -0.5,
+        0.5
+      ],
+      "note": "S-float32-2M-对齐-对称微小值域-dim=-1 | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 16,
+      "input_shape": [
+        [
+          254,
+          16383
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": 0
+      },
+      "value_range": [
+        -1,
+        3
+      ],
+      "note": "S-bfloat16-4M-非对齐-非对称小值域-dim=0 (split 行轴 254) | baseline_kernels: Slice×1 + SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 17,
+      "input_shape": [
+        [
+          4096,
+          1023
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "dim": 0
+      },
+      "value_range": [
+        -1000,
+        1000
+      ],
+      "note": "S-float16-4M-非对齐-对称大值域-dim=0 (split 行轴 4096) | baseline_kernels: Slice×1 + SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 18,
+      "input_shape": [
+        [
+          2,
+          1023,
+          4096
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -0.2,
+        0.2
+      ],
+      "note": "M-float32-8M-非对齐-对称微小值域-3D-dim=-1 | baseline_kernels: SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4,
+          510,
+          4097
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "dim": 1
+      },
+      "value_range": [
+        -3,
+        6
+      ],
+      "note": "M-bfloat16-8M-非对齐-非对称中值域-3D-dim=1 (split 第二维 510) | baseline_kernels: Slice×1 + SwiGlu×1"
+    },
+    {
+      "operator": "SwiGlu",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          3,
+          17,
+          512,
+          100
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -20,
+        40
+      ],
+      "note": "M-float32-10M-非对齐-非对称大值域-5D-dim=-1 | baseline_kernels: SwiGlu×1"
+    }
+  ],
+  "case_count": 20
+}

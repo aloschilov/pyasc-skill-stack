@@ -1,0 +1,904 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "MoeReRouting",
+  "function_name": "moe_re_routing",
+  "level": "level3",
+  "category": "LayoutTransform",
+  "difficulty": "L3",
+  "description": "MoE 网络中，进行 AlltoAll 操作从其他卡上拿到需要算的 token 后，将 token 按照专家顺序重新排列",
+  "desc_md": "# MoeReRouting 算子 API 描述\n\n## 1. 算子简介\n\nMoE 网络中，进行 AlltoAll 操作从其他卡上拿到需要算的 token 后，将 token 按照专家顺序重新排列。\n\n**主要应用场景**：\n- Mixture of Experts (MoE) 模型中 token 到专家的数据分发\n- 分布式 MoE 训练中跨 rank 的 token 重新路由\n- MoE 前馈网络前的 token 重排，使同一专家处理的 token 连续排列\n\n**算子特征**：\n- 难度等级：L3（LayoutTransform）\n- 多输入多输出，根据每个 rank 的专家 token 数量对输入 token 进行重新排列\n- 支持可选的 per_token_scales 同步重排\n\n## 2. 算子定义\n\n### 数学公式\n\n通过双重求和计算当前 token 在源位置的偏移量：\n\n$$\n\\text{SrcOffset} = \\sum_{i=0}^{\\text{cur\\_rank}} \\left( \\sum_{j=0}^{\\text{cur\\_expert}} \\text{expert\\_token\\_num\\_per\\_rank}(i,j) \\right)\n$$\n\n通过双重求和计算当前 token 在目标位置的偏移量：\n\n$$\n\\text{DstOffset} = \\sum_{j=0}^{\\text{cur\\_expert}} \\left( \\sum_{i=0}^{\\text{cur\\_rank}} \\text{expert\\_token\\_num\\_per\\_rank}(i,j) \\right)\n$$\n\n- **SrcOffset**：当前需要移动的 token 源偏移，根据输入 `expert_token_num_per_rank` 的值进行计算\n- **DstOffset**：当前需要移动的 token 目的偏移\n- **cur_rank**：`expert_token_num_per_rank` 的纵轴索引，表示该 token 原本在的卡\n- **cur_expert**：`expert_token_num_per_rank` 的横轴索引，表示该 token 由卡上专家 cur_expert 计算\n\n### 处理流程\n\n1. 根据 `expert_token_num_per_rank` 矩阵计算每个 token 的源位置和目标位置\n2. 将 token 从源位置移动到目标位置，实现按专家顺序排列\n3. 若提供 `per_token_scales`，同步进行重排\n4. 输出重排后的 token、scales、索引及每个专家的 token 数量\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.moe_re_routing(\n    Tensor tokens,\n    Tensor expert_token_num_per_rank,\n    Tensor? per_token_scales = None,\n    int expert_token_num_type = 1,\n    int idx_type = 0\n) -> (Tensor permute_tokens, Tensor permute_per_token_scales, Tensor permute_token_idx, Tensor expert_token_num)\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 | Shape |\n|------|------|--------|------|-------|\n| tokens | Tensor | 必选 | 待重新排布的 token | (A, H) |\n| expert_token_num_per_rank | Tensor | 必选 | 每张卡上各个专家处理的 token 数，矩阵元素 [i,j] 表示从卡 i 获取的专家 j 处理的 token 数 | (N, E) |\n| per_token_scales | Tensor | None | 每个 token 对应的 scale，需要随 token 同样进行重新排布 | (A) |\n| expert_token_num_type | int | 1 | 输出 expert_token_num 的模式：0=cumsum，1=count。当前只支持为 1 | - |\n| idx_type | int | 0 | 输出 permute_token_idx 的索引类型：0=gather索引，1=scatter索引。当前只支持为 0 | - |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| permute_tokens | (A, H) | 与 tokens 相同 | 重新排布后的 token |\n| permute_per_token_scales | (A) | float32 | 重新排布后的 per_token_scales（输入不携带时无效） |\n| permute_token_idx | (A) | int32 | 每个 token 在原排布方式的索引 |\n| expert_token_num | (E) | 与 expert_token_num_per_rank 相同 | 每个专家处理的 token 数 |\n\n### 数据类型\n\n| tokens dtype | expert_token_num_per_rank dtype | per_token_scales dtype |\n|-------------|--------------------------------|----------------------|\n| float16 | int32 / int64 | float32 |\n| bfloat16 | int32 / int64 | float32 |\n| int8 | int32 / int64 | float32 |\n\n### Shape 变量说明\n\n- **A**：token 个数，取值要求 Sum(expert_token_num_per_rank) = A\n- **H**：token 长度（hidden_dim），取值要求 0 < H < 16384\n- **N**：卡数（rank 数），取值无限制\n- **E**：卡上的专家数，取值无限制\n\n### 规则与约束\n\n1. `tokens` 的形状为 2D (A, H)\n2. `expert_token_num_per_rank` 的形状为 2D (N, E)，元素必须大于 0\n3. 所有元素之和必须等于 A：`Sum(expert_token_num_per_rank) = A`\n4. `expert_token_num_type` 当前只支持为 1（count 模式）\n5. `idx_type` 当前只支持为 0（gather 索引模式）\n6. `per_token_scales` 为可选参数，存在时 shape 必须为 (A)\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `A`（token 总数，`tokens` 第 0 维 / `per_token_scales` 长度） | 1 ~ 1048576 | 必须满足 `Sum(expert_token_num_per_rank) = A`；cases.csv 实测 64 ~ 524288 |\n| `H`（token 长度，`tokens` 第 1 维） | 1 ~ 16383 | 来自 §3 约束 `0 < H < 16384`；cases.csv 实测 32 ~ 2048 |\n| `N`（rank 数，`expert_token_num_per_rank` 第 0 维） | 1 ~ 128 | §3 标注「取值无限制」，受 A 总量约束；cases.csv 实测 1 ~ 64 |\n| `E`（专家数，`expert_token_num_per_rank` 第 1 维 / `expert_token_num` 长度） | 1 ~ 128 | §3 标注「取值无限制」，受 A 总量约束；cases.csv 实测 1 ~ 64 |\n| `tokens` dtype | float16 / bfloat16 / int8 | cases.csv 实测三种 dtype 均覆盖 |\n| `expert_token_num_per_rank` dtype | int32 / int64 | cases.csv 实测两种 dtype 均覆盖；元素必须 > 0 |\n| `per_token_scales` dtype | float32（或 None） | cases.csv 实测 float32 与 None 两种 |\n| `expert_token_num_type`（attr） | {0, 1} | cases.csv 实测仅 1；当前算子只支持 1（count 模式） |\n| `idx_type`（attr） | {0, 1} | cases.csv 实测仅 0；当前算子只支持 0（gather 索引） |\n\n约束：\n- `tokens.shape == (A, H)`、`expert_token_num_per_rank.shape == (N, E)`，且 `Sum(expert_token_num_per_rank) == A`（双重求和必须严格匹配 token 总数）。\n- `expert_token_num_per_rank` 元素必须满足 `> 0`（每个 (rank, expert) 组合至少有 1 个 token），且全部元素之和恰好等于 A；元素 dtype 为 int32 或 int64。\n- `per_token_scales` 为可选；提供时 `shape == (A,)`，dtype 必须为 float32。\n- dtype 一致性：`tokens.dtype == permute_tokens.dtype`，`expert_token_num_per_rank.dtype == expert_token_num.dtype`，`permute_token_idx.dtype == int32`，`permute_per_token_scales.dtype == float32`。\n- attr 限制：当前实现仅支持 `expert_token_num_type == 1`（count 模式）与 `idx_type == 0`（gather 索引）；其余取值未启用。\n- 输出索引 `permute_token_idx ∈ [0, A)`，构成长度 A 的全排列（双射）。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\nimport numpy as np\n\ndef moe_re_routing(\n    tokens: torch.Tensor,\n    expert_token_num_per_rank: torch.Tensor,\n    per_token_scales: torch.Tensor = None,\n    expert_token_num_type: int = 1,\n    idx_type: int = 0\n) -> tuple:\n    \"\"\"\n    MoeReRouting 算子 Torch Golden 参考实现\n\n    MoE 网络中，将 token 按照专家顺序重新排列\n\n    Args:\n        tokens: 待重新排布的 token，shape (A, H)\n        expert_token_num_per_rank: 每张卡上各个专家处理的 token 数，shape (N, E)\n        per_token_scales: 每个 token 对应的 scale，shape (A)，可选\n        expert_token_num_type: 输出 expert_token_num 的模式，0=cumsum, 1=count，当前只支持 1\n        idx_type: 输出 permute_token_idx 的索引类型，0=gather, 1=scatter，当前只支持 0\n\n    Returns:\n        (permute_tokens, permute_per_token_scales, permute_token_idx, expert_token_num)\n    \"\"\"\n    # 获取参数\n    N, E = expert_token_num_per_rank.shape\n    A, H = tokens.shape\n    \n    # 确保总和匹配\n    total_tokens = expert_token_num_per_rank.sum().item()\n    assert total_tokens == A, f\"Sum of expert_token_num_per_rank ({total_tokens}) must equal A ({A})\"\n    \n    # 构建 src_offset 和 dst_offset 映射\n    # 计算每个 (rank, expert) 位置的源偏移和目标偏移\n    src_offsets = {}  # (rank, expert) -> src_offset\n    dst_offsets = {}  # (rank, expert) -> dst_offset\n    \n    # 计算 SrcOffset：按 rank 和 expert 的顺序累加\n    src_acc = 0\n    for i in range(N):  # cur_rank\n        for j in range(E):  # cur_expert\n            src_offsets[(i, j)] = src_acc\n            src_acc += expert_token_num_per_rank[i, j].item()\n    \n    # 计算 DstOffset：按 expert 和 rank 的顺序累加\n    dst_acc = 0\n    for j in range(E):  # cur_expert\n        for i in range(N):  # cur_rank\n            dst_offsets[(i, j)] = dst_acc\n            dst_acc += expert_token_num_per_rank[i, j].item()\n    \n    # 构建重排映射：src_pos -> dst_pos\n    src_to_dst = {}\n    for i in range(N):\n        for j in range(E):\n            num_tokens = expert_token_num_per_rank[i, j].item()\n            src_start = src_offsets[(i, j)]\n            dst_start = dst_offsets[(i, j)]\n            for k in range(num_tokens):\n                src_to_dst[src_start + k] = dst_start + k\n    \n    # 构建反向映射用于 gather 索引\n    dst_to_src = {v: k for k, v in src_to_dst.items()}\n    \n    # 生成 permute_token_idx (gather 索引)\n    permute_token_idx = torch.zeros(A, dtype=torch.int32)\n    for dst_pos in range(A):\n        permute_token_idx[dst_pos] = dst_to_src[dst_pos]\n    \n    # 重排 tokens\n    permute_tokens = tokens[permute_token_idx]\n    \n    # 重排 per_token_scales（如果存在）\n    if per_token_scales is not None:\n        permute_per_token_scales = per_token_scales[permute_token_idx]\n    else:\n        permute_per_token_scales = torch.zeros(A, dtype=torch.float32)\n    \n    # 计算 expert_token_num (count 模式)\n    if expert_token_num_type == 1:\n        expert_token_num = expert_token_num_per_rank.sum(dim=0)  # 每个专家的总 token 数\n    else:\n        # cumsum 模式（暂不支持）\n        expert_token_num = torch.zeros(E, dtype=expert_token_num_per_rank.dtype)\n    \n    return permute_tokens, permute_per_token_scales, permute_token_idx, expert_token_num\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\nimport math\nimport random\n\n# 基础示例\ntokens_num = 16384\ntokens_length = 7168\nrank_num = 16\nexpert_num = 16\n\ntokens = torch.randint(low=-10, high=20, size=(tokens_num, tokens_length), dtype=torch.int8)\nexpert_token_num_per_rank = torch.ones(rank_num, expert_num, dtype=torch.int32)\n\n# 设置每个位置的 token 数量，确保总和等于 tokens_num\ntokens_sum = 0\nfor i in range(rank_num):\n    for j in range(expert_num):\n        if i == rank_num - 1 and j == expert_num - 1:\n            expert_token_num_per_rank[i][j] = tokens_num - tokens_sum\n            break\n        rand_num = 1\n        expert_token_num_per_rank[i][j] = rand_num\n        tokens_sum += rand_num\n\nper_token_scales = torch.randn(tokens_num, dtype=torch.float32)\n\n# 调用算子\npermute_tokens, permute_per_token_scales, permute_token_idx, expert_token_num = cann_bench.moe_re_routing(\n    tokens, expert_token_num_per_rank, per_token_scales=per_token_scales\n)\n```\n",
+  "proto": {
+    "name": "MoeReRouting",
+    "category": "LayoutTransform",
+    "difficulty": "L3",
+    "formula": "SrcOffset = Σ_{i=0}^{cur_rank} (Σ_{j=0}^{cur_expert} expert_token_num_per_rank(i,j))\nDstOffset = Σ_{j=0}^{cur_expert} (Σ_{i=0}^{cur_rank} expert_token_num_per_rank(i,j))\npermute_tokens[DstOffset+k] = tokens[SrcOffset+k]\n",
+    "description": "MoE 网络中，进行 AlltoAll 操作从其他卡上拿到需要算的 token 后，将 token 按照专家顺序重新排列",
+    "shape_support": "tokens: (A, H); expert_token_num_per_rank: (N, E); Sum(expert_token_num_per_rank)=A",
+    "attrs": [
+      {
+        "name": "expert_token_num_type",
+        "type": "int",
+        "default": 1,
+        "description": "输出 expert_token_num 的模式。0=cumsum 模式，1=count 模式。当前只支持为 1"
+      },
+      {
+        "name": "idx_type",
+        "type": "int",
+        "default": 0,
+        "description": "输出 permute_token_idx 的索引类型。0=gather 索引，1=scatter 索引。当前只支持为 0"
+      }
+    ],
+    "inputs": [
+      {
+        "name": "tokens",
+        "description": "待重新排布的 token，shape 为 (A, H)，A 为 token 数量，H 为 token 长度",
+        "dtype": [
+          "float16",
+          "bfloat16",
+          "int8"
+        ],
+        "shape": "(A, H)"
+      },
+      {
+        "name": "expert_token_num_per_rank",
+        "description": "每张卡上各个专家处理的 token 数，矩阵元素 [i,j] 表示从卡 i 获取的专家 j 处理的 token 数。shape 为 (N, E)，元素必须大于 0，所有元素之和必须等于 A",
+        "dtype": [
+          "int32",
+          "int64"
+        ],
+        "shape": "(N, E)"
+      },
+      {
+        "name": "per_token_scales",
+        "description": "每个 token 对应的 scale，需要随 token 同样进行重新排布。shape 为 (A)，dtype 为 float32",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "(A)",
+        "optional": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "permute_tokens",
+        "description": "重新排布后的 token，shape 为 (A, H)，dtype 与 tokens 相同",
+        "dtype": [
+          "float16",
+          "bfloat16",
+          "int8"
+        ],
+        "shape": "(A, H)"
+      },
+      {
+        "name": "permute_per_token_scales",
+        "description": "重新排布后的 per_token_scales。输入不携带 per_token_scales 时该输出无效。shape 为 (A)，dtype 为 float32",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "(A)"
+      },
+      {
+        "name": "permute_token_idx",
+        "description": "每个 token 在原排布方式的索引。shape 为 (A)，dtype 为 int32",
+        "dtype": [
+          "int32"
+        ],
+        "shape": "(A)"
+      },
+      {
+        "name": "expert_token_num",
+        "description": "每个专家处理的 token 数（按 count 模式，即 expert_token_num_per_rank 沿 rank 方向求和）。shape 为 (E)，dtype 与 expert_token_num_per_rank 相同",
+        "dtype": [
+          "int32",
+          "int64"
+        ],
+        "shape": "(E)"
+      }
+    ],
+    "schema": "moe_re_routing(Tensor tokens, Tensor expert_token_num_per_rank, Tensor? per_token_scales=None, int expert_token_num_type=1, int idx_type=0) -> (Tensor permute_tokens, Tensor permute_per_token_scales, Tensor permute_token_idx, Tensor expert_token_num)"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\nimport numpy as np\nfrom typing import Optional\n\n\"\"\"\nMoeReRouting 算子 Torch/Numpy Golden 参考实现\n\nMoE 网络中，将 token 按照专家顺序重新排列\n公式：SrcOffset/DstOffset 双重求和计算位置映射\n\"\"\"\n\ndef moe_re_routing(\n    tokens: torch.Tensor,\n    expert_token_num_per_rank: torch.Tensor,\n    per_token_scales: Optional[torch.Tensor] = None,\n    expert_token_num_type: int = 1,\n    idx_type: int = 0\n):\n    \"\"\"\n    MoeReRouting 算子 Torch/Numpy Golden 参考实现\n\n    MoE 网络中，将 token 按照专家顺序重新排列\n\n    Args:\n        tokens: 待重新排布的 token，shape (A, H)\n        expert_token_num_per_rank: 每张卡上各个专家处理的 token 数，shape (N, E)\n        per_token_scales: 每个 token 对应的 scale，shape (A)，可选\n        expert_token_num_type: 输出 expert_token_num 的模式，0=cumsum, 1=count，当前只支持 1\n        idx_type: 输出 permute_token_idx 的索引类型，0=gather, 1=scatter，当前只支持 0\n\n    Returns:\n        (permute_tokens, permute_per_token_scales, permute_token_idx, expert_token_num)\n    \"\"\"\n    # 判断输入类型\n    is_torch = isinstance(tokens, torch.Tensor)\n\n    # 获取参数\n    if is_torch:\n        N, E = expert_token_num_per_rank.shape\n        A, H = tokens.shape\n        dtype = tokens.dtype\n        device = tokens.device\n        int_dtype = expert_token_num_per_rank.dtype\n    else:\n        N, E = expert_token_num_per_rank.shape\n        A, H = tokens.shape\n        dtype = tokens.dtype\n        int_dtype = expert_token_num_per_rank.dtype\n\n    # 确保总和匹配\n    if is_torch:\n        total_tokens = expert_token_num_per_rank.sum().item()\n    else:\n        total_tokens = expert_token_num_per_rank.sum()\n    assert total_tokens == A, f\"Sum of expert_token_num_per_rank ({total_tokens}) must equal A ({A})\"\n\n    # Vectorised offset + gather-index construction. The old form built src/dst\n    # offsets and src->dst maps with N*E + A nested Python loops, each step doing a\n    # `.item()` (device->host sync) — on NPU that serialised thousands of syncs and\n    # timed out. Here the index math runs on CPU over the tiny (N,E) counts; the\n    # heavy token gather below stays on the input device. Output is bit-identical.\n    #   src order = (rank, expert) row-major; dst order = (expert, rank).\n    if is_torch:\n        c = expert_token_num_per_rank.to(torch.int64).cpu()\n        cnt_src = c.reshape(-1)        # block sizes in src (rank, expert) order\n        cnt_dst = c.t().reshape(-1)    # block sizes in dst (expert, rank) order\n        _excl = lambda t: torch.cat([t.new_zeros(1), t.cumsum(0)[:-1]])\n        src_start = _excl(cnt_src)\n        dst_start = _excl(cnt_dst).reshape(E, N).t().reshape(-1)  # back to (rank, expert)\n        block = torch.repeat_interleave(torch.arange(N * E), cnt_src)  # block id per src pos\n        dst_pos = dst_start[block] + (torch.arange(A) - src_start[block])  # src -> dst\n        permute_token_idx = torch.empty(A, dtype=torch.int32)\n        permute_token_idx[dst_pos] = torch.arange(A, dtype=torch.int32)   # invert -> gather idx\n        permute_token_idx = permute_token_idx.to(device)\n    else:\n        c = expert_token_num_per_rank.astype(np.int64)\n        cnt_src = c.reshape(-1)\n        cnt_dst = c.T.reshape(-1)\n        _excl = lambda a: np.concatenate([[0], np.cumsum(a)[:-1]])\n        src_start = _excl(cnt_src)\n        dst_start = _excl(cnt_dst).reshape(E, N).T.reshape(-1)\n        block = np.repeat(np.arange(N * E), cnt_src)\n        dst_pos = dst_start[block] + (np.arange(A) - src_start[block])\n        permute_token_idx = np.empty(A, dtype=np.int32)\n        permute_token_idx[dst_pos] = np.arange(A, dtype=np.int32)\n\n    # 重排 tokens\n    if is_torch:\n        permute_tokens = tokens[permute_token_idx]\n    else:\n        permute_tokens = tokens[permute_token_idx]\n\n    # 重排 per_token_scales（如果存在）\n    if per_token_scales is not None:\n        if is_torch:\n            permute_per_token_scales = per_token_scales[permute_token_idx]\n        else:\n            permute_per_token_scales = per_token_scales[permute_token_idx]\n    else:\n        if is_torch:\n            permute_per_token_scales = torch.zeros(A, dtype=torch.float32, device=device)\n        else:\n            permute_per_token_scales = np.zeros(A, dtype=np.float32)\n\n    # 计算 expert_token_num (count 模式)\n    if expert_token_num_type == 1:\n        if is_torch:\n            expert_token_num = expert_token_num_per_rank.sum(dim=0)\n        else:\n            expert_token_num = expert_token_num_per_rank.sum(axis=0)\n    else:\n        # cumsum 模式（暂不支持）\n        if is_torch:\n            expert_token_num = torch.zeros(E, dtype=int_dtype, device=device)\n        else:\n            expert_token_num = np.zeros(E, dtype=int_dtype)\n\n    return permute_tokens, permute_per_token_scales, permute_token_idx, expert_token_num\n\n\ndef get_input(\n    tokens: torch.Tensor,\n    expert_token_num_per_rank: torch.Tensor,\n    per_token_scales: Optional[torch.Tensor] = None,\n    expert_token_num_type: int = 1,\n    idx_type: int = 0,\n    **kwargs\n):\n    \"\"\"\n    输入数据预处理函数\n\n    调整 expert_token_num_per_rank 使其总和等于 tokens 数量 (A)\n\n    Args:\n        tokens: 待重新排布的 token，shape (A, H)\n        expert_token_num_per_rank: 每张卡上各个专家处理的 token 数，shape (N, E)\n        per_token_scales: 每个 token 对应的 scale，shape (A)，可选\n\n    Returns:\n        处理后的输入数据列表 [tokens, expert_token_num_per_rank, per_token_scales]\n    \"\"\"\n    A = tokens.shape[0]\n    N, E = expert_token_num_per_rank.shape\n\n    # 计算每个位置的基础值，确保总和等于 A\n    total_cells = N * E\n    base_value = A // total_cells\n    remainder = A % total_cells\n\n    # proto.yaml 声明 expert_token_num_per_rank 的元素**必须大于 0**。A < N*E 时\n    # base_value 为 0，除最后一格外全是 0 —— 静默产出违反契约的输入，候选 kernel\n    # 在\"某张卡的某个专家分到 0 个 token\"上的行为是未定义的，且失败会表现为莫名的\n    # 精度不符而非配置错误。当前用例集最小 base_value = 4，不会走到这里；这是为\n    # 后续新增小 A 用例设的护栏，宁可显式报错也不静默失效。\n    if base_value < 1:\n        raise ValueError(\n            f\"moe_re_routing get_input: tokens 数 A={A} 少于 expert_token_num_per_rank \"\n            f\"的格子数 N*E={N}*{E}={total_cells}，无法让每格都 >0（proto 要求元素必须\"\n            f\"大于 0）。请调整该用例的 shape 使 A >= N*E。\"\n        )\n\n    # 生成新的 expert_token_num_per_rank\n    if isinstance(expert_token_num_per_rank, torch.Tensor):\n        new_expert_token_num = torch.full((N, E), base_value, dtype=expert_token_num_per_rank.dtype)\n        new_expert_token_num[-1, -1] += remainder\n    else:\n        new_expert_token_num = np.full((N, E), base_value, dtype=expert_token_num_per_rank.dtype)\n        new_expert_token_num[-1, -1] += remainder\n\n    return [tokens, new_expert_token_num, per_token_scales]",
+  "cases_yaml": [
+    {
+      "operator": "MoeReRouting",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          512
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          1,
+          128
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-完整参数-带scales-rank8-expert8-H512 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 2,
+      "input_shape": [
+        [
+          16384,
+          1024
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          16384
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          1,
+          1024
+        ],
+        [
+          -2,
+          2
+        ]
+      ],
+      "note": "M-bfloat16-完整参数-带scales-rank16-expert16-H1024 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 3,
+      "input_shape": [
+        [
+          131072,
+          2048
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          131072
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -3,
+          3
+        ],
+        [
+          1,
+          4096
+        ],
+        [
+          -3,
+          3
+        ]
+      ],
+      "note": "L-bfloat16-完整参数-带scales-rank32-expert8-H2048 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 4,
+      "input_shape": [
+        [
+          4096,
+          512
+        ],
+        [
+          8,
+          8
+        ],
+        null
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          1,
+          512
+        ],
+        null
+      ],
+      "note": "M-float16-无scales-rank8-expert8-H512 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 5,
+      "input_shape": [
+        [
+          8192,
+          1024
+        ],
+        [
+          16,
+          16
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          1,
+          512
+        ],
+        null
+      ],
+      "note": "M-bfloat16-无scales-rank16-expert16-H1024 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 6,
+      "input_shape": [
+        [
+          1024,
+          256
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "int8",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          1,
+          128
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-int8-完整参数-带scales-rank8-expert4-H256 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 7,
+      "input_shape": [
+        [
+          16384,
+          512
+        ],
+        [
+          16,
+          8
+        ],
+        null
+      ],
+      "dtype": [
+        "int8",
+        "int64",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          1,
+          1024
+        ],
+        null
+      ],
+      "note": "M-int8-无scales-rank16-expert8-H512 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1024,
+          512
+        ],
+        [
+          1,
+          8
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          1,
+          1024
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-单rank-expert8 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 9,
+      "input_shape": [
+        [
+          1024,
+          512
+        ],
+        [
+          8,
+          1
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          1,
+          128
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "S-float16-rank8-单expert | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 10,
+      "input_shape": [
+        [
+          32768,
+          256
+        ],
+        [
+          8,
+          64
+        ],
+        [
+          32768
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          1,
+          512
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "M-bfloat16-大expert64-rank8 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 11,
+      "input_shape": [
+        [
+          65536,
+          256
+        ],
+        [
+          64,
+          8
+        ],
+        [
+          65536
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int64",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          1,
+          128
+        ],
+        [
+          -1000,
+          1000
+        ]
+      ],
+      "note": "L-float16-大rank64-expert8 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 12,
+      "input_shape": [
+        [
+          2048,
+          511
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          2048
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          1,
+          256
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "M-float16-质数H511-rank8-expert8 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 13,
+      "input_shape": [
+        [
+          4096,
+          1021
+        ],
+        [
+          16,
+          8
+        ],
+        [
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -2,
+          2
+        ],
+        [
+          1,
+          256
+        ],
+        [
+          -2,
+          2
+        ]
+      ],
+      "note": "M-bfloat16-质数H1021-rank16-expert8 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 14,
+      "input_shape": [
+        [
+          1009,
+          512
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          1009
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -10,
+          10
+        ],
+        [
+          1,
+          128
+        ],
+        [
+          -10,
+          10
+        ]
+      ],
+      "note": "S-float16-质数tokens1009-rank8-expert8 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 15,
+      "input_shape": [
+        [
+          2017,
+          256
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          2017
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -100,
+          100
+        ],
+        [
+          1,
+          128
+        ],
+        [
+          -100,
+          100
+        ]
+      ],
+      "note": "M-bfloat16-质数tokens2017-rank16-expert16 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 16,
+      "input_shape": [
+        [
+          1024,
+          32
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          1,
+          128
+        ],
+        [
+          -0.1,
+          0.1
+        ]
+      ],
+      "note": "S-float16-小H32-rank8-expert8 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 17,
+      "input_shape": [
+        [
+          2048,
+          64
+        ],
+        [
+          8,
+          16
+        ],
+        null
+      ],
+      "dtype": [
+        "bfloat16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          1,
+          256
+        ],
+        null
+      ],
+      "note": "M-bfloat16-小H64-无scales-rank8-expert16 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 18,
+      "input_shape": [
+        [
+          262144,
+          512
+        ],
+        [
+          32,
+          16
+        ],
+        [
+          262144
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          1,
+          8192
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "XL-float16-超大规模-rank32-expert16-H512 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 19,
+      "input_shape": [
+        [
+          524288,
+          256
+        ],
+        [
+          64,
+          8
+        ],
+        [
+          524288
+        ]
+      ],
+      "dtype": [
+        "bfloat16",
+        "int64",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -1000,
+          1000
+        ],
+        [
+          1,
+          8192
+        ],
+        [
+          -1000,
+          1000
+        ]
+      ],
+      "note": "XL-bfloat16-超大规模-rank64-expert8-H256 | baseline_kernels: MoeReRouting×1"
+    },
+    {
+      "operator": "MoeReRouting",
+      "case_id": 20,
+      "input_shape": [
+        [
+          64,
+          128
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          64
+        ]
+      ],
+      "dtype": [
+        "float16",
+        "int32",
+        "float32"
+      ],
+      "attrs": {
+        "expert_token_num_type": 1,
+        "idx_type": 0
+      },
+      "value_range": [
+        [
+          -1,
+          1
+        ],
+        [
+          1,
+          16
+        ],
+        [
+          -1,
+          1
+        ]
+      ],
+      "note": "XS-float16-最小规模-rank4-expert4-tokens64 | baseline_kernels: MoeReRouting×1"
+    }
+  ],
+  "case_count": 20
+}

@@ -1,0 +1,519 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "MhcSinkhorn",
+  "function_name": "mhc_sinkhorn",
+  "level": "level3",
+  "category": "VVFusion",
+  "difficulty": "L3",
+  "description": "mHC (Manifold-Constrained Hyper-Connections) Sinkhorn 算子 — DeepSeek-V4\n内部 hyper-connection stream 混合矩阵的双随机化投影。linear-domain 实现：\n第 1 轮 row-softmax + eps 偏移并 column normalize，后续 iter_step-1 轮做\n交替 row / column 归一化收敛到 Birkhoff Polytope 流形（doubly-stochastic）。\n详见 arXiv:2512.24880。\n",
+  "desc_md": "# MhcSinkhorn 算子 API 描述\n\n## 1. 算子简介\n\n**mHC** (**Manifold-Constrained Hyper-Connections**) Sinkhorn 算子，对\n`hc_mult × hc_mult` 的 stream 混合矩阵 `comb` 做 Sinkhorn-Knopp 双随机化投影，\n使其落在 Birkhoff Polytope 流形（即\"行和=1 且 列和=1\"的双随机矩阵集合）上。\n来源：DeepSeek-V4 用 mHC 机制替换 transformer 的标准 residual connection——\n把残差通路扩展成 `hc_mult` 条并行 stream，stream 间通过受约束的 `comb` 矩阵交换\n信息；矩阵被约束在 doubly-stochastic 流形上后 signal amplification 从 V3 的 4× 降到\n~1.6×，使 1.6T 参数训练保持稳定（详见 [arXiv:2512.24880](https://arxiv.org/abs/2512.24880)）。\n\n**主要应用场景**：\n- DeepSeek-V4 内 `DeepseekV4HyperConnection` 的 `comb` 矩阵 forward 投影\n- 任何需要把方阵投影到双随机矩阵（doubly-stochastic / Birkhoff Polytope）的场景\n- 软分配 / 软匹配问题的 Sinkhorn-Knopp 迭代求解\n\n**算子特征**：\n- 难度等级：L3（VVFusion）\n- 单输入单输出，**方阵 inner 维**：`comb: [B, hc_mult, hc_mult]`，inner 两维是 `hc_mult × hc_mult` 的 hyper-connection mixing 方阵；**DSv4 实际取 `hc_mult=4`**（残差通路数），矩阵很小 (4 × 4)\n- DSv4 production 默认 `iter_step=20`\n- 算法在 **linear 域**进行——第 1 轮先做 row-softmax 把任意 logits 化为概率分布，\n  后续 `iter_step - 1` 轮做交替 row / column 归一化以收敛到双随机矩阵\n\n## 2. 算子定义\n\n### 数学公式\n\n设输入 $C \\in \\mathbb{R}^{B \\times \\text{hc\\_mult} \\times \\text{hc\\_mult}}$，每个 batch 独立处理。\n记一轮 row-normalize 为 $R(\\cdot)$、column-normalize 为 $C(\\cdot)$：\n\n$$\nR(M)_{i,j} = \\frac{M_{i,j}}{\\sum_k M_{i,k} + \\epsilon}, \\quad\nC(M)_{i,j} = \\frac{M_{i,j}}{\\sum_k M_{k,j} + \\epsilon}\n$$\n\n算子做 `iter_step` 轮迭代，**第 1 轮的 row-normalize 用 softmax 实现**（把任意\nreal-valued logits 先转成概率分布，避免 0/负数破坏后续除法）：\n\n$$\n\\begin{aligned}\n\\text{Iter 1:}\\quad & C \\leftarrow \\mathrm{softmax}(C, \\text{dim}{=}{-}1) + \\epsilon \\\\\n                    & C \\leftarrow C / (\\text{col\\_sum}(C) + \\epsilon) \\\\\n\\text{Iter 2..iter\\_step:}\\quad & C \\leftarrow R(C) \\\\\n                                & C \\leftarrow C(C)\n\\end{aligned}\n$$\n\n### 处理流程\n\n1. **First iteration — softmax + 列归一化**（把 raw 输入化为概率域）：\n   - `row_max  = reduce_max(comb, dim=-1)` — 数值稳定 shift\n   - `comb     = exp(comb - row_max)`\n   - `row_sum  = reduce_sum(comb, dim=-1)`\n   - `comb     = comb / row_sum + eps` ——完成 row-softmax 并加 `eps` 防 0\n   - `col_sum  = reduce_sum(comb, dim=-2)`\n   - `comb     = comb / (col_sum + eps)`\n2. **Remaining `iter_step - 1` iterations — 纯 linear 双归一化**：\n   - `row_sum  = reduce_sum(comb, dim=-1); comb = comb / (row_sum + eps)`\n   - `col_sum  = reduce_sum(comb, dim=-2); comb = comb / (col_sum + eps)`\n3. 返回 `comb`（已归一化的方阵，shape 与输入完全一致）。\n\n> **与 log-domain Sinkhorn 的区别**：log-domain 方案的每轮迭代都是\n> `x - logsumexp(x)`，全程在 log 空间运算、最后再 `exp` 一次；本算子直接\n> 在 linear 域做 softmax + 除法迭代，无需最后再 exp。两种数学上等价\n> （在无 `eps` 极限下），但本算子的实现走 linear 域，与 DSv4 kernel\n> 一致——精度比对必须用 linear-domain golden。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.mhc_sinkhorn(Tensor comb, int iter_step=20, float eps=1e-6) -> Tensor comb_out\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| comb | Tensor | 必选 | 输入 hyper-connection 混合矩阵，shape `[B, hc_mult, hc_mult]`，**inner 两维必须相等**；fp32 only |\n| iter_step | int | **20** | Sinkhorn 迭代总轮数（第 1 轮含 softmax；其余 `iter_step - 1` 轮为纯 row/column normalize）；`iter_step ≥ 1` |\n| eps | float | 1e-6 | 数值稳定项，所有除法分母上加该常量 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| comb_out | `[B, hc_mult, hc_mult]`，与输入完全一致 | 与输入 comb 相同 (fp32) | Sinkhorn 迭代后的双随机方阵 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| float32 | float32 |\n\n**只支持 fp32**：mHC 的核心约束（投影到 Birkhoff Polytope）对数值精度敏感，迭代 20+ 轮的累积舍入误差在 fp16 / bf16 下会破坏双随机性质（row_sum 漂移 > 1e-3）；DSv4 实际 kernel 也以 fp32 跑该算子，本算子规范上对齐。\n\n### 规则与约束\n\n- **输入 `comb` 必须为 3D 张量**，且 inner 两维相等（`shape[-1] == shape[-2]`），表示一组 `hc_mult × hc_mult` hyper-connection 混合方阵\n- **dtype 限定 fp32**：iteration 20+ 轮的累积舍入误差对低精度敏感；fp16/bf16 下双随机性质会被破坏，故 spec 上拒绝\n- `iter_step` 是 Sinkhorn 总迭代轮数；`iter_step = 1` 时只做\"softmax + column normalize\"一轮；DSv4 production 默认 `20`\n- `eps` 必须为非负小常量；典型 1e-8 ~ 1e-6（fp32 下不会破坏数值稳定性）\n- 算法在 **linear 域**进行，第 1 轮 row-softmax 自带数值稳定 shift（`exp(x - row_max)`），后续轮次直接做除法\n- 输出与输入 shape / dtype 完全一致；不返回中间状态\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `B`（batch / token×layer 维） | **1 ~ 16384** | cases.csv 实测 1 ~ 16384；DSv4 production 中通常等于 tokens 数 |\n| `hc_mult`（hyper-connection 数量，方阵边长） | **2 ~ 16** | **DSv4 实际取 `hc_mult=4`**；矩阵本身很小 (`hc_mult × hc_mult`) |\n| `iter_step` | **1 ~ 40** | 正整数；DSv4 默认 20，cases.csv 覆盖 1 / 5 / 20 / 40 |\n| `eps` | 1e-8 ~ 1e-3 | 非负小常量；典型 1e-6 (fp32 default) |\n| dtype | **fp32 only** | 见上节 \"数据类型\" 与 \"规则与约束\" 说明 |\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\n\n\"\"\"\nMhcSinkhorn 算子 Torch Golden 参考实现 — linear-domain Sinkhorn-Knopp\n\n来源对齐 DeepSeek-V4 mHC (Manifold-Constrained Hyper-Connections) 模块中\nhyper-connection stream 混合矩阵的双随机化投影 kernel：第 1 轮做 row-softmax\n（数值稳定地把 raw 输入转成概率分布）再做 column normalize；剩余 iter_step - 1\n轮做交替 row / column 归一化，直到 row_sum 与 col_sum 都趋近 1（投影到 Birkhoff\nPolytope 流形）。\n\nNPU candidate kernel 仅支持 fp32 输入（spec 在 §3 数据类型中声明，cases.csv\n也只生成 fp32 case）；golden 这一侧不在 dtype 上做硬约束——harness 的\n``tensors_to_fp64_cpu`` 会把 float 提升到 fp64 提高参考精度，数学结果不变。\n\"\"\"\ndef mhc_sinkhorn(\n    comb: torch.Tensor, iter_step: int = 20, eps: float = 1e-6\n) -> torch.Tensor:\n    \"\"\"\n    mHC Sinkhorn — linear-domain doubly-stochastic projection on hc_mult × hc_mult matrices\n\n    Args:\n        comb: 输入 hyper-connection 混合矩阵，shape [B, hc_mult, hc_mult]，inner 两维必须相等\n        iter_step: Sinkhorn 总迭代轮数 (≥ 1)；DSv4 production 默认 20\n        eps: 数值稳定项，所有除法分母上加该常量\n\n    Returns:\n        comb_out: 双随机化后的方阵，shape 与输入完全一致；dtype 与输入相同\n    \"\"\"\n    # First iter: row-softmax + eps，然后 column normalize\n    # 等价于把 raw logits 转换成 row-probability 分布的起点\n    row_max = comb.amax(dim=-1, keepdim=True)               # numerically-stable shift\n    comb = torch.exp(comb - row_max)\n    row_sum = comb.sum(dim=-1, keepdim=True)\n    comb = comb / row_sum + eps                              # row-softmax + eps\n    col_sum = comb.sum(dim=-2, keepdim=True)\n    comb = comb / (col_sum + eps)\n\n    # 后续 iter_step - 1 轮：linear-domain row + column normalize\n    for _ in range(iter_step - 1):\n        row_sum = comb.sum(dim=-1, keepdim=True)\n        comb = comb / (row_sum + eps)\n        col_sum = comb.sum(dim=-2, keepdim=True)\n        comb = comb / (col_sum + eps)\n\n    return comb\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\n# DSv4 典型场景：B=1024 tokens，每个 token 一个 hc_mult=4 的 4×4 方阵 (fp32)\ncomb = torch.randn(1024, 4, 4, dtype=torch.float32, device=\"npu\")\ncomb_out = cann_bench.mhc_sinkhorn(comb, iter_step=20)\n\n# 单轮（仅 softmax + 1 次 column normalize）\ncomb_out = cann_bench.mhc_sinkhorn(comb, iter_step=1)\n\n# 大 batch + 上界 iter_step (40 轮)\ncomb_large = torch.randn(16384, 4, 4, dtype=torch.float32, device=\"npu\")\ncomb_out = cann_bench.mhc_sinkhorn(comb_large, iter_step=40)\n\n# fp32 高精度场景下用更小的 eps\ncomb_out = cann_bench.mhc_sinkhorn(comb, iter_step=20, eps=1e-8)\n```\n\n### 参考文档\n\n- DeepSeek-V4 mHC paper: [arXiv:2512.24880 — Manifold-Constrained Hyper-Connections](https://arxiv.org/abs/2512.24880)\n- DeepSeek-V4 HuggingFace 实现中 `DeepseekV4HyperConnection` 模块的 `(pre, post, comb)` triplet 在 forward 中用到本算子做 `comb` 的 doubly-stochastic 投影\n",
+  "proto": {
+    "name": "MhcSinkhorn",
+    "category": "VVFusion",
+    "difficulty": "L3",
+    "formula": "Iter 1:   comb = softmax(comb, dim=-1) + eps;  comb = comb / (col_sum + eps)\nIter 2..iter_step:  comb = comb / (row_sum + eps);  comb = comb / (col_sum + eps)\n",
+    "description": "mHC (Manifold-Constrained Hyper-Connections) Sinkhorn 算子 — DeepSeek-V4\n内部 hyper-connection stream 混合矩阵的双随机化投影。linear-domain 实现：\n第 1 轮 row-softmax + eps 偏移并 column normalize，后续 iter_step-1 轮做\n交替 row / column 归一化收敛到 Birkhoff Polytope 流形（doubly-stochastic）。\n详见 arXiv:2512.24880。\n",
+    "shape_support": "comb: [B, hc_mult, hc_mult]，inner 两维必须相等 (方阵)；B ∈ [1, 16384]，hc_mult ∈ [2, 16]，DSv4 实际取 hc_mult=4；fp32 only",
+    "attrs": [
+      {
+        "name": "iter_step",
+        "type": "int",
+        "default": 20,
+        "description": "Sinkhorn 总迭代轮数 (1 ~ 40)；第 1 轮含 softmax，其余轮次为纯 row/col normalize。DSv4 production 默认 20",
+        "required": false
+      },
+      {
+        "name": "eps",
+        "type": "float",
+        "default": 1e-06,
+        "description": "数值稳定项，所有除法分母上加该常量；fp32 下典型 1e-6 ~ 1e-8",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "comb",
+        "description": "输入 hyper-connection 混合矩阵，shape [B, hc_mult, hc_mult]，inner 两维必须相等，fp32 only",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[B, hc_mult, hc_mult]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "comb_out",
+        "description": "Sinkhorn 迭代后的双随机方阵，shape 与输入完全一致 (fp32)",
+        "dtype": [
+          "float32"
+        ],
+        "shape": "[B, hc_mult, hc_mult]"
+      }
+    ],
+    "schema": "mhc_sinkhorn(Tensor comb, int iter_step=20, float eps=1e-6) -> Tensor comb_out"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nMhcSinkhorn 算子 Torch Golden 参考实现 — linear-domain Sinkhorn-Knopp\n\n来源对齐 DeepSeek-V4 mHC (Manifold-Constrained Hyper-Connections) 模块中\nhyper-connection stream 混合矩阵的双随机化投影 kernel (详见 arXiv:2512.24880)：\n第 1 轮做 row-softmax (数值稳定地把 raw 输入转成概率分布) + 加 eps 偏移，再\ncolumn normalize；剩余 iter_step - 1 轮做交替 row / column 归一化，直到\nrow_sum 和 col_sum 都趋近 1 (投影到 Birkhoff Polytope 流形)。\n\n输入输出为 [B, hc_mult, hc_mult] 方阵，inner 两维必须相等。\nDSv4 实际取 hc_mult=4，即 4×4 的小方阵；B 可达 16384。\n\n**dtype**: NPU 上的 candidate kernel 仅支持 fp32（由 proto.yaml 与 desc.md\n声明、cases.csv 只产生 fp32 输入；mHC 迭代对低精度敏感会破坏双随机性质）。\ngolden 这一侧不在 dtype 上做硬约束——bench harness 的 ``tensors_to_fp64_cpu``\n会自动把所有 float 输入提升到 fp64 以提高参考精度，golden 在 fp64 下的计算\n数学上仍然正确；最终精度比对回到 fp32 阈值。\n\"\"\"\n\n\ndef mhc_sinkhorn(\n    comb: torch.Tensor, iter_step: int = 20, eps: float = 1e-6\n) -> torch.Tensor:\n    \"\"\"\n    mHC Sinkhorn — linear-domain doubly-stochastic projection on hc_mult × hc_mult matrices\n\n    Args:\n        comb: 输入 hyper-connection 混合矩阵，shape [B, hc_mult, hc_mult]，inner 两维必须相等。\n            harness 会以 fp64（golden 提精度路径）或 fp32（NPU 路径）调用本函数；\n            两种 dtype 数学结果一致。\n        iter_step: Sinkhorn 总迭代轮数 (≥ 1)；DSv4 production 默认 20\n        eps: 数值稳定项，所有除法分母上加该常量\n\n    Returns:\n        comb_out: 双随机化后的方阵，shape 与输入完全一致；dtype 与输入相同。\n    \"\"\"\n    # First iter: row-softmax + eps, then column normalize\n    # 等价于把 raw logits 转成 row-probability 分布的起点\n    row_max = comb.amax(dim=-1, keepdim=True)               # numerically-stable shift\n    comb = torch.exp(comb - row_max)\n    row_sum = comb.sum(dim=-1, keepdim=True)\n    comb = comb / row_sum + eps                              # row-softmax + eps\n    col_sum = comb.sum(dim=-2, keepdim=True)\n    comb = comb / (col_sum + eps)\n\n    # 后续 iter_step - 1 轮：linear-domain row + column normalize\n    for _ in range(iter_step - 1):\n        row_sum = comb.sum(dim=-1, keepdim=True)\n        comb = comb / (row_sum + eps)\n        col_sum = comb.sum(dim=-2, keepdim=True)\n        comb = comb / (col_sum + eps)\n\n    return comb\n",
+  "cases_yaml": [
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-128B-DSv4-decode-B=1-hc_mult=4 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 2,
+      "input_shape": [
+        [
+          64,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-8KB-DSv4-small-B=64-hc_mult=4 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 3,
+      "input_shape": [
+        [
+          512,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-66KB-DSv4-medium-B=512-hc_mult=4 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 4,
+      "input_shape": [
+        [
+          1024,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-131KB-DSv4-typical-prefill-B=1024-hc_mult=4 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 5,
+      "input_shape": [
+        [
+          4096,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-524KB-DSv4-large-prefill-B=4096-hc_mult=4 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 6,
+      "input_shape": [
+        [
+          16384,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-2.10MB-DSv4-max-batch-B=16384-hc_mult=4 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1024,
+          2,
+          2
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-33KB-hc_mult=2-下界-退化场景 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1024,
+          3,
+          3
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-74KB-hc_mult=3-奇数非对齐 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 9,
+      "input_shape": [
+        [
+          1024,
+          6,
+          6
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-295KB-hc_mult=6-非2幂 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 10,
+      "input_shape": [
+        [
+          1024,
+          8,
+          8
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-524KB-hc_mult=8-2幂 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 11,
+      "input_shape": [
+        [
+          1024,
+          12,
+          12
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-1.18MB-hc_mult=12-非2幂 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 12,
+      "input_shape": [
+        [
+          1024,
+          16,
+          16
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-2.10MB-hc_mult=16-上界 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 13,
+      "input_shape": [
+        [
+          1024,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 1,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-131KB-iter_step=1-退化为softmax+1次col_norm | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 14,
+      "input_shape": [
+        [
+          1024,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 5,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-131KB-iter_step=5-少迭代收敛性测试 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 15,
+      "input_shape": [
+        [
+          1024,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 40,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-131KB-iter_step=40-上界深收敛 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 16,
+      "input_shape": [
+        [
+          1024,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-08
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-131KB-eps=1e-8-fp32紧致 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 17,
+      "input_shape": [
+        [
+          1024,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-07
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-131KB-eps=1e-7-中等 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 18,
+      "input_shape": [
+        [
+          1,
+          2,
+          2
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-fp32-32B-tiny-smoke-B=1-hc_mult=2-下界 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 19,
+      "input_shape": [
+        [
+          1024,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "S-fp32-131KB-inf特殊值-row_max-shift防溢出 | baseline_kernels: MhcSinkhorn×1"
+    },
+    {
+      "operator": "MhcSinkhorn",
+      "case_id": 20,
+      "input_shape": [
+        [
+          1024,
+          4,
+          4
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "iter_step": 20,
+        "eps": 1e-06
+      },
+      "value_range": [
+        null,
+        null
+      ],
+      "note": "S-fp32-131KB-nan特殊值-精度比对边界 | baseline_kernels: MhcSinkhorn×1"
+    }
+  ],
+  "case_count": 20
+}

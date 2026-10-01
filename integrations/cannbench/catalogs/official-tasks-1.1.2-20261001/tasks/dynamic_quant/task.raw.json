@@ -1,0 +1,445 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "DynamicQuant",
+  "function_name": "dynamic_quant",
+  "level": "level2",
+  "category": "FusedComposite",
+  "difficulty": "L2",
+  "description": "对输入张量进行 per-token 对称动态量化 (沿 last-dim)，输出量化张量 y 及每 token 反量化系数 scale。NPU API 不暴露 axis。",
+  "desc_md": "# DynamicQuant 算子 API 描述\n\n## 1. 算子简介\n\n对输入张量进行 per-token 对称动态量化。\n\n**主要应用场景**：\n- 大语言模型推理加速中的动态量化（W8A8 / W4A8 等方案）\n- KV Cache 量化压缩以节省显存\n- 模型部署阶段的在线量化处理\n\n**算子特征**：\n- 难度等级：L2（FusedComposite）\n- 单输入单输出，涉及求最大值、缩放、四舍五入等多步融合计算\n- 输入支持 2-8 维张量\n\n## 2. 算子定义\n\n### 数学公式\n\n$$\nscaleOut = \\frac{\\max_{\\text{last-dim}}(|x|)}{127}\n$$\n\n$$\nyOut = \\text{round}\\left(\\frac{x}{scaleOut}\\right)\n$$\n\n其中：\n- $\\max_{\\text{last-dim}}(|x|)$ 表示沿 last-dim（每个 token）取绝对值最大值\n- 量化目标固定为 int8（对应 $dtypeMax = 127$）\n- $\\text{round}$ 为四舍五入到最近整数（half-to-even）\n\n> **NPU API 约束**：CANN `torch_npu.npu_dynamic_quant` 只支持 per-token 量化（沿 last-dim），不暴露 axis 参数；不支持 float32 输入；不支持 1D 张量。本算子规格与 NPU API 真实能力对齐。\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.dynamic_quant(Tensor x) -> (Tensor y, Tensor scale)\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x | Tensor | 必选 | 输入张量，shape ≥ 2 维，dtype ∈ {float16, bfloat16} |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 与输入 x 相同 | int8 | 量化后的张量 |\n| scale | `x.shape[:-1]` | float32 | 每 token 的反量化系数；下游 W8A8 / KV cache 反量化算子必需 |\n\n### 数据类型\n\n| 输入 dtype | y dtype | scale dtype |\n|-----------|---------|-------------|\n| float16 | int8 | float32 |\n| bfloat16 | int8 | float32 |\n\n### 规则与约束\n\n- 输入 x 必须为 2 ~ 8 维张量（NPU API 硬性要求 ≥ 2 维）\n- 输入 dtype 仅支持 float16 / bfloat16（NPU API 不支持 float32）\n- 量化为对称量化（zero_point 恒为 0），scale 基于每 token 绝对值最大值计算\n- 输出 shape 与输入 shape 完全一致\n- 全零 token 防除零：golden 对 abs_max 应用 `clamp(min=1e-12)` 保证 scale > 0，避免 0/0 NaN（NPU 实现行为类似；用户仍应避免大量全零输入以免数值无效）\n- golden 对 `round(x / scale)` 应用 `clamp(-128, 127)` 防止 int8 模 256 截断（罕见数值边界场景）\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| `rank(x)`（输入维度数） | 2 ~ 8 | NPU API 硬性要求 ≥ 2；cases.csv 实测 2 ~ 5 维 |\n| 各维度大小 `dim_i` | 1 ~ 16384 | cases.csv 实测最小 2、最大 16,384 |\n| last-dim 大小（量化粒度，每 token 长度） | 1 ~ 16384 | cases.csv 实测 67 ~ 16,384；沿此维取每 token 的 max-abs |\n| token 总数（前导维度乘积） | 1 ~ 2^20 | cases.csv 实测最大约 163K（11×13×17×67） |\n| 张量总元素数 | 1 ~ 2^30 | cases.csv 实测最大约 128M |\n| 输入 dtype | float16 / bfloat16 | NPU API 不支持 float32 |\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n**int8 输出特殊阈值**：\n\n量化算子输出为整数类型，round 操作存在舍入误差，允许 ±1 的绝对误差：\n\n| 输出类型 | 阈值 | 说明 |\n|----------|------|------|\n| int8 | 1.0 | 允许 \\|actual - golden\\| ≤ 1 |\n\n**通过条件**：`|actual - golden| ≤ threshold`\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\nfrom typing import Tuple\n\n\"\"\"\nDynamicQuant 算子 Torch Golden 参考实现\n\nper-token 对称动态量化 (沿 last-dim)，对齐 NPU torch_npu.npu_dynamic_quant 默认行为：\n返回 (y, scale) 双输出。scale 是下游 W8A8 / KV cache 反量化算子必需的输入，\n所以是该算子的本质输出之一，不能省。\n\"\"\"\ndef dynamic_quant(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:\n    \"\"\"Per-token 对称动态量化 (axis=-1, dtype_max=127 → int8)。\n\n    Args:\n        x: 输入张量 (fp16/bf16)，shape ≥ 2 维\n\n    Returns:\n        y:     量化后的张量 (int8, shape 与 x 一致)\n        scale: per-token 反量化系数 (float32, shape = x.shape[:-1])\n    \"\"\"\n    x_compute = x.to(torch.float32)\n    abs_max = torch.max(torch.abs(x_compute), dim=-1, keepdim=True)[0]\n    # clamp(min=1e-12) 防全零 token 触发 0/0 NaN\n    scale_out = abs_max.clamp(min=1e-12) / 127.0\n    # clamp(-128, 127) 防 int8 模 256 截断\n    y = torch.clamp(torch.round(x_compute / scale_out), -128, 127).to(torch.int8)\n    scale = scale_out.squeeze(-1).to(torch.float32)\n    return y, scale\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\n# 2D per-token quant\nx = torch.randn(1024, 1024, dtype=torch.float16, device=\"npu\")\ny, scale = cann_bench.dynamic_quant(x)\n# y.shape = (1024, 1024), y.dtype = int8\n# scale.shape = (1024,),    scale.dtype = float32\n\n# 4D per-token quant（每行最后维量化）\nx = torch.randn(2, 8, 256, 256, dtype=torch.bfloat16, device=\"npu\")\ny, scale = cann_bench.dynamic_quant(x)\n# y.shape     = (2, 8, 256, 256), y.dtype     = int8\n# scale.shape = (2, 8, 256),       scale.dtype = float32\n\n# 下游反量化（典型用法）\ndequant_x = y.to(torch.float32) * scale.unsqueeze(-1)\n```\n",
+  "proto": {
+    "name": "DynamicQuant",
+    "category": "FusedComposite",
+    "difficulty": "L2",
+    "formula": "scaleOut = row_max(abs(x)) / 127, yOut = round(x / scaleOut)",
+    "description": "对输入张量进行 per-token 对称动态量化 (沿 last-dim)，输出量化张量 y 及每 token 反量化系数 scale。NPU API 不暴露 axis。",
+    "shape_support": "输入 x: 2-8 维（NPU API 硬性要求 ≥ 2 维）；输出 y: 同 x；输出 scale: x.shape[:-1]",
+    "precision_thresholds": {
+      "int8": 1.0
+    },
+    "attrs": [],
+    "inputs": [
+      {
+        "name": "x",
+        "description": "输入张量（沿 last-dim 量化；NPU API 不支持 float32 输入）",
+        "dtype": [
+          "float16",
+          "bfloat16"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "量化后的张量（int8，shape 与 x 一致）",
+        "dtype": [
+          "int8"
+        ]
+      },
+      {
+        "name": "scale",
+        "description": "每 token 反量化系数 = row_max(abs(x)) / 127；下游 W8A8 / KV cache 反量化必需",
+        "dtype": [
+          "float32"
+        ]
+      }
+    ],
+    "schema": "dynamic_quant(Tensor x) -> (Tensor y, Tensor scale)"
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\n\n\"\"\"\nDynamicQuant 算子 Torch Golden 参考实现\n\nper-token 对称动态量化 (沿 last-dim)，对齐 NPU torch_npu.npu_dynamic_quant 默认行为：\n- 只支持沿 last-dim 量化，不暴露 axis\n- 只支持 fp16 / bf16 输入；输出 int8 + per-token scale (fp32)\n\"\"\"\nfrom typing import Tuple\n\n\ndef dynamic_quant(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:\n    \"\"\"Per-token 对称动态量化 (axis=-1, dtype_max=127→int8)。\n\n    NPU API ``torch_npu.npu_dynamic_quant`` 返回 (y, scale) 双输出 —— scale\n    是每 token 的反量化系数，下游算子（FFN W8A8 / KV cache 反量化）必须\n    拿到 scale 才能还原浮点结果，所以 scale 是算子的本质输出之一。\n\n    公式:\n        scaleOut = row_max(abs(x)) / 127         # shape = x.shape[:-1]\n        yOut     = round(x / scaleOut)            # shape = x.shape, int8\n\n    Args:\n        x: 输入张量 (fp16 / bf16)，shape ≥ 2 维\n\n    Returns:\n        y:     量化后张量 (int8, shape 与 x 一致)\n        scale: per-token 反量化系数 (float32, shape = x.shape[:-1])\n    \"\"\"\n    x_compute = x.to(torch.float32)\n    abs_max = torch.max(torch.abs(x_compute), dim=-1, keepdim=True)[0]\n    # clamp(min=1e-12) 防止全零输入触发 0/0 = NaN\n    scale_out = abs_max.clamp(min=1e-12) / 127.0\n    # clamp(-128, 127) 避免 |x/scale| > 127 时 int8 模 256 截断（罕见但理论可触发，\n    # 例如下游 fuzz/数值边界场景）\n    y = torch.clamp(torch.round(x_compute / scale_out), -128, 127).to(torch.int8)\n    # scale 报给下游：去掉 keepdim 的最后一维，dtype 固定 float32\n    scale = scale_out.squeeze(-1).to(torch.float32)\n    return y, scale\n",
+  "cases_yaml": [
+    {
+      "operator": "DynamicQuant",
+      "case_id": 1,
+      "input_shape": [
+        [
+          1024,
+          1024
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -1,
+        1
+      ],
+      "note": "S-float16-1M-对齐-对称小值域 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 2,
+      "input_shape": [
+        [
+          2048,
+          2048
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -2,
+        2
+      ],
+      "note": "M-bfloat16-4M-对齐-对称小值域 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 3,
+      "input_shape": [
+        [
+          4096,
+          4096
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -3,
+        3
+      ],
+      "note": "M-bfloat16-16M-对齐-对称小值域 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 4,
+      "input_shape": [
+        [
+          8192,
+          8192
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -10,
+        10
+      ],
+      "note": "L-float16-67M-对齐-对称中值域 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 5,
+      "input_shape": [
+        [
+          8192,
+          8192
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -100,
+        100
+      ],
+      "note": "L-bfloat16-268M-对齐-对称大值域 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 6,
+      "input_shape": [
+        [
+          8192,
+          16384
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -1000,
+        1000
+      ],
+      "note": "L-bfloat16-1G-对齐-对称大值域 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 7,
+      "input_shape": [
+        [
+          1023,
+          1023
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -0.1,
+        0.1
+      ],
+      "note": "S-float16-1M-非对齐-对称微小值域 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 8,
+      "input_shape": [
+        [
+          1009,
+          1021
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -1,
+        2
+      ],
+      "note": "S-bfloat16-1M-质数非对齐-非对称小值域 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 9,
+      "input_shape": [
+        [
+          1537,
+          769
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -5,
+        10
+      ],
+      "note": "S-bfloat16-1M-非对齐-非对称中值域 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 10,
+      "input_shape": [
+        [
+          363,
+          367,
+          373
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -50,
+        100
+      ],
+      "note": "M-float16-50M-质数非对齐-非对称大值域-3D | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 11,
+      "input_shape": [
+        [
+          2049,
+          513
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -65504,
+        65504
+      ],
+      "note": "S-bfloat16-1M-非对齐-float16边界值 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 12,
+      "input_shape": [
+        [
+          3,
+          7,
+          13,
+          4001
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -88,
+        88
+      ],
+      "note": "S-bfloat16-1M-质数非对齐-bfloat16边界值-4D | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 13,
+      "input_shape": [
+        [
+          2,
+          7,
+          256,
+          251
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -0.01,
+        0.01
+      ],
+      "note": "S-float16-900K-质数非对齐-对称微小值域-4D | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 14,
+      "input_shape": [
+        [
+          11,
+          13,
+          17,
+          67,
+          67
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -1000,
+        1000
+      ],
+      "note": "M-bfloat16-10M-质数非对齐-5D | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 15,
+      "input_shape": [
+        [
+          256,
+          4099
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        "-inf",
+        "inf"
+      ],
+      "note": "S-bfloat16-1M-质数非对齐-inf特殊值-2D | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 16,
+      "input_shape": [
+        [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        "nan",
+        "nan"
+      ],
+      "note": "S-float16-3M-质数非对齐-nan特殊值-5D | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 17,
+      "input_shape": [
+        [
+          512,
+          2049
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        0,
+        0
+      ],
+      "note": "S-bfloat16-1M-非对齐-零值 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 18,
+      "input_shape": [
+        [
+          255,
+          8193
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -0.5,
+        0.5
+      ],
+      "note": "S-bfloat16-2M-非对齐-对称微小值域 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 19,
+      "input_shape": [
+        [
+          4097,
+          511
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -1,
+        3
+      ],
+      "note": "S-float16-2M-非对齐-非对称小值域 | baseline_kernels: DynamicQuant×1"
+    },
+    {
+      "operator": "DynamicQuant",
+      "case_id": 20,
+      "input_shape": [
+        [
+          2,
+          511,
+          2049
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {},
+      "value_range": [
+        -3,
+        6
+      ],
+      "note": "S-bfloat16-2M-非对齐-非对称中值域-3D | baseline_kernels: DynamicQuant×1"
+    }
+  ],
+  "case_count": 20
+}

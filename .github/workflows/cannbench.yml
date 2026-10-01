@@ -1,0 +1,88 @@
+name: CANNBench gate
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      generate:
+        description: 'Generate the complete official catalog with GLM-5.3 and independent review'
+        type: boolean
+        default: true
+      job_ids:
+        description: 'Exact hardware job IDs for this qualification, comma separated'
+        type: string
+        default: ''
+      submit:
+        description: 'Submit one complete catalog after generation and installed-wheel qualification'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cannbench-hardware
+  cancel-in-progress: false
+
+jobs:
+  cannbench-gate:
+    # A dedicated VM runner has only this custom label (no default labels),
+    # so it cannot accidentally pick up historical arm64 simulator jobs.
+    # This workflow never runs untrusted PR code on the credential-bearing VM.
+    runs-on: cannbench-vm
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 1440
+    env:
+      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+      OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
+      CANNBENCH_JOB_IDS: ${{ inputs.job_ids || vars.CANNBENCH_JOB_IDS }}
+      CANNBENCH_OUTPUT: evidence/cannbench/run-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify VM prerequisites
+        run: |
+          command -v python3
+          command -v opencode
+          test -n "$OPENCODE_API_KEY"
+          test -n "$OPENCODE_BASE_URL"
+          python3 -c 'import yaml'
+      - name: Capture full catalog, generate and validate exact hardware results
+        env:
+          GENERATE: ${{ github.event_name == 'workflow_dispatch' && inputs.generate }}
+          SUBMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.submit }}
+        run: |
+          set -euo pipefail
+          export OPENCODE_CONFIG_CONTENT="$(python3 - <<'PY'
+          import json, os
+          print(json.dumps({'provider': {'gateway': {
+            'npm': '@ai-sdk/openai-compatible',
+            'options': {'baseURL': os.environ['OPENCODE_BASE_URL'], 'apiKey': os.environ['OPENCODE_API_KEY']},
+            'models': {'glm-5.3': {'name': 'GLM-5.3', 'limit': {'context': 256000, 'output': 32768},
+                                   'options': {'thinking': {'type': 'disabled'}, 'reasoningEffort': 'low', 'reasoning_effort': 'low'}},
+                       'qwen3.8-max': {'name': 'Qwen3.8-max', 'limit': {'context': 256000, 'output': 32768},
+                                      'options': {'enable_thinking': False, 'reasoningEffort': 'none', 'reasoning_effort': 'none'}}}
+          }}}))
+          PY
+          )"
+          args=()
+          if [ "$GENERATE" = "true" ]; then args+=(--generate); fi
+          if [ "$SUBMIT" = "true" ]; then args+=(--submit); fi
+          python3 integrations/cannbench/ci/run.py \
+            --output "$CANNBENCH_OUTPUT" "${args[@]}"
+      - name: Upload measured evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cannbench-evidence
+          path: ${{ env.CANNBENCH_OUTPUT }}/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Upload generation and compiler evidence
+        if: always() && inputs.generate
+        uses: actions/upload-artifact@v4
+        with:
+          name: cannbench-generation
+          path: ${{ env.CANNBENCH_OUTPUT }}/generation/
+          if-no-files-found: warn
+          retention-days: 90

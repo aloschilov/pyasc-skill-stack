@@ -7,14 +7,17 @@ on:
       - capabilities.yaml
       - evidence/**
       - tests/tools/generate_dashboard.py
+      - integrations/cannbench/catalogs/**
+      - .github/workflows/pages.yml
   workflow_run:
-    workflows: [CI]
+    workflows: [CI, CANNBench gate]
     types: [completed]
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -26,17 +29,71 @@ jobs:
   build-and-deploy:
     if: >-
       github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
+      github.event.workflow_run.conclusion == 'success' ||
+      github.event.workflow_run.name == 'CANNBench gate'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Select matching CANNBench evidence run
+        id: evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          EVENT_WORKFLOW: ${{ github.event.workflow_run.name }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          if [ "$EVENT_WORKFLOW" = "CANNBench gate" ]; then
+            echo "run_id=$EVENT_RUN_ID" >> "$GITHUB_OUTPUT"
+          else
+            # Listing all runs also handles the first deployment before this
+            # newly added workflow has any run or registered workflow ID.
+            run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=main&status=completed&per_page=100" \
+              --jq ".workflow_runs | map(select(.name == \"CANNBench gate\" and .head_sha == \"$SOURCE_SHA\")) | first | .id // empty")
+            echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Check whether this run produced a report
+        id: report
+        if: steps.evidence.outputs.run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.evidence.outputs.run_id }}
+        run: |
+          available=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" \
+            --jq '.artifacts | any(.name == "cannbench-evidence" and .expired == false)')
+          echo "available=$available" >> "$GITHUB_OUTPUT"
+      - name: Download exact hardware report, including failed gates
+        if: steps.report.outputs.available == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: cannbench-evidence
+          path: evidence/cannbench/ci-current
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.evidence.outputs.run_id }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
       - run: pip install pyyaml
+      - name: Retain failed runs without a hardware artifact
+        if: steps.evidence.outputs.run_id != '' && steps.report.outputs.available != 'true'
+        env:
+          RUN_ID: ${{ steps.evidence.outputs.run_id }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          catalog = json.loads(Path('integrations/cannbench/catalogs/official-tasks-1.1.2-20261001/manifest.json').read_text())
+          out = Path('evidence/cannbench/ci-current'); out.mkdir(parents=True, exist_ok=True)
+          report = {'benchmark_slug': catalog['benchmark_slug'], 'benchmark_version': catalog['benchmark_version'],
+            'gate_passed': False, 'skill_stack_gate_passed': False, 'correct_cases': 0, 'measured_cases': 0,
+            'required_operators': catalog['required_operators'], 'required_cases': catalog['required_cases'],
+            'operators': [], 'errors': ['CANNBench run ' + os.environ['RUN_ID'] + ' produced no hardware artifact']}
+          (out / 'hardware-summary.json').write_text(json.dumps(report, indent=2) + '\n')
+          PY
       - run: python tests/tools/generate_dashboard.py --output-dir _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

@@ -1,0 +1,1162 @@
+{
+  "benchmark_slug": "official-tasks",
+  "operator": "ForeachAddcdivScalar",
+  "function_name": "foreach_addcdiv_scalar",
+  "level": "level1",
+  "category": "FusedComposite",
+  "difficulty": "L1",
+  "description": "对多个张量进行逐元素加、乘、除操作",
+  "desc_md": "# ForeachAddcdivScalar 算子 API 描述\n\n## 1. 算子简介\n\nForeachAddcdivScalar 算子对多个张量列表进行逐元素的加、除、乘复合操作，是优化器（如 Adam）中常用的基础运算。\n\n**主要应用场景**：\n- Adam / AdamW 优化器的参数更新步骤\n- 需要对多组参数同时执行 addcdiv 运算的场景\n- 分布式训练中的批量参数更新\n\n**算子特征**：\n- 难度等级：L1（FusedComposite）\n- 三组 TensorList 输入，逐元素复合运算，输出 TensorList 与输入 shape 一致\n\n## 2. 算子定义\n\n### 数学公式\n\n对列表中第 $i$ 个张量：\n\n$$\ny_i = x1_i + \\frac{x2_i}{x3_i} \\cdot scalar\n$$\n\n## 3. 接口规范\n\n### 算子原型\n\n```python\ncann_bench.foreach_addcdiv_scalar(Tensor[] x1, Tensor[] x2, Tensor[] x3, float scalar) -> Tensor[] y\n```\n\n### 输入参数说明\n\n| 参数 | 类型 | 默认值 | 描述 |\n|------|------|--------|------|\n| x1 | Tensor[] | 必选 | 第 1 个输入张量列表（TensorList），被加数 |\n| x2 | Tensor[] | 必选 | 第 2 个输入张量列表（TensorList），被除数的分子 |\n| x3 | Tensor[] | 必选 | 第 3 个输入张量列表（TensorList），被除数的分母 |\n| scalar | float | 必选 | 缩放因子 |\n\n### 输出\n\n| 参数 | Shape | dtype | 描述 |\n|------|-------|-------|------|\n| y | 与输入 TensorList 各元素 shape 相同 | 与输入 dtype 相同 | 逐元素复合运算结果列表 |\n\n### 数据类型\n\n| 输入 dtype | 输出 dtype |\n|-----------|-----------|\n| float16 | float16 |\n| float32 | float32 |\n| bfloat16 | bfloat16 |\n\n### 规则与约束\n\n- x1、x2、x3 三个 TensorList 长度必须相同\n- 对应位置的张量 shape 必须一致\n- 列表中各张量的 dtype 须一致\n- x3 中的元素不应为零（除以零会产生 inf/nan）\n\n### 支持范围\n\n输入 tensor 各维度与参数的支持范围：\n\n| 维度 / 参数 | 范围 | 备注 |\n|---|---|---|\n| TensorList 长度（`L`） | 1 ~ 64 | cases.csv 实测 1 ~ 4；x1/x2/x3 三个列表长度必须相同 |\n| 每个张量维度数 | 1 ~ 8 | cases.csv 实测 1D ~ 5D |\n| 每个张量各维大小 | 1 ~ 1048576 | cases.csv 各维实测 2 ~ 8193（含 1D 张量长度 1000003） |\n| 每个张量元素总数 | 1 ~ 64M | cases.csv 实测 ~1M ~ 64M |\n| `scalar` | -1024.0 ~ 1024.0 | cases.csv 实测 -1.0 ~ 2.0（含 inf / nan 特殊值） |\n\n约束：x1[i]、x2[i]、x3[i] 三者 shape 与 dtype 必须一致；x3 中元素应非零。\n\n## 4. 精度要求\n\n采用[生态算子精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)进行验证。\n\n**误差指标**：\n\n1. 平均相对误差（MERE）：采样点中相对误差平均值\n\n   $$\n   \\text{MERE} = \\text{avg}(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n2. 最大相对误差（MARE）：采样点中相对误差最大值\n\n   $$\n   \\text{MARE} = \\max(\\frac{\\text{abs}(actual - golden)}{\\text{abs}(golden)+\\text{1e-7}})\n   $$\n\n**通过标准**：\n\n| 数据类型 | FLOAT16 | BFLOAT16 | FLOAT32 | HiFLOAT32 | FLOAT8 E4M3 | FLOAT8 E5M2 |\n|----------|---------|----------|---------|-----------|-------------|-------------|\n| **通过阈值(Threshold)** | 2^-10 | 2^-7 | 2^-13 | 2^-11 | 2^-3 | 2^-2 |\n\n当平均相对误差 MERE < Threshold，最大相对误差 MARE < 10 * Threshold 时判定为通过。\n\n\n## 5. 标准 Golden 代码\n\n```python\nimport torch\nfrom typing import List\n\ndef foreach_addcdiv_scalar(\n    x1: List[torch.Tensor], x2: List[torch.Tensor], x3: List[torch.Tensor], scalar: float\n) -> List[torch.Tensor]:\n    \"\"\"\n    对多个张量进行逐元素加、乘、除操作\n\n    公式：y_i = x1_i + (x2_i / x3_i) * scalar\n\n    Args:\n        x1: 第 1 个输入张量列表 (TensorList)\n        x2: 第 2 个输入张量列表 (TensorList)\n        x3: 第 3 个输入张量列表 (TensorList)\n        scalar: 缩放因子\n\n    Returns:\n        输出张量列表\n    \"\"\"\n\n    # FP16/BF16 输入为保证精度会先提升到 FP32 计算\n    input_dtype = x1[0].dtype if x1 else torch.float32\n    compute_dtype = torch.float32 if input_dtype in (torch.float16, torch.bfloat16) else input_dtype\n\n    x1_compute = [t.to(compute_dtype) for t in x1]\n    x2_compute = [t.to(compute_dtype) for t in x2]\n    x3_compute = [t.to(compute_dtype) for t in x3]\n\n    y = [x1_i + (x2_i / x3_i) * scalar for x1_i, x2_i, x3_i in zip(x1_compute, x2_compute, x3_compute)]\n\n    # 计算完成后恢复到输入 dtype\n    if input_dtype in (torch.float16, torch.bfloat16):\n        return [t.to(input_dtype) for t in y]\n    return y\n```\n\n## 6. 额外信息\n\n### 算子调用示例\n\n```python\nimport torch\nimport cann_bench\n\nx1 = [torch.randn(1024, 1024, dtype=torch.float32, device=\"npu\")]\nx2 = [torch.randn(1024, 1024, dtype=torch.float32, device=\"npu\")]\nx3 = [torch.rand(1024, 1024, dtype=torch.float32, device=\"npu\") + 0.1]  # 避免除零\ny = cann_bench.foreach_addcdiv_scalar(x1, x2, x3, scalar=1.0)\n```\n",
+  "proto": {
+    "name": "ForeachAddcdivScalar",
+    "category": "FusedComposite",
+    "difficulty": "L1",
+    "formula": "y_i = x1_i + (x2_i / x3_i) * scalar",
+    "description": "对多个张量进行逐元素加、乘、除操作",
+    "shape_support": "输入 shape 必须一致",
+    "attrs": [
+      {
+        "name": "scalar",
+        "type": "float",
+        "description": "缩放因子",
+        "required": true
+      }
+    ],
+    "inputs": [
+      {
+        "name": "x1",
+        "description": "第 1 个输入张量列表 (TensorList)",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "is_list": true
+      },
+      {
+        "name": "x2",
+        "description": "第 2 个输入张量列表 (TensorList)",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "is_list": true
+      },
+      {
+        "name": "x3",
+        "description": "第 3 个输入张量列表 (TensorList)",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "is_list": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "y",
+        "description": "输出张量列表",
+        "dtype": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ]
+      }
+    ],
+    "schema": "foreach_addcdiv_scalar(Tensor[] x1, Tensor[] x2, Tensor[] x3, float scalar) -> Tensor[] y",
+    "precision_thresholds": {
+      "float32": 0.005,
+      "float16": 0.01,
+      "bfloat16": 0.01
+    }
+  },
+  "golden_source": "#!/usr/bin/python3\n# coding=utf-8\n\n# ----------------------------------------------------------------------------------------------------------\n# Copyright (c) 2026 Huawei Technologies Co., Ltd.\n# This program is free software, you can redistribute it and/or modify it under the terms and conditions of\n# CANN Open Software License Agreement Version 2.0 (the \"License\").\n# Please refer to the License for details. You may not use this file except in compliance with the License.\n# THIS SOFTWARE IS PROVIDED ON AN \"AS IS\" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,\n# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.\n# See LICENSE in the root of the software repository for the full text of the License.\n# ----------------------------------------------------------------------------------------------------------\n\nimport torch\nfrom typing import List\n\n\"\"\"\nForeachAddcdivScalar 算子 Torch Golden 参考实现\n\n对多个张量进行逐元素加、乘、除操作\n公式：y_i = x1_i + (x2_i / x3_i) * scalar\n\"\"\"\ndef foreach_addcdiv_scalar(\n    x1: List[torch.Tensor], x2: List[torch.Tensor], x3: List[torch.Tensor], scalar: float\n) -> List[torch.Tensor]:\n    \"\"\"\n    对多个张量进行逐元素加、乘、除操作\n\n    公式：y_i = x1_i + (x2_i / x3_i) * scalar\n\n    Args:\n        x1: 第 1 个输入张量列表 (TensorList)\n        x2: 第 2 个输入张量列表 (TensorList)\n        x3: 第 3 个输入张量列表 (TensorList)\n        scalar: 缩放因子\n\n    Returns:\n        输出张量列表\n    \"\"\"\n    # 检测输入 dtype\n    input_dtype = x1[0].dtype if x1 else torch.float32\n\n    # FP16/BF16 输入需要升到 FP32 计算以保证精度\n    # FP32/FP64 输入保持原样计算\n    if input_dtype in (torch.float16, torch.bfloat16):\n        compute_dtype = torch.float32\n    else:\n        compute_dtype = input_dtype\n\n    # 转换到计算精度\n    x1_compute = [t.to(compute_dtype) for t in x1]\n    x2_compute = [t.to(compute_dtype) for t in x2]\n    x3_compute = [t.to(compute_dtype) for t in x3]\n\n    # 计算\n    y = [x1_i + (x2_i / x3_i) * scalar for x1_i, x2_i, x3_i in zip(x1_compute, x2_compute, x3_compute)]\n\n    # 转回原始 dtype\n    if input_dtype in (torch.float16, torch.bfloat16):\n        return [t.to(input_dtype) for t in y]\n    return y\n",
+  "cases_yaml": [
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 1,
+      "input_shape": [
+        [
+          [
+            1024,
+            1024
+          ],
+          [
+            1024,
+            1024
+          ]
+        ],
+        [
+          [
+            1024,
+            1024
+          ],
+          [
+            1024,
+            1024
+          ]
+        ],
+        [
+          [
+            1024,
+            1024
+          ],
+          [
+            1024,
+            1024
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "scalar": 1.0
+      },
+      "value_range": [
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          0.5,
+          1.0
+        ]
+      ],
+      "note": "M-float32-y=x1+x2/x3*scalar-TensorList_len=2-对齐-小比值范围 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 2,
+      "input_shape": [
+        [
+          [
+            2048,
+            2048
+          ],
+          [
+            2048,
+            2048
+          ],
+          [
+            2048,
+            2048
+          ]
+        ],
+        [
+          [
+            2048,
+            2048
+          ],
+          [
+            2048,
+            2048
+          ],
+          [
+            2048,
+            2048
+          ]
+        ],
+        [
+          [
+            2048,
+            2048
+          ],
+          [
+            2048,
+            2048
+          ],
+          [
+            2048,
+            2048
+          ]
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "scalar": 1.0
+      },
+      "value_range": [
+        [
+          -2.0,
+          2.0
+        ],
+        [
+          -2.0,
+          2.0
+        ],
+        [
+          1.0,
+          2.0
+        ]
+      ],
+      "note": "M-float16-y=x1+x2/x3*scalar-TensorList_len=3-对齐-小比值范围 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 3,
+      "input_shape": [
+        [
+          [
+            4096,
+            4096
+          ]
+        ],
+        [
+          [
+            4096,
+            4096
+          ]
+        ],
+        [
+          [
+            4096,
+            4096
+          ]
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "scalar": 1.0
+      },
+      "value_range": [
+        [
+          -3.0,
+          3.0
+        ],
+        [
+          -3.0,
+          3.0
+        ],
+        [
+          0.3,
+          3.0
+        ]
+      ],
+      "note": "M-bfloat16-y=x1+x2/x3*scalar-16M-对齐-对称小值域 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 4,
+      "input_shape": [
+        [
+          [
+            8192,
+            8192
+          ]
+        ],
+        [
+          [
+            8192,
+            8192
+          ]
+        ],
+        [
+          [
+            8192,
+            8192
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "scalar": 0.5
+      },
+      "value_range": [
+        [
+          1.0,
+          10.0
+        ],
+        [
+          -10.0,
+          10.0
+        ],
+        [
+          5.0,
+          10.0
+        ]
+      ],
+      "note": "L-float32-scalar=0.5-67M-对齐-结果远离0 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 5,
+      "input_shape": [
+        [
+          [
+            8192,
+            4096
+          ],
+          [
+            8192,
+            4096
+          ]
+        ],
+        [
+          [
+            8192,
+            4096
+          ],
+          [
+            8192,
+            4096
+          ]
+        ],
+        [
+          [
+            8192,
+            4096
+          ],
+          [
+            8192,
+            4096
+          ]
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "scalar": 2.0
+      },
+      "value_range": [
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          -100.0,
+          100.0
+        ],
+        [
+          50.0,
+          100.0
+        ]
+      ],
+      "note": "L-float16-scalar=2.0-TensorList_len=2-对齐-小比值范围 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 6,
+      "input_shape": [
+        [
+          [
+            1023,
+            1023
+          ]
+        ],
+        [
+          [
+            1023,
+            1023
+          ]
+        ],
+        [
+          [
+            1023,
+            1023
+          ]
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "scalar": -1.0
+      },
+      "value_range": [
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          -0.1,
+          0.1
+        ],
+        [
+          0.1,
+          0.1
+        ]
+      ],
+      "note": "S-bfloat16-scalar=-1.0-1M-非对齐-对称微小值域 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 7,
+      "input_shape": [
+        [
+          [
+            1009,
+            1021
+          ]
+        ],
+        [
+          [
+            1009,
+            1021
+          ]
+        ],
+        [
+          [
+            1009,
+            1021
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "scalar": 1.5
+      },
+      "value_range": [
+        [
+          -1.0,
+          2.0
+        ],
+        [
+          -1.0,
+          2.0
+        ],
+        [
+          1.0,
+          2.0
+        ]
+      ],
+      "note": "M-float32-scalar=1.5-1M-质数非对齐-小比值范围 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 8,
+      "input_shape": [
+        [
+          [
+            1537,
+            769
+          ]
+        ],
+        [
+          [
+            1537,
+            769
+          ]
+        ],
+        [
+          [
+            1537,
+            769
+          ]
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "scalar": 1.0
+      },
+      "value_range": [
+        [
+          -5.0,
+          10.0
+        ],
+        [
+          -5.0,
+          10.0
+        ],
+        [
+          0.1,
+          10.0
+        ]
+      ],
+      "note": "S-float16-1M-非对齐-非对称中值域 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 9,
+      "input_shape": [
+        [
+          [
+            363,
+            367,
+            373
+          ],
+          [
+            363,
+            367,
+            373
+          ]
+        ],
+        [
+          [
+            363,
+            367,
+            373
+          ],
+          [
+            363,
+            367,
+            373
+          ]
+        ],
+        [
+          [
+            363,
+            367,
+            373
+          ],
+          [
+            363,
+            367,
+            373
+          ]
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "scalar": 1.0
+      },
+      "value_range": [
+        [
+          -50.0,
+          100.0
+        ],
+        [
+          -50.0,
+          100.0
+        ],
+        [
+          0.1,
+          100.0
+        ]
+      ],
+      "note": "L-bfloat16-TensorList_len=2-质数非对齐-非对称大值域-3D | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 10,
+      "input_shape": [
+        [
+          [
+            2049,
+            513
+          ]
+        ],
+        [
+          [
+            2049,
+            513
+          ]
+        ],
+        [
+          [
+            2049,
+            513
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "scalar": 1.0
+      },
+      "value_range": [
+        [
+          -65504.0,
+          65504.0
+        ],
+        [
+          -65504.0,
+          65504.0
+        ],
+        [
+          1.0,
+          65504.0
+        ]
+      ],
+      "note": "M-float32-1M-非对齐-类型边界值 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 11,
+      "input_shape": [
+        [
+          [
+            3,
+            7,
+            13,
+            4001
+          ],
+          [
+            3,
+            7,
+            13,
+            4001
+          ]
+        ],
+        [
+          [
+            3,
+            7,
+            13,
+            4001
+          ],
+          [
+            3,
+            7,
+            13,
+            4001
+          ]
+        ],
+        [
+          [
+            3,
+            7,
+            13,
+            4001
+          ],
+          [
+            3,
+            7,
+            13,
+            4001
+          ]
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "scalar": 1.0
+      },
+      "value_range": [
+        [
+          -88.0,
+          88.0
+        ],
+        [
+          -88.0,
+          88.0
+        ],
+        [
+          0.1,
+          88.0
+        ]
+      ],
+      "note": "M-float16-TensorList_len=2-质数非对齐-float32边界值-4D | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 12,
+      "input_shape": [
+        [
+          [
+            1000003
+          ]
+        ],
+        [
+          [
+            1000003
+          ]
+        ],
+        [
+          [
+            1000003
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "scalar": null
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          0.1,
+          null
+        ]
+      ],
+      "note": "M-float32-scalar=inf-inf特殊值-1D-质数非对齐 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 13,
+      "input_shape": [
+        [
+          [
+            11,
+            13,
+            17,
+            67,
+            67
+          ]
+        ],
+        [
+          [
+            11,
+            13,
+            17,
+            67,
+            67
+          ]
+        ],
+        [
+          [
+            11,
+            13,
+            17,
+            67,
+            67
+          ]
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "scalar": null
+      },
+      "value_range": [
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "note": "M-bfloat16-scalar=nan-nan特殊值-10M-质数非对齐-5D | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 14,
+      "input_shape": [
+        [
+          [
+            3,
+            7,
+            11,
+            13,
+            1013
+          ]
+        ],
+        [
+          [
+            3,
+            7,
+            11,
+            13,
+            1013
+          ]
+        ],
+        [
+          [
+            3,
+            7,
+            11,
+            13,
+            1013
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "scalar": 1.0
+      },
+      "value_range": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0.001,
+          0.001
+        ]
+      ],
+      "note": "M-float32-零值-3M-质数非对齐-5D | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 15,
+      "input_shape": [
+        [
+          [
+            512,
+            2049
+          ],
+          [
+            512,
+            2049
+          ]
+        ],
+        [
+          [
+            512,
+            2049
+          ],
+          [
+            512,
+            2049
+          ]
+        ],
+        [
+          [
+            512,
+            2049
+          ],
+          [
+            512,
+            2049
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "scalar": 1.0
+      },
+      "value_range": [
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          -0.5,
+          0.5
+        ],
+        [
+          0.25,
+          0.5
+        ]
+      ],
+      "note": "M-float32-TensorList_len=2-2M-非对齐-小比值范围 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 16,
+      "input_shape": [
+        [
+          [
+            255,
+            8193
+          ],
+          [
+            255,
+            8193
+          ],
+          [
+            255,
+            8193
+          ],
+          [
+            255,
+            8193
+          ]
+        ],
+        [
+          [
+            255,
+            8193
+          ],
+          [
+            255,
+            8193
+          ],
+          [
+            255,
+            8193
+          ],
+          [
+            255,
+            8193
+          ]
+        ],
+        [
+          [
+            255,
+            8193
+          ],
+          [
+            255,
+            8193
+          ],
+          [
+            255,
+            8193
+          ],
+          [
+            255,
+            8193
+          ]
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "scalar": 1.0
+      },
+      "value_range": [
+        [
+          -1.0,
+          3.0
+        ],
+        [
+          -1.0,
+          3.0
+        ],
+        [
+          0.1,
+          3.0
+        ]
+      ],
+      "note": "M-bfloat16-TensorList_len=4-8M-非对齐-非对称小值域 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 17,
+      "input_shape": [
+        [
+          [
+            4097,
+            511
+          ]
+        ],
+        [
+          [
+            4097,
+            511
+          ]
+        ],
+        [
+          [
+            4097,
+            511
+          ]
+        ]
+      ],
+      "dtype": [
+        "float16"
+      ],
+      "attrs": {
+        "scalar": 0.0
+      },
+      "value_range": [
+        [
+          -1000.0,
+          1000.0
+        ],
+        [
+          -1000.0,
+          1000.0
+        ],
+        [
+          0.1,
+          1000.0
+        ]
+      ],
+      "note": "M-float16-scalar=0.0-2M-非对齐-对称大值域 | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 18,
+      "input_shape": [
+        [
+          [
+            2,
+            511,
+            2049
+          ],
+          [
+            2,
+            511,
+            2049
+          ]
+        ],
+        [
+          [
+            2,
+            511,
+            2049
+          ],
+          [
+            2,
+            511,
+            2049
+          ]
+        ],
+        [
+          [
+            2,
+            511,
+            2049
+          ],
+          [
+            2,
+            511,
+            2049
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "scalar": 2.0
+      },
+      "value_range": [
+        [
+          -0.2,
+          0.2
+        ],
+        [
+          -0.2,
+          0.2
+        ],
+        [
+          0.1,
+          0.2
+        ]
+      ],
+      "note": "M-float32-TensorList_len=2-scalar=2.0-8M-非对齐-对称微小值域-3D | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 19,
+      "input_shape": [
+        [
+          [
+            4,
+            255,
+            2049
+          ]
+        ],
+        [
+          [
+            4,
+            255,
+            2049
+          ]
+        ],
+        [
+          [
+            4,
+            255,
+            2049
+          ]
+        ]
+      ],
+      "dtype": [
+        "bfloat16"
+      ],
+      "attrs": {
+        "scalar": -0.5
+      },
+      "value_range": [
+        [
+          -3.0,
+          6.0
+        ],
+        [
+          -3.0,
+          6.0
+        ],
+        [
+          0.1,
+          6.0
+        ]
+      ],
+      "note": "M-bfloat16-scalar=-0.5-2M-非对齐-非对称中值域-3D | baseline_kernels: ForeachAddcdivScalar×1"
+    },
+    {
+      "operator": "ForeachAddcdivScalar",
+      "case_id": 20,
+      "input_shape": [
+        [
+          [
+            2,
+            3,
+            17,
+            1024,
+            101
+          ]
+        ],
+        [
+          [
+            2,
+            3,
+            17,
+            1024,
+            101
+          ]
+        ],
+        [
+          [
+            2,
+            3,
+            17,
+            1024,
+            101
+          ]
+        ]
+      ],
+      "dtype": [
+        "float32"
+      ],
+      "attrs": {
+        "scalar": 1.5
+      },
+      "value_range": [
+        [
+          -20.0,
+          40.0
+        ],
+        [
+          -20.0,
+          40.0
+        ],
+        [
+          20.0,
+          40.0
+        ]
+      ],
+      "note": "L-float32-scalar=1.5-10M-非对齐-小比值范围-5D | baseline_kernels: ForeachAddcdivScalar×1"
+    }
+  ],
+  "case_count": 20
+}

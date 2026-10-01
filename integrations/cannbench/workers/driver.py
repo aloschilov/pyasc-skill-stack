@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import prompts
+from contracts import parameter_names, public_signature
 from evalqueue import EvalQueue, RemoteError
 
 WORKERS_DIR = Path(__file__).resolve().parent
@@ -39,8 +40,8 @@ RUNS_DIR = WORKERS_DIR / "runs"
 SCRATCH_ROOT = WORKERS_DIR / ".scratch"
 SKILLS_ROOT = REPO_ROOT / "skills"
 
-DEFAULT_MODELS = ("dashscope/glm-5.2", "dashscope/qwen3.7-max")
-WORKER_TIMEOUT_S = 360
+DEFAULT_MODELS = ("gateway/glm-5.3", "gateway/qwen3.8-max")
+WORKER_TIMEOUT_S = 900
 REQUIRED_SKILLS = (
     "pyasc-cannbench-kernel",
     "pyasc-syntax-constraints",
@@ -59,6 +60,8 @@ PHASE_SKILLS = {
     ),
     "review": (
         "pyasc-cannbench-kernel",
+        "pyasc-code-review",
+        "pyasc-build-run-verify",
     ),
     "repair": (
         "pyasc-cannbench-kernel",
@@ -73,7 +76,8 @@ anything else, invoke the OpenCode `skill` tool for each exact skill:
 covers the algorithm, pinned-v2 APIs, all 20 cases, tiling, tails, UB budget,
 numerical risks, anti-cheat constraints, and the local validation ladder. Do
 not write candidate.py yet. End with DESIGN_DONE.
-Use at most four tool calls. Do not inspect current submission modules, old run
+Use at most six tool calls, including the relevant skill reference and the
+design file write. Do not inspect current submission modules, old run
 artifacts, or the full pyasc source; task.md and the loaded skill references
 are the allowed implementation context.
 """,
@@ -84,6 +88,10 @@ Before writing code, invoke the OpenCode `skill` tool for each exact skill:
 submission module to candidate.py. Perform only a Python syntax check; do not
 build or run pyasc locally. Create no other files. End with IMPLEMENT_DONE.
 Do not inspect current submission modules or old generated candidates.
+Use at most six tool calls: two skill calls, task/design reads, candidate write,
+and syntax check. The pinned API contract is in task.md. Do not search API
+sources or any other checkout; write a concrete candidate for the measured
+compiler gate to verify.
 """,
     "review": """\
 This is the independent REVIEW phase of a provenance-gated kernel workflow.
@@ -93,7 +101,11 @@ Apply the skill, review the exact public contract, host/JIT boundary, tails,
 dtypes, special values, and UB budget; fix candidate.py in place if needed,
 then run only `python3 -m py_compile candidate.py`. Do not replace numerical
 work with torch operations and create no other files. End with REVIEW_DONE.
-Use at most five tool calls.
+For local campaigns, read compile_report.json: it records the measured compiler
+result for this exact implementation. Repair any reported failure. The driver
+will compile the reviewed candidate again before qualification.
+Use at most ten tool calls, including the three skills, task/candidate/report reads,
+any repair write, and the syntax check.
 Do not inspect current submission modules or old generated candidates.
 """,
     "repair": """\
@@ -103,7 +115,7 @@ candidate.py, and compile_feedback.md. Apply the skill to the measured local
 failure for this operator, repair candidate.py in place without copying an
 earlier repository implementation, and run only `python3 -m py_compile
 candidate.py`. Create no other files. End with REPAIR_DONE.
-Use at most five tool calls and stop as soon as the measured failure is fixed.
+Use at most seven tool calls and stop as soon as the measured failure is fixed.
     """,
 }
 WORKFLOW_PHASES = ("design", "implement", "review")
@@ -262,6 +274,8 @@ class WorkItem:
     accepted_score: float | None = None
     status: str = "pending"
     history: list = field(default_factory=list)
+    task_dir: Path | None = None
+    contract: dict | None = None
 
     @property
     def name(self) -> str:
@@ -313,7 +327,7 @@ def _dotted(node: ast.AST) -> str | None:
     return None
 
 
-def static_check(path: Path, callable_name: str) -> list[str]:
+def static_check(path: Path, callable_name: str, task_dir: Path | None = None) -> list[str]:
     problems = []
     source = path.read_text()
     try:
@@ -329,22 +343,33 @@ def static_check(path: Path, callable_name: str) -> list[str]:
         problems.append(
             f"missing top-level public callable def {callable_name}(...)")
     else:
-        actual = tuple(arg.arg for arg in callable_node.args.args)
-        expected = EXPECTED_PARAMETERS[callable_name]
+        actual = tuple(arg.arg for arg in callable_node.args.posonlyargs + callable_node.args.args + callable_node.args.kwonlyargs)
+        expected = parameter_names(task_dir, callable_name) if task_dir else EXPECTED_PARAMETERS[callable_name]
         if actual != expected:
             problems.append(
                 f"public signature parameters {actual!r} != {expected!r}"
             )
         if callable_node.args.vararg or callable_node.args.kwarg:
             problems.append("public callable must not use *args or **kwargs")
+        if task_dir:
+            expected_args = public_signature(task_dir, callable_name)
+            def defaults(arguments):
+                positional = arguments.posonlyargs + arguments.args
+                values = dict(zip((arg.arg for arg in positional[-len(arguments.defaults):]), arguments.defaults)) if arguments.defaults else {}
+                values.update((arg.arg, value) for arg, value in zip(arguments.kwonlyargs, arguments.kw_defaults) if value is not None)
+                return {key: ast.dump(value) for key, value in values.items()}
+            expected_defaults = defaults(expected_args)
+            actual_defaults = defaults(callable_node.args)
+            if actual_defaults != expected_defaults:
+                problems.append("Public callable defaults differ from official golden")
 
     has_jit = any(
         isinstance(n, ast.FunctionDef) and any(
-            (_dotted(d) or _dotted(getattr(d, "func", None) or d)) == "asc2.jit"
+            (_dotted(d) or _dotted(getattr(d, "func", None) or d)) in ("asc2.jit", "asctile.jit", "asc.jit")
             for d in n.decorator_list)
         for n in ast.walk(tree))
     if not has_jit:
-        problems.append("no @asc2.jit kernel found")
+        problems.append("no public pyasc JIT kernel found")
 
     if "ensure_npu_platform" not in source:
         problems.append("missing ensure_npu_platform import/call "
@@ -442,9 +467,20 @@ def run_worker(scratch: Path, message: str, log_path: Path,
     cmd.append(message)
     # Pin skill discovery to this checkout. External skill catalogs are
     # disabled so similarly named user skills cannot satisfy provenance.
-    config = {
-        "skills": {"paths": [str(SKILLS_ROOT)]},
-        "mcp": {"cann-bench-site": {"enabled": False}},
+    config = json.loads(os.environ.get("OPENCODE_CONFIG_CONTENT", "{}"))
+    config["skills"] = {"paths": [str(SKILLS_ROOT)]}
+    config.setdefault("mcp", {})["cann-bench-site"] = {"enabled": False}
+    config["permission"] = {
+        "read": "allow", "glob": "allow", "grep": "allow", "skill": "allow",
+        # OpenCode matches edits against project-relative paths. A scoped
+        # transfer may inherit the enclosing VM checkout as its project root.
+        "edit": {"*": "deny", **{
+            "*" + str(scratch.relative_to(REPO_ROOT) / name): "allow"
+            for name in ("candidate.py", "design.md")
+        }},
+        "bash": {"*": "deny", "python3 -m py_compile candidate.py": "allow"},
+        "external_directory": {"*": "deny", str(REPO_ROOT / "*"): "allow"},
+        "task": "deny", "webfetch": "deny",
     }
     env = {
         **os.environ,
@@ -577,7 +613,7 @@ def decide_accept(item: WorkItem, digest: dict) -> bool:
     return baseline is None or digest["score"] > baseline + 0.05
 
 
-def local_evaluate(op: str, candidate: Path, iter_dir: Path) -> dict:
+def local_evaluate(op: str, candidate: Path, iter_dir: Path, task_dir: Path | None = None) -> dict:
     try:
         candidate_arg = candidate.resolve().relative_to(REPO_ROOT)
     except ValueError as exc:
@@ -586,6 +622,9 @@ def local_evaluate(op: str, candidate: Path, iter_dir: Path) -> dict:
         str(WORKERS_DIR / "run_local_compile_gate.sh"),
         "--candidate", str(candidate_arg), "--op", op,
     ]
+    if task_dir:
+        relative = task_dir.resolve().relative_to(REPO_ROOT)
+        command.extend(["--cases", str(relative / "cases.yaml"), "--proto", str(relative / "proto.yaml")])
     proc = subprocess.run(command, capture_output=True, text=True)
     try:
         report = json.loads(proc.stdout)
@@ -671,7 +710,7 @@ def process_item(item: WorkItem, queue: EvalQueue | None, run_root: Path,
             extra_levers=EXTRA_LEVERS.get(item.op, ""))
     else:
         message = prompts.build_generation_prompt(
-            item.op, item.op, item.op, guidance=GUIDANCE.get(item.op, "-"))
+            item.op, item.op, item.op, guidance=GUIDANCE.get(item.op, "-"), task_dir=item.task_dir)
     base_message = message
     (item_dir / "prompt.md").write_text(base_message)
 
@@ -711,9 +750,21 @@ def process_item(item: WorkItem, queue: EvalQueue | None, run_root: Path,
         }
         phase_results = {}
         actual_phase_models = {}
+        reviewed_compile = None
         for phase in WORKFLOW_PHASES:
             start_index = phase_model_indexes[phase]
             if phase == "review" and "implement" in actual_phase_models:
+                if evaluation == "local":
+                    print(f"[{item.name}] iter {it}: compiler evidence before review", flush=True)
+                    before_review = local_evaluate(item.op, candidate, iter_dir, item.task_dir)
+                    pre_report = iter_dir / "pre_review_compile.json"
+                    shutil.copy2(iter_dir / "local_compile.json", pre_report)
+                    reviewed_compile = {"candidate_sha256": _sha256(candidate),
+                                        "report_sha256": _sha256(pre_report)}
+                    (scratch / "compile_report.json").write_text(json.dumps({
+                        **reviewed_compile, "measured_feedback": compact_local_feedback(before_review),
+                        "full_report": json.loads(pre_report.read_text()),
+                    }, indent=2) + "\n")
                 implementation_index = models.index(
                     actual_phase_models["implement"]
                 )
@@ -724,7 +775,9 @@ def process_item(item: WorkItem, queue: EvalQueue | None, run_root: Path,
                 flush=True,
             )
             phase_result = run_phase(
-                scratch, phase, iter_dir, models, start_index, phase_attempts
+                scratch, phase, iter_dir,
+                tuple(m for m in models if m != actual_phase_models.get("implement")) if phase == "review" else models,
+                0 if phase == "review" else start_index, phase_attempts
             )
             if phase_result is None:
                 break
@@ -780,13 +833,19 @@ def process_item(item: WorkItem, queue: EvalQueue | None, run_root: Path,
             "prompt_sha256": _sha256(scratch / "task.md"),
             "design_sha256": _sha256(design),
             "candidate_sha256": _sha256(candidate),
+            "task_contract": item.contract,
             "evaluation_mode": evaluation,
+            "reviewed_compile": reviewed_compile,
         }
         (iter_dir / "provenance.json").write_text(
             json.dumps(provenance, indent=2), encoding="utf-8"
         )
 
-        problems = static_check(candidate, item.op)
+        problems = static_check(candidate, item.op, item.task_dir)
+        if not provenance["skill_gate_passed"]:
+            problems.append("Incomplete native skill provenance")
+        if actual_phase_models["implement"] == actual_phase_models["review"]:
+            problems.append("Review must use a different model")
         if problems:
             print(f"[{item.name}] iter {it}: static check failed: "
                   f"{problems}", flush=True)
@@ -802,13 +861,13 @@ def process_item(item: WorkItem, queue: EvalQueue | None, run_root: Path,
                 f"[{item.name}] iter {it}: exact-v2 local compile gate",
                 flush=True,
             )
-            digest = local_evaluate(item.op, candidate, iter_dir)
+            digest = local_evaluate(item.op, candidate, iter_dir, item.task_dir)
             (iter_dir / "digest.json").write_text(
                 json.dumps(digest, indent=2) + "\n", encoding="utf-8"
             )
             provenance["validation"] = {
                 "label": "verified-local-compile",
-                "pyasc_commit": "ac1222a48c8914d3f81297c7570d1a84f0f26778",
+                "pyasc_commit": "0a631f70968c3cb7c33ce45330a85768dd5a6f06",
                 "report_sha256": _sha256(iter_dir / "local_compile.json"),
                 "passed": digest.get("passed"),
                 "total": digest.get("total"),
@@ -908,6 +967,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--items", required=True,
                         help="comma list of <op>:<tune|generate>, or all")
+    parser.add_argument("--catalog", type=Path, help="Verified official manifest; required for full-catalog generation")
+    parser.add_argument("--output-dir", type=Path, help="New campaign directory for exact CI artifact binding")
     parser.add_argument("--iterations", type=int, default=3)
     parser.add_argument("--workers", type=int, default=3)
     parser.add_argument(
@@ -923,25 +984,46 @@ def main() -> int:
     args = parser.parse_args()
 
     models = tuple(model.strip() for model in args.models.split(",") if model.strip())
-    if not models:
-        parser.error("at least one --models entry is required")
+    if len(set(models)) < 2:
+        parser.error("at least two distinct --models entries are required for independent review")
+    if args.workers < 1 or args.iterations < 1:
+        parser.error("workers and iterations must be positive")
     if args.phase_attempts < 1:
         parser.error("--phase-attempts must be at least 1")
 
     items = []
+    catalog = None
+    catalog_ops = {}
+    if args.catalog:
+        sys.path.insert(0, str(WORKERS_DIR.parent / "ci"))
+        from validate_catalog import validate
+        catalog = validate(args.catalog.parent)
+        catalog_ops = {op["function_name"]: op for op in catalog["operators"]}
+        if args.evaluation == "remote":
+            parser.error("Full-catalog remote submission requires the durable campaign submission stage")
+    if args.items.strip() == "all" and catalog is None:
+        parser.error("--items all requires --catalog; a historical subset is not the full benchmark")
     item_specs = (
-        [f"{op}:generate" for op in ALL_OPS]
+        [f"{op}:generate" for op in catalog_ops]
         if args.items.strip() == "all"
         else args.items.split(",")
     )
     for spec in item_specs:
         op, _, kind = spec.strip().partition(":")
-        if op not in ALL_OPS or kind not in ("tune", "generate"):
+        if op not in (catalog_ops or ALL_OPS) or kind not in ("tune", "generate"):
             parser.error(f"bad item {spec!r}")
-        items.append(WorkItem(op=op, kind=kind))
+        if catalog and kind != "generate":
+            parser.error("Authoritative catalog campaigns generate fresh candidates")
+        if any(item.op == op for item in items):
+            parser.error("Duplicate work item: " + op)
+        items.append(WorkItem(op=op, kind=kind,
+            task_dir=args.catalog.parent / "tasks" / op if catalog else None,
+            contract=catalog_ops.get(op)))
 
-    run_root = RUNS_DIR / time.strftime("%Y%m%d_%H%M%S")
+    run_root = args.output_dir.resolve() if args.output_dir else RUNS_DIR / time.strftime("%Y%m%d_%H%M%S")
     run_root.mkdir(parents=True)
+    if catalog:
+        (run_root / "catalog-manifest.json").write_text(json.dumps(catalog, indent=2) + "\n")
     print(f"run dir: {run_root}", flush=True)
 
     queue = EvalQueue() if args.evaluation == "remote" else None
@@ -952,7 +1034,13 @@ def main() -> int:
                 args.dry_run, args.evaluation, models, args.phase_attempts,
             ) for item in items
         ]
-        results = [f.result() for f in futures]
+        results = []
+        for item, future in zip(items, futures):
+            try:
+                results.append(future.result())
+            except Exception as exc:
+                item.status = "failed: " + type(exc).__name__ + ": " + str(exc)
+                results.append(item)
 
     print("\n=== campaign summary ===")
     for item in results:
@@ -963,6 +1051,9 @@ def main() -> int:
         "evaluation": args.evaluation,
         "models": list(models),
         "requested_operators": [item.op for item in items],
+        "required_operators": catalog["required_operators"] if catalog else len(items),
+        "required_cases": catalog["required_cases"] if catalog else None,
+        "catalog_sha256": catalog["catalog_sha256"] if catalog else None,
         "locally_qualified_operators": [
             item.op for item in results
             if item.status.startswith("locally qualified")
@@ -989,7 +1080,7 @@ def main() -> int:
             ),
             "evidence": "verified-local-compile",
             "operators": summary["locally_qualified_operators"],
-            "cases_per_operator": 20,
+            "case_counts": {item.op: item.contract["case_count"] if item.contract else 20 for item in items},
             "limitations": [
                 "generated kernels were not executed numerically",
                 "performance was not measured",
