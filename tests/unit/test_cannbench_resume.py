@@ -263,6 +263,7 @@ class RequalificationTests(unittest.TestCase):
                     "passed": 20 if passed else 3, "total": 20}
 
         def phase(scratch, name, iteration, models, index, attempts):
+            self.assertIn("Recorded candidate replay failed", (scratch / "task.md").read_text())
             if name == "design":
                 (scratch / "design.md").write_text("design")
             else:

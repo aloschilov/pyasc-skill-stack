@@ -399,6 +399,29 @@ def static_check(path: Path, callable_name: str, task_dir: Path | None = None) -
                         f"banned torch call: {name}() — torch is allowed only "
                         f"for {sorted(ALLOWED_TORCH_CALLS)}; all math must be "
                         f"asc2 kernels")
+    for function in (node for node in tree.body if isinstance(node, ast.FunctionDef)):
+        decorators = [_dotted(getattr(dec, "func", dec)) for dec in function.decorator_list]
+        if any(name in ("asctile.jit", "asc.jit", "asc2.jit") for name in decorators):
+            continue
+        # Tensor allocation/view assembly is host metadata; copying values into
+        # output tensors belongs in pyasc kernels and must not bypass codegen.
+        allocated = set()
+        for node in ast.walk(function):
+            if isinstance(node, (ast.Assign, ast.AnnAssign)) and isinstance(node.value, ast.Call):
+                call = _dotted(node.value.func)
+                if call in {"torch.empty", "torch.empty_like", "torch.zeros", "torch.zeros_like"}:
+                    targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                    allocated.update(target.id for target in targets if isinstance(target, ast.Name))
+        for node in ast.walk(function):
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "copy_"):
+                problems.append("banned host Tensor.copy_(): write outputs inside pyasc JIT kernels")
+            if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                for target in targets:
+                    if (isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name)
+                            and target.value.id in allocated):
+                        problems.append("banned host Tensor indexed assignment: " + target.value.id)
     return sorted(set(problems))
 
 
@@ -856,6 +879,12 @@ def process_item(item: WorkItem, queue: EvalQueue | None, run_root: Path,
             return item
         print(f"[{item.name}] reuse replay failed; generating fresh candidates",
               flush=True)
+        replay = item_dir / "reuse-attempt"
+        if (replay / "digest.json").is_file():
+            message = "Recorded candidate replay failed under the current gate. " + json.dumps(
+                compact_local_feedback(json.loads((replay / "digest.json").read_text())))
+        elif (replay / "static_check.json").is_file():
+            message = "Recorded candidate violates the current static contract. " + (replay / "static_check.json").read_text()
 
     canonical_module = SUBMISSION_PKG / f"{item.op}.py"
 

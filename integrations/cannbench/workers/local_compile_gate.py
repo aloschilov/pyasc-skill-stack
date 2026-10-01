@@ -65,6 +65,7 @@ class FakeTensor:
         self.shape = tuple(int(v) for v in shape)
         self.dtype = dtype
         self.device = device
+        self._strides = None
 
     @property
     def ndim(self) -> int:
@@ -80,10 +81,44 @@ class FakeTensor:
         return self.dtype.itemsize
 
     def is_contiguous(self) -> bool:
+        expected = 1
+        for size, stride in zip(reversed(self.shape), reversed(self.stride())):
+            if size == 0:
+                return True
+            if size != 1 and stride != expected:
+                return False
+            expected *= size
         return True
 
     def contiguous(self, *_: Any, **__: Any) -> "FakeTensor":
-        return self
+        return self if self.is_contiguous() else FakeTensor(self.shape, self.dtype, self.device)
+
+    def expand(self, *sizes: Any) -> "FakeTensor":
+        if len(sizes) == 1 and isinstance(sizes[0], (list, tuple)):
+            sizes = tuple(sizes[0])
+        if len(sizes) < self.ndim:
+            raise RuntimeError("expand cannot reduce tensor rank")
+        leading = len(sizes) - self.ndim
+        shape, strides = [], []
+        padded_shape = (1,) * leading + self.shape
+        original_strides = list(self.stride())
+        for axis in reversed(range(leading)):
+            following = original_strides[0] * padded_shape[axis + 1] if original_strides else 1
+            original_strides.insert(0, following)
+        for axis, raw in enumerate(sizes):
+            target = int(raw)
+            source = 1 if axis < leading else self.shape[axis - leading]
+            if target == -1:
+                if axis < leading:
+                    raise RuntimeError("expand cannot infer a new leading dimension")
+                target = source
+            if target < 0 or (source != target and source != 1):
+                raise RuntimeError("expand dimension is not broadcastable")
+            shape.append(target)
+            strides.append(0 if target != source else original_strides[axis])
+        result = FakeTensor(shape, self.dtype, self.device)
+        result._strides = tuple(strides)
+        return result
 
     def squeeze(self, dim=None) -> "FakeTensor":
         if dim is None:
@@ -111,6 +146,8 @@ class FakeTensor:
         return FakeTensor(shape, self.dtype, self.device)
 
     def stride(self, dim: int | None = None):
+        if self._strides is not None:
+            return self._strides if dim is None else self._strides[dim]
         values = []
         running = 1
         for size in reversed(self.shape):
