@@ -47,21 +47,7 @@ jobs:
           EVENT_WORKFLOW: ${{ github.event.workflow_run.name }}
           EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
           EVENT_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: |
-          if [ "$EVENT_WORKFLOW" = "CANNBench gate" ]; then
-            echo "run_id=$EVENT_RUN_ID" >> "$GITHUB_OUTPUT"
-            echo "source_sha=$EVENT_SHA" >> "$GITHUB_OUTPUT"
-          else
-            # Listing all runs also handles the first deployment before this
-            # newly added workflow has any run or registered workflow ID.
-            # Keep the latest measured evidence visible after a dashboard-only
-            # change. Its source revision is displayed and cannot qualify a
-            # different current revision.
-            read -r run_id source_sha < <(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=main&status=completed&per_page=100" \
-              --jq ".workflow_runs | map(select(.name == \"CANNBench gate\")) | ([.[] | select(.head_sha == \"$SOURCE_SHA\")] + .) | first | if . then [.id,.head_sha] | @tsv else \" \" end")
-            echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
-            echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
-          fi
+        run: python3 integrations/cannbench/ci/select_pages_evidence.py
       - name: Check whether this run produced a report
         id: report
         if: steps.evidence.outputs.run_id != ''
