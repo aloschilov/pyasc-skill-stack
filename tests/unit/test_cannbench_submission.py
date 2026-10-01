@@ -25,6 +25,9 @@ class FakeClient:
             return {"jobs": [{"id": "job_test", "job_tag": self.queue.tag, "status": "succeeded"}]} if self.listed else {"jobs": []}
         return {"jobs": []}
 
+    def get_credits(self):
+        return {"credits": {"remaining": 100}}
+
     def get_job(self, job_id):
         return {"job": {"id": job_id, "status": "succeeded"}}
 
