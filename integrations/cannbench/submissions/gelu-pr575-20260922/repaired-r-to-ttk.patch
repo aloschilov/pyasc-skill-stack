@@ -1,0 +1,160 @@
+--- a/gelu.py
++++ b/gelu.py
+@@ -5,48 +5,58 @@
+ from ._pyasc_runtime import ensure_npu_platform
+ from ._device_resources import query_resources
+ from ._gelu_metadata.gate import require_default_device, validate_capacity, record_capacity
+-from ._runtime_context import launch_context, record_launch
++from ._runtime_context import launch_context
+ 
+-# Uniform JIT experiment derived from F; not hardware-qualified.
++# PR575 geometry-only hardware diagnostic; device bodies were tested on VM.
+ UNIFORM_REUSE = 2
+-# Compiler-qualified allocation only. CaModel completion explicitly waived for this hardware diagnostic.
+-QUALIFIED_TILES = {('float32', 'none'): {4160: 66560, 15872: 253952}, ('float32', 'tanh'): {15872: 253952}, ('float16', 'none'): {8192: 131072, 15872: 253952}, ('float16', 'tanh'): {8192: 98304, 21120: 253440}, ('bfloat16', 'none'): {8192: 131072, 15872: 253952}, ('bfloat16', 'tanh'): {8192: 98304, 21120: 253440}}
++# All20 geometries compiled; full numerical Model checks cover cases10 and15.
++QUALIFIED_TILES = {('float16', 'none'): {4608: 73728}, ('float32', 'none'): {5440: 87040}, ('bfloat16', 'none'): {4608: 73728}, ('float16', 'tanh'): {5376: 64512}, ('float32', 'tanh'): {8192: 131072}, ('bfloat16', 'tanh'): {5376: 64512}}
+ 
+ 
++# These are logical grid dimensions, not requests to allocate more physical AIVs.
++# Exact PR575 partitioning is retained; all six routes use their literal ubFormer.
+ def choose_geometry(elements: int, available_blocks: int, ub_budget: int, dtype: str, mode: str):
+-    """Choose only measured fitting tiles; avoid starving available blocks.
+-
+-    qualified_tiles maps tile elements to compiler UB bytes for this exact
+-    dtype/mode/JIT/unroll/kernel. Unknown inventories never permit a launch.
+-    Minimize maximum padded work per block, then number of tile iterations.
+-    This is a geometric heuristic, not a performance measurement.
+-    """
+-    if elements < 1 or available_blocks < 1 or ub_budget < 1:
+-        raise ValueError('Positive work, resource cap and UB capacity required')
+-    qualified_tiles = QUALIFIED_TILES[(dtype, mode)]
+-    choices = []
+-    for tile, ub in qualified_tiles.items():
+-        if type(tile) is not int or type(ub) is not int or tile < 1 or ub < 1:
+-            raise ValueError('Invalid compiler inventory')
+-        if ub > ub_budget:
+-            continue
+-        tiles = (elements + tile - 1) // tile
+-        blocks = min(available_blocks, tiles)
+-        iterations = (tiles + blocks - 1) // blocks
+-        choices.append(((iterations * tile, iterations, -blocks), tile, blocks, ub))
+-    if not choices:
+-        raise RuntimeError('No compiler-qualified tile fits UB')
+-    _, tile, blocks, ub = min(choices)
+-    return tile, blocks, ub
++    if elements < 1 or available_blocks < 1:
++        raise ValueError('Positive work and known resources required')
++    inventory = QUALIFIED_TILES[(dtype, mode)]
++    tile = min(inventory)
++    ub = inventory[tile]
++    if ub > ub_budget:
++        raise RuntimeError('TTK tile exceeds bound UB capacity')
++    block_length = ((elements + 71) // 72 + 511) // 512 * 512
++    logical_blocks = (elements + block_length - 1) // block_length
++    return tile, logical_blocks, ub
+ 
+ 
+ def geometry(is_fp32: bool, approximate: str):
+-    if approximate == 'none' and is_fp32:
+-        return 4160, 2, True
+-    if approximate == 'tanh' and is_fp32:
+-        return 15872, 2, True
+-    return 8192, 2, True
++    if is_fp32:
++        return (5440 if approximate == 'none' else 8192), 2, True
++    return (4608 if approximate == 'none' else 5376), 2, True
+ 
++
++def require_unreduced_resources(reported: int, device_limit: int, thread_limit: int,
++                                stream_limit: int, launch_cap: int, fallback: bool):
++    if fallback or type(reported) is not int or reported < 1:
++        raise RuntimeError('TTK logical grid requires known full device resources')
++    if device_limit != reported or thread_limit != reported or stream_limit != reported or launch_cap != reported:
++        raise RuntimeError('TTK logical grid refuses reduced device/thread/stream resources')
++
++
++_TTK_REPORTED = set()
++
++
++def record_ttk_launch(size: int, dtype: str, mode: str, tile: int, blocks: int, ub: int,
++                      reported: int, device_limit: int, thread_limit: int, stream_limit: int):
++    key = (size, dtype, mode, reported)
++    if key not in _TTK_REPORTED:
++        print('GELU_TTK_GRID', dict(elements=size, dtype=dtype, mode=mode,
++              core_num=72, block_length=((size+71)//72+511)//512*512,
++              tile=tile, logical_blocks=blocks, compiled_ub_bytes=ub,
++              reported_aiv=reported,
++              device_limit=device_limit,
++              thread_limit=thread_limit,
++              stream_limit=stream_limit), flush=True)
++        _TTK_REPORTED.add(key)
+ 
+ 
+ @asctile.jit(reuse_alloc=2, vf_fusion=True)
+@@ -56,18 +66,17 @@
+                 is_fp32: asctile.ConstExpr):
+     in_gm = asctile.global_tensor(input_ptr, [input_length])
+     out_gm = asctile.global_tensor(output_ptr, [input_length])
+-    total_tiles = asctile.ceildiv(input_length, tile_length)
+-    quotient = total_tiles // asctile.block_num()
+-    remainder = total_tiles % asctile.block_num()
+-    first_tile = asctile.block_idx() * quotient + min(asctile.block_idx(), remainder)
+-    local_tiles = quotient + min(max(remainder - asctile.block_idx(), 0), 1)
++    block_length = asctile.ceildiv(asctile.ceildiv(input_length, 72), 512) * 512
++    block_start = asctile.block_idx() * block_length
++    block_end = min(block_start + block_length, input_length)
++    local_tiles = asctile.ceildiv(max(block_end - block_start, 0), tile_length)
+     # Explicit fixed-size inner group avoids a separate dynamic remainder loop.
+     for base in range(0, local_tiles, unroll_factor):
+         for lane in asctile.range(unroll_factor, unroll_factor=unroll_factor):
+             i = base + lane
+             if i < local_tiles:
+-                offset = (first_tile + i) * tile_length
+-                valid = max(0, min(input_length - offset, tile_length))
++                offset = block_start + i * tile_length
++                valid = max(0, min(block_end - offset, tile_length))
+                 raw = asctile.copy_in(in_gm, [offset], [tile_length], real_shape=[valid], pad_value=0)
+                 x = raw.to(asctile.float32)
+                 if approximate:
+@@ -95,14 +104,13 @@
+                 is_fp32: asctile.ConstExpr):
+     in_gm = asctile.global_tensor(input_ptr, [input_length])
+     out_gm = asctile.global_tensor(output_ptr, [input_length])
+-    total_tiles = asctile.ceildiv(input_length, tile_length)
+-    quotient = total_tiles // asctile.block_num()
+-    remainder = total_tiles % asctile.block_num()
+-    first_tile = asctile.block_idx() * quotient + min(asctile.block_idx(), remainder)
+-    local_tiles = quotient + min(max(remainder - asctile.block_idx(), 0), 1)
++    block_length = asctile.ceildiv(asctile.ceildiv(input_length, 72), 512) * 512
++    block_start = asctile.block_idx() * block_length
++    block_end = min(block_start + block_length, input_length)
++    local_tiles = asctile.ceildiv(max(block_end - block_start, 0), tile_length)
+     for i in asctile.range(local_tiles, unroll_factor=unroll_factor):
+-        offset = (first_tile + i) * tile_length
+-        valid = max(0, min(input_length - offset, tile_length))
++        offset = block_start + i * tile_length
++        valid = max(0, min(block_end - offset, tile_length))
+         raw = asctile.copy_in(in_gm, [offset], [tile_length], real_shape=[valid], pad_value=0)
+         x = raw.to(asctile.float32)
+         if approximate:
+@@ -157,13 +165,16 @@
+     require_default_device(resources, route)
+     with launch_context(resources) as context:
+         capacity = validate_capacity(context.resources, route, stream_limit=context.stream_limit)
+-        # Same policy for all six routes: live resource cap, useful work, measured UB.
++        require_unreduced_resources(context.resources.reported_aiv, context.resources.device_limit,
++                                    context.resources.thread_limit, context.stream_limit,
++                                    context.resources.launch_cap, context.resources.fallback)
++        # Retain exact logical TTK grid; never silently clamp it to physical AIVs.
+         tile, cores, ub = choose_geometry(size, context.resources.launch_cap,
+                                          min(253952, capacity['allocation_capacity_bytes']), dtype, approximate)
+         route.update(tile=tile, compiled_ub_bytes=ub)
+         capacity = validate_capacity(context.resources, route, stream_limit=context.stream_limit)
+-        record_launch(context, elements=size, tile=tile, unroll=unroll, cores=cores,
+-                      dtype=dtype, mode=approximate, vf=vf, ub=ub, reuse=reuse)
++        record_ttk_launch(size, dtype, approximate, tile, cores, ub, context.resources.reported_aiv,
++                          context.resources.device_limit, context.resources.thread_limit, context.stream_limit)
+         record_capacity(context.resources, route, capacity, stream_limit=context.stream_limit)
+         selected_kernel = gelu_kernel if (exact_fp32 or (approximate == 'tanh' and x.dtype != torch.float32)) else gelu_reference_kernel
+         selected_kernel[cores, context.stream](x.reshape(-1), y.reshape(-1), size, tile, unroll,
