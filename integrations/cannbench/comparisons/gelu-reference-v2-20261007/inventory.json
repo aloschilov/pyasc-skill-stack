@@ -1,0 +1,560 @@
+[
+  {
+    "dtype": "float16",
+    "mode": "none",
+    "tile_shape": [
+      2048
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 24576,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "6a3b9f710d1f0c3f677c085f531bbb59bbdb31c197a56ffaeb68d18727f53e45"
+  },
+  {
+    "dtype": "float16",
+    "mode": "none",
+    "tile_shape": [
+      8192
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 98304,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "f21ce68b58dca564831c7f79574587e581fdcb5d11ec27dd0a05350bf442d97a"
+  },
+  {
+    "dtype": "float16",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "77ef7a7a3a6d6da6aaca869a6cfbc446eb3b4ac6593ae5bf797f799432188eb2"
+  },
+  {
+    "dtype": "float16",
+    "mode": "tanh",
+    "tile_shape": [
+      2048
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 24576,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "ec40ccb5df46bb55f2f02736ae3299f420db873dc2644aaea91c11e2c7235f53"
+  },
+  {
+    "dtype": "float16",
+    "mode": "tanh",
+    "tile_shape": [
+      8192
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 98304,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "26861ff07063de1bffbb00dee1f4be7cdb03a45ae2e517fe046c5491fa28ab83"
+  },
+  {
+    "dtype": "float16",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "993d2f65d1ea475705571122ca827965e7710012e1324682d02fb2f7ef083425"
+  },
+  {
+    "dtype": "bfloat16",
+    "mode": "none",
+    "tile_shape": [
+      2048
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 24576,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "9bbca02e3f5c572dd9c7df5b81047fb9ef2291258b4ec3926065c0d7389e8690"
+  },
+  {
+    "dtype": "bfloat16",
+    "mode": "none",
+    "tile_shape": [
+      8192
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 98304,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "a5f196e2918d6eeebb31afff35fffc8f365c7d092a63f6cc554dd47aba65ec8a"
+  },
+  {
+    "dtype": "bfloat16",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "722769c7f90ea1bb7ee667c98e6bb9ebc3f209c4b4aa76f853d2aba7bca0b933"
+  },
+  {
+    "dtype": "bfloat16",
+    "mode": "tanh",
+    "tile_shape": [
+      2048
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 24576,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "7938c8cbdb7afa5d5cc7d2f45181155807f3c0ab82c8db9447a3db784528902b"
+  },
+  {
+    "dtype": "bfloat16",
+    "mode": "tanh",
+    "tile_shape": [
+      8192
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 98304,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "8d1636ec5e2ec8e8a36ff1d7c953be3d91159e1526329083b3bc9e766857a79c"
+  },
+  {
+    "dtype": "bfloat16",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "57debbca9d19fe3c81f03dd2d35f8a4cc23f8f104cc52594be84691e17cf0cbe"
+  },
+  {
+    "dtype": "float32",
+    "mode": "none",
+    "tile_shape": [
+      2048
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 24576,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "51dc52ed9859fcac964a491ee61fcf35ed0efd1603fcc0f68e09ee734bd562ce"
+  },
+  {
+    "dtype": "float32",
+    "mode": "none",
+    "tile_shape": [
+      8192
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 98304,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "da05e5db2fb9a0a4f9bd05e56a8292078012791c6f842e7244f2bd4dce543192"
+  },
+  {
+    "dtype": "float32",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "9d2525e49eb5bbad8e1c69a4e038c4b59776cf6ca6f783bedb282a5a45c9f43a"
+  },
+  {
+    "dtype": "float32",
+    "mode": "tanh",
+    "tile_shape": [
+      2048
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 24576,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "51c2cbd936f7e3d12e307a4033abaa612fc4951a60f87074507529048d373317"
+  },
+  {
+    "dtype": "float32",
+    "mode": "tanh",
+    "tile_shape": [
+      8192
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 98304,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "ff38472f0e1a026618cf3c7642294bb38c9f805c948ce6d8ecc9b7a9dd6745a3"
+  },
+  {
+    "dtype": "float32",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "864c831aabe2618d73a87b69dd7fe6f1666cd951666f51ddaaa1cddcd4cfbb66"
+  }
+]

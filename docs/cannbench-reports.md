@@ -1,5 +1,19 @@
 # CANNBench evaluation reports
 
+## Reference-DAG GeLU on current pyasc v2 (2026-10-07)
+
+- [Full report: all 20 cases, implementation, JIT/UB, local checks and limitations](../integrations/cannbench/comparisons/gelu-reference-v2-20261007/README.md)
+- [Exact successful submission, including the self-contained runtime wheel](../integrations/cannbench/comparisons/gelu-reference-v2-20261007/repair/diagnostic.zip)
+- [Hardware job `job_ce3bf7738fb3`](https://cannbench.com/workspace/jobs/job_ce3bf7738fb3)
+
+Pinned pyasc v2 `9069108e323746187c48d78fec4929c4afa2efc4`. **20/20 correct**,
+zero anti-cheat failures; independently computed geometric mean **0.509582×**.
+No case exceeds reference. A separate local FP32 negative-tail stress test
+still fails; official-case success is not a universal numerical guarantee.
+The report preserves the first build-entry manifest failure and its manifest-only
+repair, exact archives, source trace, and sanitized evidence. No compiler or
+active skill changes are part of this publication.
+
 ## GeLU adaptive runner campaign — intermediate report (2026-09-11)
 
 - [Unified intermediate report: all jobs,20 shapes,tiling,JIT,UB and local results](../reports/gelu-adaptive-intermediate-20260911/README.md)

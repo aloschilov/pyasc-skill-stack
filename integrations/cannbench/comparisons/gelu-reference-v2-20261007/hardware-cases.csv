@@ -1,0 +1,21 @@
+case_id,shape,dtype,mode,tile_shape,unroll,reuse_alloc,vf_fusion,compiled_ub_bytes,status,accuracy,elapsed_us,baseline_perf_us,derived_speedup,reported_speedup,error,kernel,job_url
+1,1024x1024,float16,none,[15872],1,2,True,190464,cascade,,,6.78,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+2,2048x2048,float32,none,[15872],1,2,True,190464,cascade,,,17.3,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+3,4096x4096,bfloat16,none,[15872],1,2,True,190464,cascade,,,62.32,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+4,8192x8192,float16,tanh,[15872],1,2,True,190464,cascade,,,232.59,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+5,8192x8192,float32,tanh,[15872],1,2,True,190464,cascade,,,354.19,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+6,1023x1023,bfloat16,tanh,[15872],1,2,True,190464,cascade,,,7.18,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+7,1009x1021,float16,none,[15872],1,2,True,190464,cascade,,,6.72,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+8,1537x769,float32,tanh,[15872],1,2,True,190464,cascade,,,6.98,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+9,363x367x373,bfloat16,none,[15872],1,2,True,190464,cascade,,,177.48,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+10,2049x513,float16,tanh,[15872],1,2,True,190464,cascade,,,6.94,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+11,3x7x13x4001,float32,none,[15872],1,2,True,190464,cascade,,,7.22,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+12,1000003,bfloat16,tanh,[15872],1,2,True,190464,cascade,,,6.78,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+13,11x13x17x67x67,float32,none,[15872],1,2,True,190464,cascade,,,39.22,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+14,3x7x11x13x1009,float16,tanh,[15872],1,2,True,190464,cascade,,,13.66,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+15,512x2049,float32,none,[15872],1,2,True,190464,cascade,,,6.46,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+16,255x8193,bfloat16,none,[15872],1,2,True,190464,cascade,,,10.66,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+17,4097x511,float16,tanh,[15872],1,2,True,190464,cascade,,,10.62,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+18,2x511x2049,float32,none,[15872],1,2,True,190464,cascade,,,10.12,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+19,4x255x2049,bfloat16,tanh,[15872],1,2,True,190464,cascade,,,10.78,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143
+20,2x3x17x1024x101,float32,none,[15872],1,2,True,190464,cascade,,,37.98,,,compile failed: [<build>] build.sh 编译失败：,kernel.py,https://cannbench.com/workspace/jobs/job_b822d9190143

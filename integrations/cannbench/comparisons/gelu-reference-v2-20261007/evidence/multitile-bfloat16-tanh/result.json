@@ -1,0 +1,230 @@
+{
+  "pin": "9069108e323746187c48d78fec4929c4afa2efc4",
+  "args": {
+    "dtype": "bfloat16",
+    "mode": "tanh",
+    "tile": 15872,
+    "size": 8193,
+    "cores": 1,
+    "unroll": 1,
+    "compile_only": false,
+    "workload_size": 31745,
+    "output": "/home/aloschilov/workspace/gelu-reference-v2-20261007/evidence/multitile-bfloat16-tanh/result.json"
+  },
+  "completed": true,
+  "compiled": true,
+  "harness_sha256": "c7ab0f25ec463778697d123bdc06dba957cc1b58c189b4fe9bbd6f17a4d8867a",
+  "runtime_file": "/home/aloschilov/workspace/gelu-reference-v2-20261007/native-installed/asc/__init__.py",
+  "asctile_file": "/home/aloschilov/workspace/gelu-reference-v2-20261007/native-installed/asc/experimental/asctile/__init__.py",
+  "source_sha256": "5e3a0b09773e18965c3a57776b09dc40171e08134bec7b8c170a05c6f1b226cc",
+  "requested_options": {
+    "debug": false,
+    "strip_loc": false,
+    "verify_sync": true,
+    "print_ir_before_all": false,
+    "run_passes": true,
+    "kernel_type": null,
+    "auto_sync": true,
+    "auto_sync_log": "",
+    "matmul_cube_only": false,
+    "insert_sync": true,
+    "always_compile": true,
+    "bisheng_options": null,
+    "opt_level": 3,
+    "vf_vec_len": null,
+    "cv_ratio": 1,
+    "reuse_alloc": 2,
+    "static_alloc": null,
+    "vf_fusion": true
+  },
+  "memory_consumed": {
+    "UB": 190464
+  },
+  "binary_sha256": "57debbca9d19fe3c81f03dd2d35f8a4cc23f8f104cc52594be84691e17cf0cbe",
+  "ub_fit": true,
+  "sample_segments": [
+    [
+      "multi_tile_workload",
+      0,
+      31745
+    ]
+  ],
+  "phase": "model",
+  "active_input": "combined",
+  "repeat": 1,
+  "checks": [
+    {
+      "input": "combined",
+      "repeat": 0,
+      "passed": true,
+      "repeat_equal": true,
+      "guards_intact": true,
+      "model_ticks": 14488,
+      "warmed": false,
+      "wall_seconds": 85.8850474159699,
+      "details": {
+        "passed": true,
+        "dtype": "bfloat16",
+        "threshold": 0.0078125,
+        "mere": 0.0,
+        "mare": 0.0,
+        "max_diff": 0.0,
+        "mean_diff": 0.0,
+        "mismatch_count": 0,
+        "total_count": 31745,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "bfloat16",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "mismatch_count": 0,
+            "total_count": 31745,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      },
+      "segment_checks": [
+        {
+          "input": "multi_tile_workload",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "max_diff": 0.0,
+            "mean_diff": 0.0,
+            "mismatch_count": 0,
+            "total_count": 31745,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 0.0,
+                "mare": 0.0,
+                "mismatch_count": 0,
+                "total_count": 31745,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "input": "combined",
+      "repeat": 1,
+      "passed": true,
+      "repeat_equal": true,
+      "guards_intact": true,
+      "model_ticks": 13089,
+      "warmed": true,
+      "wall_seconds": 88.37621558387764,
+      "details": {
+        "passed": true,
+        "dtype": "bfloat16",
+        "threshold": 0.0078125,
+        "mere": 0.0,
+        "mare": 0.0,
+        "max_diff": 0.0,
+        "mean_diff": 0.0,
+        "mismatch_count": 0,
+        "total_count": 31745,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "bfloat16",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "mismatch_count": 0,
+            "total_count": 31745,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      },
+      "segment_checks": [
+        {
+          "input": "multi_tile_workload",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "max_diff": 0.0,
+            "mean_diff": 0.0,
+            "mismatch_count": 0,
+            "total_count": 31745,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 0.0,
+                "mare": 0.0,
+                "mismatch_count": 0,
+                "total_count": 31745,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "accuracy_passed": true
+}
