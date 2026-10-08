@@ -1,0 +1,880 @@
+{
+  "passed": true,
+  "dispatches": [
+    {
+      "cap": 1,
+      "case_id": 1,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 2,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 3,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 4,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 5,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', True, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 6,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 7,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 8,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', True, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 9,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 10,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 11,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 12,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 13,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 14,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 15,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 16,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 17,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 18,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 19,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 1,
+      "case_id": 20,
+      "passed": true,
+      "cores": 1,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 1,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 2,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 3,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 4,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 5,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', True, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 6,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 7,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 8,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', True, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 9,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 10,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 11,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 12,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 13,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 14,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 15,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 16,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 17,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 18,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 19,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 8,
+      "case_id": 20,
+      "passed": true,
+      "cores": 8,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 1,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 2,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 3,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 4,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 5,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', True, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 6,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 7,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 8,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', True, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 9,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 10,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 11,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 12,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 13,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 14,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 15,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 16,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 17,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 18,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 19,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 64,
+      "case_id": 20,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 1,
+      "passed": true,
+      "cores": 67,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 2,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 3,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 4,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 5,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', True, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 6,
+      "passed": true,
+      "cores": 66,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 7,
+      "passed": true,
+      "cores": 65,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 8,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', True, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 9,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 10,
+      "passed": true,
+      "cores": 67,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 11,
+      "passed": true,
+      "cores": 69,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 12,
+      "passed": true,
+      "cores": 64,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 13,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 14,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 15,
+      "passed": true,
+      "cores": 67,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 16,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', False, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 17,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 18,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 19,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.bfloat16', True, False, 15872, 1)"
+    },
+    {
+      "cap": 72,
+      "case_id": 20,
+      "passed": true,
+      "cores": 72,
+      "tile": 15872,
+      "unroll": 1,
+      "specialization": "('torch.float32', False, True, 15872, 1)"
+    }
+  ],
+  "bridge_loadability": true,
+  "bridge_device_binding_tested": false,
+  "provenance": {
+    "pyasc_pin": "9069108e323746187c48d78fec4929c4afa2efc4",
+    "upstream_wheel_sha256": "e4e414b590daf4a8be59330041834bba93dcb53f73e7419a6a3bdf87d79322ac",
+    "kernel_sha256": "5e3a0b09773e18965c3a57776b09dc40171e08134bec7b8c170a05c6f1b226cc",
+    "experiment": "reference-DAG diagnostic; FP32 negative-tail stress fails locally"
+  },
+  "specializations": {
+    "('torch.float16', False, False, 15872, 1)": {
+      "ub": 190464,
+      "options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "insert_sync": true,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "vf_vec_len": 256,
+        "cv_ratio": 1,
+        "reuse_alloc": 2,
+        "static_alloc": null,
+        "vf_fusion": true
+      },
+      "source_sha256": "9353c8ff6b31d4a8aca19b1ba35273c37dacc81aef564d2c0e0c576873e8ae43"
+    },
+    "('torch.float32', False, True, 15872, 1)": {
+      "ub": 190464,
+      "options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "insert_sync": true,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "vf_vec_len": 256,
+        "cv_ratio": 1,
+        "reuse_alloc": 2,
+        "static_alloc": null,
+        "vf_fusion": true
+      },
+      "source_sha256": "c728b218da42c73ae68ee3a676f27b6fc7b87e64c1754f7c05a789fa3bb6c0db"
+    },
+    "('torch.bfloat16', False, False, 15872, 1)": {
+      "ub": 190464,
+      "options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "insert_sync": true,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "vf_vec_len": 256,
+        "cv_ratio": 1,
+        "reuse_alloc": 2,
+        "static_alloc": null,
+        "vf_fusion": true
+      },
+      "source_sha256": "578444b937d37711109b6cbbe0e477bc305edf6ff0950793049842fc0f5aa11c"
+    },
+    "('torch.float16', True, False, 15872, 1)": {
+      "ub": 190464,
+      "options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "insert_sync": true,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "vf_vec_len": 256,
+        "cv_ratio": 1,
+        "reuse_alloc": 2,
+        "static_alloc": null,
+        "vf_fusion": true
+      },
+      "source_sha256": "292e0597c031ee7e169c3b3131dd2861c281687b85e85f3d57627ddc301aee3c"
+    },
+    "('torch.float32', True, False, 15872, 1)": {
+      "ub": 190464,
+      "options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "insert_sync": true,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "vf_vec_len": 256,
+        "cv_ratio": 1,
+        "reuse_alloc": 2,
+        "static_alloc": null,
+        "vf_fusion": true
+      },
+      "source_sha256": "5b447625abf008e738458594bb7b57299ef2380f06915b29f75fe0cfe436b8d1"
+    },
+    "('torch.bfloat16', True, False, 15872, 1)": {
+      "ub": 190464,
+      "options": {
+        "debug": false,
+        "strip_loc": false,
+        "verify_sync": true,
+        "print_ir_before_all": false,
+        "run_passes": true,
+        "kernel_type": "KernelType.AIV_ONLY",
+        "auto_sync": true,
+        "auto_sync_log": "",
+        "matmul_cube_only": false,
+        "insert_sync": true,
+        "always_compile": false,
+        "bisheng_options": null,
+        "opt_level": 3,
+        "vf_vec_len": 256,
+        "cv_ratio": 1,
+        "reuse_alloc": 2,
+        "static_alloc": null,
+        "vf_fusion": true
+      },
+      "source_sha256": "3b6379045fe8028ccff4a78a8f7ea2e2e380d7fc9ce40dd745e7adc7b97cbd2b"
+    }
+  },
+  "scope": "Mocked host launch and stock lowering, not device accuracy"
+}

@@ -1,0 +1,65 @@
+{
+  "tag": "gelu-reference-v2-9069108-20261007",
+  "state": "compile_failed",
+  "created": 1791392884.6740615,
+  "archive_sha256": "a7819eede1ac0a1867364db81c97fe9283193219fa871f7d5a112c8ac8b62cd0",
+  "kernel_sha256": "5e3a0b09773e18965c3a57776b09dc40171e08134bec7b8c170a05c6f1b226cc",
+  "offline_qualification_sha256": "61c8d329327fc3cad9bfdf98b230c0744ca0c56f53c2de4a44c566af8e4869cb",
+  "routes": [
+    {
+      "dtype": "float16",
+      "mode": "none",
+      "evidence": "/home/aloschilov/workspace/gelu-reference-v2-20261007/evidence/qualification-float16-none/result.json",
+      "evidence_sha256": "db8447229558b125a4849b8aa441b1e82a341ffef1abae8cd650385b3f5d72eb",
+      "accuracy": true
+    },
+    {
+      "dtype": "float16",
+      "mode": "tanh",
+      "evidence": "/home/aloschilov/workspace/gelu-reference-v2-20261007/evidence/qualification-float16-tanh/result.json",
+      "evidence_sha256": "6c22777779d1b205a7146f811ceb56f9f7ea6cbc655278970a8bee87aba0aecd",
+      "accuracy": true
+    },
+    {
+      "dtype": "bfloat16",
+      "mode": "none",
+      "evidence": "/home/aloschilov/workspace/gelu-reference-v2-20261007/evidence/qualification-bfloat16-none/result.json",
+      "evidence_sha256": "5fbf4429f4fb472ea24bd0123b665470a6f99ae209c7c8746a83a80f1a300de5",
+      "accuracy": true
+    },
+    {
+      "dtype": "bfloat16",
+      "mode": "tanh",
+      "evidence": "/home/aloschilov/workspace/gelu-reference-v2-20261007/evidence/qualification-bfloat16-tanh/result.json",
+      "evidence_sha256": "64981b95e8865377507549d53fdd11e1a38aca40fbe73237156bf7054b98c545",
+      "accuracy": true
+    },
+    {
+      "dtype": "float32",
+      "mode": "none",
+      "evidence": "/home/aloschilov/workspace/gelu-reference-v2-20261007/evidence/verified-float32-none/result.json",
+      "evidence_sha256": "e3c49f459f21dd727d006d6bf162b9ad30151712c24d77212233dea59499ff3d",
+      "accuracy": false
+    },
+    {
+      "dtype": "float32",
+      "mode": "tanh",
+      "evidence": "/home/aloschilov/workspace/gelu-reference-v2-20261007/evidence/verified-float32-tanh/result.json",
+      "evidence_sha256": "83a4a80e62daa1b22358977cbecd494a0edfeda705fe987be95c8aef8f85b9df",
+      "accuracy": true
+    }
+  ],
+  "diagnostic": true,
+  "attempt_limit": 1,
+  "retry_count": 0,
+  "rationale": "Requested reference-algorithm hardware evaluation. Known dense-tail FP32 exact stress failure; sampled official ranges passed. Not a fully correctness-qualified release.",
+  "selected_operators": [
+    "gelu"
+  ],
+  "is_private": true,
+  "upload_pid": 617709,
+  "curl_exit": 0,
+  "upload_finished": 1791393506.178034,
+  "job_id": "job_b822d9190143",
+  "observed": 1791394251.2325516
+}

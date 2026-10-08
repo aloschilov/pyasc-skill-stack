@@ -1,0 +1,51 @@
+[
+  {
+    "label": "unchanged-repair",
+    "expected_success": true,
+    "returncode": 0,
+    "output": "cann_bench/__init__.py: OK\ncann_bench/_device_resources.py: OK\ncann_bench/_gelu_metadata/__init__.py: OK\ncann_bench/_gelu_metadata/active_soc.py: OK\ncann_bench/_gelu_metadata/diagnostics_v2.py: OK\ncann_bench/_gelu_metadata/gate.py: OK\ncann_bench/_gelu_metadata/loaded_sdk.py: OK\ncann_bench/_gelu_metadata/platform_capacity.py: OK\ncann_bench/_pyasc_runtime.py: OK\ncann_bench/_runtime_context.py: OK\ncann_bench/gelu.py: OK\ncann_bench/kernel.py: OK\nmetadata/augment_wheel.py: OK\nmetadata/build_metadata_v2.py: OK\nmetadata/build_metadata_v3.py: OK\nmetadata/build_payload.sh: OK\nmetadata/loaded_sdk.py: OK\nmetadata/platform_capacity.cpp: OK\nsetup.py: OK\nwheel/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl: OK\n",
+    "stderr": ""
+  },
+  {
+    "label": "old-manifest-rejects-entrypoint-edit",
+    "expected_success": false,
+    "returncode": 1,
+    "output": "build.sh: FAILED\ncann_bench/__init__.py: OK\ncann_bench/_device_resources.py: OK\ncann_bench/_gelu_metadata/__init__.py: OK\ncann_bench/_gelu_metadata/active_soc.py: OK\ncann_bench/_gelu_metadata/diagnostics_v2.py: OK\ncann_bench/_gelu_metadata/gate.py: OK\ncann_bench/_gelu_metadata/loaded_sdk.py: OK\ncann_bench/_gelu_metadata/platform_capacity.py: OK\ncann_bench/_pyasc_runtime.py: OK\ncann_bench/_runtime_context.py: OK\ncann_bench/gelu.py: OK\ncann_bench/kernel.py: OK\nmetadata/augment_wheel.py: OK\nmetadata/build_metadata_v2.py: OK\nmetadata/build_metadata_v3.py: OK\nmetadata/build_payload.sh: OK\nmetadata/loaded_sdk.py: OK\nmetadata/platform_capacity.cpp: OK\nsetup.py: OK\nwheel/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl: OK\n",
+    "stderr": "sha256sum: WARNING: 1 computed checksum did NOT match\n"
+  },
+  {
+    "label": "repair-allows-entrypoint-edit",
+    "expected_success": true,
+    "returncode": 0,
+    "output": "cann_bench/__init__.py: OK\ncann_bench/_device_resources.py: OK\ncann_bench/_gelu_metadata/__init__.py: OK\ncann_bench/_gelu_metadata/active_soc.py: OK\ncann_bench/_gelu_metadata/diagnostics_v2.py: OK\ncann_bench/_gelu_metadata/gate.py: OK\ncann_bench/_gelu_metadata/loaded_sdk.py: OK\ncann_bench/_gelu_metadata/platform_capacity.py: OK\ncann_bench/_pyasc_runtime.py: OK\ncann_bench/_runtime_context.py: OK\ncann_bench/gelu.py: OK\ncann_bench/kernel.py: OK\nmetadata/augment_wheel.py: OK\nmetadata/build_metadata_v2.py: OK\nmetadata/build_metadata_v3.py: OK\nmetadata/build_payload.sh: OK\nmetadata/loaded_sdk.py: OK\nmetadata/platform_capacity.cpp: OK\nsetup.py: OK\nwheel/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl: OK\n",
+    "stderr": ""
+  },
+  {
+    "label": "rejects-payload-edit:cann_bench/kernel.py",
+    "expected_success": false,
+    "returncode": 1,
+    "output": "cann_bench/__init__.py: OK\ncann_bench/_device_resources.py: OK\ncann_bench/_gelu_metadata/__init__.py: OK\ncann_bench/_gelu_metadata/active_soc.py: OK\ncann_bench/_gelu_metadata/diagnostics_v2.py: OK\ncann_bench/_gelu_metadata/gate.py: OK\ncann_bench/_gelu_metadata/loaded_sdk.py: OK\ncann_bench/_gelu_metadata/platform_capacity.py: OK\ncann_bench/_pyasc_runtime.py: OK\ncann_bench/_runtime_context.py: OK\ncann_bench/gelu.py: OK\ncann_bench/kernel.py: FAILED\nmetadata/augment_wheel.py: OK\nmetadata/build_metadata_v2.py: OK\nmetadata/build_metadata_v3.py: OK\nmetadata/build_payload.sh: OK\nmetadata/loaded_sdk.py: OK\nmetadata/platform_capacity.cpp: OK\nsetup.py: OK\nwheel/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl: OK\n",
+    "stderr": "sha256sum: WARNING: 1 computed checksum did NOT match\n"
+  },
+  {
+    "label": "rejects-payload-edit:cann_bench/_device_resources.py",
+    "expected_success": false,
+    "returncode": 1,
+    "output": "cann_bench/__init__.py: OK\ncann_bench/_device_resources.py: FAILED\ncann_bench/_gelu_metadata/__init__.py: OK\ncann_bench/_gelu_metadata/active_soc.py: OK\ncann_bench/_gelu_metadata/diagnostics_v2.py: OK\ncann_bench/_gelu_metadata/gate.py: OK\ncann_bench/_gelu_metadata/loaded_sdk.py: OK\ncann_bench/_gelu_metadata/platform_capacity.py: OK\ncann_bench/_pyasc_runtime.py: OK\ncann_bench/_runtime_context.py: OK\ncann_bench/gelu.py: OK\ncann_bench/kernel.py: OK\nmetadata/augment_wheel.py: OK\nmetadata/build_metadata_v2.py: OK\nmetadata/build_metadata_v3.py: OK\nmetadata/build_payload.sh: OK\nmetadata/loaded_sdk.py: OK\nmetadata/platform_capacity.cpp: OK\nsetup.py: OK\nwheel/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl: OK\n",
+    "stderr": "sha256sum: WARNING: 1 computed checksum did NOT match\n"
+  },
+  {
+    "label": "rejects-payload-edit:metadata/build_payload.sh",
+    "expected_success": false,
+    "returncode": 1,
+    "output": "cann_bench/__init__.py: OK\ncann_bench/_device_resources.py: OK\ncann_bench/_gelu_metadata/__init__.py: OK\ncann_bench/_gelu_metadata/active_soc.py: OK\ncann_bench/_gelu_metadata/diagnostics_v2.py: OK\ncann_bench/_gelu_metadata/gate.py: OK\ncann_bench/_gelu_metadata/loaded_sdk.py: OK\ncann_bench/_gelu_metadata/platform_capacity.py: OK\ncann_bench/_pyasc_runtime.py: OK\ncann_bench/_runtime_context.py: OK\ncann_bench/gelu.py: OK\ncann_bench/kernel.py: OK\nmetadata/augment_wheel.py: OK\nmetadata/build_metadata_v2.py: OK\nmetadata/build_metadata_v3.py: OK\nmetadata/build_payload.sh: FAILED\nmetadata/loaded_sdk.py: OK\nmetadata/platform_capacity.cpp: OK\nsetup.py: OK\nwheel/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl: OK\n",
+    "stderr": "sha256sum: WARNING: 1 computed checksum did NOT match\n"
+  },
+  {
+    "label": "rejects-payload-edit:wheel/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl",
+    "expected_success": false,
+    "returncode": 1,
+    "output": "cann_bench/__init__.py: OK\ncann_bench/_device_resources.py: OK\ncann_bench/_gelu_metadata/__init__.py: OK\ncann_bench/_gelu_metadata/active_soc.py: OK\ncann_bench/_gelu_metadata/diagnostics_v2.py: OK\ncann_bench/_gelu_metadata/gate.py: OK\ncann_bench/_gelu_metadata/loaded_sdk.py: OK\ncann_bench/_gelu_metadata/platform_capacity.py: OK\ncann_bench/_pyasc_runtime.py: OK\ncann_bench/_runtime_context.py: OK\ncann_bench/gelu.py: OK\ncann_bench/kernel.py: OK\nmetadata/augment_wheel.py: OK\nmetadata/build_metadata_v2.py: OK\nmetadata/build_metadata_v3.py: OK\nmetadata/build_payload.sh: OK\nmetadata/loaded_sdk.py: OK\nmetadata/platform_capacity.cpp: OK\nsetup.py: OK\nwheel/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl: FAILED\n",
+    "stderr": "sha256sum: WARNING: 1 computed checksum did NOT match\n"
+  }
+]
