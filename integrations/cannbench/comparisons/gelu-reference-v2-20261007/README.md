@@ -4,6 +4,11 @@ Experiment started 2026-10-07. Isolated from the concurrently modified skill rep
 
 ## Published artifact and offline verification
 
+Download the single ready-to-use **[submission.zip](submission.zip)**. It is a
+byte-identical copy of the successful [repair/diagnostic.zip](repair/diagnostic.zip)
+for [job_ce3bf7738fb3](https://cannbench.com/workspace/jobs/job_ce3bf7738fb3) (20/20).
+SHA256: `ef5269b46a56437463f5dcef53fd408dcf173c3a502e0306726a797a6f840ceb`.
+
 The **complete successful submission** is [repair/diagnostic.zip](repair/diagnostic.zip),
 including the evaluator build entrypoint, metadata bridge sources, kernel/launcher,
 and the self-contained CPython 3.12/x86_64 runtime wheel. Its bytes are unchanged
