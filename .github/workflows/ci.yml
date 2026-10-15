@@ -31,7 +31,7 @@ jobs:
       - name: Validate complete official catalog snapshot
         run: python integrations/cannbench/ci/validate_catalog.py integrations/cannbench/catalogs/official-tasks-1.1.2-20261001
       - name: Build dashboard
-        run: python tests/tools/generate_dashboard.py --output-dir _site
+        run: python dashboard/cannbench/build.py --output-dir _site
       - uses: actions/upload-artifact@v4
         with:
           name: dashboard-preview

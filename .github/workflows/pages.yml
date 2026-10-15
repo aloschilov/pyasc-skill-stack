@@ -1,16 +1,8 @@
 name: Deploy Pages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - capabilities.yaml
-      - evidence/**
-      - tests/tools/generate_dashboard.py
-      - integrations/cannbench/catalogs/**
-      - .github/workflows/pages.yml
   workflow_run:
-    workflows: [CI, CANNBench gate]
+    workflows: [CI]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -28,9 +20,9 @@ concurrency:
 jobs:
   build-and-deploy:
     if: >-
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success' ||
-      github.event.workflow_run.name == 'CANNBench gate'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -38,77 +30,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
-      - name: Select exact CANNBench evidence run
-        id: evidence
+          ref: ${{ github.event.workflow_run.head_sha || 'main' }}
+      - name: Require successful CI for this exact main revision
         env:
           GH_TOKEN: ${{ github.token }}
-          SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-          EVENT_WORKFLOW: ${{ github.event.workflow_run.name }}
-          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
-          EVENT_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: python3 integrations/cannbench/ci/select_pages_evidence.py
-      - name: Check whether this run produced a report
-        id: report
-        if: steps.evidence.outputs.run_id != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ steps.evidence.outputs.run_id }}
         run: |
-          available=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" \
-            --jq '.artifacts | any(.name == "cannbench-evidence" and .expired == false)')
-          echo "available=$available" >> "$GITHUB_OUTPUT"
-      - name: Download exact hardware report, including failed gates
-        if: steps.report.outputs.available == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: cannbench-evidence
-          path: evidence/cannbench/ci-current
-          github-token: ${{ github.token }}
-          run-id: ${{ steps.evidence.outputs.run_id }}
+          set -euo pipefail
+          revision=$(git rev-parse HEAD)
+          main_revision=$(git ls-remote origin refs/heads/main | cut -f1)
+          test "$revision" = "$main_revision"
+          successful=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$revision&branch=main&status=success&per_page=10" --jq '.workflow_runs | length')
+          test "$successful" -gt 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - run: pip install pyyaml
-      - name: Retain failed runs without a hardware artifact
-        if: steps.evidence.outputs.run_id != '' && steps.report.outputs.available != 'true'
-        env:
-          RUN_ID: ${{ steps.evidence.outputs.run_id }}
-        run: |
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          catalog = json.loads(Path('integrations/cannbench/catalogs/official-tasks-1.1.2-20261001/manifest.json').read_text())
-          out = Path('evidence/cannbench/ci-current'); out.mkdir(parents=True, exist_ok=True)
-          report = {'benchmark_slug': catalog['benchmark_slug'], 'benchmark_version': catalog['benchmark_version'],
-            'gate_passed': False, 'skill_stack_gate_passed': False, 'correct_cases': 0, 'measured_cases': 0,
-            'required_operators': catalog['required_operators'], 'required_cases': catalog['required_cases'],
-            'operators': [], 'errors': ['CANNBench run ' + os.environ['RUN_ID'] + ' produced no hardware artifact']}
-          (out / 'hardware-summary.json').write_text(json.dumps(report, indent=2) + '\n')
-          PY
-      - name: Bind displayed evidence to its measured revision
-        if: steps.report.outputs.available == 'true'
-        env:
-          EVIDENCE_SHA: ${{ steps.evidence.outputs.source_sha }}
-          RUN_ID: ${{ steps.evidence.outputs.run_id }}
-        run: |
-          python - <<'PY'
-          import json, os, subprocess
-          from pathlib import Path
-          path = Path('evidence/cannbench/ci-current/hardware-summary.json')
-          report = json.loads(path.read_text())
-          current = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
-          measured = os.environ['EVIDENCE_SHA']
-          report.update(evidence_revision=measured, dashboard_revision=current, evidence_run_id=os.environ['RUN_ID'])
-          if current != measured:
-              report['skill_stack_gate_passed'] = False
-              report['generation_provenance'] = 'Hardware evidence for revision ' + measured + '; current revision ' + current + ' requires its own source binding'
-          path.write_text(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + '\n')
-          PY
-      - run: python tests/tools/generate_dashboard.py --output-dir _site
+      - name: Validate skill binding and build reviewed dashboard
+        run: python dashboard/cannbench/build.py --output-dir _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+      - name: Recheck main before deployment
+        run: test "$(git rev-parse HEAD)" = "$(git ls-remote origin refs/heads/main | cut -f1)"
       - id: deployment
         uses: actions/deploy-pages@v4

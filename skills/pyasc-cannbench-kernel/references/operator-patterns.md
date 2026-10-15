@@ -13,13 +13,58 @@ acceptable substitute for a final asctile kernel.
 
 `sigmoid`, `exp`, `mish`, and `gelu` flatten arbitrary-rank contiguous input to
 one dimension. Use grid-stride tiles, `real_shape=[n]` tails, f32 intermediates
-for f16/bf16 where needed, and `cores = min(72, num_tiles)`. Stable forms must
+for f16/bf16 where needed, and `cores = min(available_vector_blocks, num_tiles)`
+using a qualified active-device resource query. Stable forms must
 preserve NaN and Inf behavior from `golden.py`. GELU has both `none` and `tanh`
 attributes and requires distinct kernels or tile widths.
 
-For GELU, do not copy the narrow upstream target test as a complete
-CANNBench implementation: that test covers one FP32 shape and only the
-sigmoid-equivalent tanh approximation. The 950PR-verified 20/20 pattern is:
+### High-level GeLU campaign (historical)
+
+Use `compiler-team/pyasc@adadd7d66ed0ee16d33d79487bf584899a26ef1e` — the
+historical GeLU pin, not CANNBench runtime authority — and public
+`asctile` types, JIT, math, copy operations, and range, as in the target tests.
+The upstream GeLU test is a structural reference, not a complete CANNBench
+implementation: its one FP32 shape and sigmoid-equivalent tanh approximation
+do not cover both `approximate` modes, all dtypes, tails, or special values.
+
+Explore concise public tile expressions: `asctile.erf` for exact-mode
+semantics and `asctile.tanh` or a stable exponential identity for tanh mode.
+For the latter, with `s = (x + x*x*x * 0.044715) * (2*sqrt(2/pi))`, the
+cancellation-free form is `x * exp(minimum(s, 0)) / (exp(-abs(s)) + 1)`.
+Precompute Python math constants outside JIT and use `asctile.float32`
+intermediates where needed. Direct `1 + erf/tanh` can lose negative tails;
+validate against the task's dtype-specific error and NaN/Inf rules rather
+than treating a compact formula as proven. If the public exact-mode route
+cannot meet those tolerances, record that measured blocker.
+
+Do not author `inline`, `inline_vf`, low-level `asc`/`asc2` kernels, a custom
+JIT/compiler adapter, or the long Numerical Recipes polynomial below for this
+campaign. Compiler-generated VF/register code from public tile operations is
+allowed. Establish default and `reuse_alloc=1` baselines, then explore the
+18-combination [JIT matrix](../../pyasc-api-patterns/references/api-jit-options.md)
+with synchronization ON. Measure UB and numerical behavior at fixed geometry
+before widening tiles; only real-NPU timings establish speed.
+
+Measured local qualification at this pin (CANN 9.0 / 950PR_9599) rejects the
+public-erf FP32 exact path on dense negative-tail inputs for **all 18 JIT
+configurations**, despite successful compilation and smaller smoke tests.
+Read the [minimal reproduction and campaign report](../../../../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/README.md)
+before promoting GeLU. Increasing tile size or changing allocation does not
+repair this measured numerical failure. Do not substitute a polynomial or
+silently relabel tanh as exact.
+
+Use the actual Torch golden for special values: in this harness GeLU(-Inf)
+is NaN in both modes, not the mathematical limiting value zero. Worker claims
+about limits or precision must be checked against executed reference results.
+
+### Historical GeLU recipes and measurements — not valid campaign guidance
+
+The following NR/Horner and low-level routes are retained as historical
+evidence at their original pins (for example `030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`).
+They belong to the historical high-level GeLU era; `0a631f70968c3cb7c33ce45330a85768dd5a6f06`
+is the current CANNBench runtime authority, not a historical GeLU pin.
+Their successful cases do not qualify them for the new high-level campaign.
+The historical 950PR-verified 20/20 recipe was:
 
 - exact mode: set `z = abs(x) / sqrt(2)`, then construct the reciprocal with
   pyasc-valid operand order: `den = z*0.5 + 1.0`,
@@ -40,9 +85,9 @@ sigmoid-equivalent tanh approximation. The 950PR-verified 20/20 pattern is:
 The exact Horner chain has a much larger static UB footprint than its source
 suggests because every SSA update remains live during allocation. On the
 pinned v2 compiler, `tile_size=2048`, `unroll_factor=2` consumes roughly
-796--820 KB and is rejected against the 253952-byte UB limit. Use the measured
-safe baseline `tile_size=512`, `unroll_factor=2` for exact mode. Keep tanh on a
-separate kernel/tile; `tile_size=1024`, `unroll_factor=2` is measured at
+796--820 KB and is rejected against the 253952-byte UB limit. The measured
+safe historical baseline was `tile_size=512`, `unroll_factor=2` for exact mode.
+Tanh used a separate kernel/tile; `tile_size=1024`, `unroll_factor=2` measured at
 172--184 KB. Do not infer a larger exact tile solely from a source-level
 temporary count; only the exact-v2 compile report establishes the UB budget.
 
@@ -52,10 +97,10 @@ tile. Supply neutral padding explicitly: `pad_value=0` for additive operands,
 chains. This prevents invalid arithmetic in inactive lanes without changing
 the logical output.
 
-For performance investigations, current v2 also exposes low-level
-`asc.adv.erfc`, which forms exact GeLU without the Horner chain. Do not launch a
-plain `@asc.jit` C310 kernel: the base compiler adds a hidden FFTS argument and
-CANNBench fails in `c2c_ctrl_addr()`. The GeLU deep-dive adapter changes only
+The historical performance investigation used low-level `asc.adv.erfc` to
+form exact GeLU without the Horner chain. A plain `@asc.jit` C310 kernel at
+that revision had a hidden FFTS argument and failed in `c2c_ctrl_addr()` on
+CANNBench. The GeLU deep-dive adapter changed only
 kernel-argument legalization and verifies `has_ffts_arg=false`. Its FP32 and
 BF16 exact routes passed the official cases that ran, but measured only 0.2968x
 and 0.1462x respectively; it is not yet a >=1x performance pattern.
@@ -74,11 +119,14 @@ has a fused `AscendC::Gelu`; pyasc v2 does not expose it, which should be filed
 as a performance/API blocker rather than worked around with an inaccurate
 formula.
 
-Pinned-v2 scalar rule: both data branches of `asctile.where(condition, a, b)`
-must be LocalTensor values. A Python scalar branch such as
-`asctile.where(x >= 0, 1.0, tile)` fails with `AttributeError: 'float' object has
-no attribute 'dtype'`. Prefer algebra that avoids the select, or build an
-aligned tensor branch with `asctile.full`.
+### Shared tile constraints
+
+Older snapshots required LocalTensor branches for `asctile.where`; the later
+historical GeLU snapshot `adadd7d6` added numeric scalar operands. Verify the
+actually supported operand kinds against the CANNBench runtime pin `0a631f70`
+before relying on either form, and do not require
+extra full tiles solely to reproduce an older API restriction. Alignment
+and measured compare/select lowering limitations still need verification.
 
 ## MaskedScale
 

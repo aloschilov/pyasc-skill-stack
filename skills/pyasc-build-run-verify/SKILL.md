@@ -8,7 +8,11 @@ description: Build, compile, execute, and verify current-v2 asctile kernels on e
 Always keep source, wheel, Python ABI, compiler, and platform provenance
 together. For the current CANNBench campaign use
 `pyasc v2@0a631f70968c3cb7c33ce45330a85768dd5a6f06`, CPython 3.12 for
-the submitted x86_64 wheel, and `Ascend950PR_9599`.
+the submitted x86_64 wheel, and the recorded target platform. (The historical
+high-level GeLU campaign used `adadd7d66ed0ee16d33d79487bf584899a26ef1e`; that
+pin is not CANNBench authority — never change the runtime to match stale GeLU
+prose.) Local GeLU evidence uses `Ascend950PR_9599`; do not infer remote
+resources from that name.
 
 ## Validation ladder
 
@@ -73,9 +77,9 @@ scope. `critical` or `adversarial` is `verified-camodel-smoke`, not a full
 - Lower `opt_level` when a clearer compiler failure is useful.
 - `insert_sync=True` is a current AscTile default.
 - Valid allocation modes are `reuse_alloc=0/1/2`; test the mode used in the
-  submitted candidate. At `0a631f70`, use a concrete-options adapter or
-  upstream repair before assuming AscTile-specific decorator options took
-  effect.
+  submitted candidate. Check public decorator/call-time propagation and the
+  base-first discovery-cache reproducer in the JIT reference; do not introduce
+  a concrete-options adapter or compiler monkeypatch.
 - Do not use the removed `run_asc2_passes` option.
 
 Common failures:
@@ -100,6 +104,13 @@ of attribute dispatch, and inspect simulator diagnostics for invalid padded
 lane arithmetic. A finite random smoke is not enough for exp/GELU/norm/softmax.
 
 ## Remote evidence
+
+For performance iterations use the
+[top-down CANN-sample methodology](../pyasc-api-patterns/references/cann-performance-tuning.md).
+Capture per-block envelope, engine intervals and requested/effective geometry
+before explaining a gain. Ratios are not additive, allocation is not bandwidth,
+and simulated ticks/trace counts are not hardware latency. Retain failed
+prefetch/fusion experiments as evidence; do not assume a pipeline overlaps.
 
 For every CANNBench result record submission ID, job ID, immutable URL,
 operator/case counts, passed cases, score/geomean, anti-cheat failures, exact

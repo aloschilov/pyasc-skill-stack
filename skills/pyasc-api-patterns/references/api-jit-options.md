@@ -1,17 +1,29 @@
 # pyasc v2 AscTile JIT compile options
 
-At evaluated commit `0a631f70968c3cb7c33ce45330a85768dd5a6f06`, these options
-exist on `asctile.runtime.compiler.CompileOptions`, but inherited JIT option
-discovery/extraction still uses the base `asc` option class. The plain
-decorator forms below are therefore API intent, not a working CANNBench path,
-until an upstream fix or the repository's concrete-options adapter is loaded.
+The CANNBench campaign uses
+`compiler-team/pyasc@0a631f70968c3cb7c33ce45330a85768dd5a6f06` with a matching
+runtime. The API notes below were measured for the historical high-level GeLU
+campaign at `adadd7d66ed0ee16d33d79487bf584899a26ef1e`; treat them as historical
+behavior notes, not as CANNBench runtime authority. Other reports, including
+those at `030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`, retain their original pins. An option failure in one process is not evidence
+that public AscTile JIT is generally broken: test the actual decorator,
+effective options, and caches as described below.
 
 ## Decorator syntax
 
 ```python
-@asctile.jit(always_compile=True)        # standard for development
-@asctile.jit                              # defaults (uses cache)
+@asctile.jit                         # default baseline (uses cache)
+@asctile.jit(reuse_alloc=1)           # second baseline; public AscTile API
+@asctile.jit(reuse_alloc=2, static_alloc=True, vf_fusion=True,
+            insert_sync=True, always_compile=True)  # development experiment
 ```
+
+These are alternative decorators for separate kernel variants, not stacked
+decorators. Use public `asctile.GlobalAddress`, `asctile.ConstExpr`, dtypes,
+tile math, copy operations, and range in their bodies, following the target
+tests. No authored `inline`/`inline_vf`, low-level `asc`/`asc2`, compiler
+monkeypatch, or custom JIT belongs in the high-level campaign. Compiler-created
+register code from `vf_fusion=True` is permitted.
 
 ## Compile parameters
 
@@ -21,10 +33,81 @@ until an upstream fix or the repository's concrete-options adapter is loaded.
 | `opt_level` | `int` (0-3) | Compiler default | Bisheng optimization level |
 | `matmul_cube_only` | `bool` | `False` | Pure cube mode (matrix compute only) |
 | `reuse_alloc` | `int` (0-2) | `0` | Which UB-reuse pass runs. `0` none, `1` `ReuseUBAllocation`, `2` `ReuseTensorAllocation`. `2` packs buffers differently rather than strictly tighter — see the hazard below |
+| `static_alloc` | `bool` or `None` | `None` | `None` selects the platform default (enabled on 950PR); `True` requests static tile allocation; `False` uses the AscendC TPipe allocation path |
+| `vf_fusion` | `bool` | `False` | Fuse eligible vector operations into compiler-generated register/VF blocks; supported on C310 |
+| `insert_sync` | `bool` | `True` | Insert synchronization; keep ON throughout the campaign |
 
 `insert_sync=True` is the current AscTile default. There is no
 `run_asc2_passes` or `run_asctile_passes` option in current v2; do not copy it
 from older snapshots.
+
+## Explicit JIT experiment matrix
+
+Plan all 18 combinations of `reuse_alloc=(0, 1, 2)`,
+`static_alloc=(None, False, True)`, and `vf_fusion=(False, True)`, always with
+`insert_sync=True`. Begin with bare defaults and `reuse_alloc=1`, leaving the
+other options at defaults, on identical source, tile size, unroll, and inputs.
+The source calls `reuse_alloc=1` a recommended "legacy implementation": that
+describes its internal pass, not the public API. `reuse_alloc=2` is experimental.
+
+`static_alloc=None` records platform selection, even if it resolves like
+`True` on 950PR. Reuse changes buffer layout/lifetimes and may reduce UB or
+regress speed; static allocation can reduce scalar allocation overhead;
+VF fusion can remove UB transfers but changes register pressure and scheduling.
+Their interactions with unrolling and tile size can change UB usage, numerical
+behavior, synchronization, and large-case runtime stability. A smaller UB
+number does not establish correctness or speed. Preserve the compare/select
+hazard below; a passing `reuse_alloc=1` is not proof that the overrun is absent.
+
+For each attempted combination record requested and effective options, pin,
+source hash, dtype/shape/mode, tile/core/unroll choices, compiled UB, compile
+result, numerical case coverage, and real-NPU timings when authorized.
+Record unsupported/failed combinations and untested combinations explicitly.
+Workers may test a bounded subset; the matrix is an experiment plan, not a
+requirement to run 18 full simulator suites inside one worker budget. Tune
+tile/unroll/core choices after comparing options at fixed geometry, and rerun
+correctness for the selected combination.
+
+## Diagnose the public JIT path before blaming it
+
+At the historical GeLU pin `adadd7d66ed0ee16d33d79487bf584899a26ef1e`, a
+fresh-process diagnostic
+reproduced a narrow discovery-cache inheritance bug: calling
+`asc.runtime.jit.JITFunction.get_config_keywords()` before importing AscTile
+populates the base class's `_config_keywords`. The AscTile subclass inherits
+that cached list through `getattr`, so `@asctile.jit(reuse_alloc=1)` then raises
+`The following option names are unknown: reuse_alloc` during construction.
+Simply importing `asc` is not the measured trigger; base keyword discovery is.
+See the [base-first result](../../../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/evidence/jit-base-first/result.json).
+
+Call-time extraction uses `self.compiler.options_cls`; it is not hardwired to
+the base compiler. The [cold AscTile-first result](../../../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/evidence/jit-cold/result.json)
+records successful native CaModel execution of a 257-element FP32 arithmetic
+probe with defaults, decorator `reuse_alloc=1`, a call-time
+`reuse_alloc=2, static_alloc=True, vf_fusion=True` override, a cached repeat,
+and an `always_compile=True` repeat. These are diagnostic routes, not GeLU
+coverage or proof of all 18 combinations. Run stock AscTile in a fresh process
+before base keyword discovery; do not patch or delete the inherited cache.
+
+1. Record the source commit, wheel/build provenance, imported module paths,
+   architecture, and actual decorated kernel. Test bare `@asctile.jit`,
+   `@asctile.jit(reuse_alloc=1)`, then the exact failing option combination.
+   Merely constructing `asctile.CompileOptions` does not test the decorator or
+   launch-time extraction.
+2. Run each probe in a fresh process with a new task-owned `PYASC_CACHE_DIR`.
+   Compare `import asctile` first with `from asc.runtime.jit import JITFunction;
+   JITFunction.get_config_keywords()` then `import asctile` in diagnostic
+   probes only. Apply the same decorator. Record requested/effective compile options
+   and cache keys; inherited option-discovery caches may make order matter.
+3. Check both an isolated cold compile and a same-options cache hit, then
+   change an option and verify it reaches compilation and separates the cache
+   entries. `always_compile=True` bypasses compiled artifacts; it does not
+   reset in-process option-discovery/extraction caches. Fresh processes do.
+4. Reproduce through the real public decorator and supported compile/launch
+   entrypoint, not only a gate that directly constructs compiler options.
+   Retain exception, logs, and omitted routes if the installed environment
+   cannot exercise that path. Report a narrowly scoped blocker; do not
+   monkeypatch option discovery/compiler classes or introduce a custom JIT.
 
 <!-- BEGIN: temporary, delete once pyasc issue #2 is fixed -->
 ### `asctile.where` writes past its destination tile (open compiler defect)
@@ -177,13 +260,19 @@ kernel[core_num](arg1, arg2, ...)
 |-----------|------|----------|-------------|
 | `core_num` | `int` | Yes | Number of cores to use |
 
-**asctile does NOT use a stream argument.** The v1 syntax `kernel[core_num, stream](...)` must not be used.
+At the campaign pin, `asctile.runtime.jit.JITFunction` inherits the base
+`__getitem__`, which constructs `LaunchOptions(core_num, stream, ...)`.
+`kernel[core_num, stream](...)` is supported public syntax. Use a qualified
+current-device/current-stream context when required by the evaluator; do not
+mistake the default-stream shorthand above for a stream prohibition.
 
 ## JIT cache behavior
 
 - **Cache location**: `${PYASC_HOME}/.pyasc/cache` (or `${PYASC_CACHE_DIR}`)
 - **Cache key**: compile options + kernel parameters + global variables + source code
-- **Force rebuild**: Set `always_compile=True` or delete cache directory
+- **Force rebuild**: Set `always_compile=True` or use a fresh task-owned cache
+  directory; neither resets in-process option-discovery caches. Do not delete
+  shared caches for a campaign probe.
 
 ## Environment variables
 

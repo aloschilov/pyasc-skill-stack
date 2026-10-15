@@ -5,30 +5,30 @@ description: Current pyasc v2 AscTile API and kernel patterns. Use when selectin
 
 # Current pyasc v2 API patterns
 
-The authoritative source is `compiler-team/pyasc` branch `v2`. For the current
-campaign use commit `0a631f70968c3cb7c33ce45330a85768dd5a6f06` and the source
-archive under `integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/runtime-build`.
+The authoritative source is `compiler-team/pyasc` branch `v2`. The CANNBench
+campaign uses commit `0a631f70968c3cb7c33ce45330a85768dd5a6f06` with
+a matching runtime. The historical high-level GeLU campaign used
+`adadd7d66ed0ee16d33d79487bf584899a26ef1e`; that pin is not CANNBench authority.
+Other campaigns must state their own source/runtime pin;
+older snapshot evidence is not automatically current.
 The public tile package is `asctile`; `asc2` and `tensor/load/store` belong to
 older snapshots and must not appear in new kernels.
 
 ## Surface to use
 
 ```python
-import asc
 import asctile
 
 @asctile.jit
-def kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
-           size: asc.ConstExpr[int], tile_size: asc.ConstExpr[int]):
+def kernel(x_ptr: asctile.GlobalAddress, out_ptr: asctile.GlobalAddress,
+           size: int, tile_size: asctile.ConstExpr[int]):
     x_gm = asctile.global_tensor(x_ptr, [size])
     out_gm = asctile.global_tensor(out_ptr, [size])
     for tile_id in asctile.range(asctile.block_idx(),
                                  asctile.ceildiv(size, tile_size),
-                                 asctile.block_num(), unroll_factor=2):
+                                 asctile.block_num(), unroll_factor=1):
         offset = tile_id * tile_size
-        valid = size - offset
-        if valid > tile_size:
-            valid = tile_size
+        valid = min(size - offset, tile_size)
         x = asctile.copy_in(
             x_gm, [offset], [tile_size], real_shape=[valid], pad_value=0
         )
@@ -45,6 +45,24 @@ The exact memory signatures are:
   scalar.
 - `copy(src, offsets=None, shape=None, location=None)` moves/slices a local
   tensor between local memory levels.
+
+Offsets always precede shape. Swapping them —
+`copy_in(g, [rows, cols], [off0, off1])` — fails with `TypeError: All
+values in '2' must be integers` because the shape list lands in the offset
+position (measured on pinned-runtime engram_gate_fusion).
+
+`copy_in`/`copy_out` consume the `GlobalTensor` descriptor, never the raw
+`GlobalAddress` kernel parameter. Passing the parameter directly —
+`asctile.copy_in(x_ptr, ...)` — fails with `TypeError: 'src' argument must
+be GlobalTensor, got GlobalAddress` (measured on pinned-runtime
+conv_3d_backprop_filter). Always materialize `x_gm =
+asctile.global_tensor(x_ptr, [numel])` in the kernel body first.
+
+`asctile.concat` is variadic: `asctile.concat(t0, t1, ...)`, not
+`asctile.concat([t0, t1])`. Passing one Python list fails compile with
+`TypeError`-class diagnostics because the list is not a tile (measured on
+pinned-runtime conv_3d_backprop_filter). Splat a built list:
+`asctile.concat(*tiles)`.
 
 Use `asctile.TensorLocation.UB/L1/L0A/L0B/L0C`, not the removed
 `TileLocation` spelling. Shape rank, offsets rank, and `real_shape` rank must
@@ -75,30 +93,68 @@ exceptions produced while computing padded lanes.
 - Numerical work belongs inside one or more `@asctile.jit` kernels.
 - Pass a `torch.Tensor`/`numpy.ndarray` directly to a JIT launch. Do not call
   `Tensor.data_ptr()`; the JIT needs pointer dtype specialization.
-- Use `asc.ConstExpr[T]` for parameters that affect local shapes, compile-time
+- Never call `asctile.global_tensor` (or `copy_in`/`copy_out`) at host level
+  or pass its result across the host/JIT boundary. These calls require the
+  JIT builder context and fail at launch with `RuntimeError:
+  '<name>' cannot be called without initialization of global builder`.
+  Declare kernel parameters as `GlobalAddress` and construct every
+  `asctile.global_tensor(ptr, [shape])` inside the `@asctile.jit` kernel
+  body; the launch converts the raw host tensors itself. Measured on the
+  pinned runtime: host-side `global_tensor` construction fails all cases at
+  dispatch.
+- Use `asctile.ConstExpr[T]` for parameters that affect local shapes, compile-time
   branches, or unrolling.
-- Launch as `kernel[core_num](...)`; AscTile does not take a stream in the
-  launch bracket.
+- The local compile gate replays the host callable with shape/dtype-only
+  tensor stubs. Data-dependent host reads such as `t.item()`,
+  `int(t[0])`, or host branching on tensor values fail at dispatch with
+  `AttributeError: 'FakeTensor' object has no attribute 'item'` (measured
+  on pinned-runtime nms, all 20 cases, with every kernel specialization
+  compiling cleanly). Prefer shape/metadata-derived host logic. A genuinely
+  data-dependent read (e.g. a device-computed count that sizes the output)
+  must tolerate the trace without changing real-runtime semantics:
+  ```python
+  try:
+      m = int(cnt[0].item())      # real path: always reads the true value
+  except AttributeError:          # shape-only gate replay stub only
+      m = n                       # conservative shape-derived bound
+  ```
+  Constraints on this pattern, all mandatory:
+  - Catch only the measured replay signature (`AttributeError`). Catching
+    `RuntimeError`/`TypeError` would also swallow genuine runtime failures
+    and silently replace the true value with the bound on hardware.
+  - The fallback branch must be unreachable on the real evaluator; if it
+    ever executes there, the candidate is defective — fix the read, do not
+    widen the except.
+  - The fallback may only supply output-shape metadata (an allocation
+    bound), never a numerical value that enters computation.
+  - A compile-gate pass under the fallback proves dispatch completeness
+    only; it does NOT qualify the data-dependent path. CaModel numerical
+    qualification on real tensors remains required and is the oracle that
+    would reject any fallback leaking onto the real path.
+- Launch as `kernel[core_num](...)` or, with the qualified active-device context,
+  `kernel[core_num, stream](...)`. At the GeLU pin AscTile inherits public
+  `LaunchOptions(core_num, stream, ...)`; stream is not a removed v1 feature.
+  Use the evaluator's current stream when required; do not force a default stream.
 
 Supported current compile options include `always_compile`, `insert_sync`,
 `reuse_alloc` (`0`, `1`, `2`), `vf_fusion`, and `matmul_cube_only`. Do not use
 the removed `run_asc2_passes` option. Prefer an evidenced `reuse_alloc` value;
 `always_compile=True` is for development rather than a submission requirement.
 
-At commit `0a631f70`, the AscTile JIT inherits option discovery and call-time
-extraction that consult base `asc.CompileOptions`, not the concrete AscTile
-compiler options. Consequently direct decorators using `reuse_alloc`,
-`static_alloc`, or `vf_fusion` are not reliable. Use the CANNBench
-concrete-options adapter or an upstream fix, and confirm the option in the
-compile specialization report before attributing behavior to it.
+The pinned JIT has a measured base-first keyword-discovery cache hazard, not
+a blanket failure of call-time options. Read the exact reproducer in
+[JIT options](references/api-jit-options.md). Test public decorators/overrides
+in fresh processes; do not use a concrete-options adapter or monkeypatch.
 
 ## Elementwise pattern
 
 Flatten contiguous inputs to one logical dimension, grid-stride over tiles,
 promote sensitive f16/bf16 arithmetic to f32, and cast once before storing.
-Choose the largest tile that fits UB after accounting for every live SSA
-temporary and `unroll_factor` buffering. Keep enough tiles to occupy the
-available cores for small and medium shapes.
+Compare tile sizes using measured compiled UB, useful work per available block,
+DMA size, overlap, and scalar overhead. The largest fitting tile is not always
+fastest; UB fill is not the objective. Read
+[top-down tuning from CANN samples](references/cann-performance-tuning.md)
+before a performance iteration.
 
 Current-v2 dtype constraints observed by the CANNBench integration:
 
@@ -162,7 +218,8 @@ acc = asctile.matmul(a_l0, b_l0)
 out = asctile.copy(acc, location=asctile.TensorLocation.UB)
 ```
 
-Size double-buffered L0 tiles against half the relevant physical capacity.
+Budget every live L0 operand/accumulator and actual buffering against the
+relevant capacity; half-capacity is only an estimate for two equal buffers.
 Compile-time Python loops are appropriate for fully unrolled M/N/K tile loops;
 use `asctile.range(..., unroll_factor=2)` only where software pipelining is
 intended and memory permits it.
@@ -181,4 +238,5 @@ numerical correctness or performance.
 
 - [JIT options and measured hazards](references/api-jit-options.md)
 - [Reduction tiling](references/reduction-tiling.md)
+- [CANN performance techniques and evidence-driven experiments](references/cann-performance-tuning.md)
 - `pyasc-cannbench-kernel` for the benchmark contract and evidence labels

@@ -1,0 +1,9 @@
+{
+  "source_sha256": "6547cb45a0e7c075d8b4dbee6f5bf3a8bceab8d19a0c33c2bbd7fdd329e61c18",
+  "view_sha256": "b215af8f2b58a06fc10d99aa81ac273f3f54e756b226c412f5531c4e335d8e7e",
+  "embedded_data_unchanged": true,
+  "capability_rows": 31,
+  "hardware_operator_rows_preserved": 53,
+  "hardware_measured_operators": 1,
+  "removed": "Repeated missing-evidence bullet list and oversized injected panel; no evidence or measurement deleted."
+}

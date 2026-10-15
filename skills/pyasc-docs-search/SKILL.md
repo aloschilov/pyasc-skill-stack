@@ -1,172 +1,63 @@
 ---
 name: pyasc-docs-search
-description: pyasc development resource index (local-first). Provides local API documentation, tutorial catalog, test examples, and architecture docs. Prioritize local pyasc source tree resources. Trigger — when searching for API usage, tutorial examples, or implementation references for pyasc kernel development.
+description: Local-first index for current pyasc v2 APIs, target tests, examples, docs, and CANN operator references. Use when verifying an API or finding an implementation reference.
 ---
 
-# pyasc Development Resources
+# Current pyasc v2 resource routing
 
-For CANNBench, read the vendored task files and
-`integrations/cannbench/pyasc-v2-source` before any external or machine-local
-checkout. The exact commit in `SOURCE_COMMIT` outranks examples from a newer or
-older pyasc v2 tree. Load `pyasc-cannbench-kernel` for the compact operator
-contract and known-workaround routing.
+For a pinned campaign, its exact source snapshot outranks every checkout,
+cached example, and web page. For the current CANNBench work use
+the source snapshot verified at `0a631f70968c3cb7c33ce45330a85768dd5a6f06`.
 
-## Overview
+## Search order
 
-This skill provides local-first documentation search for pyasc kernel development:
-- **Local resources**: API docs, 5 tutorial examples, unit/kernel/generalization tests
-- **pyasc source tree**: Complete Python API surface at `~/workspace/pyasc/python/asc/`
+1. Operator `proto.yaml`, `cases.yaml`, and `golden.py`.
+2. `python/asctile/__init__.py` for the exported tile API.
+3. `python/asctile/language/` and `python/asctile/runtime/` for signatures and
+   validation behavior.
+4. `python/test/asctile/target/` for handwritten production-shape patterns.
+5. `python/test/asctile/kernels/` and `python/tutorials/asctile/` for smaller
+   examples.
+6. `docs/python-api/`, `docs/programming-guide/`, and
+   `docs/python_syntax_support.md`.
+7. CANN `ops-*` source for semantic and tiling reference.
 
-## Resource paths
+Use `rg` against the exact source. Useful searches:
 
-### Local golden set (always accessible — use first)
-
-| Resource type | Path | Description |
-|---------------|------|-------------|
-| Tutorials | `golden/tutorials/` | 5 golden tutorial kernels |
-| API docs (basic) | `golden/docs/python-api/language/basic.md` | Basic API index (add, sub, mul, abs, data_copy, etc.) |
-| API docs (core) | `golden/docs/python-api/language/core.md` | Core types (GlobalTensor, LocalTensor, etc.) |
-| API docs (adv) | `golden/docs/python-api/language/adv.md` | Advanced API index (matmul, etc.) |
-| API docs (fwk) | `golden/docs/python-api/language/fwk.md` | Framework API index (TPipe, TQue, etc.) |
-| Generated API refs | `golden/docs/python-api/language/generated/` | 277 individual API reference pages |
-| Lib API docs | `golden/docs/python-api/lib/` | Runtime library API docs |
-| Architecture | `golden/docs/architecture_introduction.md` | JIT pipeline overview |
-| Syntax support | `golden/docs/python_syntax_support.md` | Supported/unsupported syntax |
-| Developer guide | `golden/docs/developer_guide.md` | Extension guide |
-
-### External pyasc source (fallback — requires external_directory permission)
-
-| Resource type | Path | Description |
-|---------------|------|-------------|
-| Tutorials source | `~/workspace/pyasc/python/tutorials/` | 5 tutorial examples |
-| Unit tests | `~/workspace/pyasc/python/test/unit/` | Per-API unit tests |
-| Kernel tests | `~/workspace/pyasc/python/test/kernels/` | End-to-end kernel tests |
-| Generalization tests | `~/workspace/pyasc/python/test/generalization/` | Cross-API generalization tests |
-| Python API source | `~/workspace/pyasc/python/asc/language/` | API implementation (basic, core, adv, fwk) |
-
-## Search priority
-
-```
-1. Golden set (golden/tutorials/, golden/docs/) — ALWAYS CHECK FIRST
-       | Not found
-2. golden/docs/python-api/language/generated/ (individual API references)
-       | Not found
-3. ~/workspace/pyasc/python/tutorials/ (5 tutorials, external)
-       | Not found
-4. ~/workspace/pyasc/python/asc/language/ (API source code, external)
-       | Not found
-5. ~/workspace/pyasc/python/test/ (test examples, external)
+```bash
+rg -n "def copy_in|def copy_out|def global_tensor" python/asctile
+rg -n "@asctile.jit|asctile.softmax|asctile.rms_norm" python/test/asctile
+rg -n "reuse_alloc|vf_fusion|insert_sync" python/asctile/runtime
 ```
 
-## v1-to-asc2 translation
+## Current package distinction
 
-> Many golden docs, tutorials, and API references use **v1 naming** (GlobalTensor, LocalTensor, data_copy, set_flag, wait_flag, TPosition, TPipe, TQue, etc.).
-> When retrieving v1 docs, **translate to asc2 equivalents** per `pyasc-api-patterns`:
+- `asctile`: high-level tile API used by current v2 kernels.
+- `asc`: shared dtypes, addresses, runtime configuration, and lower-level API.
 
-| v1 pattern | asc2 equivalent |
-|-----------|----------------|
-| `asc.GlobalTensor` / `asc.LocalTensor` | `asc2.tensor(ptr, [shape])` + `asc2.load`/`asc2.store` |
-| `asc.data_copy(dst, src, ...)` | `asc2.load(gm, [shape], offsets=[...])` / `asc2.store(tile, gm, offsets=[...])` |
-| `asc.set_flag` / `asc.wait_flag` | Not needed — `@asc2.jit` handles sync automatically |
-| `TPipe`, `TQue`, `BUFFER_NUM` | Not needed — `@asc2.jit` handles buffering |
-| `asc.abs(dst, src)` (v1 style) | `result = asc2.abs(x)` (returns new tile) |
-| `@asc.kernel_function` | `@asc2.jit(always_compile=True)` |
-| `kernel.launch(stream, ...)` | `kernel[CORE_NUM](...)` (no stream) |
+Do not translate a current kernel to `asc2`; that package was renamed away.
+Do not translate `global_tensor/copy_in/copy_out` back to
+`tensor/load/store`; those names are from older snapshots.
 
-## Tutorial catalog
+## CANN references
 
-| Tutorial | Golden path | External path | Description |
-|----------|-------------|---------------|-------------|
-| 01_add | `golden/tutorials/01_add.py` | `~/workspace/pyasc/python/tutorials/01_add/` | Manual sync vector add |
-| 02_add_framework | `golden/tutorials/02_add_framework.py` | `~/workspace/pyasc/python/tutorials/02_add_framework/` | Framework-managed sync add |
-| 03_matmul_mix | `golden/tutorials/03_matmul_mix.py` | `~/workspace/pyasc/python/tutorials/03_matmul_mix/` | MIX mode matmul (cube + vector) |
-| 04_matmul_cube_only | `golden/tutorials/04_matmul_cube_only.py` | `~/workspace/pyasc/python/tutorials/04_matmul_cube_only/` | Pure cube mode matmul |
-| 05_matmul_leakyrelu | `golden/tutorials/05_matmul_leakyrelu.py` | `~/workspace/pyasc/python/tutorials/05_matmul_leakyrelu/` | Matmul + LeakyReLU fusion |
+- `https://gitcode.com/cann/ops-math` — elementwise, reductions, movement
+- `https://gitcode.com/cann/ops-nn` — normalization, matmul, neural-network ops
+- `https://gitcode.com/cann/ops-transformer` — transformer-specific ops
+- `https://gitcode.com/cann/ops-cv` — vision ops
+- `https://gitee.com/ascend/samples` — AscendC examples
 
-### Reference operator repositories (remote)
+Use the CANN implementation to understand semantics, tiling, buffering, and
+hardware assumptions. The deliverable remains pyasc/asctile code.
 
-CANN operator source is the ground truth for tiling rules, shapes, and semantics.
-Reference it by **remote coordinates**, not machine-local paths. Clone under
-`$CANN_OPS_ROOT` (default `~/workspace`) only if you need local source to read or
-build; the skills cite the remote so they are portable across machines.
+## Evidence rule
 
-| Repo | Remote (branch `master`) | Use |
-|------|--------------------------|-----|
-| ops-math | https://gitcode.com/cann/ops-math | elementwise / conversion tiling (abs, add, concat, select, one_hot, ...) |
-| ops-nn | https://gitcode.com/cann/ops-nn | matmul / norm ops (batch_mat_mul_v3, layer_norm_v4, rms_norm, ...) |
-| ops-cv | https://gitcode.com/cann/ops-cv | vision ops |
-| ops-transformer | https://gitcode.com/cann/ops-transformer | attention / transformer ops |
-| AscendC samples | https://gitee.com/ascend/samples | kernel-direct + framework AscendC samples |
-
-In-repo paths cited below are relative to the corresponding repo root — e.g.
-`math/abs/op_host/arch35/abs_tiling_arch35.cpp` resolves to
-`https://gitcode.com/cann/ops-math/blob/master/math/abs/op_host/arch35/abs_tiling_arch35.cpp`.
-
-### Canonical operator references & AscendC matmul samples
-
-Perf baselines compare the generated/golden pyasc kernel against the **canonical**
-hand-written operator on the same camodel (`ascendc_ref_runner.py`). For cube /
-matmul work (remote source; clone under `$CANN_OPS_ROOT` only if a local build is needed):
-
-| Resource | Remote source | Use |
-|----------|---------------|-----|
-| BatchMatMulV3 canonical op | [ops-nn/matmul/batch_mat_mul_v3](https://gitcode.com/cann/ops-nn/tree/master/matmul/batch_mat_mul_v3) | `aclnnBatchMatMul` reference for the `batch_mat_mul_v3/float16` perf cell (op_host tiling, op_kernel/arch35, examples/test_aclnn_batchmatmul.cpp) |
-| LayerNormV4 canonical op | [ops-nn/norm/layer_norm_v4](https://gitcode.com/cann/ops-nn/tree/master/norm/layer_norm_v4) | `aclnnLayerNorm` reference for the `layer_norm_v4/{bfloat16,float32}` perf cells (`aclnnop/aclnn_layer_norm.h`, examples/test_aclnn_layer_norm_v4.cpp). On C310, public `aclnnLayerNorm` routes to the V4 arch35 kernels. |
-| MatMulV3 / FusedMatMul deps | [ops-nn/matmul/mat_mul_v3](https://gitcode.com/cann/ops-nn/tree/master/matmul/mat_mul_v3), [.../fused_mat_mul](https://gitcode.com/cann/ops-nn/tree/master/matmul/fused_mat_mul) | Pulled in by the batch_mat_mul_v3 build; share the `op_cache_tiling` legacy path |
-| AscendC matmul sample (kernel-direct) | [samples .../MatmulInvocationNeo](https://gitee.com/ascend/samples/tree/master/operator/ascendc/tutorials/MatmulCustomSample/KernelLaunch/MatmulInvocationNeo) | Self-contained single-GEMM cube kernel + host `MultiCoreMatmulTiling`; grounds cube skill guidance |
-| AscendC matmul sample (framework) | [samples .../MatmulCustomSample/FrameworkLaunch](https://gitee.com/ascend/samples/tree/master/operator/ascendc/tutorials/MatmulCustomSample/FrameworkLaunch) | aclnn-invocation single/multi-core matmul custom op |
-| AscendC matmul+act sample | [samples .../MatmulLeakyReluCustomSample](https://gitee.com/ascend/samples/tree/master/operator/ascendc/tutorials/MatmulLeakyReluCustomSample) | Matmul + LeakyReLU fixpipe fusion reference |
-
-> **Matmul-family camodel prerequisite:** the aclnn tiling step dlopens
-> `libophost_comm_legacy.so` (the matmul cache-tiling impl), shipped by the
-> **`Ascend-cann-A3-ops`** package under `<cann>/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/<arch>/`.
-> If the aarch64 toolkit was installed without that ops package, the whole matmul
-> aclnn family fails to tile (`TilingPrepareForOpCache fail`); install
-> `Ascend-cann-A3-ops_<ver>_linux-aarch64.run` to repair. See
-> `docs/perf-vs-ascendc-demo.md` "CUBE BatchMatMulV3".
-
-### Quick API lookup
-
-To find the API reference for a specific function (e.g., `asc.abs`):
-```
-Read: golden/docs/python-api/language/generated/asc.language.basic.abs.md
-```
-
-The naming pattern is: `golden/docs/python-api/language/generated/asc.language.{module}.{function}.md`
-
-## API module index
-
-| Module | Path | Content |
-|--------|------|---------|
-| `asc.language.basic` | `python/asc/language/basic/` | Basic vector APIs (add, sub, mul, div, data_copy, etc.) |
-| `asc.language.core` | `python/asc/language/core/` | Core types (GlobalTensor, LocalTensor, enums, TPosition) |
-| `asc.language.adv` | `python/asc/language/adv/` | Advanced APIs (matmul, etc.) |
-| `asc.language.fwk` | `python/asc/language/fwk/` | Framework APIs (TPipe, TQue, etc.) |
-| `asc.lib.host` | `python/asc/lib/host/` | Host-side helpers |
-| `asc.lib.runtime` | `python/asc/lib/runtime/` | ACL runtime wrappers |
-| `asc.runtime.config` | `python/asc/runtime/` | Backend/Platform configuration |
-
-## Explore Agent usage
-
-**When to use**:
-1. Find API documentation or usage examples
-2. Understand how a specific pyasc API works
-3. Search for tutorial implementations similar to the target kernel
-4. Find solutions when encountering JIT compilation errors
-
-**How to use**:
-```
-Use Task tool, subagent_type=Explore
-Provide clear search objectives and scope
-```
-
-**Example prompts**:
-- "Search for usage examples of asc2.load/asc2.store in pyasc asc2 kernel tests"
-- "Find how tiling is implemented with asc.ceildiv in asc2 kernels"
-- "Search for asc2.tensor initialization patterns in pyasc test/kernels/asc2/"
+When an API or workaround matters, cite the exact source file and commit.
+Treat behavior copied from a different v2 snapshot as a hypothesis until the
+pinned compile/runtime gate confirms it.
 
 ## References
 
-- [API Index](references/api-index.md)
-- [Tutorial Catalog](references/tutorial-catalog.md)
-- [Example Catalog](references/example-catalog.md)
+- [API index](references/api-index.md)
+- [Example catalog](references/example-catalog.md)
+- [Tutorial catalog](references/tutorial-catalog.md)

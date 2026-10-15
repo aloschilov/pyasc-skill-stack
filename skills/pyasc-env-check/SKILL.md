@@ -1,90 +1,58 @@
 ---
 name: pyasc-env-check
-description: pyasc development environment check skill. Verifies Python version, pyasc installation, CANN toolkit, optional torch/torch_npu, and runtime configuration. Trigger — environment check, pyasc installation, CANN setup, Python version verification.
+description: Verify a current-v2 pyasc source/runtime/toolkit environment, including exact commit provenance, Python ABI, CANN, compiler, camodel, torch_npu, and NPU availability.
 ---
 
-# pyasc Environment Check
-
-## CANNBench pinned-runtime profile
+# Current pyasc v2 environment check
 
 `compiler-team/pyasc` branch `v2` is not available from the Python package
-repositories used by this project. For CANNBench, do not run `pip install
-pyasc` and do not trust another local checkout. Verify
-`integrations/cannbench/pyasc-v2-source/SOURCE_COMMIT` and use the vendored
-CPython 3.12 x86_64 wheel through
-`integrations/cannbench/workers/run_local_compile_gate.sh`. The normal checks
-below apply to standalone simulator development.
+repositories used by this project. Do not use `pip install pyasc` to stand in
+for the selected source. Build or use a vendored wheel from the exact recorded
+commit.
 
-Quickly verify the development environment for pyasc kernel development.
+## Required checks
 
-## Workflow
+- selected source remote/branch/commit
+- wheel SHA-256, architecture, and CPython ABI
+- `import asc` and `import asctile`; `import asc2` must not be required
+- Python version supported by that wheel
+- CANN toolkit root/version and Bisheng compiler path
+- target platform `Ascend950PR_9599`
+- simulator library path for camodel
+- torch and torch_npu versions for real tensor launches
+- NPU presence and account access when running hardware
 
-```
-Environment check
-    |
-    +-- Python version check (3.9-3.12)
-    |
-    +-- pyasc installation check
-    |
-    +-- CANN toolkit check
-    |
-    +-- Optional: torch / torch_npu check
-    |
-    +-- Optional: NPU device check
-```
+For the current campaign the expected source commit is
+`0a631f70968c3cb7c33ce45330a85768dd5a6f06` with a matching runtime. Verify the actual wheel ABI and architecture; historical
+four-operator wheels belong to their recorded pin and are not substitutes.
 
-## Quick check
+## Quick commands
 
 ```bash
-bash scripts/check_env.sh
+git -C <pyasc-repo> fetch origin v2
+git -C <pyasc-repo> rev-parse origin/v2
+python3 -c "import asc, asctile; print(asc.__file__, asctile.__file__)"
+sha256sum <wheel>
+python3 --version
+test -x "$ASCEND_HOME_PATH/tools/bisheng_compiler/bin/bisheng"
+npu-smi info
 ```
 
-## Check items
+The import command only proves which installed runtime is visible. Compare it
+to the recorded wheel/source before using its output as campaign evidence.
 
-| Check item | Command | Required |
-|-----------|---------|----------|
-| Python version | `python3 --version` | Yes (3.9-3.12) |
-| pyasc installed | `python3 -c "import asc; print(asc.__version__)"` | Yes |
-| CANN toolkit | Check `ASCEND_HOME_PATH` | Yes |
-| numpy | `python3 -c "import numpy; print(numpy.__version__)"` | Yes (< 2.0) |
-| torch | `python3 -c "import torch; print(torch.__version__)"` | Optional |
-| torch_npu | `python3 -c "import torch_npu"` | Optional (for NPU tensors) |
-| NPU devices | `npu-smi info` | Optional (for NPU backend) |
+## Profiles
 
-## Environment variables
+- **QEMU/x86_64 compile gate:** dispatch and lowering only; no numerical or
+  performance claim.
+- **Native aarch64 camodel:** numerical execution; build the same commit using
+  local LLVM when required.
+- **NPU/CANNBench:** authoritative benchmark execution and timing.
 
-| Variable | Purpose | Required |
-|----------|---------|----------|
-| `ASCEND_HOME_PATH` | CANN Toolkit path | Yes |
-| `PYASC_HOME` | pyasc JIT cache root | Optional |
-| `PYASC_CACHE_DIR` | pyasc JIT cache directory | Optional |
-| `PYASC_DUMP_PATH` | Dump ASC-IR and generated code | Optional (debugging) |
-
-## CANN version compatibility
-
-| pyasc version | CANN version |
-|--------------|-------------|
-| v1.0.0 | CANN 8.0.0 |
-| v1.1.0 | CANN 8.1.0 |
-| v1.2.0+ | CANN 9.0.0 |
-
-This project is verified against **CANN 9.0.0** (`ascendai/cann:9.0.0-beta.2-910b-ubuntu22.04-py3.11`). The base image is multi-arch and runs on both x86_64 and aarch64 Linux hosts.
-
-## Backend availability
-
-| Backend | Requirements |
-|---------|-------------|
-| Model (simulator) | CANN toolkit installed, simulator libraries in `LD_LIBRARY_PATH` |
-| NPU | CANN toolkit + NPU hardware (Atlas A2/A3) |
-
-## Troubleshooting
-
-- **`import asc` fails**: for standalone development, build the selected pyasc
-  source; for CANNBench use the vendored exact-runtime gate above
-- **CANN not found**: Run `source /usr/local/Ascend/ascend-toolkit/set_env.sh`
-- **numpy >= 2.0 error**: Downgrade with `pip install "numpy<2"`
-- **Model backend fails**: Check `LD_LIBRARY_PATH` includes CANN simulator libs
+If source and runtime commits differ, stop validation and rebuild the runtime.
+If camodel is unavailable, continue with compile evidence but label numerical
+claims unverified. Never silently substitute another platform or pyasc build.
 
 ## References
 
-- [Environment Requirements](references/env-requirements.md)
+- [Environment requirements](references/env-requirements.md)

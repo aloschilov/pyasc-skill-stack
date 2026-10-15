@@ -15,36 +15,46 @@ import numpy as np
 
 import asc
 import asc.runtime.config as config
-import asc2
+import asctile
 
 TILE_SIZE = 128
-CORE_NUM = 16
+CORE_NUM = 72  # Ascend950PR_9599; derive from target metadata in reusable code.
 
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(always_compile=True)
+@asctile.jit(always_compile=True)
 def kernel_func(x_ptr: asc.GlobalAddress, y_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
-                size: int, tile_size: asc.ConstExpr[int], tile_per_block: asc.ConstExpr[int]):
+                size: asc.ConstExpr[int], tile_size: asc.ConstExpr[int]):
     """Replace this with your kernel implementation."""
-    x_gm = asc2.tensor(x_ptr, [size])
-    y_gm = asc2.tensor(y_ptr, [size])
-    out_gm = asc2.tensor(out_ptr, [size])
-    base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block):
-        tile_offset = base_offset + i * tile_size
-        x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
-        y = asc2.load(y_gm, [tile_size], offsets=[tile_offset])
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    y_gm = asctile.global_tensor(y_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    num_tiles = asctile.ceildiv(size, tile_size)
+    for tile_id in asctile.range(
+        asctile.block_idx(), num_tiles, asctile.block_num(), unroll_factor=2
+    ):
+        tile_offset = tile_id * tile_size
+        valid = size - tile_offset
+        if valid > tile_size:
+            valid = tile_size
+        x = asctile.copy_in(
+            x_gm, [tile_offset], [tile_size], real_shape=[valid], pad_value=0
+        )
+        y = asctile.copy_in(
+            y_gm, [tile_offset], [tile_size], real_shape=[valid], pad_value=0
+        )
         # TODO: Replace with your operation
         out = x + y
-        asc2.store(out, out_gm, offsets=[tile_offset])
+        asctile.copy_out(out, out_gm, [tile_offset], real_shape=[valid])
 
 
 def kernel_launch(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     out = np.empty_like(x)
     size = out.size
     num_tiles = asc.ceildiv(size, TILE_SIZE)
-    kernel_func[CORE_NUM](x, y, out, size, TILE_SIZE, asc.ceildiv(num_tiles, CORE_NUM))
+    core_num = min(CORE_NUM, num_tiles)
+    kernel_func[core_num](x, y, out, size, TILE_SIZE)
     return out
 
 
