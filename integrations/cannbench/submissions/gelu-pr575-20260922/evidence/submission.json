@@ -1,0 +1,28 @@
+{
+  "id": "job_13cb06f8dff9",
+  "status": "succeeded",
+  "target_hardware": "950pr",
+  "runner_hardware": "950pr",
+  "claimed_pool_id": "system-shared",
+  "is_independent_environment": false,
+  "job_tag": "gelu-pr575-ttk-20260922-one",
+  "is_private": true,
+  "selected_operators": [
+    "gelu"
+  ],
+  "benchmark_slug": "official-tasks",
+  "benchmark_version": "1.1.2",
+  "job_completed": true,
+  "passed_cases": 20,
+  "total_cases": 20,
+  "queued_at": "2026-09-22T13:33:10.679058",
+  "claimed_at": "2026-09-22T13:46:04.935456",
+  "finished_at": "2026-09-22T13:50:09.053048",
+  "failure_kind": null,
+  "error_message": null,
+  "url": "https://cannbench.com/workspace/jobs/job_13cb06f8dff9",
+  "runner_revisions": {
+    "cann_bench_ref": "e8609f6b5891361fb6f0afb141eb8909c1b4a59b",
+    "benchsite_ref": "605a23e3e3b857353689282cc7de1b0bf66e8c99"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "label": "P",
+  "archive_sha256": "b50fa4e488311dc147f2d2a06ef966d8de6e07fa629b6e8db151ed9705b99612",
+  "source_sha256": "dde7c51cada47a19e0fd96cef92d08caf1e005f218204ace3a4b8f4cb69be0ba",
+  "built_wheel_sha256": "01c5cfab9b780a89b42d3c5992f020c4e4ca3d56c6649882f893d021891bc32b",
+  "note": "x86 build/install/all20 host dispatch and translation at caps64/72; exact PR575 logical blocks at full reported64/72; not numerical execution"
+}

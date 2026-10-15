@@ -1,0 +1,9 @@
+{
+  "passed_cases": 20,
+  "total_cases": 20,
+  "anti_cheat_failed_cases": 0,
+  "true_geometric_mean_speedup": 0.4372771551567709,
+  "arithmetic_mean_speedup": 0.47166733014649226,
+  "previous_true_geometric_mean_speedup": 0.48357903454041457,
+  "geometric_mean_previous_over_current": 0.9042516815733167
+}

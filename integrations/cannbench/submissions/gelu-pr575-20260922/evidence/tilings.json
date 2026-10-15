@@ -1,0 +1,335 @@
+[
+  {
+    "case_id": 1,
+    "name": "gelu_v2_00001",
+    "blocks": 71,
+    "shape": [
+      1024,
+      1024
+    ],
+    "dtype": "float16",
+    "mode": "none",
+    "key": 5,
+    "size": 1048576,
+    "core_num": 72,
+    "tile": 4608,
+    "block_length": 14848
+  },
+  {
+    "case_id": 2,
+    "name": "gelu_v2_00002",
+    "blocks": 72,
+    "shape": [
+      2048,
+      2048
+    ],
+    "dtype": "float32",
+    "mode": "none",
+    "key": 13,
+    "size": 4194304,
+    "core_num": 72,
+    "tile": 5440,
+    "block_length": 58368
+  },
+  {
+    "case_id": 3,
+    "name": "gelu_v2_00003",
+    "blocks": 72,
+    "shape": [
+      4096,
+      4096
+    ],
+    "dtype": "bfloat16",
+    "mode": "none",
+    "key": 9,
+    "size": 16777216,
+    "core_num": 72,
+    "tile": 4608,
+    "block_length": 233472
+  },
+  {
+    "case_id": 4,
+    "name": "gelu_v2_00004",
+    "blocks": 72,
+    "shape": [
+      8192,
+      8192
+    ],
+    "dtype": "float16",
+    "mode": "tanh",
+    "key": 7,
+    "size": 67108864,
+    "core_num": 72,
+    "tile": 5376,
+    "block_length": 932352
+  },
+  {
+    "case_id": 5,
+    "name": "gelu_v2_00005",
+    "blocks": 72,
+    "shape": [
+      8192,
+      8192
+    ],
+    "dtype": "float32",
+    "mode": "tanh",
+    "key": 15,
+    "size": 67108864,
+    "core_num": 72,
+    "tile": 8192,
+    "block_length": 932352
+  },
+  {
+    "case_id": 6,
+    "name": "gelu_v2_00006",
+    "blocks": 71,
+    "shape": [
+      1023,
+      1023
+    ],
+    "dtype": "bfloat16",
+    "mode": "tanh",
+    "key": 11,
+    "size": 1046529,
+    "core_num": 72,
+    "tile": 5376,
+    "block_length": 14848
+  },
+  {
+    "case_id": 7,
+    "name": "gelu_v2_00007",
+    "blocks": 72,
+    "shape": [
+      1009,
+      1021
+    ],
+    "dtype": "float16",
+    "mode": "none",
+    "key": 5,
+    "size": 1030189,
+    "core_num": 72,
+    "tile": 4608,
+    "block_length": 14336
+  },
+  {
+    "case_id": 8,
+    "name": "gelu_v2_00008",
+    "blocks": 70,
+    "shape": [
+      1537,
+      769
+    ],
+    "dtype": "float32",
+    "mode": "tanh",
+    "key": 15,
+    "size": 1181953,
+    "core_num": 72,
+    "tile": 8192,
+    "block_length": 16896
+  },
+  {
+    "case_id": 9,
+    "name": "gelu_v2_00009",
+    "blocks": 72,
+    "shape": [
+      363,
+      367,
+      373
+    ],
+    "dtype": "bfloat16",
+    "mode": "none",
+    "key": 9,
+    "size": 49691433,
+    "core_num": 72,
+    "tile": 4608,
+    "block_length": 690176
+  },
+  {
+    "case_id": 10,
+    "name": "gelu_v2_00010",
+    "blocks": 71,
+    "shape": [
+      2049,
+      513
+    ],
+    "dtype": "float16",
+    "mode": "tanh",
+    "key": 7,
+    "size": 1051137,
+    "core_num": 72,
+    "tile": 5376,
+    "block_length": 14848
+  },
+  {
+    "case_id": 11,
+    "name": "gelu_v2_00011",
+    "blocks": 72,
+    "shape": [
+      3,
+      7,
+      13,
+      4001
+    ],
+    "dtype": "float32",
+    "mode": "none",
+    "key": 13,
+    "size": 1092273,
+    "core_num": 72,
+    "tile": 5440,
+    "block_length": 15360
+  },
+  {
+    "case_id": 12,
+    "name": "gelu_v2_00012",
+    "blocks": 70,
+    "shape": [
+      1000003
+    ],
+    "dtype": "bfloat16",
+    "mode": "tanh",
+    "key": 11,
+    "size": 1000003,
+    "core_num": 72,
+    "tile": 5376,
+    "block_length": 14336
+  },
+  {
+    "case_id": 13,
+    "name": "gelu_v2_00013",
+    "blocks": 72,
+    "shape": [
+      11,
+      13,
+      17,
+      67,
+      67
+    ],
+    "dtype": "float32",
+    "mode": "none",
+    "key": 13,
+    "size": 10912759,
+    "core_num": 72,
+    "tile": 5440,
+    "block_length": 152064
+  },
+  {
+    "case_id": 14,
+    "name": "gelu_v2_00014",
+    "blocks": 72,
+    "shape": [
+      3,
+      7,
+      11,
+      13,
+      1009
+    ],
+    "dtype": "float16",
+    "mode": "tanh",
+    "key": 7,
+    "size": 3030027,
+    "core_num": 72,
+    "tile": 5376,
+    "block_length": 42496
+  },
+  {
+    "case_id": 15,
+    "name": "gelu_v2_00015",
+    "blocks": 71,
+    "shape": [
+      512,
+      2049
+    ],
+    "dtype": "float32",
+    "mode": "none",
+    "key": 13,
+    "size": 1049088,
+    "core_num": 72,
+    "tile": 5440,
+    "block_length": 14848
+  },
+  {
+    "case_id": 16,
+    "name": "gelu_v2_00016",
+    "blocks": 72,
+    "shape": [
+      255,
+      8193
+    ],
+    "dtype": "bfloat16",
+    "mode": "none",
+    "key": 9,
+    "size": 2089215,
+    "core_num": 72,
+    "tile": 4608,
+    "block_length": 29184
+  },
+  {
+    "case_id": 17,
+    "name": "gelu_v2_00017",
+    "blocks": 72,
+    "shape": [
+      4097,
+      511
+    ],
+    "dtype": "float16",
+    "mode": "tanh",
+    "key": 7,
+    "size": 2093567,
+    "core_num": 72,
+    "tile": 5376,
+    "block_length": 29184
+  },
+  {
+    "case_id": 18,
+    "name": "gelu_v2_00018",
+    "blocks": 72,
+    "shape": [
+      2,
+      511,
+      2049
+    ],
+    "dtype": "float32",
+    "mode": "none",
+    "key": 13,
+    "size": 2094078,
+    "core_num": 72,
+    "tile": 5440,
+    "block_length": 29184
+  },
+  {
+    "case_id": 19,
+    "name": "gelu_v2_00019",
+    "blocks": 72,
+    "shape": [
+      4,
+      255,
+      2049
+    ],
+    "dtype": "bfloat16",
+    "mode": "tanh",
+    "key": 11,
+    "size": 2089980,
+    "core_num": 72,
+    "tile": 5376,
+    "block_length": 29184
+  },
+  {
+    "case_id": 20,
+    "name": "gelu_v2_00020",
+    "blocks": 72,
+    "shape": [
+      2,
+      3,
+      17,
+      1024,
+      101
+    ],
+    "dtype": "float32",
+    "mode": "none",
+    "key": 13,
+    "size": 10549248,
+    "core_num": 72,
+    "tile": 5440,
+    "block_length": 146944
+  }
+]
