@@ -1,0 +1,7 @@
+# Preserve byte-for-byte experimental artifacts, including original CSV endings.
+*.csv -text whitespace=cr-at-eol
+*.zip binary
+*.jpg binary
+# Frozen submitted/generated sources retain their original trailing blank lines.
+bundle/** whitespace=-blank-at-eof
+evidence/**/dump/ascendc.cpp whitespace=-blank-at-eof

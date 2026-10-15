@@ -1,0 +1,795 @@
+[
+  {
+    "case_id": 1,
+    "shape": [
+      1024,
+      1024
+    ],
+    "elements": 1048576,
+    "dtype": "float16",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "77ef7a7a3a6d6da6aaca869a6cfbc446eb3b4ac6593ae5bf797f799432188eb2",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 67
+  },
+  {
+    "case_id": 2,
+    "shape": [
+      2048,
+      2048
+    ],
+    "elements": 4194304,
+    "dtype": "float32",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "9d2525e49eb5bbad8e1c69a4e038c4b59776cf6ca6f783bedb282a5a45c9f43a",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 3,
+    "shape": [
+      4096,
+      4096
+    ],
+    "elements": 16777216,
+    "dtype": "bfloat16",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "722769c7f90ea1bb7ee667c98e6bb9ebc3f209c4b4aa76f853d2aba7bca0b933",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 4,
+    "shape": [
+      8192,
+      8192
+    ],
+    "elements": 67108864,
+    "dtype": "float16",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "993d2f65d1ea475705571122ca827965e7710012e1324682d02fb2f7ef083425",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 5,
+    "shape": [
+      8192,
+      8192
+    ],
+    "elements": 67108864,
+    "dtype": "float32",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "864c831aabe2618d73a87b69dd7fe6f1666cd951666f51ddaaa1cddcd4cfbb66",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 6,
+    "shape": [
+      1023,
+      1023
+    ],
+    "elements": 1046529,
+    "dtype": "bfloat16",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "57debbca9d19fe3c81f03dd2d35f8a4cc23f8f104cc52594be84691e17cf0cbe",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 66
+  },
+  {
+    "case_id": 7,
+    "shape": [
+      1009,
+      1021
+    ],
+    "elements": 1030189,
+    "dtype": "float16",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "77ef7a7a3a6d6da6aaca869a6cfbc446eb3b4ac6593ae5bf797f799432188eb2",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 65
+  },
+  {
+    "case_id": 8,
+    "shape": [
+      1537,
+      769
+    ],
+    "elements": 1181953,
+    "dtype": "float32",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "864c831aabe2618d73a87b69dd7fe6f1666cd951666f51ddaaa1cddcd4cfbb66",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 9,
+    "shape": [
+      363,
+      367,
+      373
+    ],
+    "elements": 49691433,
+    "dtype": "bfloat16",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "722769c7f90ea1bb7ee667c98e6bb9ebc3f209c4b4aa76f853d2aba7bca0b933",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 10,
+    "shape": [
+      2049,
+      513
+    ],
+    "elements": 1051137,
+    "dtype": "float16",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "993d2f65d1ea475705571122ca827965e7710012e1324682d02fb2f7ef083425",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 67
+  },
+  {
+    "case_id": 11,
+    "shape": [
+      3,
+      7,
+      13,
+      4001
+    ],
+    "elements": 1092273,
+    "dtype": "float32",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "9d2525e49eb5bbad8e1c69a4e038c4b59776cf6ca6f783bedb282a5a45c9f43a",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 69
+  },
+  {
+    "case_id": 12,
+    "shape": [
+      1000003
+    ],
+    "elements": 1000003,
+    "dtype": "bfloat16",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "57debbca9d19fe3c81f03dd2d35f8a4cc23f8f104cc52594be84691e17cf0cbe",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 64
+  },
+  {
+    "case_id": 13,
+    "shape": [
+      11,
+      13,
+      17,
+      67,
+      67
+    ],
+    "elements": 10912759,
+    "dtype": "float32",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "9d2525e49eb5bbad8e1c69a4e038c4b59776cf6ca6f783bedb282a5a45c9f43a",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 14,
+    "shape": [
+      3,
+      7,
+      11,
+      13,
+      1009
+    ],
+    "elements": 3030027,
+    "dtype": "float16",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "993d2f65d1ea475705571122ca827965e7710012e1324682d02fb2f7ef083425",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 15,
+    "shape": [
+      512,
+      2049
+    ],
+    "elements": 1049088,
+    "dtype": "float32",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "9d2525e49eb5bbad8e1c69a4e038c4b59776cf6ca6f783bedb282a5a45c9f43a",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 67
+  },
+  {
+    "case_id": 16,
+    "shape": [
+      255,
+      8193
+    ],
+    "elements": 2089215,
+    "dtype": "bfloat16",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "722769c7f90ea1bb7ee667c98e6bb9ebc3f209c4b4aa76f853d2aba7bca0b933",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 17,
+    "shape": [
+      4097,
+      511
+    ],
+    "elements": 2093567,
+    "dtype": "float16",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "993d2f65d1ea475705571122ca827965e7710012e1324682d02fb2f7ef083425",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 18,
+    "shape": [
+      2,
+      511,
+      2049
+    ],
+    "elements": 2094078,
+    "dtype": "float32",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "9d2525e49eb5bbad8e1c69a4e038c4b59776cf6ca6f783bedb282a5a45c9f43a",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 19,
+    "shape": [
+      4,
+      255,
+      2049
+    ],
+    "elements": 2089980,
+    "dtype": "bfloat16",
+    "mode": "tanh",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "57debbca9d19fe3c81f03dd2d35f8a4cc23f8f104cc52594be84691e17cf0cbe",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  },
+  {
+    "case_id": 20,
+    "shape": [
+      2,
+      3,
+      17,
+      1024,
+      101
+    ],
+    "elements": 10549248,
+    "dtype": "float32",
+    "mode": "none",
+    "tile_shape": [
+      15872
+    ],
+    "unroll": 1,
+    "passed": true,
+    "ub_bytes": 190464,
+    "compiler_options": {
+      "debug": false,
+      "strip_loc": false,
+      "verify_sync": true,
+      "print_ir_before_all": false,
+      "run_passes": true,
+      "kernel_type": "KernelType.AIV_ONLY",
+      "auto_sync": true,
+      "auto_sync_log": "",
+      "matmul_cube_only": false,
+      "insert_sync": true,
+      "always_compile": true,
+      "bisheng_options": null,
+      "opt_level": 3,
+      "vf_vec_len": 256,
+      "cv_ratio": 1,
+      "reuse_alloc": 2,
+      "static_alloc": null,
+      "vf_fusion": true
+    },
+    "binary_sha256": "9d2525e49eb5bbad8e1c69a4e038c4b59776cf6ca6f783bedb282a5a45c9f43a",
+    "launched_at_cap64": 64,
+    "launched_at_cap72": 72
+  }
+]

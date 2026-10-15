@@ -1,0 +1,5 @@
+Hardware follow-up for the same v2 revision `9069108e323746187c48d78fec4929c4afa2efc4` and unchanged reference-DAG kernel: the private CANNBench diagnostic passed **20/20 official GeLU cases**, with zero anti-cheat failures, on Ascend950PR_957c / CANN 9.1.0 / Torch-NPU 2.10.0.post4. This includes all official FP32 exact cases. No compiler patches were needed; FP32 exact used the inline configured-Erf workaround shown above, while low-precision exact used public Erf with FP32 intermediates.
+
+This does not invalidate the separate local 2049-point `linspace(-8,-2)` stress failure on CANN 9.0 / CaModel 9599: the workload and SDK differ. Please do not interpret that stress result as a failure of the current official hardware cases, or the hardware pass as proof of accuracy for every input distribution.
+
+The API request remains useful for reproducing the reference algorithm without inline AscendC. This experiment does not establish a compiler-pass bug, nor does it establish performance parity with the reference.

@@ -1,0 +1,561 @@
+{
+  "pin": "9069108e323746187c48d78fec4929c4afa2efc4",
+  "args": {
+    "dtype": "bfloat16",
+    "mode": "tanh",
+    "tile": 15872,
+    "size": 8193,
+    "cores": 8,
+    "unroll": 1,
+    "compile_only": false,
+    "output": "/home/aloschilov/workspace/gelu-reference-v2-20261007/evidence/qualification-bfloat16-tanh/result.json"
+  },
+  "completed": true,
+  "compiled": true,
+  "harness_sha256": "7251590f0b1c4c2ae23672f43c13cd6099b97d025a3bbff45791e80d46bb7276",
+  "runtime_file": "/home/aloschilov/workspace/gelu-reference-v2-20261007/native-installed/asc/__init__.py",
+  "asctile_file": "/home/aloschilov/workspace/gelu-reference-v2-20261007/native-installed/asc/experimental/asctile/__init__.py",
+  "source_sha256": "5e3a0b09773e18965c3a57776b09dc40171e08134bec7b8c170a05c6f1b226cc",
+  "requested_options": {
+    "debug": false,
+    "strip_loc": false,
+    "verify_sync": true,
+    "print_ir_before_all": false,
+    "run_passes": true,
+    "kernel_type": null,
+    "auto_sync": true,
+    "auto_sync_log": "",
+    "matmul_cube_only": false,
+    "insert_sync": true,
+    "always_compile": true,
+    "bisheng_options": null,
+    "opt_level": 3,
+    "vf_vec_len": null,
+    "cv_ratio": 1,
+    "reuse_alloc": 2,
+    "static_alloc": null,
+    "vf_fusion": true
+  },
+  "memory_consumed": {
+    "UB": 190464
+  },
+  "binary_sha256": "57debbca9d19fe3c81f03dd2d35f8a4cc23f8f104cc52594be84691e17cf0cbe",
+  "ub_fit": true,
+  "sample_segments": [
+    [
+      "random",
+      0,
+      1025
+    ],
+    [
+      "range_-inf_inf",
+      1025,
+      1538
+    ],
+    [
+      "range_-3_6",
+      1538,
+      2051
+    ],
+    [
+      "range_-0.1_0.1",
+      2051,
+      2564
+    ],
+    [
+      "negative_tail",
+      2564,
+      4613
+    ]
+  ],
+  "phase": "model",
+  "active_input": "combined",
+  "repeat": 1,
+  "checks": [
+    {
+      "input": "combined",
+      "repeat": 0,
+      "passed": true,
+      "repeat_equal": true,
+      "guards_intact": true,
+      "model_ticks": 6972,
+      "warmed": false,
+      "wall_seconds": 19.32919330103323,
+      "details": {
+        "passed": true,
+        "dtype": "bfloat16",
+        "threshold": 0.0078125,
+        "mere": 6.436950198849448e-11,
+        "mare": 4.440889455818166e-09,
+        "max_diff": 4.440892098500626e-16,
+        "mean_diff": 6.436951191856368e-18,
+        "mismatch_count": 0,
+        "total_count": 4613,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "bfloat16",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0078125,
+            "mere": 6.436950198849448e-11,
+            "mare": 4.440889455818166e-09,
+            "mismatch_count": 0,
+            "total_count": 4613,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      },
+      "segment_checks": [
+        {
+          "input": "random",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "max_diff": 0.0,
+            "mean_diff": 0.0,
+            "mismatch_count": 0,
+            "total_count": 1025,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 0.0,
+                "mare": 0.0,
+                "mismatch_count": 0,
+                "total_count": 1025,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        },
+        {
+          "input": "range_-inf_inf",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "max_diff": 0.0,
+            "mean_diff": 0.0,
+            "mismatch_count": 0,
+            "total_count": 513,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 0.0,
+                "mare": 0.0,
+                "mismatch_count": 0,
+                "total_count": 513,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        },
+        {
+          "input": "range_-3_6",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "max_diff": 0.0,
+            "mean_diff": 0.0,
+            "mismatch_count": 0,
+            "total_count": 513,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 0.0,
+                "mare": 0.0,
+                "mismatch_count": 0,
+                "total_count": 513,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        },
+        {
+          "input": "range_-0.1_0.1",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "max_diff": 0.0,
+            "mean_diff": 0.0,
+            "mismatch_count": 0,
+            "total_count": 513,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 0.0,
+                "mare": 0.0,
+                "mismatch_count": 0,
+                "total_count": 513,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        },
+        {
+          "input": "negative_tail",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 1.3417381307606633e-10,
+            "mare": 4.440889455818166e-09,
+            "max_diff": 4.440892098500626e-16,
+            "mean_diff": 1.3417383377461469e-17,
+            "mismatch_count": 0,
+            "total_count": 2049,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 1.3417381307606633e-10,
+                "mare": 4.440889455818166e-09,
+                "mismatch_count": 0,
+                "total_count": 2049,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "input": "combined",
+      "repeat": 1,
+      "passed": true,
+      "repeat_equal": true,
+      "guards_intact": true,
+      "model_ticks": 4567,
+      "warmed": true,
+      "wall_seconds": 13.703311088960618,
+      "details": {
+        "passed": true,
+        "dtype": "bfloat16",
+        "threshold": 0.0078125,
+        "mere": 6.436950198849448e-11,
+        "mare": 4.440889455818166e-09,
+        "max_diff": 4.440892098500626e-16,
+        "mean_diff": 6.436951191856368e-18,
+        "mismatch_count": 0,
+        "total_count": 4613,
+        "mismatch_ratio": 0.0,
+        "small_value_error_count": 0,
+        "small_value_cpu_error_count": 0,
+        "small_value_total_count": 0,
+        "cancel_error_count": 0,
+        "cancel_cpu_error_count": 0,
+        "cancel_total_count": 0,
+        "error_msg": null,
+        "output_results": [
+          {
+            "index": 0,
+            "name": "",
+            "dtype": "bfloat16",
+            "dtype_category": "float",
+            "passed": true,
+            "threshold": 0.0078125,
+            "mere": 6.436950198849448e-11,
+            "mare": 4.440889455818166e-09,
+            "mismatch_count": 0,
+            "total_count": 4613,
+            "max_abs_diff": 0,
+            "error_msg": ""
+          }
+        ]
+      },
+      "segment_checks": [
+        {
+          "input": "random",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "max_diff": 0.0,
+            "mean_diff": 0.0,
+            "mismatch_count": 0,
+            "total_count": 1025,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 0.0,
+                "mare": 0.0,
+                "mismatch_count": 0,
+                "total_count": 1025,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        },
+        {
+          "input": "range_-inf_inf",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "max_diff": 0.0,
+            "mean_diff": 0.0,
+            "mismatch_count": 0,
+            "total_count": 513,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 0.0,
+                "mare": 0.0,
+                "mismatch_count": 0,
+                "total_count": 513,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        },
+        {
+          "input": "range_-3_6",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "max_diff": 0.0,
+            "mean_diff": 0.0,
+            "mismatch_count": 0,
+            "total_count": 513,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 0.0,
+                "mare": 0.0,
+                "mismatch_count": 0,
+                "total_count": 513,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        },
+        {
+          "input": "range_-0.1_0.1",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 0.0,
+            "mare": 0.0,
+            "max_diff": 0.0,
+            "mean_diff": 0.0,
+            "mismatch_count": 0,
+            "total_count": 513,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 0.0,
+                "mare": 0.0,
+                "mismatch_count": 0,
+                "total_count": 513,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        },
+        {
+          "input": "negative_tail",
+          "passed": true,
+          "details": {
+            "passed": true,
+            "dtype": "bfloat16",
+            "threshold": 0.0078125,
+            "mere": 1.3417381307606633e-10,
+            "mare": 4.440889455818166e-09,
+            "max_diff": 4.440892098500626e-16,
+            "mean_diff": 1.3417383377461469e-17,
+            "mismatch_count": 0,
+            "total_count": 2049,
+            "mismatch_ratio": 0.0,
+            "small_value_error_count": 0,
+            "small_value_cpu_error_count": 0,
+            "small_value_total_count": 0,
+            "cancel_error_count": 0,
+            "cancel_cpu_error_count": 0,
+            "cancel_total_count": 0,
+            "error_msg": null,
+            "output_results": [
+              {
+                "index": 0,
+                "name": "",
+                "dtype": "bfloat16",
+                "dtype_category": "float",
+                "passed": true,
+                "threshold": 0.0078125,
+                "mere": 1.3417381307606633e-10,
+                "mare": 4.440889455818166e-09,
+                "mismatch_count": 0,
+                "total_count": 2049,
+                "max_abs_diff": 0,
+                "error_msg": ""
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "accuracy_passed": true
+}

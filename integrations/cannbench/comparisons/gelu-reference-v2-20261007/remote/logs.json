@@ -1,0 +1,55 @@
+{
+  "job_id": "job_b822d9190143",
+  "stage_summary": {
+    "current_stage": "compile",
+    "last_stage": "compile",
+    "last_stage_status": "failed",
+    "failed_stage": "compile",
+    "failed_status": "compile_failed",
+    "failed_message": "compile failed during staged evaluation",
+    "event_count": 3
+  },
+  "stages": [
+    {
+      "stage": "prepare",
+      "status": "preparing",
+      "message": "downloading benchmark/submission",
+      "payload": {
+        "workspace": "/data0/pd/benchsite-dev-runner-jobs-5/job_b822d9190143"
+      },
+      "created_at": "2026-10-07T17:31:16.021177"
+    },
+    {
+      "stage": "compile",
+      "status": "compiling",
+      "message": "running cann-bench staged evaluation",
+      "payload": {
+        "stage": "staged",
+        "timeout_sec": 1400,
+        "operator_count": 1,
+        "case_count": 20,
+        "op_timeout_sec": 240,
+        "case_timeout_sec": 40
+      },
+      "created_at": "2026-10-07T17:31:16.853953"
+    },
+    {
+      "stage": "compile",
+      "status": "failed",
+      "message": "compile failed during staged evaluation",
+      "payload": {
+        "stage": "staged",
+        "result_stage": "compile_failed",
+        "returncode": 1,
+        "timed_out": false,
+        "log_tail": "build.sh: FAILED\ncann_bench/__init__.py: OK\ncann_bench/_device_resources.py: OK\ncann_bench/_gelu_metadata/__init__.py: OK\ncann_bench/_gelu_metadata/active_soc.py: OK\ncann_bench/_gelu_metadata/diagnostics_v2.py: OK\ncann_bench/_gelu_metadata/gate.py: OK\ncann_bench/_gelu_metadata/loaded_sdk.py: OK\ncann_bench/_gelu_metadata/platform_capacity.py: OK\ncann_bench/_pyasc_runtime.py: OK\ncann_bench/_runtime_context.py: OK\ncann_bench/gelu.py: OK\ncann_bench/kernel.py: OK\nmetadata/augment_wheel.py: OK\nmetadata/build_metadata_v2.py: OK\nmetadata/build_metadata_v3.py: OK\nmetadata/build_payload.sh: OK\nmetadata/loaded_sdk.py: OK\nmetadata/platform_capacity.cpp: OK\nsetup.py: OK\nwheel/cann_bench-1.1.0-cp312-cp312-linux_x86_64.whl: OK\nsha256sum: WARNING: 1 computed checksum did NOT match\n",
+        "log_bytes_total": 776,
+        "truncated": false,
+        "log_artifact_uploaded": true,
+        "log_artifact_name": "compile.log",
+        "log_artifact_size_bytes": 776
+      },
+      "created_at": "2026-10-07T17:31:28.046892"
+    }
+  ]
+}
