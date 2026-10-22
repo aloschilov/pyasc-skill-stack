@@ -1,128 +1,37 @@
-# pyasc Supported Syntax Details
+# Supported current-v2 JIT syntax
 
-All syntax below is valid inside `@asc.jit`-decorated functions.
-
-## Attribute access
-
-```python
-@asc.jit
-def func():
-    nums = [1, 2, 3]
-    return nums.__len__()
-```
-
-## Loops
+Current v2 supports ordinary assignments, annotated assignments,
+`if`/`elif`/`else`, ternary expressions, `while`, compile-time Python `range`,
+device `asctile.range`, arithmetic/comparison/bitwise/boolean operators,
+module-level JIT helper calls, tuple/list construction and indexing when types
+are resolvable, slicing, assertions, and top-level returns from device helpers.
 
 ```python
-@asc.jit
-def func(n, total):
-    for i in range(n):       # for with range()
-        total += i
-    while total < 100:        # while loop
-        total += 1
-    return total
+@asctile.jit
+def helper(x):
+    y = x * 2.0
+    return y
+
+@asctile.jit
+def kernel(x_ptr: asc.GlobalAddress, n: asc.ConstExpr[int]):
+    x_gm = asctile.global_tensor(x_ptr, [n])
+    for i in asctile.range(asctile.block_idx(), n, asctile.block_num()):
+        x = asctile.copy_in(x_gm, [i])
+        y = helper(x)
 ```
 
-## Operators
+`asctile.block_idx` and `asctile.block_num` are functions and must be
+called. Bare names materialize as function objects and the loop fails to
+lower with `TypeError: Unsupported value type for materialization:
+function`. This exact signature was measured on the pinned runtime in
+multiple CANNBench candidates; always write `asctile.block_idx()` /
+`asctile.block_num()`.
 
-```python
-@asc.jit
-def func(a, b):
-    result = a + b * 2       # binary: +, -, *, /, %, //, **, &, |, ^, <<, >>
-    neg = -a                  # unary: -, ~, not
-    return result
-```
+Chains of three or more boolean operators are rejected: `if a >= 0 and a < D
+and b >= 0` fails with `UnsupportedSyntaxError: ... Chained boolean
+operators are not supported, group pairs with parentheses`. Group pairwise:
+`if (a >= 0 and a < D) and (b >= 0 and b < H):`. The same rule applies
+inside ternary conditions (measured on pinned-runtime candidates for
+conv_3d_backprop_filter and dilation_2d).
 
-## Collections
-
-```python
-@asc.jit
-def func(a, b, c):
-    nums = [a, b, c]         # list
-    pair = a, b               # tuple
-    return nums[0] + pair[1]  # subscript access
-```
-
-## Conditionals
-
-```python
-@asc.jit
-def func(x, y, z, ans, step):
-    ans = x if x > 0 else 0  # ternary if
-    if x + y == z:            # if/elif/else
-        ans += step
-    elif x + y > z:
-        ans += step * 2
-    else:
-        ans -= 1
-    return ans
-```
-
-## Assignments
-
-```python
-@asc.jit
-def func(a, b):
-    result = a + b            # simple assignment
-    result += 1               # augmented: +=, -=, *=, /=, %=
-    count: int = 3            # annotated assignment
-    return result
-```
-
-## Boolean logic
-
-```python
-@asc.jit
-def func(val, lo, hi, cnt, step):
-    if val >= lo and val <= hi:
-        cnt += step
-    return cnt
-```
-
-## Constants and comparisons
-
-```python
-@asc.jit
-def func():
-    a = 1                     # int constant
-    b = True                  # bool constant
-    c = 3.14                  # float constant
-    return a > 0              # comparison: >, <, >=, <=, ==, !=
-```
-
-## Assert with f-string
-
-```python
-@asc.jit
-def func(num):
-    assert num > 0, f"Expected positive, got {num}"
-```
-
-## Slicing
-
-```python
-@asc.jit
-def func():
-    nums = [1, 2, 3, 4, 5]
-    return len(nums[2:])      # slice from index 2
-```
-
-## Function calls
-
-```python
-@asc.jit
-def helper() -> int:
-    return 42
-
-@asc.jit
-def kernel():
-    x = helper()              # call another @asc.jit function
-```
-
-## Pass statement
-
-```python
-@asc.jit
-def func():
-    pass
-```
+Check optional loop and JIT keywords against the exact selected source.

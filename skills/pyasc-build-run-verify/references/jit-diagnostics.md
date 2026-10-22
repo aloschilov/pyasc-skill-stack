@@ -18,7 +18,7 @@ Check `$PYASC_DUMP_PATH` for:
 ### Step 2: Force recompile
 
 ```python
-@asc.jit(always_compile=True)
+@asctile.jit(always_compile=True)
 def kernel(...):
     ...
 ```
@@ -28,7 +28,7 @@ This bypasses the JIT cache and forces a fresh compilation.
 ### Step 3: Reduce optimization
 
 ```python
-@asc.jit(opt_level=0)
+@asctile.jit(opt_level=0)
 def kernel(...):
     ...
 ```
@@ -38,12 +38,12 @@ Lower optimization may produce clearer error messages.
 ### Step 4: Enable auto-sync logging
 
 ```python
-@asc.jit(auto_sync=True, auto_sync_log="sync.log")
+@asctile.jit(insert_sync=True)
 def kernel(...):
     ...
 ```
 
-Review `sync.log` to see what sync instructions the compiler inserts.
+Inspect `PYASC_DUMP_PATH` output to see the inserted synchronization.
 
 ## Common error patterns
 
@@ -60,7 +60,7 @@ Review `sync.log` to see what sync instructions the compiler inserts.
 | Error | Cause | Fix |
 |-------|-------|-----|
 | `RuntimeError: core_num` | Invalid core count | Use count <= hardware cores |
-| `ImportError: asc` | pyasc not installed | pip install pyasc |
+| `ImportError: asc` or `asctile` | Source/runtime mismatch or pyasc not installed | Install the wheel built from the selected v2 commit |
 | `CANN not found` | Missing CANN toolkit | source set_env.sh |
 
 ### Verification errors
@@ -74,9 +74,13 @@ Review `sync.log` to see what sync instructions the compiler inserts.
 ## Cache management
 
 ```bash
-# Clear JIT cache
-rm -rf ${PYASC_HOME:-$HOME}/.pyasc/cache
-
-# Set custom cache location
-export PYASC_CACHE_DIR=/tmp/pyasc_cache
+# Isolate an experiment without deleting shared/user caches.
+PYASC_PROBE_DIR=$(mktemp -d /tmp/pyasc-jit-probe.XXXXXX)
+export PYASC_CACHE_DIR="$PYASC_PROBE_DIR/cache"
+export PYASC_DUMP_PATH="$PYASC_PROBE_DIR/dump"
 ```
+
+Run each option/import-order probe in a fresh process. Preserve the directory
+with its provenance; forced recompilation does not reset in-process keyword
+discovery. For timing, separate compile/verify_sync/debug work from warmed
+execution and record the exact simulator library family and clock units.

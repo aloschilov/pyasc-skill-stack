@@ -1,137 +1,74 @@
 ---
 name: pyasc-code-review
-description: pyasc asc2 kernel code review skill. Reviews kernel code against pyasc syntax constraints, asc2 API correctness, and Python secure coding guidelines using hypothesis testing methodology. Trigger — when reviewing kernel code for correctness, during acceptance review in Phase 2, or when the user provides code for review.
+description: Review current-v2 asctile kernels for contract coverage, API validity, correctness, memory safety, numerical behavior, performance, and evidence quality.
 ---
 
-# pyasc Code Review (asc2)
+# Current-v2 pyasc kernel review
 
-> Current-v2 CANNBench override: commit `030e9b2c` uses `asctile`, not
-> `asc2`. Reject new CANNBench candidates that import the removed legacy
-> package; otherwise apply the same review rules with the renamed symbols.
+Review against the exact selected source and task contract. For the current
+CANNBench campaign use `pyasc v2@0a631f70968c3cb7c33ce45330a85768dd5a6f06`, `import asctile`,
+`@asctile.jit`, `global_tensor`, `copy_in`, and `copy_out`.
 
-> CANNBench routing: for files under `integrations/cannbench/`, invoke
-> `pyasc-cannbench-kernel` and use its compact contract as the review checklist.
-> Do not load the generic references below unless the task is a standalone
-> pyasc program. The pinned benchmark API is `global_tensor` / `copy_in` /
-> `copy_out`; pass tensors to JIT launches, not `Tensor.data_ptr()`.
+## Review order
 
-For a CANNBench candidate, load `pyasc-cannbench-kernel` first. Review against
-the pinned `global_tensor` / `copy_in` / `copy_out` API and the exact task
-schema; do not require `always_compile=True`, `asc2.tensor/load/store`, a
-`__main__`, or numpy verification. Require all 20 case routes to pass the
-exact-v2 local compile gate, and label numerical/performance status separately.
+1. **Public contract:** exact callable name/signature/defaults; every shape,
+   dtype, attribute, list arity, tail, and special-value route is covered.
+2. **Implementation boundary:** torch is limited to allocation, metadata, and
+   launches. No torch numerical fallback, native operator, CPU round-trip, or
+   `Tensor.data_ptr()`.
+3. **Current API:** no `asc2`, `asctile.tensor/load/store`, removed compile
+   options, invalid range kwargs, or wrong transpose argument form.
+4. **Memory:** descriptor/local/offset/real-shape ranks match; physical final
+   dimensions are transfer-aligned; tail padding is operation-neutral; all
+   live buffers fit UB/L1/L0 after unrolling.
+5. **Numerics:** promotion and final cast match the golden; NaN/Inf/signed-zero
+   behavior is deliberate; reduction identities and cross-core combines are
+   correct.
+6. **Performance:** useful core occupancy, contiguous DMA, shape-aware tiles,
+   no unnecessary materialization or launch explosion, and no tiny fixed tile
+   across all shapes.
+7. **Evidence:** static, exact-v2 compile, camodel, and CANNBench claims are
+   clearly separated.
 
-## Core Principles
+## Critical rejection conditions
 
-1. **Syntax compliance** — all code inside `@asc2.jit` must use only supported Python syntax
-2. **asc2 API correctness** — all asc2 API calls must match documented signatures and patterns
-3. **Hypothesis testing driven** — systematically collect evidence to determine risks
-4. **Auditable** — the entire review is logged with an evidence chain
+- a benchmark case is omitted, narrowed, or silently routed to torch math
+- candidate source does not contain a real `@asctile.jit` numerical path
+- host output aliases an input contrary to the contract
+- runtime source/wheel commit differs from the declared commit
+- compile-only evidence is represented as numerical or performance evidence
+- CANNBench score is quoted without case count and immutable run/job identity
 
-## Call Interface
+## Known current-v2 checks
 
-### Required parameters
+- int8 arithmetic may need int8 -> f16 -> f32
+- f16/bf16 temporaries in one specialization can cause declaration conflicts
+- compare/select destination sizing has a measured 256-byte repeat hazard
+- scalar reductions may be `PlainValue`, not `LocalTensor`
+- BF16 builtin softmax, int64 local transpose, and rank>4 stores require
+  explicit supported routes rather than hopeful dispatch
+- target-derived RMSNorm launches may require explicit `ConstExpr` wrappers
+- bare `asctile.block_idx`/`asctile.block_num` (missing `()`) fail lowering
+  with `TypeError: Unsupported value type for materialization: function`;
+  they are zero-arg calls
+- `asctile.global_tensor`/`copy_in`/`copy_out` at host level or passed across
+  the host/JIT boundary fail with `RuntimeError: '<name>' cannot be called
+  without initialization of global builder`; construction belongs inside
+  `@asctile.jit` code with `GlobalAddress` parameters, and the launch
+  receives raw host tensors
+- `asc.GlobalAddress`/`asc.ConstExpr` and the `asctile.`-prefixed spellings
+  both resolve on the pinned runtime (`asctile` re-exports them); do not
+  reject a candidate on spelling alone — judge by compile evidence
 
-**Parameter 1: Code snippet**
-- The kernel code to review (kernel.py or code block)
+## Output format
 
-**Parameter 2: Review focus**
-- Specify the type of issues to check
-- Examples: "check syntax constraints", "verify asc2 API usage", "check tiling correctness"
-
-**Parameter 3: Specification reference** (optional)
-- Specific specification file path
-- Default: pyasc syntax constraints + Python secure coding
-
-### Parameter verification
-
-If required parameters are missing:
-1. Inform the user which parameters are missing
-2. Do not execute review
-3. Prompt for complete parameters
-
-## Review Checklist for pyasc asc2 Kernels
-
-### Mandatory checks
-
-| Check | What to verify | Reference |
-|-------|---------------|-----------|
-| **Syntax compliance** | All constructs inside `@asc2.jit` are in the supported set | `pyasc-syntax-constraints` |
-| **No unsupported constructs** | No `print`, `break`, `continue`, `lambda`, `try/except`, nested functions, `global`, `import` inside JIT | `pyasc-syntax-constraints` |
-| **`@asc2.jit` correctness** | Kernel decorated with `@asc2.jit`; `always_compile=True` is standalone-development-only; device functions separated; no class methods | `pyasc-api-patterns` |
-| **Type correctness** | Kernel params use supported types; `ConstExpr` for tile_size/tile_per_block | `pyasc-syntax-constraints` |
-| **asc2.load/asc2.store** | Tiles loaded via `asc2.load()` and written via `asc2.store()` — NOT manual `asc.data_copy` | `pyasc-api-patterns` |
-| **asc2.tensor usage** | Global memory wrapped via `asc2.tensor(ptr, [shape])` | `pyasc-api-patterns` |
-| **asc2.range usage** | Tile loops use `asc2.range()`, NOT `range()` | `pyasc-syntax-constraints` |
-| **Launch syntax** | `kernel[core_num](...)` — no stream argument | `pyasc-api-patterns` |
-| **Output verification** | Standalone: operator-appropriate numpy/torch reference. CANNBench: compile evidence and hardware result are reported separately | `pyasc-build-run-verify` |
-| **Variable scoping** | No use of variables only defined inside one `if` branch | `pyasc-syntax-constraints` |
-
-### Red flags — asc v1 API in asc2 kernel
-
-| Red flag | What it means | Fix |
-|----------|---------------|-----|
-| `asc.GlobalTensor()` | Using v1 manual memory | Use `asc2.tensor(ptr, [shape])` |
-| `asc.LocalTensor(...)` | Using v1 local buffers | Use `asc2.load()` / `asc2.store()` |
-| `asc.data_copy(...)` | Using v1 DMA | Use `asc2.load()` / `asc2.store()` |
-| `asc.set_flag(...)` / `asc.wait_flag(...)` | Using v1 sync | Remove — asc2 handles sync automatically |
-| `asc.TPosition.*` | Using v1 buffer positions | Remove — not needed in asc2 |
-| `BUFFER_NUM` | Using v1 double-buffering | Remove — asc2 handles this automatically |
-| `kernel[n, stream](...)` | Using v1 launch syntax | Use `kernel[n](...)` |
-
-### Python secure coding checks
-
-| Check | What to verify |
-|-------|---------------|
-| Input validation | Kernel parameters validated before launch |
-| No hardcoded secrets | No credentials or paths hardcoded |
-| Resource cleanup | Devices properly managed |
-| Numeric safety | No division by zero, overflow-safe arithmetic |
-
-## Review Process (Hypothesis Testing)
-
-### Phase 1: Preparation
-
-1. Verify required parameters are complete
-2. Read the pyasc syntax constraints and asc2 API patterns
-3. Identify the code to review
-
-### Phase 2: Hypothesis Testing
-
-**Step 1: Segment code** — divide into: kernel function, device functions, launch function, verification
-
-**Step 2: For each segment, establish hypothesis**
-- H0: This code segment is correct and safe
-- H1: This code segment has issues
-- Confidence: 0%
-
-**Step 3: Evidence collection**
-
-| Evidence Type | Scoring |
-|---------------|---------|
-| Unsupported syntax used inside `@asc2.jit` | +50% |
-| asc v1 API used instead of asc2 | +45% |
-| Missing `asc2.load`/`asc2.store` (manual memory mgmt) | +35% |
-| API signature mismatch | +40% |
-| Missing output verification | +30% |
-| Variable scoping violation | +25% |
-| Python secure coding violation | +20% |
-| Using `range()` instead of `asc2.range()` | +30% |
-
-**Step 4: Verify evidence** — check if the issue is defended elsewhere
-
-**Step 5: Decision** — confidence > 60% = report as issue
-
-### Phase 3: Report
-
-Generate report with:
-1. Review category (syntax, API, memory, verification, security)
-2. Risk points with line numbers and code snippets
-3. Evidence chain
-4. Suggested fixes
-5. Overall score (10-point scale)
+Report findings first, ordered by severity. For each finding include the exact
+file/line or route, affected cases, expected behavior, and a concrete repair.
+Then state which gates were actually run and list residual risks. “No findings”
+must still state evidence scope.
 
 ## References
 
-- [Python Secure Coding](references/PythonSecureCoding.md)
-- [pyasc Review Checklist](references/pyasc-review-checklist.md)
+- [Review checklist](references/pyasc-review-checklist.md)
+- [Secure host-code notes](references/PythonSecureCoding.md)
+- `pyasc-cannbench-kernel/references/pyasc-v2-blockers.md`

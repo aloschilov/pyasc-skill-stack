@@ -5,7 +5,7 @@
 | Component | Version | Install |
 |-----------|---------|---------|
 | Python | 3.9-3.12 | System package manager |
-| pyasc | Latest | `pip install pyasc` or build from source |
+| pyasc | Exact selected v2 commit | Build a wheel from source or use the matching vendored artifact |
 | numpy | < 2.0 | `pip install "numpy<2"` |
 | CANN Toolkit | 8.0.0+ | Huawei Ascend installer |
 
@@ -30,10 +30,11 @@
 ## Setup steps
 
 1. Install CANN Toolkit
-2. `source /usr/local/Ascend/ascend-toolkit/set_env.sh`
-3. `pip install pyasc "numpy<2"`
+2. Source the installed toolkit environment (on this machine:
+   `source /usr/local/Ascend/cann-9.0.0/set_env.sh`)
+3. Build/install pyasc from the exact selected `v2` commit and install `"numpy<2"`
 4. (Optional) `pip install torch torch_npu`
-5. Verify: `python3 -c "import asc; print('OK')"`
+5. Verify: `python3 -c "import asc, asctile; print(asc.__file__, asctile.__file__)"`
 
 ## Model backend setup
 

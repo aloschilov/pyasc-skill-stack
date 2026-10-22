@@ -1,167 +1,113 @@
-# Reduction tiling selection (last-axis reduce)
+# Reduction tiling: preserve semantics, then measure geometry
 
-Guidance for choosing the host-side tiling of a last-axis reduction
-(`reduce_max`, `reduce_min`, `reduce_sum`, `reduce_mean`, `reduce_prod`) so the
-kernel is **performant**, not merely correct. Correctness comes from padding with
-the reduction identity (see the reductions section of `pyasc-target-operator`);
-this file is about the tile *shape* and how the row block is loaded.
+For last-axis reduce_max/min/sum/mean/prod, choose geometry using the
+[top-down tuning reference](cann-performance-tuning.md). Reductions are not
+universally memory-bound: short rows can be dominated by DMA/VF setup, long
+rows by accumulation dependencies, and small row counts by available work.
 
-## Three levers that decide reduction performance
+## Preserve the logical reduction axis
 
-A last-axis reduction is memory-bound. Against the hand-written CANN operator the
-outcome is set by three levers, in order of impact:
+Flatten only leading dimensions: R=prod(shape[:-1]), C=shape[-1].
+Do not remove all singleton dimensions first: [32, 1] reduces 32 independent
+one-element rows, not one 32-element row. Keep output shape/keepdim/dtype and
+empty-reduction identities/errors from the task golden. A C=1 mathematical
+identity may still need a cast or output copy; it is not permission to return
+an input alias or skip required dtype conversion.
 
-1. **Use every AI core.** Spread the `R` rows across the full core grid
-   (`core_num = platform core count`, e.g. `72` on `Ascend950PR_9599`), not a
-   handful. Under-parallelizing to 4-8 cores is a 9-18x deficit on the large-`R`
-   shapes and is the single biggest mistake. `rows_per_block = ceildiv(R, core_num)`
-   is the **primary** input to tile sizing.
-2. **Keep the reduce axis contiguous and unpadded — `tile_cols = C`.** Load a
-   `[tile_rows, C]` block as one contiguous run of `tile_rows * C` elements and pad
-   only the flat total to 32 B, **never per-row**. Do *not* align `tile_cols` up to
-   32 B: when `C` is not a multiple of `32/itemsize` that pads every row
-   (`C=4 -> 8` doubles traffic; `10 -> 16`; `18 -> 24`), and since the kernel is
-   memory-bound the wasted bytes map straight to the ratio.
-3. **Size `tile_rows` to the per-core block, then the UB budget.** Clear a core's
-   `rows_per_block` rows in a few large tiles; the tile only has to fit UB. Do
-   **not** cap `tile_rows` to multiples of 8 and do **not** shrink it to manufacture
-   double-buffer iterations — contiguity and core count matter more than pipeline
-   overlap here.
-
-The anti-pattern all three catch: a fixed tiny tile (`[8, 8]` = 256 B, ~0.4% of
-UB, ~100x slower than CANN) run on a few cores. If `tile_rows`, `tile_cols`, or the
-core count do not scale with the shape, the tiling is wrong. Reference point: the
-degenerate `[8, 8]` tile on 4-8 cores lands at geomean ~0.01-0.43 of CANN; the
-three levers above bring a last-axis reduce to ~1.0 (parity).
-
-### The most common miss: one row per iteration
-
-Do **not** reduce one row per loop iteration (the `reduce_sum` `[32, 4096]`
-teaching example does this because it has only 32 wide rows). Copying that pattern
-here is the mistake:
+This host-only shape helper performs no tiling, allocation or launch:
 
 ```python
-# WRONG for large R: thousands of tiny [1, C] loads, memory-latency bound, loses to CANN
-for i in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(), ...):
-    row = asc2.load(x_gm, [1, C], offsets=[i, 0])   # one row -> one reduce
-    m = asc2.reduce_max(row)
+from math import prod
+
+
+def last_axis_geometry(shape):
+    dims = tuple(shape)
+    if not dims or any(type(d) is not int or d < 0 for d in dims):
+        raise ValueError("expected a nonempty shape of nonnegative integers")
+    return prod(dims[:-1]), dims[-1]
 ```
 
-```python
-# RIGHT: pack many rows into one contiguous [tile_rows, C] tile, reduce axis 1
-for t in asc2.range(row_iters_per_block, unroll_factor=2):
-    tile = asc2.load(x_gm, [tile_rows, C], offsets=[row0 + t * tile_rows, 0])  # tile_rows rows
-    out = asc2.reduce_max(tile, 1)                                             # [tile_rows] in one op
-```
+For a general axis, normalize it before deriving [outer, axis_size, inner].
+Do not reinterpret a non-last-axis reduction as a contiguous last-axis one.
 
-Most target shapes have `R` in the thousands-to-hundreds-of-thousands. With one
-row per iteration each core issues thousands of tiny `[1, C]` DMAs; the win is
-issuing a few large `[tile_rows, C]` contiguous DMAs instead.
+## Work distribution
 
-Also **do not hard-code the core count** to the `reduce_sum` example's `16` (or
-any literal). Launch on the platform's full core count (`72` on
-`Ascend950PR_9599`) so `R` is spread across every core; treat the example's number
-as illustrative, not a target.
+Query available vector resources for the active device, respecting applicable
+limits. Choose no more useful row groups than the work supports, unless a
+separately qualified column-split algorithm supplies more parallel work.
+Do not hard-code 72/64/32 blocks or infer resources from a SoC suffix.
+A labeled one-block fallback is compatible, not evidence of tuned performance.
 
-## UB budget numbers
+Compare contiguous balanced row ranges and cyclic row tiles. Verify coverage,
+non-overlapping stores, tails, idle blocks and address integer range.
+Record min/max rows and tiles per block; raw block count alone does not show
+load balance. Many narrow rows often benefit from batching; a few wide rows
+can legitimately use one row per iteration.
 
-- Physical UB on `Ascend950PR_9599` (C310) is `192 * 1024` bytes. Size tiles
-  against the **real** budget: with double buffering the per-buffer budget is
-  `per_buffer = (UB_PHYS - reserve) // itemsize // BUFFER_NUM` with
-  `BUFFER_NUM = 2` and a small `reserve` (~1 KB). A conservative `64 * 1024`
-  budget leaves most of UB idle and yields tiles that are too small — prefer the
-  physical budget and only back off if `UB overflow` fires.
-- CANN formula (from `concat_tiling_arch35.cpp`, `TilingUb`):
-  `max_elems = ((UB_CAPACITY - 1024) // dtype.itemsize) // BUFFER_NUM // sibling_regions`.
-  A single-region reduction has `sibling_regions = 1`.
+## Physical versus logical layout
 
-## Double buffering (secondary)
+For supported 2-D copies use physical [tile_rows, aligned_cols], logical
+real_shape=[valid_rows, C], and the operation's identity padding. The local
+final dimension must satisfy the pinned copy API's alignment constraints.
+For max/min use -inf/+inf where supported; for sum use 0, product 1. For mean,
+divide by the logical count, not padded width.
 
-`asc2.range(..., unroll_factor=2)` double-buffers the row loop, and
-the overlap only materializes with `>= 2 * unroll_factor` iterations. For a
-reduction this is a **secondary** concern: with all cores active each core owns few
-rows, so 1-5 large contiguous tiles per block already beat a many-small-tile
-schedule. Keep double buffering when it is free (the block naturally splits into
-several tiles), but never shrink a tile below the UB fill just to add iterations.
+A flat contiguous load followed by a reshape is an alternative only after
+proving the pinned API supports the physical layout and masks. Do not emit
+an unaligned [tile_rows, C] copy merely because the total byte count is aligned.
+Padding in UB is not automatically extra GM traffic; inspect emitted copies
+and actual byte counters before quantifying bandwidth waste.
 
-## Step 1 — flatten and simplify
+Test tiny C (including 1, 4 and non-aligned widths), aligned rows, and odd tails.
+For broadcast/compare/select outputs retain the destination-size hazard in
+[the JIT reference](api-jit-options.md); extending a tensor's lifetime by
+hoisting can make a latent alias/overrun problem destructive.
 
-Flatten the input to a 2-D `[R, C]` where `C` is the last-axis reduce width and
-`R = prod(shape[:-1])`. First simplify:
+## UB budget and candidate search
 
-- **Reshape short-circuit.** Drop size-1 dims before flattening (e.g.
-  `[1500, 1, 61] -> [1500, 61]`). If `C == 1` the reduction is the identity —
-  emit a copy/reshape, not a vector reduce.
+Use the compiler's measured peak allocation at the exact pin, dtype,
+tile shape and effective options. Include input/output casts, reduction
+scratch, alignment, resident gamma/scale data, live intermediates and actual
+unrolled buffers. The local 950PR compiler budget of 253952 B is not a
+universal hardware capacity. UB divided by two buffers is an initial estimate,
+not proof of fit; a concat-specific formula is not a reduction memory model.
 
-## Step 2 — pick the regime by C
+- Whole row fits: compare one row with batches of independent rows. Bound
+  batch size by useful rows per block and measured UB. Larger DMA can amortize
+  setup but reduce concurrency or leave a costly tail.
+- Row exceeds budget: tile columns and maintain correctly typed partial
+  reductions. Seed from a supported reduction/local value, not a Python float
+  later reassigned to a PlainValue. Use correct merge math: max/min, sum/product,
+  and mean's total logical divisor differ.
+- Few huge rows: cross-core partials may help, but count workspace,
+  synchronization and the second reduction kernel; revalidate accumulation
+  order, exceptional values and task determinism.
+- Shared gamma/broadcast input: compare reuse across rows against the resident
+  allocation and longer lifetime. Do not assume hoisting is free.
 
-Let `align = 32 // dtype.itemsize` (fp32 -> 8) and
-`per_buffer = (UB_PHYS - reserve) // dtype.itemsize // BUFFER_NUM`.
+## Unrolling and buffering are distinct
 
-### Small C (whole row fits) — the common regime
+Compare unroll=1/2 at matched geometry and effective JIT settings.
+AscTile unrolling does not guarantee distinct ping-pong storage or overlapping
+MTE2/V execution. There is no universally proven minimum iteration count of
+2*unroll. Inspect generated buffers, dependencies and timestamped intervals.
+A single large tile can win by DMA efficiency or lose by eliminating overlap;
+keep both as measured alternatives instead of always filling UB.
 
-When a whole row fits (`C <= per_buffer`), reduce a **block of many rows at once**:
+For long dependent sums, compare independent row chains with partial/balanced
+sums as separate experiments. Do not stack them assuming additive speedups.
+FP32 accumulation, pairwise summation and rsqrt refinement alter numerical
+behavior; validate them against the actual normalization/quantization contract.
 
-- `tile_cols = C` (the true row width, unpadded — this keeps the block contiguous).
-- `rows_per_block = ceildiv(R, core_num)` across all cores.
-- `ub_cap = per_buffer // C` (max rows per tile that fit one buffer).
-- `tile_rows = min(ub_cap, rows_per_block)` — one tile per core when it fits;
-  otherwise split the block into `ceildiv(rows_per_block, ub_cap)` even, large
-  tiles.
-- Load `[tile_rows, C]` as one contiguous buffer (flat total padded to 32 B), then
-  a single `asc2.reduce_max(tile, 1)` reduces `tile_rows` rows in one wide op.
+## Qualification and reporting
 
-### Tiny C (e.g. 4, 8) — still row-pack, do not pad
+Compile every selected specialization before simulation. Reject UB overflow
+or unknown allocation, then execute logical outputs against the golden:
+singleton and empty axes per contract, unaligned rows, tails, NaN/Inf, repeated
+execution, multicore partitioning and guard regions. Static inspection leaves
+undemonstrated synchronization cases unknown.
 
-The win is packing many rows into one contiguous buffer, exactly as above with
-`tile_cols = C`. A transpose -> reduce -> transpose variant is rarely worth it once
-the load is already contiguous; measure before adding one.
-
-### Large C (row wider than the budget)
-
-When `C > per_buffer`, the row does not fit — tile the C axis:
-
-- `tile_cols = align_down(per_buffer, align)` (fill the per-buffer budget).
-- `tile_rows` small; maintain a per-row max accumulator across column tiles,
-  folding with `asc2.maximum(acc, part)`.
-- Keep `>= 2 * unroll_factor` column iterations so the column loop double-buffers.
-
-## Step 3 — host-side tiling selector
-
-Compute the tile on the host from shape + dtype + budget + **core count**:
-
-```python
-def select_reduce_tiling(shape, itemsize, core_num,
-                         ub_phys=192 * 1024, reserve=1024, buffer_num=2):
-    dims = [d for d in shape if d != 1]           # reshape short-circuit
-    R = 1
-    for d in dims[:-1]:
-        R *= d
-    C = dims[-1] if dims else 1
-    if C == 1:
-        return "reshape", None                    # identity, no reduce
-    align = 32 // itemsize
-    per_buffer = (ub_phys - reserve) // itemsize // buffer_num
-    rows_per_block = -(-R // core_num)            # ceildiv: spread across ALL cores
-    if C <= per_buffer:                           # small-C: pack rows, tile_cols = C
-        ub_cap = max(1, per_buffer // C)
-        n_tiles = -(-rows_per_block // ub_cap)    # tiles needed to cover the block
-        tile_rows = -(-rows_per_block // n_tiles) # even, large tiles
-        tile_cols = C                             # unpadded -> contiguous block
-    else:                                          # large-C: tile the column axis
-        tile_rows = 1
-        tile_cols = (per_buffer // align) * align
-    return "reduce", (tile_rows, tile_cols)
-```
-
-Launch with `core_num` blocks and load each `[tile_rows, C]` tile as one
-contiguous run (pad only the flat total to 32 B).
-
-## Verify
-
-Validate the **static** path with `pytest --compile-only` (worst case for UB),
-then run `--backend Model` for numerics against `torch.amax(x, dim=-1)` (or the
-matching torch reduction). UB overflow shows as
-`RuntimeError: UB overflow: N available, M used`; back off `tile_rows` (or the UB
-budget) if it fires. Confirm the reduce axis stays contiguous (`tile_cols == C`)
-and that all cores are used (`core_num == platform core count`).
+Record tile_rows/physical_cols/logical_cols, launched/useful/available blocks,
+rows and tiles per block, JIT settings, UB, numerical scope and repeated timing.
+Confirm observed bottleneck changes in traces, then use authorized hardware
+runs to establish speed. None of these rules promises parity with CANN.
