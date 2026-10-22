@@ -5,9 +5,15 @@ description: Review current-v2 asctile kernels for contract coverage, API validi
 
 # Current-v2 pyasc kernel review
 
-Review against the exact selected source and task contract. For the current
-CANNBench campaign use `pyasc v2@0a631f70968c3cb7c33ce45330a85768dd5a6f06`, `import asctile`,
+Review against the exact selected source and task contract, using
 `@asctile.jit`, `global_tensor`, `copy_in`, and `copy_out`.
+
+Check that the kernel imports `asctile` in a form valid for the runtime it
+will actually run on: `from asc.experimental import asctile` for the published
+`pyasc-dev` wheel, top-level `import asctile` for older source builds such as
+the CANNBench campaign pin `pyasc v2@0a631f70968c3cb7c33ce45330a85768dd5a6f06`.
+A try/except covering both is acceptable and is what the workflow template
+generates.
 
 ## Review order
 

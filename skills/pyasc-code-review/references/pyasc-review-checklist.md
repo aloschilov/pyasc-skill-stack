@@ -8,7 +8,8 @@
 
 ## API and syntax
 
-- [ ] `import asctile` and at least one real `@asctile.jit` numerical kernel
+- [ ] `asctile` imported in a form valid for the target runtime, and at least
+      one real `@asctile.jit` numerical kernel
 - [ ] `global_tensor` + `copy_in/copy_out`; no legacy tile API
 - [ ] Supported JIT options, range kwargs, value kinds, and transpose axes
 - [ ] No unsupported Python constructs inside JIT

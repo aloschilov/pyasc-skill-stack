@@ -95,9 +95,9 @@ before base keyword discovery; do not patch or delete the inherited cache.
    Merely constructing `asctile.CompileOptions` does not test the decorator or
    launch-time extraction.
 2. Run each probe in a fresh process with a new task-owned `PYASC_CACHE_DIR`.
-   Compare `import asctile` first with `from asc.runtime.jit import JITFunction;
-   JITFunction.get_config_keywords()` then `import asctile` in diagnostic
-   probes only. Apply the same decorator. Record requested/effective compile options
+   Compare importing `asctile` first with `from asc.runtime.jit import
+   JITFunction; JITFunction.get_config_keywords()` then importing `asctile`,
+   in diagnostic probes only. Apply the same decorator. Record requested/effective compile options
    and cache keys; inherited option-discovery caches may make order matter.
 3. Check both an isolated cold compile and a same-options cache hit, then
    change an option and verify it reaches compilation and separates the cache

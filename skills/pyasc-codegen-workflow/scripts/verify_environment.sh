@@ -14,10 +14,20 @@ if [ ! -d "$KERNEL_DIR" ]; then
     exit 1
 fi
 
+# asctile lives at asc.experimental.asctile in the published pyasc-dev wheel,
+# but older source builds expose it as a top-level module. Probe both.
+ASCTILE_PROBE='
+try:
+    from asc.experimental import asctile
+except ImportError:
+    import asctile
+'
+
 # Auto-detect the correct Python: prefer whichever has pyasc installed
 if [ -z "${PYTHON:-}" ]; then
     for candidate in python3.10 python3.11 python3.12 python3.9 python3; do
-        if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import asc, asctile" 2>/dev/null; then
+        if command -v "$candidate" >/dev/null 2>&1 \
+           && "$candidate" -c "import asc; $ASCTILE_PROBE" 2>/dev/null; then
             PYTHON="$candidate"
             break
         fi
@@ -30,7 +40,11 @@ echo "[INFO] Using Python: $PYTHON ($(command -v "$PYTHON" 2>/dev/null || echo '
 
 PYTHON_VERSION=$($PYTHON --version 2>&1 | awk '{print $2}' || echo "not found")
 
-PYASC_VERSION=$($PYTHON -c "import asc, asctile; print(getattr(asc, '__version__', 'installed'), asctile.__file__)" 2>/dev/null || echo "not installed")
+PYASC_VERSION=$($PYTHON -c "
+import asc
+$ASCTILE_PROBE
+print(getattr(asc, '__version__', 'installed'), asctile.__file__)
+" 2>/dev/null || echo "not installed")
 
 NUMPY_VERSION=$($PYTHON -c "import numpy; print(numpy.__version__)" 2>/dev/null || echo "not installed")
 

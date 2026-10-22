@@ -3,16 +3,30 @@ name: pyasc-build-run-verify
 description: Build, compile, execute, and verify current-v2 asctile kernels on exact-source QEMU gates, camodel, NPU, and CANNBench.
 ---
 
-# Build, run, and verify current pyasc v2
+# Build, run, and verify pyasc v2 asctile kernels
 
 Always keep source, wheel, Python ABI, compiler, and platform provenance
-together. For the current CANNBench campaign use
-`pyasc v2@0a631f70968c3cb7c33ce45330a85768dd5a6f06`, CPython 3.12 for
-the submitted x86_64 wheel, and the recorded target platform. (The historical
-high-level GeLU campaign used `adadd7d66ed0ee16d33d79487bf584899a26ef1e`; that
-pin is not CANNBench authority — never change the runtime to match stale GeLU
-prose.) Local GeLU evidence uses `Ascend950PR_9599`; do not infer remote
-resources from that name.
+together.
+
+**Default runtime:** the published wheel, `pip install --pre pyasc-dev`, which
+exposes `from asc.experimental import asctile`. It tracks upstream's default
+branch, so read the actual commit from its metadata rather than assuming one:
+
+```bash
+python3 -c "import importlib.metadata as m; print(m.version('pyasc-dev'))"
+```
+
+**Campaign runtimes** are different artifacts and are pinned deliberately. The
+CANNBench campaign uses `pyasc v2@0a631f70968c3cb7c33ce45330a85768dd5a6f06`
+with CPython 3.12 for the submitted x86_64 wheel and the recorded target
+platform; those builds expose `asctile` as a **top-level** module instead. The
+historical high-level GeLU campaign used
+`adadd7d66ed0ee16d33d79487bf584899a26ef1e`; that pin is not CANNBench
+authority — never change the runtime to match stale GeLU prose. Local GeLU
+evidence uses `Ascend950PR_9599`; do not infer remote resources from that name.
+
+Never mix the two: evidence produced on a campaign pin does not transfer to the
+published wheel, or the reverse. State which runtime produced each result.
 
 ## Validation ladder
 
@@ -46,8 +60,8 @@ legacy nine-operator list.
 
 ## Native camodel setup
 
-Use a wheel built from the selected commit. On this machine the local LLVM
-reference is `/home/aloschilov/workspace/llvm`. A typical environment is:
+Use a wheel built from the selected commit. If you need a local LLVM for a
+source build, point `LLVM_INSTALL_PREFIX` at it. A typical environment is:
 
 ```bash
 export ASCEND_HOME_PATH=/usr/local/Ascend/cann-9.0.0
