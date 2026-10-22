@@ -1,6 +1,6 @@
 # pyasc-skill-stack
 
-Reusable Agent skill modules for pyasc kernel development on Huawei Ascend NPUs using the **asc2** high-level tile-based API.
+Reusable Agent skill modules for pyasc kernel development on Huawei Ascend NPUs using the **asctile** high-level tile-based API.
 
 With skills installed, a short prompt like _"Develop an abs operator for float16, shapes [1,128], [4,2048], [32,4096]"_ is enough — the agent handles environment setup, design, implementation, review, and verification autonomously.
 
@@ -19,12 +19,33 @@ These must be available on the host before starting:
 - `opencode` CLI installed
 - CANN Toolkit installed somewhere on disk (see [docs/cann-setup.md](docs/cann-setup.md))
 - Simulator libraries for `Ascend950PR_9599` (shipped with CANN — the only platform the stack targets)
-- `pip install -e /home/aloschilov/workspace/pyasc-v2-eval` (the dedicated read-only evaluation clone described in [docs/cann-setup.md](docs/cann-setup.md#evaluation-pyasc-clone-pyasc-v2-eval)). Active pyasc development should remain in `pyasc-fork`; never edit `pyasc-v2-eval`.
-- Either: Python 3.10.x (for the local-build path) **or** Docker (for the containerized path)
+- Linux on `x86_64` or `aarch64`, glibc 2.35 or newer (Ubuntu 22.04 and newer)
+- CPython 3.10 or 3.11, matching the support matrix below
 
-> **Note on `asc2`.** The `asc2` tile-based API is not yet published to PyPI — the PyPI `pyasc` wheel ships only the `asc` v1 API. To get `asc2` you currently need either the Docker image (Option A) or a build from the `v2` branch of the `pyasc` source (Option B).
+> **Runtime contract.** The skills target the **`asctile` programming model inside PyAsc**, obtained from the published `pyasc-dev` wheel:
+>
+> ```bash
+> python3.10 -m venv .venv && source .venv/bin/activate
+> python -m pip install --pre pyasc-dev
+> ```
+>
+> `asctile` is compiled into the wheel at build time. Setting `PYASC_SETUP_EXPERIMENTAL=1` during `pip install` of an existing wheel does nothing — it is a *source build* flag.
 
-> **Architecture support.** Tested on Ubuntu 22.04 on both `x86_64` and `aarch64`. The Docker image (Option A) is multi-arch and auto-selects the right LLVM prebuilt at build time. For Option B (local build), use the LLVM archive matching `uname -m` (the snippet below does this for you). CANN itself must be installed from its arch-specific installer (`linux-x86_64.run` vs `linux-aarch64.run`); see [docs/cann-setup.md](docs/cann-setup.md).
+### Support matrix
+
+`pyasc-dev` is a development release. Published wheels, each qualified by two clean installations plus a CANN compile and `Ascend950PR_9599` camodel execution:
+
+| Platform | CPython | Minimum glibc | Latest published version |
+|---|---|---|---|
+| Linux `aarch64` | 3.10 | 2.35 | `1.1.1.dev20261021205441` |
+| Linux `x86_64` | 3.10 | 2.35 | `1.1.1.dev20261022133935` |
+| Linux `x86_64` | 3.11 | 2.35 | `1.1.1.dev20261022085448` |
+
+No `aarch64` CPython 3.11 wheel, no macOS, no Windows, and no other Python versions are published. `pip` resolves the newest version that has a wheel for your platform, so different hosts legitimately land on different versions.
+
+The wheel supplies the compiler and runtime only. **CANN, its drivers, and any hardware are installed separately** and are not bundled.
+
+> **Historical pins.** Earlier revisions of this repository pinned pyasc revision `030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`, and `CANONICAL.json` records `0a631f70968c3cb7c33ce45330a85768dd5a6f06` as the CANNBench campaign runtime. Both are **development artifacts from past campaigns, not user dependencies**. Each published wheel instead records its own source commit in its PyPI metadata, because the build tracks the upstream default branch; read it with the command in Step 4 rather than assuming any fixed revision.
 
 ### Step 1. Clone the repository
 
@@ -63,41 +84,52 @@ Common CANN install locations you may need to point `CANN_HOME` at:
 - `$HOME/Ascend/cann-<version>` (e.g. `cann-9.0.0`)
 - `/usr/local/Ascend/ascend-toolkit/latest` (system-wide install, and the location used inside the Docker image)
 
-`PYASC_SRC` is only needed for Options B and C below.
+`PYASC_SRC` is only needed for Options C and D below.
 
-### Step 3. Install `pyasc` (with `asc2`) — choose one option
+### Step 3. Install `pyasc` (with `asctile`) — choose one option
 
-#### Option A — Docker (self-contained, recommended for a clean machine)
-
-The default `docker/Dockerfile` builds `pyasc` from the `v2` source inside the image; no pyasc checkout is required on the host.
+#### Option A — Published wheel (recommended)
 
 ```bash
-docker build -f docker/Dockerfile -t pyasc-sim:latest docker/
+python3.10 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install --pre pyasc-dev
+```
+
+`--pre` is required: every `pyasc-dev` release is a development version, so `pip` ignores them all without it.
+
+Install `pyasc-dev` into a **dedicated virtual environment**. It provides the same `asc` import package as the stable `pyasc` distribution, so the two must not be installed together.
+
+#### Option B — Docker (self-contained, for a clean machine)
+
+The default `docker/Dockerfile` builds the pinned pyasc revision from the verified Git bundle in `docker/`; no pyasc checkout or GitCode credential is required on the build host.
+
+This image is pinned to the historical `030e9b2c` revision and exists so that CI runs and older recorded evidence stay reproducible. For new work prefer Option A — the published wheel tracks current upstream, whereas this image does not.
+
+```bash
+docker build -f docker/Dockerfile \
+  --build-arg PYASC_GIT_REV=030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d \
+  -t pyasc-sim:py3.11-pyasc-030e9b2c docker/
 docker run --rm -it \
   --ulimit nofile=1048576:1048576 \
   -v "$(pwd)":/workspace -w /workspace \
-  pyasc-sim:latest
+  pyasc-sim:py3.11-pyasc-030e9b2c
 ```
 
 > The `--ulimit nofile=1048576` is required: the CANN simulator opens hundreds of dump files per core (16 cores × tens of files), and the default Docker `nofile` limit of 1024 causes runtime errors like `Failed opening file ... Too many open files`.
 
 All remaining steps (sourcing CANN, running `opencode`, running kernels) happen **inside the container**. Inside the container, `CANN_HOME` is preset (CANN 9.0.0-beta.2 lives under `/usr/local/Ascend/cann-9.0.0-beta.2`; the install also exposes `/usr/local/Ascend/ascend-toolkit/latest` as a symlink, and sourcing `set_env.sh` updates `$ASCEND_HOME_PATH` accordingly).
 
-An advanced overlay-based variant is also provided for developers who want to graft their local `pyasc` build onto a prebuilt CANN image:
+To build and publish the native per-architecture runner images, use `docker/build-sim-image.sh`; the script derives the same versioned tag from `PYASC_GIT_REV`.
 
-```bash
-docker build -f docker/Dockerfile.overlay -t pyasc-sim:overlay docker/
-```
-
-See the header of [`docker/Dockerfile.overlay`](docker/Dockerfile.overlay) for when and why to use this variant.
-
-#### Option B — Local build from `pyasc` source (recommended for developers)
+#### Option C — Local build from `pyasc` source (for compiler developers)
 
 Requires CANN and a C++ toolchain on the host. Clone `pyasc` anywhere (`$PYASC_SRC` tells the rest of the workflow where it lives) and build it into a venv:
 
 ```bash
 git clone https://gitcode.com/cann/pyasc.git "$PYASC_SRC"
-( cd "$PYASC_SRC" && git fetch origin +refs/merge-requests/85/head:v2 && git checkout v2 )
+( cd "$PYASC_SRC" && git checkout v2 )   # or the exact commit you need
 
 python3.10 -m venv .venv
 source .venv/bin/activate
@@ -112,14 +144,16 @@ mkdir -p "$HOME/.llvm"
 curl -fsSL "$LLVM_URL" | tar -xz --strip-components=1 -C "$HOME/.llvm"
 export LLVM_INSTALL_PREFIX="$HOME/.llvm"
 
-pip install "$PYASC_SRC"
+PYASC_SETUP_EXPERIMENTAL=1 pip install "$PYASC_SRC"
 ```
+
+`PYASC_SETUP_EXPERIMENTAL=1` is **required**: without it the build omits `asc.experimental.asctile` entirely and every skill in this repo will fail to import. It only has an effect while compiling from source.
 
 See the upstream [`pyasc` build-from-source guide](https://gitcode.com/cann/pyasc) (file `docs/installation/build-from-source.rst`) for both prebuilt LLVM archive URLs and optional build flags (`PYASC_SETUP_CCACHE`, `PYASC_SETUP_CLANG_LLD`, etc.).
 
-#### Option C — Shortcut: existing system-wide `pyasc` dev install
+#### Option D — Shortcut: existing system-wide `pyasc` dev install
 
-If `asc2` is already importable from the base `python3.10` (for example, you maintain a `pip install -e "$PYASC_SRC"` globally), create a venv that inherits system site-packages:
+If `asctile` is already importable from the base `python3.10` (for example, you maintain a `pip install -e "$PYASC_SRC"` globally), create a venv that inherits system site-packages:
 
 ```bash
 python3.10 -m venv --system-site-packages .venv
@@ -130,13 +164,22 @@ This is the fastest path but depends entirely on your pre-existing Python enviro
 
 ### Step 4. Source CANN and start OpenCode
 
-Same commands for all three options (for Docker, run them inside the container — `CANN_HOME` is preset there):
+Same commands for every option (for Docker, run them inside the container — `CANN_HOME` is preset there):
 
 ```bash
 source "$CANN_HOME/set_env.sh"
 export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
-python3.10 -c "import asc, asc2; print('pyasc OK')"
+python -c "from asc.experimental import asctile; print('asctile OK:', asctile.__file__)"
 opencode
+```
+
+The import path is `asc.experimental.asctile`. A bare `import asctile` works only for some source builds and **fails with the published wheel**, so prefer the fully-qualified form everywhere.
+
+To see which upstream commit your runtime was built from:
+
+```bash
+python -c "import importlib.metadata as m; print(m.version('pyasc-dev'))"
+python -c "import importlib.metadata as m; d=m.metadata('pyasc-dev')['Description']; import re; print(re.search(r'Source: .([0-9a-f]{40}).', d).group(1))"
 ```
 
 Skill discovery is handled by `opencode.json` in the repo root — no additional installation step is needed.
@@ -166,9 +209,9 @@ When skills are discovered correctly, the agent:
 
 1. Loads `pyasc-codegen-workflow` and follows a 4-phase workflow (Phase 0 → 1 → 2 → 3)
 2. Initializes the kernel project directory
-3. Retrieves documentation from the golden set and asc2 kernel references
-4. Writes a design document with asc2 API selection and syntax checks
-5. Implements `kernel.py` using the asc2 kernel template and reviewed patterns
+3. Retrieves documentation from the golden set and asctile kernel references
+4. Writes a design document with asctile API selection and syntax checks
+5. Implements `kernel.py` using the asctile kernel template and reviewed patterns
 6. Conducts self-review and acceptance review against pyasc constraints
 7. Runs verification (simulator or JIT fallback) and writes a verification record
 8. Delivers a runnable kernel with all workflow artifacts
@@ -190,9 +233,9 @@ If the agent requires any of the above, there is likely a problem with skill dis
 ```
 pyasc-skill-stack/
 ├── skills/                           # Skill modules (agent reads these)
-│   ├── pyasc-codegen-workflow/       # Core 4-phase workflow (asc2)
-│   ├── pyasc-api-patterns/           # asc2 API usage patterns
-│   ├── pyasc-syntax-constraints/     # Supported syntax inside @asc2.jit
+│   ├── pyasc-codegen-workflow/       # Core 4-phase workflow (asctile)
+│   ├── pyasc-api-patterns/           # asctile API usage patterns
+│   ├── pyasc-syntax-constraints/     # Supported syntax inside @asctile.jit
 │   ├── pyasc-docs-search/            # Documentation index
 │   ├── pyasc-build-run-verify/       # Build, run, verification
 │   ├── pyasc-code-review/            # Code review checklist
@@ -204,7 +247,7 @@ pyasc-skill-stack/
 │       ├── quickstart.md             # Manual development guide
 │       └── kernels/                  # Generated kernel workspace
 ├── golden/
-│   ├── tutorials/                    # Golden reference tutorial (asc2 vadd)
+│   ├── tutorials/                    # Golden reference tutorial (asctile vadd)
 │   ├── kernels/                      # Golden kernels per tier (abs, reduce_sum, gelu, leaky_relu, softmax)
 │   ├── archive/                      # Archived golden kernels (sub, mul — covered by tier 0)
 │   └── docs/                         # Local pyasc API documentation
@@ -224,8 +267,8 @@ pyasc-skill-stack/
 | Skill | Purpose |
 |-------|---------|
 | `pyasc-codegen-workflow` | 4-phase workflow: environment → design → implementation + review → verification |
-| `pyasc-api-patterns` | asc2 API usage patterns, tiling with ceildiv, `ConstExpr` guidance |
-| `pyasc-syntax-constraints` | Python syntax support/restrictions inside `@asc2.jit` |
+| `pyasc-api-patterns` | asctile API usage patterns, tiling with ceildiv, `ConstExpr` guidance |
+| `pyasc-syntax-constraints` | Python syntax support/restrictions inside `@asctile.jit` |
 | `pyasc-docs-search` | Local-first documentation and tutorial search |
 | `pyasc-build-run-verify` | JIT compilation, simulator execution, output verification |
 | `pyasc-code-review` | Code review against pyasc constraints |
@@ -289,9 +332,9 @@ The matrix is organized around four **complexity tiers** that represent genuinel
 
 | Tier | Name | What it tests |
 |------|------|--------------|
-| 0 | Elementwise | Template substitution: `load` -> single `asc2.*()` call -> `store` |
+| 0 | Elementwise | Template substitution: `load` -> single `asctile.*()` call -> `store` |
 | 1 | Reduction | Output shape differs from input; accumulation logic |
-| 2 | Composed | No single asc2 builtin; agent must compose multiple API calls |
+| 2 | Composed | No single asctile builtin; agent must compose multiple API calls |
 | 3 | Advanced | Multi-dimensional tiling, accumulator management, placement |
 
 Each tier has representative operations with prompts. Proving a representative (e.g. `abs` for unary elementwise) gives high confidence that structurally identical operations (e.g. `exp`, `log`, `sqrt`) can also be generated.
