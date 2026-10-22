@@ -1,4 +1,4 @@
-"""CANN Bench Gelu interface implemented as pyasc asc2 kernels.
+"""CANN Bench Gelu interface implemented as pyasc asctile kernels.
 
 Two modes per the spec (proto.yaml attr ``approximate``):
   - "none": y = x * 0.5 * (1 + erf(x / sqrt(2)))
@@ -35,11 +35,11 @@ Performance optimisations:
     _TWO_SQRT_2_OVER_PI) + _TWO_SQRT_2_OVER_PI) * x, saving one
     multiply per element.
 
-One or more @asc2.jit kernels per mode (the mode is a compile-time
+One or more @asctile.jit kernels per mode (the mode is a compile-time
 choice, not a runtime value).  Kernel design follows pyasc-api-patterns
 Pattern A (1-D flatten, grid-stride tile loop, real_shape tails, f32
 internal compute).  Tiles are always the LEFT operand of arithmetic
-(asc2 Tile has no __rmul__).
+(asctile Tile has no __rmul__).
 """
 
 import math
@@ -47,12 +47,12 @@ import math
 import torch
 
 import asc
-import asc2
+import asctile
 
 from ._pyasc_runtime import ensure_npu_platform
 
 # ---------------------------------------------------------------------------
-# Module-level precomputed constants (no math.* inside @asc2.jit).
+# Module-level precomputed constants (no math.* inside @asctile.jit).
 # ---------------------------------------------------------------------------
 _MAX_CORES = 72
 _INV_SQRT2 = 1.0 / math.sqrt(2.0)
@@ -78,22 +78,22 @@ _tanh_tile = None          # None = untested, int = chosen tile
 # erf-mode kernels
 # ---------------------------------------------------------------------------
 
-@asc2.jit
+@asctile.jit
 def _gelu_erf_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
                      size: int, num_tiles: int,
                      tile_size: asc.ConstExpr[int]):
     """erf-mode GELU, grid-stride tile loop with unroll_factor=2."""
-    x_gm = asc2.global_tensor(x_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(),
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
                         unroll_factor=2):
         off = t * tile_size
         n = tile_size if off + tile_size <= size else size - off
-        x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])
+        x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[n])
         xf = x.to(asc.float32)
-        z = asc2.abs(xf) * _INV_SQRT2
+        z = asctile.abs(xf) * _INV_SQRT2
         den = z * 0.5 + 1.0
-        tt = asc2.full([tile_size], 1.0, dtype=asc.float32) / den
+        tt = asctile.full([tile_size], 1.0, dtype=asc.float32) / den
         # Numerical Recipes erfc Chebyshev fit, Horner form in tt.
         p = tt * 0.17087277 - 0.82215223
         p = p * tt + 1.48851587
@@ -104,18 +104,18 @@ def _gelu_erf_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
         p = p * tt + 0.37409196
         p = p * tt + 1.00002368
         p = p * tt - 1.26551223
-        erfc_z = tt * asc2.exp(p - z * z)          # erfc(|v|), rel err ~1e-7
+        erfc_z = tt * asctile.exp(p - z * z)          # erfc(|v|), rel err ~1e-7
         # Algebraic output — cancellation-free:
         #   x >= 0: y = x - x * 0.5 * erfc  (safe: 0.5*erfc in [0,0.5])
         #   x <  0: y = x * 0.5 * erfc
         half_erfc = erfc_z * 0.5
         y_neg = xf * half_erfc
         y_pos = xf - y_neg
-        y = asc2.where(xf >= 0.0, y_pos, y_neg)
-        asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
+        y = asctile.where(xf >= 0.0, y_pos, y_neg)
+        asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
 
 
-@asc2.jit
+@asctile.jit
 def _gelu_erf_kernel_u1(x_ptr: asc.GlobalAddress,
                         out_ptr: asc.GlobalAddress,
                         size: int, num_tiles: int,
@@ -125,17 +125,17 @@ def _gelu_erf_kernel_u1(x_ptr: asc.GlobalAddress,
     Unroll 1 halves UB allocation vs unroll 2, enabling TILE=1024
     (each f32 tile temporary costs 4*TILE*1 bytes instead of 4*TILE*2).
     """
-    x_gm = asc2.global_tensor(x_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(),
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
                         unroll_factor=1):
         off = t * tile_size
         n = tile_size if off + tile_size <= size else size - off
-        x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])
+        x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[n])
         xf = x.to(asc.float32)
-        z = asc2.abs(xf) * _INV_SQRT2
+        z = asctile.abs(xf) * _INV_SQRT2
         den = z * 0.5 + 1.0
-        tt = asc2.full([tile_size], 1.0, dtype=asc.float32) / den
+        tt = asctile.full([tile_size], 1.0, dtype=asc.float32) / den
         p = tt * 0.17087277 - 0.82215223
         p = p * tt + 1.48851587
         p = p * tt - 1.13520398
@@ -145,40 +145,40 @@ def _gelu_erf_kernel_u1(x_ptr: asc.GlobalAddress,
         p = p * tt + 0.37409196
         p = p * tt + 1.00002368
         p = p * tt - 1.26551223
-        erfc_z = tt * asc2.exp(p - z * z)
+        erfc_z = tt * asctile.exp(p - z * z)
         half_erfc = erfc_z * 0.5
         y_neg = xf * half_erfc
         y_pos = xf - y_neg
-        y = asc2.where(xf >= 0.0, y_pos, y_neg)
-        asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
+        y = asctile.where(xf >= 0.0, y_pos, y_neg)
+        asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
 
 
 # ---------------------------------------------------------------------------
 # tanh-mode kernel
 # ---------------------------------------------------------------------------
 
-@asc2.jit
+@asctile.jit
 def _gelu_tanh_kernel(x_ptr: asc.GlobalAddress,
                      out_ptr: asc.GlobalAddress,
                      size: int, num_tiles: int,
                      tile_size: asc.ConstExpr[int]):
     """tanh-mode GELU with stable sigmoid, grid-stride tile loop."""
-    x_gm = asc2.global_tensor(x_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(),
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
                         unroll_factor=2):
         off = t * tile_size
         n = tile_size if off + tile_size <= size else size - off
-        x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])
+        x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[n])
         xf = x.to(asc.float32)
         # Factored cubic: s = 2u = (x^2 * gc_t + k) * x
         #   where gc_t = _GELU_C * _TWO_SQRT_2_OVER_PI, k = _TWO_SQRT_2_OVER_PI
         x2 = xf * xf
         s = (x2 * _GC_T + _TWO_SQRT_2_OVER_PI) * xf
         # y = x * sigmoid(s), stable: e^min(s,0) / (1 + e^-|s|)
-        sig = asc2.exp(asc2.minimum(s, 0.0)) / (asc2.exp(-asc2.abs(s)) + 1.0)
+        sig = asctile.exp(asctile.minimum(s, 0.0)) / (asctile.exp(-asctile.abs(s)) + 1.0)
         y = xf * sig
-        asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
+        asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
 
 
 # ---------------------------------------------------------------------------
@@ -186,7 +186,7 @@ def _gelu_tanh_kernel(x_ptr: asc.GlobalAddress,
 # ---------------------------------------------------------------------------
 
 def gelu(x: torch.Tensor, approximate: str = "none") -> torch.Tensor:
-    """Element-wise GELU of an NPU tensor via pyasc asc2 kernels."""
+    """Element-wise GELU of an NPU tensor via pyasc asctile kernels."""
     ensure_npu_platform()
     if approximate not in ("none", "tanh"):
         raise ValueError(

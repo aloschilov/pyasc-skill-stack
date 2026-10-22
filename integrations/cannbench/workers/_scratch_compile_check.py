@@ -1,7 +1,7 @@
 """Local JIT compile-check for the sigmoid kernel UB budget (scratch file)."""
 import os
 
-_CANN_ENV = "/usr/local/Ascend/ascend-toolkit/latest/set_env.sh"
+_CANN_ENV = "/usr/local/Ascend/cann-9.0.0/set_env.sh"
 if os.path.exists(_CANN_ENV):
     import subprocess
     out = subprocess.check_output(["bash", "-c", f"source {_CANN_ENV} && env"]).decode()
@@ -18,34 +18,35 @@ for _b in ("/usr/local/Ascend/cann-9.0.0/aarch64-linux/bin/bisheng",
         break
 
 import asc
-import asc2
+import asctile
 from asc import DataType
-from asc.runtime.jit import MockTensor, MockValue
+from asc.runtime.jit import MockTensor
 import asc.runtime.config as config
 
 
 def set_platform():
     # Model (simulator) backend avoids the NPU runtime lib (libruntime.so),
     # which is absent on this host. check=False skips the lib-availability gate.
-    plat = config.Platform("Ascend950PR_9599")
+    plat = config.Platform.Ascend950PR_9599
     config.set_platform(config.Backend.Model, plat, check=False)
     print(f"[env] platform set (Model/sim): {plat}", flush=True)
 
 
-@asc2.jit
+@asctile.jit
 def _sigmoid_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
                     size: int, num_tiles: int,
                     tile_size: asc.ConstExpr[int]):
-    x_gm = asc2.global_tensor(x_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(),
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
                         unroll_factor=2):
         off = t * tile_size
         n = tile_size if off + tile_size <= size else size - off
-        x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])
+        x = asctile.copy_in(
+            x_gm, [off], [tile_size], real_shape=[n], pad_value=0.0)
         xf = x.to(asc.float32)
-        y = asc2.div(1.0, asc2.exp(-xf) + 1.0)
-        asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
+        y = asctile.div(1.0, asctile.exp(-xf) + 1.0)
+        asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
 
 
 def compile_test(tile, dtype_str, cores=72):

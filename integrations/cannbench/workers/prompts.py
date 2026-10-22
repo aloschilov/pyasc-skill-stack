@@ -82,7 +82,37 @@ def timings_table(op: str) -> tuple[str, str, str]:
 
 
 def build_generation_prompt(op: str, callable_name: str, module_name: str,
-                            guidance: str) -> str:
+                            guidance: str, task_dir: Path | None = None,
+                            *, source_overlay=None, source_overlay_sha256=None) -> str:
+    if (source_overlay is not None or source_overlay_sha256 is not None) and task_dir is None:
+        raise ValueError('Source overlay requires an official task directory')
+    if task_dir is not None:
+        # Include the complete indivisible contract, rather than a lossy table
+        # or an obsolete implementation from the historical nine-op campaign.
+        sections = [f"# Official CANNBench task: {op}\nPublic callable: {callable_name}\n"]
+        restored_cases = None
+        if source_overlay is not None or source_overlay_sha256 is not None:
+            from local_compile_gate import load_compile_cases
+            cases, restorations = load_compile_cases(
+                task_dir / 'cases.yaml', source_overlay, source_overlay_sha256)
+            restored_cases = yaml.safe_dump({'cases': cases}, sort_keys=False)
+            sections.append('## Verified official source restoration\n'
+                            'The cases.yaml section below is the verified execution contract, '
+                            'including source restorations used by compiler and numerical gates. '
+                            'Original catalog files remain unchanged.\n'
+                            f'Overlay manifest SHA256: {source_overlay_sha256}\n'
+                            '```json\n' + json.dumps(restorations, indent=2, sort_keys=True) + '\n```\n')
+        for name, language in (("desc.md", "markdown"), ("proto.yaml", "yaml"),
+                               ("golden.py", "python"), ("cases.yaml", "yaml")):
+            content = restored_cases if name == 'cases.yaml' and restored_cases is not None else (task_dir / name).read_text()
+            sections.append(f"## {name}\n```{language}\n{content}\n```\n")
+        sections.append("Implement every case using the current pyasc-cannbench-kernel skill. "
+                        "Use public asctile.jit, global_tensor, copy_in and copy_out APIs. "
+                        "No torch numerical operations, case removal, or host data reads. "
+                        "Import ensure_npu_platform from ._pyasc_runtime. "
+                        "Compilation alone cannot establish correctness or hardware performance.\n")
+        sections.append("## Pinned public API contract\n" + (TEMPLATES / "constraints.md").read_text())
+        return "\n".join(sections)
     op_dir = TASKS_DIR / op
     summary, n_cases = cases_summary(op)
     proto = yaml.safe_load((op_dir / "proto.yaml").read_text())

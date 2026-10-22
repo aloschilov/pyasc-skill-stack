@@ -3,7 +3,7 @@
 import torch
 
 import asc
-import asc2
+import asctile
 
 from ._pyasc_runtime import ensure_npu_platform
 
@@ -11,7 +11,7 @@ _MAX_CORES = 72
 _MAX_TILE_ELEMENTS = 4096
 
 
-@asc2.jit(reuse_alloc=1)
+@asctile.jit(reuse_alloc=1)
 def _rms_norm_fallback_kernel(x_ptr: asc.GlobalAddress,
                               gamma_ptr: asc.GlobalAddress,
                               out_ptr: asc.GlobalAddress,
@@ -21,36 +21,36 @@ def _rms_norm_fallback_kernel(x_ptr: asc.GlobalAddress,
                               tile_size: asc.ConstExpr[int],
                               epsilon: float):
     """Padded two-pass fallback for unaligned D or native FP32 UB overflow."""
-    x_gm = asc2.global_tensor(x_ptr, [rows, cols])
-    gamma_gm = asc2.global_tensor(gamma_ptr, [cols])
-    out_gm = asc2.global_tensor(out_ptr, [rows, cols])
+    x_gm = asctile.global_tensor(x_ptr, [rows, cols])
+    gamma_gm = asctile.global_tensor(gamma_ptr, [cols])
+    out_gm = asctile.global_tensor(out_ptr, [rows, cols])
 
-    for row in asc2.range(asc2.block_idx(), rows, asc2.block_num()):
-        acc = asc2.reduce_sum(
-            asc2.full([1, 64], 0.0, dtype=asc.float32)
+    for row in asctile.range(asctile.block_idx(), rows, asctile.block_num()):
+        acc = asctile.reduce_sum(
+            asctile.full([1, 64], 0.0, dtype=asc.float32)
         )
-        for tile_id in asc2.range(num_tiles):
+        for tile_id in asctile.range(num_tiles):
             col = tile_id * tile_size
             n = tile_size if col + tile_size <= cols else cols - col
-            x = asc2.copy_in(
+            x = asctile.copy_in(
                 x_gm, [row, col], [1, tile_size], real_shape=[1, n]
             )
             xf = x.to(asc.float32)
-            acc = acc + asc2.reduce_sum(xf * xf)
+            acc = acc + asctile.reduce_sum(xf * xf)
 
-        inv_rms = 1.0 / asc2.sqrt(acc / cols + epsilon)
+        inv_rms = 1.0 / asctile.sqrt(acc / cols + epsilon)
 
-        for tile_id in asc2.range(num_tiles):
+        for tile_id in asctile.range(num_tiles):
             col = tile_id * tile_size
             n = tile_size if col + tile_size <= cols else cols - col
-            x = asc2.copy_in(
+            x = asctile.copy_in(
                 x_gm, [row, col], [1, tile_size], real_shape=[1, n]
             )
-            gamma = asc2.copy_in(
+            gamma = asctile.copy_in(
                 gamma_gm, [col], [tile_size], real_shape=[n]
             )
             y = x.to(asc.float32) * gamma.to(asc.float32) * inv_rms
-            asc2.copy_out(
+            asctile.copy_out(
                 y.to(x.dtype),
                 out_gm,
                 [row, col],
@@ -58,7 +58,7 @@ def _rms_norm_fallback_kernel(x_ptr: asc.GlobalAddress,
             )
 
 
-@asc2.jit(reuse_alloc=1)
+@asctile.jit(reuse_alloc=1)
 def _rms_norm_kernel(x_ptr: asc.GlobalAddress,
                      gamma_ptr: asc.GlobalAddress,
                      out_ptr: asc.GlobalAddress,
@@ -67,19 +67,19 @@ def _rms_norm_kernel(x_ptr: asc.GlobalAddress,
                      total_tiles: int,
                      rows_per_tile: asc.ConstExpr[int],
                      epsilon: float):
-    x_gm = asc2.global_tensor(x_ptr, [rows, cols])
-    gamma_gm = asc2.global_tensor(gamma_ptr, [cols])
-    out_gm = asc2.global_tensor(out_ptr, [rows, cols])
-    gamma = asc2.copy_in(gamma_gm, [0], [cols])
+    x_gm = asctile.global_tensor(x_ptr, [rows, cols])
+    gamma_gm = asctile.global_tensor(gamma_ptr, [cols])
+    out_gm = asctile.global_tensor(out_ptr, [rows, cols])
+    gamma = asctile.copy_in(gamma_gm, [0], [cols])
 
-    for tile_id in asc2.range(
-        asc2.block_idx(), total_tiles, asc2.block_num(), unroll_factor=2
+    for tile_id in asctile.range(
+        asctile.block_idx(), total_tiles, asctile.block_num(), unroll_factor=2
     ):
         row = tile_id * rows_per_tile
         active_rows = (
             rows_per_tile if row + rows_per_tile <= rows else rows - row
         )
-        x = asc2.copy_in(
+        x = asctile.copy_in(
             x_gm,
             [row, 0],
             [rows_per_tile, cols],
@@ -89,12 +89,12 @@ def _rms_norm_kernel(x_ptr: asc.GlobalAddress,
         # inputs have a wider tolerance, so use an f16 compute path and cast
         # back instead of falling out to a slower scalar reduction.
         if x.dtype == asc.bfloat16:
-            y = asc2.rms_norm(
+            y = asctile.rms_norm(
                 x.to(asc.float16), gamma.to(asc.float16), epsilon
             ).to(asc.bfloat16)
         else:
-            y = asc2.rms_norm(x, gamma, epsilon)
-        asc2.copy_out(
+            y = asctile.rms_norm(x, gamma, epsilon)
+        asctile.copy_out(
             y,
             out_gm,
             [row, 0],

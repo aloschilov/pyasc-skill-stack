@@ -10,7 +10,7 @@
 
 import math
 
-import asc2
+import asctile
 import pytest
 import torch
 
@@ -66,22 +66,22 @@ def _select_elementwise_tile(shape, itemsize, live_tensors, unroll_factor=2):
 # to the declared global_tensor shape, so block_length * block_num may
 # exceed input_length safely (no host padding, no tail branch).
 # ---------------------------------------------------------------------------
-@asc2.jit(reuse_alloc=0)
-def add_inplace(a_ptr: asc2.GlobalAddress, b_ptr: asc2.GlobalAddress, input_length,
-                tile_length: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
-    a_gm = asc2.global_tensor(a_ptr, [input_length])   # a_gm is BOTH input and output
-    b_gm = asc2.global_tensor(b_ptr, [input_length])
+@asctile.jit(reuse_alloc=0)
+def add_inplace(a_ptr: asctile.GlobalAddress, b_ptr: asctile.GlobalAddress, input_length,
+                tile_length: asctile.ConstExpr, unroll_factor: asctile.ConstExpr):
+    a_gm = asctile.global_tensor(a_ptr, [input_length])   # a_gm is BOTH input and output
+    b_gm = asctile.global_tensor(b_ptr, [input_length])
 
-    block_loop_num = asc2.ceildiv(asc2.ceildiv(input_length, asc2.block_num()), tile_length)
+    block_loop_num = asctile.ceildiv(asctile.ceildiv(input_length, asctile.block_num()), tile_length)
     block_length = tile_length * block_loop_num
-    block_offset = asc2.block_idx() * block_length
+    block_offset = asctile.block_idx() * block_length
 
-    for i in asc2.range(block_loop_num, unroll_factor=unroll_factor):
+    for i in asctile.range(block_loop_num, unroll_factor=unroll_factor):
         current_offset = block_offset + i * tile_length
-        at = asc2.copy_in(a_gm, [current_offset], [tile_length])
-        bt = asc2.copy_in(b_gm, [current_offset], [tile_length])
+        at = asctile.copy_in(a_gm, [current_offset], [tile_length])
+        bt = asctile.copy_in(b_gm, [current_offset], [tile_length])
         zt = at + bt
-        asc2.copy_out(zt, a_gm, [current_offset])   # store back into a_gm
+        asctile.copy_out(zt, a_gm, [current_offset])   # store back into a_gm
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +124,7 @@ def test_add_inplace(profiler, runs, kernel_type, test_name, input_shape, input_
 
     params = [a, b]                       # NO separate output tensor — a is the output
     if kernel_type == STATIC:
-        params.append(asc2.ConstExpr(length))
+        params.append(asctile.ConstExpr(length))
     else:
         params.append(length)
     params.extend([tile_length, unroll_factor])

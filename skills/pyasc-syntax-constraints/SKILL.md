@@ -1,131 +1,117 @@
 ---
 name: pyasc-syntax-constraints
-description: pyasc Python syntax support and restrictions reference. Documents supported and unsupported Python syntax within @asc2.jit functions, type constraints, and ConstExpr usage. Trigger — when writing kernel code, checking if a Python construct is supported, or debugging JIT compilation errors related to syntax.
+description: Current pyasc v2 syntax, typing, ConstExpr, loop, and kernel/device-function constraints. Use when writing asctile kernels or diagnosing AST/type/JIT errors.
 ---
 
-# pyasc Syntax Constraints
+# Current pyasc v2 syntax constraints
 
-> Current-v2 CANNBench override: commit `030e9b2c` renamed the tile package
-> from `asc2` to `asctile`. When `pyasc-cannbench-kernel` is loaded, translate
-> every legacy `asc2.*` spelling below to the corresponding `asctile.*`
-> spelling and use that campaign's vendored source as the API authority.
+Use the syntax implementation and tests from the exact selected `v2` commit.
+For the current CANNBench campaign that is
+`0a631f70968c3cb7c33ce45330a85768dd5a6f06`. New tile kernels use
+`@asctile.jit`; `@asc2.jit` is obsolete.
 
-Syntax and keyword support varies across v2 snapshots. For CANNBench, the
-source of truth is `integrations/cannbench/pyasc-v2-source` at the commit in
-`SOURCE_COMMIT`; load `pyasc-cannbench-kernel` and verify uncertain constructs
-against that source plus the exact-v2 compile gate. In particular, its
-`asc2.range` supports `unroll_factor` and `gm_barrier`, but not `parallel`.
+## Supported core constructs
 
-## Overview
+- assignments and annotated assignments
+- `if`/`elif`/`else` and ternary expressions
+- `for` with compile-time Python `range` or device `asctile.range`
+- `while`
+- arithmetic, comparison, bitwise, unary, and boolean operators
+- tuple/list creation, indexing, and slicing where the compiler can resolve
+  the involved types
+- calls to module-level JIT helpers and current pyasc builtins
+- assertions with simple/f-string messages
 
-pyasc compiles Python code to Ascend C via JIT. Only a subset of Python syntax is supported inside `@asc2.jit`-decorated functions. This skill documents what is and is not allowed.
+Inside a device loop use only keywords present in the selected source.
+Current v2 `asctile.range` supports `unroll_factor` and `gm_barrier`; it does
+not support a `parallel` keyword. Use a plain Python `range` for a genuinely
+compile-time loop that should be fully unrolled.
 
-## Supported Syntax
+## Unsupported or unsafe constructs
 
-| Syntax | Example | Notes |
-|--------|---------|-------|
-| Attribute access | `nums.__len__()` | |
-| `while` loop | `while i < n: ...` | |
-| `for` loop | `for i in asc2.range(n): ...` | Use `asc2.range()` inside kernel, not `range()` |
-| Binary operators | `a + b * c` | `+`, `-`, `*`, `/`, `%`, `//`, `**`, `&`, `\|`, `^`, `<<`, `>>` |
-| Unary operators | `~a`, `-a`, `not a` | |
-| `tuple` | `return x, y, z` | |
-| `list` | `nums = [a, b, c]` | |
-| `pass` | `pass` | |
-| Ternary `if` | `ans = x if x > 0 else 0` | |
-| `if`/`elif`/`else` | Full conditional blocks | |
-| Constants | `a = 1; b = True` | |
-| Comparisons | `>`, `<`, `>=`, `<=`, `==`, `!=` | |
-| Function calls | `func()` | Must be `@asc2.jit`-decorated or asc2 built-in |
-| Boolean logic | `and`, `or` | |
-| Augmented assign | `+=`, `-=`, `*=`, `/=`, `%=` | |
-| Assignment | `x = expr` | |
-| Annotated assign | `count: int = 3` | |
-| f-strings + assert | `assert cond, f"msg {val}"` | |
-| Subscript | `nums[0]` | |
-| Slice | `tensor[offset:]` | |
+- nested function definitions
+- `global` or `nonlocal`
+- `break` or `continue`
+- `try`/`except`, `raise`, or `with`
+- `yield`, lambda, async definitions, or `await`
+- imports inside a JIT function
+- class methods as kernels
+- host I/O such as `print` or file access
+- variables defined on only one runtime branch and read afterwards
 
-## Unsupported Syntax
+The outer launched kernel writes outputs and must not return a Python value.
+A module-level JIT device helper may return at its top level. Do not return
+from the middle of runtime control flow.
 
-| Syntax | Status | Workaround |
-|--------|--------|------------|
-| Nested functions | Not supported | Define separate `@asc2.jit` functions |
-| `global` | Not supported | Pass values as parameters |
-| `return` from kernel | Not supported | Kernels write to output tensors; device functions may return |
-| `return` inside `if`/`for` | Not supported | Use top-level return only in device functions |
-| `continue` | Not supported | Restructure loop logic |
-| `print()` | Not supported | Use `assert` with f-strings |
-| `with open(...)` | Not supported | Do file I/O outside JIT |
-| `raise` | Not supported | Use `assert` instead |
-| `try`/`except` | Not supported | Handle errors outside JIT |
-| `yield` / `yield from` | Not supported | No generators |
-| `lambda` | Not supported | Define named functions |
-| `break` | Not supported | Restructure loop logic |
-| `import` / `from...import` | Not supported | All imports outside JIT |
-| `async def` / `async with` | Not supported | No async |
-| `nonlocal` | Not supported | Pass values as parameters |
-| Class methods as kernels | Not supported | Use module-level functions |
-| If-scoped variables | Restricted | Initialize before `if`; use `asc.ConstExpr` for compile-time branching |
-| Unsigned int comparison | Restricted | Use `np.int64` or truthiness check instead |
+## Runtime and compile-time values
 
-## Type Constraints
+Runtime parameters may be scalar bool/int/float, numpy scalars/arrays,
+torch tensors on the supported path, and `asc.GlobalAddress`. Values that
+control local tensor shapes, static iteration, specialization, or compile-time
+branches must be `asc.ConstExpr[T]`/`asctile.ConstExpr[T]` or otherwise known
+when the JIT specializes the function.
 
-### Kernel parameter types (runtime)
-
-| Supported | Not supported |
-|-----------|---------------|
-| `bool`, `int`, `float` | `str` |
-| `numpy` scalars and `ndarray` | `tuple`, `list`, `dict` |
-| `torch.Tensor` (NPU mode only) | Complex objects |
-| `asc.GlobalAddress` | |
-
-### Compile-time parameters
-
-Use `asc.ConstExpr[T]` for values that must be resolved at compile time:
 ```python
-@asc2.jit(always_compile=True)
-def kernel(x_ptr: asc.GlobalAddress, tile_size: asc.ConstExpr[int]):
-    # tile_size is resolved at compile time and included in the JIT cache key
-    ...
+@asctile.jit
+def kernel(x_ptr: asc.GlobalAddress,
+           size: asc.ConstExpr[int],
+           tile_size: asc.ConstExpr[int],
+           mode: asc.ConstExpr[int]):
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    if mode == 0:
+        for i in asctile.range(asctile.ceildiv(size, tile_size)):
+            ...
 ```
 
-### Built-in whitelist inside JIT
+Container and string attributes normally remain host-side and choose a
+specialized launch. Avoid passing arbitrary Python objects into the JIT.
 
-Only these built-ins are available: `dict`, `float`, `int`, `isinstance`, `issubclass`, `len`, `list`, `range`, `repr`, `str`, `tuple`, `type`
+Two measured official-contract attribute pitfalls:
 
-Note: For iteration inside `@asc2.jit`, use `asc2.range()` instead of `range()`.
-Do not assume optional keywords are portable between pyasc snapshots.
+- Official cases encode some numeric attrs as strings, e.g.
+  `epsilon: '1e-05'` (group_norm, rms_norm, add_rms_norm_dynamic_quant,
+  apply_adam_w, mhc_sinkhorn, mla_prolog) and `norm_eps: '1e-05'`
+  (engram_gate_fusion). Passing the raw attr into a JIT call fails with
+  `TypeError: Argument type in JIT function is not supported: str` (measured,
+  all 20 cases). Coerce in host code before the launch:
+  `eps = float(norm_eps)`. The same applies to int-like strings.
+- List-valued attrs such as `group_list` (grouped_matmul_swiglu_quant) are
+  host-side Python lists, not tensors. Calling tensor methods on them fails
+  with `AttributeError: 'list' object has no attribute 'contiguous'`
+  (measured, all 20 cases). Keep list attrs as metadata; when the kernel
+  needs the values on-device, materialize with the whitelisted host factory
+  `torch.tensor(group_list, dtype=torch.int32, device=...)` and pass that to
+  the launch (`torch.tensor` is in the static whitelist; `torch.as_tensor`
+  is NOT whitelisted and has no FakeTorch support).
 
-### Cube (matmul) loop + placement notes
+## Values and tensor APIs
 
-- **M/N/K tile loops are compile-time.** When the trip count is an
-  `asc.ConstExpr[int]` (matmul m/n/k tiles), a plain Python `for i in range(...)`
-  is fully unrolled at JIT time — that is the intended form for the loop that must
-  keep an operand resident in `L0A`/`L0B`. Use `asc2.range(...,
-  unroll_factor=2)` only on the *inner* tile loop you want software-pipelined
-  (double-buffered).
-- **Overlap (`gm_barrier=False`) doubles the pipelined L0 buffer.** The 2-deep
-  tile must fit half the L0 capacity (≤ 32 KiB for L0A/L0B, ≤ 64 KiB for the f32
-  L0C). A full-K `[256,128]` f16 L0B tile is 64 KiB and overflows when doubled
-  (`L0B overflow: 65536 bytes available, 131072 used`); shrink the tile (e.g.
-  `N_TILE=64`) before relying on overlap.
-- **Cube tile placement is explicit:** load/`asc2.copy` operands to
-  `asc2.TileLocation.L0A` (left) / `L0B` (right); stage from GM via
-  `asc2.TileLocation.L1` for reuse; the `@` result lands in L0C as f32 — cast with
-  `.to(asc2.float16)` before `asc2.store` if a 16-bit output is wanted.
+`copy_in` without `shape` and reductions can produce `PlainValue`. Many unary
+and binary tile APIs require `LocalTensor`. Do not assume a scalar result can
+be passed to tensor-only `rsqrt`, `maximum`, or `where`; use supported scalar
+arithmetic or materialize an aligned tensor with `asctile.full`.
 
-## Kernel vs Device Function Rules
+Global descriptors, offsets, local shapes, and `real_shape` must have matching
+rank. For 2-D-or-higher UB copies, the final physical dimension must satisfy
+32-byte transfer alignment. Current transpose axes are separate positional
+integers (`tile.transpose(*perm)`), not one list argument.
 
-| Rule | Kernel function | Device function |
-|------|----------------|-----------------|
-| Launched from | Host via `kernel[core_num](...)` | Other `@asc2.jit` functions |
-| `return` value | Not allowed | Allowed |
-| `@asc2.jit(...)` options | Effective (always_compile, etc.) | Ignored |
-| Nesting | Cannot be nested | Cannot be nested |
+## Placement and pipelining
+
+Use `asctile.TensorLocation.L1/L0A/L0B/L0C/UB`. Software pipelining via
+`unroll_factor=2` can double live local/L0 buffers, so validate memory use for
+the largest specialization. Do not use the removed `run_asc2_passes` option.
+
+## Validation rule
+
+Syntax validity is only the first gate. Parse/compile every host-selected
+specialization against the exact v2 runtime, then execute representative
+ordinary and special-value cases on camodel. QEMU compile-only results do not
+prove numerical correctness or performance.
 
 ## References
 
-- [Supported Syntax Details](references/supported-syntax.md)
-- [Unsupported Syntax Details](references/unsupported-syntax.md)
-- [Type Constraints](references/type-constraints.md)
-- [ConstExpr Guide](references/constexpr-guide.md)
+- [Supported syntax](references/supported-syntax.md)
+- [Unsupported syntax](references/unsupported-syntax.md)
+- [Type constraints](references/type-constraints.md)
+- [ConstExpr guide](references/constexpr-guide.md)

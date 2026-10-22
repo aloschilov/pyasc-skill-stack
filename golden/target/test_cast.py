@@ -8,54 +8,53 @@
 
 import math
 
-import asc2
+import asctile
 import pytest
 import torch
 
-STATIC = "static"
-DYNAMIC = "dynamic"
+from .helpers import parametrize_is_static
 
 
-@asc2.jit(reuse_alloc=1)
-def cast_direct(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, input_length, block_loop_num,
-                block_loop_num_tail, block_length, tile_length: asc2.ConstExpr, dst_dtype: asc2.ConstExpr,
-                unroll_factor: asc2.ConstExpr):
-    x_gm = asc2.global_tensor(input_ptr, [input_length])
-    out_gm = asc2.global_tensor(output_ptr, [input_length])
+@asctile.jit(reuse_alloc=1)
+def cast_direct(input_ptr: asctile.GlobalAddress, output_ptr: asctile.GlobalAddress, input_length, block_loop_num,
+                block_loop_num_tail, block_length, tile_length: asctile.ConstExpr, dst_dtype: asctile.ConstExpr,
+                unroll_factor: asctile.ConstExpr):
+    x_gm = asctile.global_tensor(input_ptr, [input_length])
+    out_gm = asctile.global_tensor(output_ptr, [input_length])
 
-    # block_loop_num = asc2.ceildiv(asc2.ceildiv(input_length, asc2.block_num()), tile_length)
+    # block_loop_num = asctile.ceildiv(asctile.ceildiv(input_length, asctile.block_num()), tile_length)
     # block_length = tile_length * block_loop_num
-    block_offset = asc2.block_idx() * block_length
+    block_offset = asctile.block_idx() * block_length
 
-    for i in asc2.range(block_loop_num, unroll_factor=unroll_factor):
+    for i in asctile.range(block_loop_num, unroll_factor=unroll_factor):
         current_offset = block_offset + i * tile_length
-        xt = asc2.copy_in(x_gm, [current_offset], [tile_length])
+        xt = asctile.copy_in(x_gm, [current_offset], [tile_length])
         zt = xt.to(dst_dtype)
-        asc2.copy_out(zt, out_gm, [current_offset])
+        asctile.copy_out(zt, out_gm, [current_offset])
 
 
-@asc2.jit(reuse_alloc=1)
-def cast_two(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, input_length, block_loop_num,
-             block_loop_num_tail, block_length, tile_length: asc2.ConstExpr, intermediate_dtype: asc2.ConstExpr,
-             dst_dtype: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
-    x_gm = asc2.global_tensor(input_ptr, [input_length])
-    out_gm = asc2.global_tensor(output_ptr, [input_length])
+@asctile.jit(reuse_alloc=1)
+def cast_two(input_ptr: asctile.GlobalAddress, output_ptr: asctile.GlobalAddress, input_length, block_loop_num,
+             block_loop_num_tail, block_length, tile_length: asctile.ConstExpr, intermediate_dtype: asctile.ConstExpr,
+             dst_dtype: asctile.ConstExpr, unroll_factor: asctile.ConstExpr):
+    x_gm = asctile.global_tensor(input_ptr, [input_length])
+    out_gm = asctile.global_tensor(output_ptr, [input_length])
 
-    # block_loop_num = asc2.ceildiv(asc2.ceildiv(input_length, asc2.block_num()), tile_length)
+    # block_loop_num = asctile.ceildiv(asctile.ceildiv(input_length, asctile.block_num()), tile_length)
     # block_length = tile_length * block_loop_num
-    block_offset = asc2.block_idx() * block_length
+    block_offset = asctile.block_idx() * block_length
 
-    for i in asc2.range(block_loop_num, unroll_factor=unroll_factor):
+    for i in asctile.range(block_loop_num, unroll_factor=unroll_factor):
         current_offset = block_offset + i * tile_length
-        xt = asc2.copy_in(x_gm, [current_offset], [tile_length])
+        xt = asctile.copy_in(x_gm, [current_offset], [tile_length])
         middle_tile = xt.to(intermediate_dtype)
         zt = middle_tile.to(dst_dtype)
-        asc2.copy_out(zt, out_gm, [current_offset])
+        asctile.copy_out(zt, out_gm, [current_offset])
 
 
 # DYNAMIC [2, 5, 7, 42767] only supports unroll_factor = 1
 # yapf: disable
-@pytest.mark.parametrize("kernel_type", [STATIC])
+@parametrize_is_static()
 @pytest.mark.parametrize("test_name, block_num, input_shapes, input_dtypes, output_shapes, output_dtypes, compile_params, runtime_params, tiling_key, tiling_params", [
 # PYASC_TESTS_BEGIN
     ("cast_test_1", 8, ([128, 64], ), (torch.int32, ), ([128, 64], ), (torch.float16, ), (1, ), (2, 1), 0, (8, 21120, 1024, 1, 1, 1024, 1024, 0, 0, 0, 0, 0)),
@@ -63,9 +62,9 @@ def cast_two(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, inpu
     ("cast_test_3", 10, ([128, 80], ), (torch.int32, ), ([128, 80], ), (torch.float16, ), (1, ), (2, 1), 0, (10, 21120, 1024, 1, 1, 1024, 1024, 0, 0, 0, 0, 0)),
     ("cast_test_4", 40, ([400, 1, 50], ), (torch.int64, ), ([400, 1, 50], ), (torch.float32, ), (0, ), (2, 0), 0, (40, 10560, 504, 1, 1, 504, 344, 0, 0, 0, 0, 0)),
     ("cast_test_5", 1, ([128], ), (torch.int64, ), ([128], ), (torch.int32, ), (3, ), (2, 3), 0, (1, 10560, 128, 1, 1, 128, 128, 32, 16, 330, 4, 4)),
-    # BUG: int8 -> int64 ("cast_test_6", 4, ([128, 128], ), (torch.int8, ), ([128, 128], ), (torch.int64, ), (9, ), (2, 9), 0, (4, 9728, 4096, 1, 1, 4096, 4096, 0, 0, 0, 0, 0)),
-    # BUG: int8 -> int64 ("cast_test_7", 1, ([1, 256], ), (torch.int8, ), ([1, 256], ), (torch.int64, ), (9, ), (2, 9), 0, (1, 9728, 256, 1, 1, 256, 256, 0, 0, 0, 0, 0)),
-    # BUG: int8 -> int64 ("cast_test_8", 1, ([1, 300], ), (torch.int8, ), ([1, 300], ), (torch.int64, ), (9, ), (2, 9), 0, (1, 9728, 304, 1, 1, 304, 300, 0, 0, 0, 0, 0)),
+    ("cast_test_6", 4, ([128, 128], ), (torch.int8, ), ([128, 128], ), (torch.int64, ), (9, ), (2, 9), 0, (4, 9728, 4096, 1, 1, 4096, 4096, 0, 0, 0, 0, 0)),
+    ("cast_test_7", 1, ([1, 256], ), (torch.int8, ), ([1, 256], ), (torch.int64, ), (9, ), (2, 9), 0, (1, 9728, 256, 1, 1, 256, 256, 0, 0, 0, 0, 0)),
+    ("cast_test_8", 1, ([1, 300], ), (torch.int8, ), ([1, 300], ), (torch.int64, ), (9, ), (2, 9), 0, (1, 9728, 304, 1, 1, 304, 300, 0, 0, 0, 0, 0)),
     ("cast_test_9", 2, ([7376, 1], ), (torch.int8, ), ([7376, 1], ), (torch.float32, ), (0, ), (2, 0), 0, (2, 17920, 3688, 1, 1, 3688, 3688, 0, 0, 0, 0, 0)),
     ("cast_test_10", 8, ([100, 1, 302], ), (torch.int8, ), ([100, 1, 302], ), (torch.float32, ), (0, ), (2, 0), 0, (8, 17920, 3776, 1, 1, 3776, 3768, 0, 0, 0, 0, 0)),
     ("cast_test_11", 64, ([650, 100], ), (torch.int32, ), ([650, 100], ), (torch.float32, ), (0, ), (2, 0), 0, (64, 15808, 1016, 1, 1, 1016, 992, 0, 0, 0, 0, 0)),
@@ -113,8 +112,10 @@ def cast_two(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, inpu
 # PYASC_TESTS_END
 ])
 # yapf: enable
-def test_cast(profiler, runs, kernel_type, test_name, block_num, input_shapes, input_dtypes, output_shapes,
-              output_dtypes, compile_params, runtime_params, tiling_key, tiling_params):
+def test_cast(profiler, runs, is_static, test_name, block_num, input_shapes, input_dtypes, output_shapes, output_dtypes,
+              compile_params, runtime_params, tiling_key, tiling_params):
+    if not is_static:
+        pytest.skip("dynamic shape is not supported")
     input_shape = input_shapes[0]
     input_dtype = input_dtypes[0]
     output_dtype = output_dtypes[0]
@@ -147,29 +148,33 @@ def test_cast(profiler, runs, kernel_type, test_name, block_num, input_shapes, i
     out_tensor = torch.zeros(input_shape_1d, dtype=output_dtype)
 
     dtype_map = {
-        torch.int8: asc2.int8,
-        torch.int16: asc2.int16,
-        torch.int32: asc2.int32,
-        torch.int64: asc2.int64,
-        torch.float16: asc2.float16,
-        torch.float32: asc2.float32,
-        torch.bfloat16: asc2.bfloat16,
+        torch.int8: asctile.int8,
+        torch.int16: asctile.int16,
+        torch.int32: asctile.int32,
+        torch.int64: asctile.int64,
+        torch.float16: asctile.float16,
+        torch.float32: asctile.float32,
+        torch.bfloat16: asctile.bfloat16,
     }
     dst_dtype = dtype_map[output_dtype]
 
     params = [in_tensor_x, out_tensor]
-    if kernel_type == STATIC:
+    if is_static:
         params.extend([
-            asc2.ConstExpr(input_shape_1d[0]),
-            asc2.ConstExpr(block_loop_num),
-            asc2.ConstExpr(block_loop_num_tail),
-            asc2.ConstExpr(block_length)
+            asctile.ConstExpr(input_shape_1d[0]),
+            asctile.ConstExpr(block_loop_num),
+            asctile.ConstExpr(block_loop_num_tail),
+            asctile.ConstExpr(block_length)
         ])
     else:
         params.extend([input_shape_1d[0], block_loop_num, block_loop_num_tail, block_length])
 
     if input_dtype == torch.int8 or output_dtype == torch.int8:
-        intermediate_dtype = asc2.float16
+        if input_dtype == torch.int64 or output_dtype == torch.int64:
+            # workaround for int8 -> int64 casts
+            intermediate_dtype = asctile.int32
+        else:
+            intermediate_dtype = asctile.float16
         params.extend([tile_length, intermediate_dtype, dst_dtype, unroll_factor])
 
         with profiler.profile():

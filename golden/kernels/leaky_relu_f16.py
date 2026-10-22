@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.10
 """Golden kernel: leaky_relu/float16
 
-Conditional operation using ``asc2.where``: ``out = where(x >= 0, x,
+Conditional operation using ``asctile.where``: ``out = where(x >= 0, x,
 alpha * x)``. Verified on CANN simulator with Ascend950PR_9599 platform.
 
 Cell metadata (mirrors capabilities.yaml; do not drift):
@@ -21,7 +21,7 @@ Non-obvious constraints (Phase 1.5):
     C310's stricter MTE GDMA burst alignment check (test sizes
     start at 8192 = ``TILE_SIZE * CORE_NUM * 4``).
   - UB/L1/L0 placement: the input tile, the comparison ``x >= 0``,
-    the scaled branch ``x * alpha``, and the ``asc2.where`` selector
+    the scaled branch ``x * alpha``, and the ``asctile.where`` selector
     all live in UB. No L0 / cube involvement.
   - Padding: none.
   - Tail behavior: aligned_only.
@@ -36,7 +36,7 @@ import numpy as np
 
 import asc
 import asc.runtime.config as config
-import asc2
+import asctile
 
 TILE_SIZE = 128
 CORE_NUM = 16
@@ -44,19 +44,19 @@ CORE_NUM = 16
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(reuse_alloc=1)
-def leaky_relu_kernel(x_ptr: asc2.GlobalAddress, alpha: float,
-                      out_ptr: asc2.GlobalAddress, size: int,
-                      tile_size: asc2.ConstExpr,
-                      tile_per_block: asc2.ConstExpr):
-    x_gm = asc2.global_tensor(x_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block, unroll_factor=2):
+@asctile.jit(reuse_alloc=1)
+def leaky_relu_kernel(x_ptr: asctile.GlobalAddress, alpha: float,
+                      out_ptr: asctile.GlobalAddress, size: int,
+                      tile_size: asctile.ConstExpr,
+                      tile_per_block: asctile.ConstExpr):
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    base_offset = asctile.block_idx() * tile_size * tile_per_block
+    for i in asctile.range(tile_per_block, unroll_factor=2):
         tile_offset = base_offset + i * tile_size
-        x = asc2.copy_in(x_gm, [tile_offset], [tile_size])
-        out = asc2.where(x >= 0, x, x * alpha)
-        asc2.copy_out(out, out_gm, [tile_offset])
+        x = asctile.copy_in(x_gm, [tile_offset], [tile_size])
+        out = asctile.where(x >= 0, x, x * alpha)
+        asctile.copy_out(out, out_gm, [tile_offset])
 
 
 def leaky_relu_launch(x: np.ndarray, alpha: float) -> np.ndarray:

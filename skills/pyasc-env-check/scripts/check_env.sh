@@ -10,7 +10,7 @@ WARNINGS=0
 # Auto-detect the correct Python: prefer whichever has pyasc installed
 if [ -z "${PYTHON:-}" ]; then
     for candidate in python3.10 python3.11 python3.12 python3.9 python3; do
-        if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import asc" 2>/dev/null; then
+        if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import asc, asctile" 2>/dev/null; then
             PYTHON="$candidate"
             break
         fi
@@ -36,9 +36,9 @@ else
 fi
 
 # pyasc
-PYASC_VERSION=$($PYTHON -c "import asc; print(getattr(asc, '__version__', 'installed'))" 2>/dev/null || echo "not installed")
+PYASC_VERSION=$($PYTHON -c "import asc, asctile; print(getattr(asc, '__version__', 'installed'), asctile.__file__)" 2>/dev/null || echo "not installed")
 if [ "$PYASC_VERSION" = "not installed" ]; then
-    echo "[FAIL] pyasc not installed (pip install pyasc)"
+    echo "[FAIL] matching pyasc v2 runtime not installed (build/install the selected source commit)"
     ERRORS=$((ERRORS + 1))
 else
     echo "[PASS] pyasc: $PYASC_VERSION"
@@ -79,7 +79,7 @@ fi
 CANN_PATH="${ASCEND_HOME_PATH:-not set}"
 if [ "$CANN_PATH" = "not set" ]; then
     echo "[WARN] ASCEND_HOME_PATH not set"
-    echo "       Run: source \$HOME/Ascend/cann/set_env.sh"
+    echo "       Run: source /usr/local/Ascend/cann-9.0.0/set_env.sh (or your installed toolkit path)"
     WARNINGS=$((WARNINGS + 1))
 elif [ -d "$CANN_PATH" ]; then
     CANN_VERSION="unknown"
@@ -100,7 +100,7 @@ if [ "$CANN_PATH" != "not set" ] && [ -d "$CANN_PATH" ]; then
     SIM_PATH="$CANN_PATH/tools/simulator/Ascend950PR_9599/lib"
     if [ -d "$SIM_PATH" ]; then
         echo "[PASS] Simulator: Ascend950PR_9599 libs found"
-        if echo "$LD_LIBRARY_PATH" 2>/dev/null | grep -q "simulator"; then
+        if echo "${LD_LIBRARY_PATH:-}" 2>/dev/null | grep -q "simulator"; then
             echo "[PASS] Simulator: LD_LIBRARY_PATH includes simulator path"
         else
             echo "[WARN] Simulator: LD_LIBRARY_PATH missing simulator path"

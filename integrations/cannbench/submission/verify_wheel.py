@@ -15,13 +15,15 @@ def main() -> None:
         names = set(archive.namelist())
         required = {
             "asc/__init__.py",
-            "asc2/__init__.py",
+            "asctile/__init__.py",
             "cann_bench/masked_scale.py",
             "pybind11/__init__.py",
         }
         missing = required - names
         if missing:
             raise RuntimeError(f"wheel is missing required files: {sorted(missing)}")
+        if "asc2/__init__.py" in names:
+            raise RuntimeError("wheel contains the removed asc2 package")
         if not any(name.startswith("asc/_C/libpyasc") and name.endswith(".so") for name in names):
             raise RuntimeError("wheel is missing asc._C.libpyasc native extension")
         metadata_name = next(name for name in names if name.endswith(".dist-info/METADATA"))

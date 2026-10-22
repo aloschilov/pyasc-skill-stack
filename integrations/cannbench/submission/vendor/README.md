@@ -1,11 +1,11 @@
 # Vendored pyasc v2 runtime
 
 The submission evaluates `compiler-team/pyasc`, branch `v2`, at the immutable
-commit `ac1222a48c8914d3f81297c7570d1a84f0f26778` (2026-08-31).
+commit `030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d` (2026-09-03 snapshot).
 
-- Source: <https://gitcode.com/compiler-team/pyasc/tree/ac1222a48c8914d3f81297c7570d1a84f0f26778>
+- Source: <https://gitcode.com/compiler-team/pyasc/tree/030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d>
 - Runtime wheel: `runtime-wheels/pyasc-1.1.1-cp312-cp312-linux_x86_64.whl`
-- Wheel SHA-256: `27e675fe2446b9ff8b2841688218c2d6b3ace877a3c4be491d0cba68af4dfcdd`
+- Wheel SHA-256: `c86802f7cd33e96657ef3ba26573d40a54de3875dafe7995cb0dc960758e5479`
 - Runtime build helper: `runtime-wheels/pybind11-2.13.6-py3-none-any.whl`
 - pybind11 SHA-256: `237c41e29157b962835d356b370ededd57594a26d5894a795960f0047cb5caf5`
 - Build ABI: CPython 3.12 / x86_64, matching the CANNBench evaluator.
@@ -22,5 +22,5 @@ commit `ac1222a48c8914d3f81297c7570d1a84f0f26778` (2026-08-31).
   `PYASC-LICENSE` and embedded in the final wheel.
 
 The final CANNBench wheel has no external Python package dependency on pyasc
-or pybind11 and contains `asc`, `asc2`, `asc._C.libpyasc`, and the pybind11
+or pybind11 and contains `asc`, `asctile`, `asc._C.libpyasc`, and the pybind11
 headers/runtime helper needed by pyasc's host-binding compiler.

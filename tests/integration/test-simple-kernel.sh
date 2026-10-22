@@ -77,17 +77,17 @@ echo "--- Test 4: Golden kernel content check ---"
 
 GOLDEN_ADD="$SKILLS_DIR/golden/tutorials/01_add.py"
 if [ -f "$GOLDEN_ADD" ]; then
-    if grep -qE '@asc2\.jit|@asc\.jit' "$GOLDEN_ADD"; then
-        print_pass "Golden kernel has @asc2.jit or @asc.jit decorator"
+    if grep -qE '@asctile\.jit|@asc\.jit' "$GOLDEN_ADD"; then
+        print_pass "Golden kernel has @asctile.jit or @asc.jit decorator"
     else
-        print_fail "Golden kernel missing @asc2.jit / @asc.jit"
+        print_fail "Golden kernel missing @asctile.jit / @asc.jit"
         ERRORS=$((ERRORS + 1))
     fi
 
-    if grep -q "asc2.load" "$GOLDEN_ADD" && grep -q "asc2.store" "$GOLDEN_ADD"; then
-        print_pass "Golden kernel has asc2.load and asc2.store"
+    if grep -q "asctile.copy_in" "$GOLDEN_ADD" && grep -q "asctile.copy_out" "$GOLDEN_ADD"; then
+        print_pass "Golden kernel has asctile.copy_in and asctile.copy_out"
     else
-        print_fail "Golden kernel missing asc2.load or asc2.store"
+        print_fail "Golden kernel missing asctile.copy_in or asctile.copy_out"
         ERRORS=$((ERRORS + 1))
     fi
 
@@ -98,10 +98,10 @@ if [ -f "$GOLDEN_ADD" ]; then
         ERRORS=$((ERRORS + 1))
     fi
 
-    if grep -q "asc2.range" "$GOLDEN_ADD"; then
-        print_pass "Golden kernel has asc2.range tile loop"
+    if grep -q "asctile.range" "$GOLDEN_ADD"; then
+        print_pass "Golden kernel has asctile.range tile loop"
     else
-        print_fail "Golden kernel missing asc2.range"
+        print_fail "Golden kernel missing asctile.range"
         ERRORS=$((ERRORS + 1))
     fi
 fi
@@ -112,14 +112,14 @@ echo "--- Test 5: Template content check ---"
 
 TEMPLATE="$SKILLS_DIR/skills/pyasc-codegen-workflow/templates/kernel-template.py"
 if [ -f "$TEMPLATE" ]; then
-    if grep -qE '@asc2\.jit|@asc\.jit' "$TEMPLATE"; then
-        print_pass "Kernel template has @asc2.jit or @asc.jit"
+    if grep -qE '@asctile\.jit|@asc\.jit' "$TEMPLATE"; then
+        print_pass "Kernel template has @asctile.jit or @asc.jit"
     else
-        print_fail "Kernel template missing @asc2.jit / @asc.jit"
+        print_fail "Kernel template missing @asctile.jit / @asc.jit"
         ERRORS=$((ERRORS + 1))
     fi
 
-    if grep -q "torch.allclose" "$TEMPLATE"; then
+    if grep -qE "(torch\.(allclose|testing\.assert_close)|np\.testing\.assert_allclose)" "$TEMPLATE"; then
         print_pass "Kernel template has verification"
     else
         print_fail "Kernel template missing verification"

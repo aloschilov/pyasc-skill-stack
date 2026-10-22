@@ -22,7 +22,7 @@ Non-obvious constraints (Phase 1.5):
     return zeros. Test sizes start at 8192 (= ``TILE_SIZE * CORE_NUM
     * 4``) for that reason.
   - UB/L1/L0 placement: each tile is loaded into UB (default
-    location of ``asc2.load`` with no ``location=`` arg); the abs
+    location of ``asctile.copy_in`` with no ``location=`` arg); the abs
     is computed in-place in UB and stored straight back to GM. No
     L0 / cube involvement.
   - Padding: none. ``tail_behavior=aligned_only`` — the kernel
@@ -31,7 +31,7 @@ Non-obvious constraints (Phase 1.5):
   - Tail behavior: aligned_only. Non-multiple shapes are out of
     scope (see ``unsupported_regimes=[]`` — i.e. no opt-in regime
     extends this cell).
-  - Accumulator dtype: null. ``asc2.abs`` is a pure elementwise op
+  - Accumulator dtype: null. ``asctile.abs`` is a pure elementwise op
     with no accumulation.
   - Simulator/platform assumptions: ``Ascend950PR_9599`` (C310);
     numpy ``np.empty_like`` for the output is fine here because
@@ -46,7 +46,7 @@ import numpy as np
 
 import asc
 import asc.runtime.config as config
-import asc2
+import asctile
 
 TILE_SIZE = 128
 CORE_NUM = 16
@@ -54,17 +54,17 @@ CORE_NUM = 16
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(reuse_alloc=1)
-def abs_kernel(x_ptr: asc2.GlobalAddress, out_ptr: asc2.GlobalAddress,
-               size: int, tile_size: asc2.ConstExpr, tile_per_block: asc2.ConstExpr):
-    x_gm = asc2.global_tensor(x_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block, unroll_factor=2):
+@asctile.jit(reuse_alloc=1)
+def abs_kernel(x_ptr: asctile.GlobalAddress, out_ptr: asctile.GlobalAddress,
+               size: int, tile_size: asctile.ConstExpr, tile_per_block: asctile.ConstExpr):
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    base_offset = asctile.block_idx() * tile_size * tile_per_block
+    for i in asctile.range(tile_per_block, unroll_factor=2):
         tile_offset = base_offset + i * tile_size
-        x = asc2.copy_in(x_gm, [tile_offset], [tile_size])
-        out = asc2.abs(x)
-        asc2.copy_out(out, out_gm, [tile_offset])
+        x = asctile.copy_in(x_gm, [tile_offset], [tile_size])
+        out = asctile.abs(x)
+        asctile.copy_out(out, out_gm, [tile_offset])
 
 
 def abs_launch(x: np.ndarray) -> np.ndarray:

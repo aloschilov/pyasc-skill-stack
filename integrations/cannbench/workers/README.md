@@ -8,7 +8,7 @@ CANNBench evaluation queue on 950PR.
 
 - `prompts.py` — renders definite prompts from `templates/` + vendored specs
   in `../tasks/` + archived reports in `../../../evidence/cannbench/`.
-- `templates/constraints.md` — the pyasc asc2 contract digest (kernel rules,
+- `templates/constraints.md` — the current pyasc `asctile` contract digest (kernel rules,
   UB budget, numerical-stability recipes, anti-cheat rules) shared by both
   prompt kinds.
 - `driver.py` — provenance-gated design/implementation/review loop with static
@@ -17,8 +17,9 @@ CANNBench evaluation queue on 950PR.
   case routes against the self-contained pinned-v2 runtime under QEMU.
 - `staged_local_repair.py` — finish a model seed with measured repair and an
   independent model review without touching the canonical submission.
-- `assemble_local_bundle.py` / `run_local_matrix.py` — assemble and recheck the
-  full nine-operator, 180-route generated bundle.
+- `assemble_local_bundle.py` / `run_local_matrix.py` — derive the operator set
+  from vendored tasks, then assemble and recheck the current 11-operator,
+  220-route generated bundle.
 - `run_camodel_smoke.py` — execute either the basic float32 suite or selected
   high-risk dtype/control routes with a native exact-v2 wheel; raw ticks are
   not speedups.
@@ -27,6 +28,22 @@ CANNBench evaluation queue on 950PR.
   PR comments as a data or command channel.
 
 ## Usage
+
+Tuning prompts embed the maintained
+[CANN-sample top-down reference](../../../skills/pyasc-api-patterns/references/cann-performance-tuning.md)
+with its SHA256, so workers receive the actual guidance rather than a pathname
+alone. Keep the rendered prompt/hash in run provenance; supplied content is
+not independent skill-read evidence. This adds no submission, schedule or
+permission to use low-level kernels. Use one operator/route and a trace-backed
+hypothesis per iteration; sample timings are not our hardware measurements.
+
+CPU-only regression checks for this integration:
+
+```bash
+python3 -m unittest discover -s tests/tools -p test_performance_guidance.py
+```
+
+Run that command from the repository root.
 
 ```bash
 cd integrations/cannbench/workers
@@ -37,6 +54,8 @@ python3 driver.py --items masked_scale:generate,swi_glu:generate \
                   --iterations 3 --workers 2                             # M3a
 python3 driver.py --items foreach_addcdiv_scalar:generate,foreach_norm:generate \
                   --iterations 3 --workers 2                             # M3b
+python3 driver.py --items softmax:generate,transpose:generate \
+                  --iterations 3 --workers 2                             # L1 completion
 python3 driver.py --items <op>:<kind> --dry-run                          # prompt only
 python3 ../sync-benchmark-task.py RmsNorm                                # vendor next task
 ```
@@ -48,10 +67,10 @@ python3 driver.py --items all --evaluation local --iterations 2 --workers 2 \
   --models dashscope/glm-5.2,dashscope/qwen3.7-max
 ```
 
-Artifacts land in `runs/<timestamp>/<item>/` (prompt, design, candidate,
+Artifacts land in `.scratch/cannbench/runs/<timestamp>/<item>/` (prompt, design, candidate,
 worker JSON-event logs, phase skill traces, exact-v2 compile report,
 `provenance.json`, and `digest.json`). Candidates that route and compile all
-20 cases are copied to `runs/<timestamp>/locally_qualified/cann_bench/`; this
+20 cases are copied to `.scratch/cannbench/runs/<timestamp>/locally_qualified/cann_bench/`; this
 bundle does not overwrite the canonical submission because the local gate does
 not execute numerics or measure performance.
 
@@ -68,13 +87,15 @@ from `--models`. The driver
 parses the structured OpenCode event stream and rejects a candidate before any
 evaluation when a required skill call or completion marker is missing. Scratch
 work stays in the gitignored in-repo `.scratch/` directory so project
-permissions and skill discovery are deterministic.
+permissions and skill discovery are deterministic. New default driver runs use `workers/.scratch/cannbench/runs/<timestamp>/`;
+pass `--output-dir` to choose another location. Existing `workers/runs/` archives
+are retained unchanged.
 
 When a locally validated candidate must wait for the daily site quota, resume
 the exact immutable run with:
 
 ```bash
-python3 submit_skill_candidate.py runs/<timestamp>/<item>/iter<N>
+python3 submit_skill_candidate.py .scratch/cannbench/runs/<timestamp>/<item>/iter<N>
 ```
 
 The resume command verifies candidate, prompt, skill-source and local-lowering

@@ -6,31 +6,31 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 
-import asc2
+import asctile
 import pytest
 import torch
 
-from .helpers import DYNAMIC, STATIC, select_elementwise_tile
+from .helpers import parametrize_is_static, select_elementwise_tile
 
 
-@asc2.jit(reuse_alloc=1)
-def reciprocal(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, input_length, tile_length: asc2.ConstExpr,
-               unroll_factor: asc2.ConstExpr):
-    x = asc2.global_tensor(input_ptr, [input_length])
-    z = asc2.global_tensor(output_ptr, [input_length])
+@asctile.jit(reuse_alloc=1)
+def reciprocal(input_ptr: asctile.GlobalAddress, output_ptr: asctile.GlobalAddress, input_length,
+               tile_length: asctile.ConstExpr, unroll_factor: asctile.ConstExpr):
+    x = asctile.global_tensor(input_ptr, [input_length])
+    z = asctile.global_tensor(output_ptr, [input_length])
 
-    block_loop_num = asc2.ceildiv(asc2.ceildiv(input_length, asc2.block_num()), tile_length)
+    block_loop_num = asctile.ceildiv(asctile.ceildiv(input_length, asctile.block_num()), tile_length)
     block_length = tile_length * block_loop_num
-    block_offset = asc2.block_idx() * block_length
+    block_offset = asctile.block_idx() * block_length
 
-    for i in asc2.range(block_loop_num, unroll_factor=unroll_factor):
+    for i in asctile.range(block_loop_num, unroll_factor=unroll_factor):
         current_offset = block_offset + i * tile_length
-        xt = asc2.copy_in(x, [current_offset], [tile_length])
-        zt = asc2.div(1.0, xt)
-        asc2.copy_out(zt, z, [current_offset])
+        xt = asctile.copy_in(x, [current_offset], [tile_length])
+        zt = asctile.div(1.0, xt)
+        asctile.copy_out(zt, z, [current_offset])
 
 
-@pytest.mark.parametrize("kernel_type", [STATIC, DYNAMIC])
+@parametrize_is_static()
 @pytest.mark.parametrize("test_name, input_shape, input_dtype, tiling", [
     ("reciprocal_test_1", [1024], torch.float32, select_elementwise_tile([1024], 4, 2)),
     ("reciprocal_test_2", [2400], torch.float32, select_elementwise_tile([2400], 4, 2)),
@@ -55,7 +55,7 @@ def reciprocal(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, in
     ("reciprocal_test_21", [128, 2, 512], torch.float16, select_elementwise_tile([128, 2, 512], 2, 2)),
     ("reciprocal_test_22", [1024, 6144], torch.float16, select_elementwise_tile([1024, 6144], 2, 2)),
 ])
-def test_reciprocal(profiler, runs, kernel_type, test_name, input_shape, input_dtype, tiling):
+def test_reciprocal(profiler, runs, is_static, test_name, input_shape, input_dtype, tiling):
     length, tile_length, block_num, unroll_factor = tiling
 
     # For low-precision dtypes bound |x| away from zero: a near-zero x makes 1/x
@@ -68,8 +68,8 @@ def test_reciprocal(profiler, runs, kernel_type, test_name, input_shape, input_d
     out_tensor = torch.zeros([length], dtype=input_dtype)
 
     params = [in_tensor, out_tensor]
-    if kernel_type == STATIC:
-        params.append(asc2.ConstExpr(length))
+    if is_static:
+        params.append(asctile.ConstExpr(length))
     else:
         params.append(length)
     params.extend([tile_length, unroll_factor])

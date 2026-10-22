@@ -5,9 +5,9 @@ Element-wise absolute value for float32 tensors with cache-line-aligned
 tail handling (Pattern B from skills/pyasc-api-patterns/SKILL.md).
 
 Vendored from pyasc-v2-eval@7b85554a:
-  python/test/asc2/operations/test_unary_ops.py
-    -- asc2.abs API contract + atol=1e-3 against torch.abs
-  python/test/asc2/target/test_vadd.py
+  python/test/asctile/operations/test_unary_ops.py
+    -- asctile.abs API contract + atol=1e-3 against torch.abs
+  python/test/asctile/target/test_vadd.py
     -- 1D-flatten tiling skeleton with cache-line aligned tail
 numpy / numpy.testing.assert_allclose adapted from
 torch / torch.testing.assert_close (see docs/golden-upstream-map.md).
@@ -38,7 +38,7 @@ Non-obvious constraints (Phase 9):
     computed in-place, and the result is stored straight back to GM.
     No L0 / cube involvement.
   - Tolerance: ``atol=rtol=1e-3``, sourced from upstream
-    ``operations/test_unary_ops.py`` which asserts ``asc2.abs`` vs
+    ``operations/test_unary_ops.py`` which asserts ``asctile.abs`` vs
     ``torch.abs`` at ``atol=1e-3`` for float32.
   - Simulator/platform assumptions: ``Ascend950PR_9599`` (C310);
     numpy buffers are safe for this elementwise UB-only path.
@@ -50,7 +50,7 @@ import numpy as np
 
 import asc
 import asc.runtime.config as config
-import asc2
+import asctile
 
 TILE_SIZE = 128
 CORE_NUM = 16
@@ -58,17 +58,17 @@ CORE_NUM = 16
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(reuse_alloc=1)
-def abs_kernel(x_ptr: asc2.GlobalAddress, out_ptr: asc2.GlobalAddress,
-               size: int, tile_size: asc2.ConstExpr, tile_per_block: asc2.ConstExpr):
-    x_gm = asc2.global_tensor(x_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block, unroll_factor=2):
+@asctile.jit(reuse_alloc=1)
+def abs_kernel(x_ptr: asctile.GlobalAddress, out_ptr: asctile.GlobalAddress,
+               size: int, tile_size: asctile.ConstExpr, tile_per_block: asctile.ConstExpr):
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    base_offset = asctile.block_idx() * tile_size * tile_per_block
+    for i in asctile.range(tile_per_block, unroll_factor=2):
         tile_offset = base_offset + i * tile_size
-        x = asc2.copy_in(x_gm, [tile_offset], [tile_size])
-        out = asc2.abs(x)
-        asc2.copy_out(out, out_gm, [tile_offset])
+        x = asctile.copy_in(x_gm, [tile_offset], [tile_size])
+        out = asctile.abs(x)
+        asctile.copy_out(out, out_gm, [tile_offset])
 
 
 def abs_launch(x: np.ndarray) -> np.ndarray:

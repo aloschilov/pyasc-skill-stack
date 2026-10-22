@@ -8,7 +8,7 @@ import torch
 def verify_kernel(kernel_launch_fn, x, y, expected_fn, atol=1e-5):
     result = kernel_launch_fn(x, y)
     expected = expected_fn(x, y)
-    np.testing.assert_allclose(result, expected, atol=atol, rtol=1e-3)
+    torch.testing.assert_close(result, expected, atol=atol, rtol=1e-3)
     return True
 ```
 
@@ -44,7 +44,7 @@ def verify_kernel_np(result_np, expected_np, atol=1e-5):
 
 If neither Model nor NPU backend is available:
 
-1. **Syntax check**: Verify all `@asc.jit` code uses supported syntax
+1. **Syntax check**: Verify all `@asctile.jit` code uses supported syntax
 2. **ASC-IR dump**: Set `PYASC_DUMP_PATH` and check generated IR
 3. **Code review**: Manual review against API patterns
 4. **State limitation**: "Runtime verification pending; static checks passed"

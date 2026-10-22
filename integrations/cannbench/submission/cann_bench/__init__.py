@@ -1,9 +1,9 @@
-"""pyasc asc2 submission package for CANN Bench.
+"""pyasc asctile submission package for CANN Bench.
 
 Each module exposes one public callable whose name and signature match the
-operator's ``proto.yaml`` schema. All numerical work happens in pyasc asc2
-kernels launched directly on torch_npu-owned device buffers (zero-copy via
-``Tensor.data_ptr()``).
+operator's ``proto.yaml`` schema. All numerical work happens in pyasc asctile
+kernels launched directly with torch_npu-owned tensors so pointer dtype
+specialization remains available to the JIT.
 """
 
 from .exp import exp

@@ -1,4 +1,4 @@
-"""CANN Bench Mish interface implemented as a pyasc asc2 kernel.
+"""CANN Bench Mish interface implemented as a pyasc asctile kernel.
 
 mish(x) = x * tanh(softplus(x)). Computing softplus then tanh naively
 loses all precision for x << 0: log(1 + e^x) rounds 1 + e^x to 1.0 once
@@ -18,14 +18,14 @@ branch). e^() never sees a positive argument, so no f32 overflow.
 
 The two branches share the sub-expression a = 2w and b = w^2. Factoring
 numerator and denominator through `a` lets each be produced by a single
-`asc2.where` blend that reuses the same live tiles, instead of four
+`asctile.where` blend that reuses the same live tiles, instead of four
 distinct branch tiles held alive until a final quotient-select. The
 per-element result is bit-identical to the four-branch spelling: for the
 selected branch the operands to the final division are exactly num_pos
 and den_pos (or num_neg and den_neg), so dividing the blended numerator
 by the blended denominator equals the original branch quotient.
 
-Tile width: the asc2 allocator reserves a unified-buffer slot for every
+Tile width: the asctile allocator reserves a unified-buffer slot for every
 distinct SSA tile (x each doubled by ``unroll_factor=2``); this kernel's
 chain measured 353024 B at TILE=2048 (f16) / 328448 B (f32), i.e. above
 the 253952 B budget. UB scales linearly with TILE, so TILE=1280 projects
@@ -42,7 +42,7 @@ grid-stride tile loop, ``real_shape`` tails, f32 internal compute).
 import torch
 
 import asc
-import asc2
+import asctile
 
 from ._pyasc_runtime import ensure_npu_platform
 
@@ -50,33 +50,33 @@ _TILE = 1280
 _MAX_CORES = 72
 
 
-@asc2.jit
+@asctile.jit
 def _mish_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
                  size: int, num_tiles: int, tile_size: asc.ConstExpr[int]):
-    x_gm = asc2.global_tensor(x_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(),
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
                         unroll_factor=2):
         off = t * tile_size
         n = tile_size if off + tile_size <= size else size - off
-        x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])
+        x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[n])
         xf = x.to(asc.float32)
-        w = asc2.exp(-asc2.abs(xf))
+        w = asctile.exp(-asctile.abs(xf))
         a = w * 2.0              # 2w          (shared by both branches)
         b = w * w                # w^2         (shared by both branches)
         cond = xf >= 0.0
-        one = asc2.full([tile_size], 1.0, dtype=asc.float32)
+        one = asctile.full([tile_size], 1.0, dtype=asc.float32)
         # num = 1 + 2w (x>=0)  |  w^2 + 2w (x<0)
-        num = a + asc2.where(cond, one, b)
+        num = a + asctile.where(cond, one, b)
         # den = num + 2w^2 (x>=0)  |  num + 2 (x<0)
-        den = num + (asc2.where(cond, b, one) * 2.0)
+        den = num + (asctile.where(cond, b, one) * 2.0)
         tanh_sp = num / den
         y = xf * tanh_sp
-        asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
+        asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
 
 
 def mish(x: torch.Tensor) -> torch.Tensor:
-    """Element-wise Mish activation of an NPU tensor via a pyasc asc2 kernel."""
+    """Element-wise Mish activation of an NPU tensor via a pyasc asctile kernel."""
     ensure_npu_platform()
     if not x.is_contiguous():
         x = x.contiguous()

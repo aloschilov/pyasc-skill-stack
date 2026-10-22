@@ -37,7 +37,7 @@ import numpy as np
 
 import asc
 import asc.runtime.config as config
-import asc2
+import asctile
 
 TILE_SIZE = 2048
 CORE_NUM = 16
@@ -46,21 +46,21 @@ ALIGNMENT = TILE_SIZE * CORE_NUM  # 32768 elements
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(reuse_alloc=1)
-def drop_out_do_mask_kernel(data_ptr: asc2.GlobalAddress, mask_ptr: asc2.GlobalAddress,
-                            out_ptr: asc2.GlobalAddress, size: int,
-                            tile_size: asc2.ConstExpr, tile_per_block: asc2.ConstExpr,
+@asctile.jit(reuse_alloc=1)
+def drop_out_do_mask_kernel(data_ptr: asctile.GlobalAddress, mask_ptr: asctile.GlobalAddress,
+                            out_ptr: asctile.GlobalAddress, size: int,
+                            tile_size: asctile.ConstExpr, tile_per_block: asctile.ConstExpr,
                             scale: asc.ConstExpr[float]):
-    data_gm = asc2.global_tensor(data_ptr, [size])
-    mask_gm = asc2.global_tensor(mask_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block, unroll_factor=2):
+    data_gm = asctile.global_tensor(data_ptr, [size])
+    mask_gm = asctile.global_tensor(mask_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    base_offset = asctile.block_idx() * tile_size * tile_per_block
+    for i in asctile.range(tile_per_block, unroll_factor=2):
         off = base_offset + i * tile_size
-        data_t = asc2.copy_in(data_gm, [off], [tile_size])
-        mask_t = asc2.copy_in(mask_gm, [off], [tile_size])
+        data_t = asctile.copy_in(data_gm, [off], [tile_size])
+        mask_t = asctile.copy_in(mask_gm, [off], [tile_size])
         out = (data_t * mask_t) * scale
-        asc2.copy_out(out, out_gm, [off])
+        asctile.copy_out(out, out_gm, [off])
 
 
 def drop_out_do_mask_launch(data: np.ndarray, mask: np.ndarray,

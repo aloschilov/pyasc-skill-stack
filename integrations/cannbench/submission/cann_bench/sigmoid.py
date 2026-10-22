@@ -1,4 +1,4 @@
-"""CANN Bench Sigmoid interface implemented as a pyasc asc2 kernel.
+"""CANN Bench Sigmoid interface implemented as a pyasc asctile kernel.
 
 Kernel design (pyasc-api-patterns Pattern A, grid-stride variant):
   - 1-D flatten; each block strides over tiles so any element count works.
@@ -15,7 +15,7 @@ Kernel design (pyasc-api-patterns Pattern A, grid-stride variant):
 import torch
 
 import asc
-import asc2
+import asctile
 
 from ._pyasc_runtime import ensure_npu_platform
 
@@ -24,23 +24,23 @@ _NARROW_TILE = 1024
 _MAX_CORES = 72
 
 
-@asc2.jit
+@asctile.jit
 def _sigmoid_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
                     size: int, num_tiles: int, tile_size: asc.ConstExpr[int]):
-    x_gm = asc2.global_tensor(x_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(),
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
                         unroll_factor=2):
         off = t * tile_size
         n = tile_size if off + tile_size <= size else size - off
-        x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])
+        x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[n])
         xf = x.to(asc.float32)
-        y = asc2.div(1.0, asc2.exp(-xf) + 1.0)
-        asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
+        y = asctile.div(1.0, asctile.exp(-xf) + 1.0)
+        asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
 
 
 def sigmoid(x: torch.Tensor) -> torch.Tensor:
-    """Element-wise sigmoid of an NPU tensor via a pyasc asc2 kernel."""
+    """Element-wise sigmoid of an NPU tensor via a pyasc asctile kernel."""
     ensure_npu_platform()
     if not x.is_contiguous():
         x = x.contiguous()

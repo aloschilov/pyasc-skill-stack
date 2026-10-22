@@ -1,4 +1,4 @@
-"""CANN Bench SwiGlu interface implemented as a pyasc asc2 kernel.
+"""CANN Bench SwiGlu interface implemented as a pyasc asctile kernel.
 
 Kernel design:
   - Zero-copy 2-D path for aligned layouts: input viewed as [outer, C*inner],
@@ -15,7 +15,7 @@ Kernel design:
 import torch
 
 import asc
-import asc2
+import asctile
 
 from ._pyasc_runtime import ensure_npu_platform
 
@@ -24,68 +24,68 @@ _MAX_CORES = 72
 _ALIGN_BYTES = 32
 
 
-@asc2.jit
+@asctile.jit
 def _swiglu_2d_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
                       outer: int, half_cols: int, total_cols: int,
                       num_col_tiles: int, tile_size: asc.ConstExpr[int]):
-    x_gm = asc2.global_tensor(x_ptr, [outer, total_cols])
-    out_gm = asc2.global_tensor(out_ptr, [outer, half_cols])
+    x_gm = asctile.global_tensor(x_ptr, [outer, total_cols])
+    out_gm = asctile.global_tensor(out_ptr, [outer, half_cols])
     total_tiles = outer * num_col_tiles
-    for t in asc2.range(asc2.block_idx(), total_tiles, asc2.block_num(),
+    for t in asctile.range(asctile.block_idx(), total_tiles, asctile.block_num(),
                         unroll_factor=2):
         row = t // num_col_tiles
         col_tile = t % num_col_tiles
         col_off = col_tile * tile_size
         x1_col_off = half_cols + col_off
         n = tile_size if col_off + tile_size <= half_cols else half_cols - col_off
-        x0 = asc2.copy_in(x_gm, [row, col_off], [1, tile_size],
+        x0 = asctile.copy_in(x_gm, [row, col_off], [1, tile_size],
                          real_shape=[1, n])
-        x1 = asc2.copy_in(x_gm, [row, x1_col_off], [1, tile_size],
+        x1 = asctile.copy_in(x_gm, [row, x1_col_off], [1, tile_size],
                          real_shape=[1, n])
         x0f = x0.to(asc.float32)
         x1f = x1.to(asc.float32)
-        abs_x = asc2.abs(x0f)
+        abs_x = asctile.abs(x0f)
         neg_abs = -abs_x
-        b = asc2.exp(neg_abs)
+        b = asctile.exp(neg_abs)
         denom = b + 1.0
-        min_x = asc2.minimum(x0f, 0.0)
-        a = asc2.exp(min_x)
+        min_x = asctile.minimum(x0f, 0.0)
+        a = asctile.exp(min_x)
         num = x0f * a
         silu = num / denom
         result = silu * x1f
-        asc2.copy_out(result.to(x0.dtype), out_gm, [row, col_off],
+        asctile.copy_out(result.to(x0.dtype), out_gm, [row, col_off],
                       real_shape=[1, n])
 
 
-@asc2.jit
+@asctile.jit
 def _swiglu_1d_kernel(x0_ptr: asc.GlobalAddress, x1_ptr: asc.GlobalAddress,
                       out_ptr: asc.GlobalAddress, size: int, num_tiles: int,
                       tile_size: asc.ConstExpr[int]):
-    x0_gm = asc2.global_tensor(x0_ptr, [size])
-    x1_gm = asc2.global_tensor(x1_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(),
+    x0_gm = asctile.global_tensor(x0_ptr, [size])
+    x1_gm = asctile.global_tensor(x1_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
                         unroll_factor=2):
         off = t * tile_size
         n = tile_size if off + tile_size <= size else size - off
-        x0 = asc2.copy_in(x0_gm, [off], [tile_size], real_shape=[n])
-        x1 = asc2.copy_in(x1_gm, [off], [tile_size], real_shape=[n])
+        x0 = asctile.copy_in(x0_gm, [off], [tile_size], real_shape=[n])
+        x1 = asctile.copy_in(x1_gm, [off], [tile_size], real_shape=[n])
         x0f = x0.to(asc.float32)
         x1f = x1.to(asc.float32)
-        abs_x = asc2.abs(x0f)
+        abs_x = asctile.abs(x0f)
         neg_abs = -abs_x
-        b = asc2.exp(neg_abs)
+        b = asctile.exp(neg_abs)
         denom = b + 1.0
-        min_x = asc2.minimum(x0f, 0.0)
-        a = asc2.exp(min_x)
+        min_x = asctile.minimum(x0f, 0.0)
+        a = asctile.exp(min_x)
         num = x0f * a
         silu = num / denom
         result = silu * x1f
-        asc2.copy_out(result.to(x0.dtype), out_gm, [off], real_shape=[n])
+        asctile.copy_out(result.to(x0.dtype), out_gm, [off], real_shape=[n])
 
 
 def swi_glu(input: torch.Tensor, dim: int = -1) -> torch.Tensor:
-    """SwiGLU activation via a pyasc asc2 kernel.
+    """SwiGLU activation via a pyasc asctile kernel.
 
     output = silu(x0) * x1  where  (x0, x1) = input.chunk(2, dim)
     and silu(v) = v * sigmoid(v) with the stable sigmoid form

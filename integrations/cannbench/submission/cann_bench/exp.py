@@ -1,4 +1,4 @@
-"""CANN Bench Exp interface implemented as a pyasc asc2 kernel.
+"""CANN Bench Exp interface implemented as a pyasc asctile kernel.
 
 Spec formula: y = e^((x*scale + shift) * ln(base)) for base > 0, and the
 natural base (ln(base) treated as 1) when base <= 0. Both collapse to a
@@ -25,7 +25,7 @@ import math
 import torch
 
 import asc
-import asc2
+import asctile
 
 from ._pyasc_runtime import ensure_npu_platform
 
@@ -34,20 +34,20 @@ _TILE_F32 = 2048
 _MAX_CORES = 72
 
 
-@asc2.jit
+@asctile.jit
 def _exp_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
                 size: int, num_tiles: int, a: float, b: float,
                 tile_size: asc.ConstExpr[int]):
-    x_gm = asc2.global_tensor(x_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(),
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
                         unroll_factor=2):
         off = t * tile_size
         n = tile_size if off + tile_size <= size else size - off
-        x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])
+        x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[n])
         xf = x.to(asc.float32)
-        y = asc2.exp(xf * a + b)
-        asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
+        y = asctile.exp(xf * a + b)
+        asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
 
 
 def exp(x: torch.Tensor, base: float = -1.0, scale: float = 1.0,

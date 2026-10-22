@@ -1,4 +1,4 @@
-"""CANN Bench MaskedScale interface implemented as a pyasc asc2 kernel.
+"""CANN Bench MaskedScale interface implemented as a pyasc asctile kernel.
 
 Kernel design (grid-stride, elementwise):
   - 1-D flatten; each block strides over tiles so any element count works.
@@ -22,7 +22,7 @@ Kernel design (grid-stride, elementwise):
 import torch
 
 import asc
-import asc2
+import asctile
 
 from ._pyasc_runtime import ensure_npu_platform
 
@@ -32,7 +32,7 @@ _NARROW_TILE = 1024
 _MAX_CORES = 72
 
 
-@asc2.jit
+@asctile.jit
 def _masked_scale_kernel(
     x_ptr: asc.GlobalAddress,
     mask_ptr: asc.GlobalAddress,
@@ -43,30 +43,30 @@ def _masked_scale_kernel(
     tile_size: asc.ConstExpr[int],
     mask_kind: asc.ConstExpr[int],
 ):
-    x_gm = asc2.global_tensor(x_ptr, [size])
-    mask_gm = asc2.global_tensor(mask_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(),
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    mask_gm = asctile.global_tensor(mask_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
                         unroll_factor=2):
         off = t * tile_size
         n = tile_size if off + tile_size <= size else size - off
-        x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])
+        x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[n])
         xf = x.to(asc.float32)
-        m = asc2.copy_in(mask_gm, [off], [tile_size], real_shape=[n])
+        m = asctile.copy_in(mask_gm, [off], [tile_size], real_shape=[n])
         if mask_kind == 0:
-            mh = asc2.cast(m, asc.float16)
+            mh = asctile.cast(m, asc.float16)
             mf = mh.to(asc.float32)
         elif mask_kind == 1:
-            mh = asc2.cast(m, asc.float16)
+            mh = asctile.cast(m, asc.float16)
             mf = mh.to(asc.float32)
-            mf = asc2.where(mf < 0.0, mf + 256.0, mf)
+            mf = asctile.where(mf < 0.0, mf + 256.0, mf)
         else:
             mf = m.to(asc.float32)
         y = (xf * mf) * scale
-        asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
+        asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])
 
 
-@asc2.jit
+@asctile.jit
 def _cast_mask_to_f32(
     mask_ptr: asc.GlobalAddress,
     temp_ptr: asc.GlobalAddress,
@@ -74,15 +74,15 @@ def _cast_mask_to_f32(
     num_tiles: int,
     tile_size: asc.ConstExpr[int],
 ):
-    mask_gm = asc2.global_tensor(mask_ptr, [size])
-    temp_gm = asc2.global_tensor(temp_ptr, [size])
-    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(),
+    mask_gm = asctile.global_tensor(mask_ptr, [size])
+    temp_gm = asctile.global_tensor(temp_ptr, [size])
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
                         unroll_factor=2):
         off = t * tile_size
         n = tile_size if off + tile_size <= size else size - off
-        m = asc2.copy_in(mask_gm, [off], [tile_size], real_shape=[n])
+        m = asctile.copy_in(mask_gm, [off], [tile_size], real_shape=[n])
         mf = m.to(asc.float32)
-        asc2.copy_out(mf, temp_gm, [off], real_shape=[n])
+        asctile.copy_out(mf, temp_gm, [off], real_shape=[n])
 
 
 def _is_cross_type(x_dtype, mask_dtype):
@@ -96,7 +96,7 @@ def _is_cross_type(x_dtype, mask_dtype):
 def masked_scale(
     x: torch.Tensor, mask: torch.Tensor, scale: float = 1.0
 ) -> torch.Tensor:
-    """Element-wise masked scale: y = x * mask * scale, via asc2 kernel."""
+    """Element-wise masked scale: y = x * mask * scale, via asctile kernel."""
     ensure_npu_platform()
     if not x.is_contiguous():
         x = x.contiguous()

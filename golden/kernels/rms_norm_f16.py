@@ -10,7 +10,7 @@ kernels with two adaptations:
     ``.to(asc.float32)`` so the sum-of-squares accumulator and the
     output multiply stay in float32.
   - The output is cast back to float16 via ``.to(x.dtype)`` before
-    ``asc2.store`` (matches the ``DTYPE_X`` template parameter on
+    ``asctile.copy_out`` (matches the ``DTYPE_X`` template parameter on
     CANN's ``KernelRmsNormRegBase`` / ``KernelRmsNormRegBaseSplitD``).
 
 Cell metadata (mirrors capabilities.yaml; do not drift):
@@ -51,10 +51,10 @@ Non-obvious constraints (Phase 1.5):
   - Accumulator dtype: ``float32`` for both branches. The float16
     cell casts ``x``/``gamma`` to float32 in-kernel before the
     reduce_sum and the output multiply, and casts back to float16
-    only before the final ``asc2.store``.
+    only before the final ``asctile.copy_out``.
   - Reduction axis: -1. The reduction is the row-wise mean-square.
   - Identity: ``"0"`` — the sum-of-squares accumulator starts at
-    zero (``asc2.full([1, tile_cols], 0.0, dtype=asc.float32)``).
+    zero (``asctile.full([1, tile_cols], 0.0, dtype=asc.float32)``).
   - Dispatcher choice (rms_norm only): full_row when
     ``num_cols * dtype_bytes <= UB_BUDGET_BYTES`` AND
     ``num_cols % 8 == 0``; otherwise split_d.
@@ -77,7 +77,7 @@ import torch
 
 import asc
 import asc.runtime.config as config
-import asc2
+import asctile
 
 CORE_NUM = 8
 TILE_COLS = 64
@@ -87,70 +87,70 @@ UB_BUDGET_BYTES = 64 * 1024
 logging.basicConfig(level=logging.INFO)
 
 
-@asc2.jit(reuse_alloc=1)
-def rms_norm_full_row_kernel(x_ptr: asc2.GlobalAddress, gamma_ptr: asc2.GlobalAddress,
-                             out_ptr: asc2.GlobalAddress,
+@asctile.jit(reuse_alloc=1)
+def rms_norm_full_row_kernel(x_ptr: asctile.GlobalAddress, gamma_ptr: asctile.GlobalAddress,
+                             out_ptr: asctile.GlobalAddress,
                              num_rows: int,
-                             num_cols: asc2.ConstExpr,
+                             num_cols: asctile.ConstExpr,
                              epsilon: asc.ConstExpr[float]):
     """Full-row variant for float16. Mirrors CANN's
     ``KernelRmsNormRegBase``; accumulator stays in float32.
     """
-    x_gm = asc2.global_tensor(x_ptr, [num_rows, num_cols])
-    gamma_gm_2d = asc2.global_tensor(gamma_ptr, [1, num_cols])
-    out_gm = asc2.global_tensor(out_ptr, [num_rows, num_cols])
+    x_gm = asctile.global_tensor(x_ptr, [num_rows, num_cols])
+    gamma_gm_2d = asctile.global_tensor(gamma_ptr, [1, num_cols])
+    out_gm = asctile.global_tensor(out_ptr, [num_rows, num_cols])
 
-    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
+    for row in asctile.range(asctile.block_idx(), num_rows, asctile.block_num(),
                           unroll_factor=2):
-        x_row = asc2.copy_in(x_gm, [row, 0], [1, num_cols])
+        x_row = asctile.copy_in(x_gm, [row, 0], [1, num_cols])
         x_row_f32 = x_row.to(asc.float32)
-        sum_sq = asc2.reduce_sum(x_row_f32 * x_row_f32)
-        inv_rms = 1.0 / asc2.sqrt(sum_sq / num_cols + epsilon)
+        sum_sq = asctile.reduce_sum(x_row_f32 * x_row_f32)
+        inv_rms = 1.0 / asctile.sqrt(sum_sq / num_cols + epsilon)
 
-        gamma_row = asc2.copy_in(gamma_gm_2d, [0, 0], [1, num_cols])
+        gamma_row = asctile.copy_in(gamma_gm_2d, [0, 0], [1, num_cols])
         gamma_row_f32 = gamma_row.to(asc.float32)
         out_f32 = x_row_f32 * gamma_row_f32 * inv_rms
-        asc2.copy_out(out_f32.to(x_row.dtype), out_gm, [row, 0])
+        asctile.copy_out(out_f32.to(x_row.dtype), out_gm, [row, 0])
 
 
-@asc2.jit(reuse_alloc=1)
-def rms_norm_split_d_kernel(x_ptr: asc2.GlobalAddress, gamma_ptr: asc2.GlobalAddress,
-                            out_ptr: asc2.GlobalAddress,
+@asctile.jit(reuse_alloc=1)
+def rms_norm_split_d_kernel(x_ptr: asctile.GlobalAddress, gamma_ptr: asctile.GlobalAddress,
+                            out_ptr: asctile.GlobalAddress,
                             num_rows: int, num_cols: int, padded_cols: int,
                             num_tiles: int,
-                            tile_cols: asc2.ConstExpr,
+                            tile_cols: asctile.ConstExpr,
                             epsilon: asc.ConstExpr[float]):
     """Split-D variant for float16. Mirrors CANN's
     ``KernelRmsNormRegBaseSplitD``; accumulator stays in float32; output
     is cast back to ``x.dtype`` before storing.
     """
-    x_gm = asc2.global_tensor(x_ptr, [num_rows, padded_cols])
-    gamma_gm_2d = asc2.global_tensor(gamma_ptr, [1, padded_cols])
-    out_gm = asc2.global_tensor(out_ptr, [num_rows, padded_cols])
+    x_gm = asctile.global_tensor(x_ptr, [num_rows, padded_cols])
+    gamma_gm_2d = asctile.global_tensor(gamma_ptr, [1, padded_cols])
+    out_gm = asctile.global_tensor(out_ptr, [num_rows, padded_cols])
 
-    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
+    for row in asctile.range(asctile.block_idx(), num_rows, asctile.block_num(),
                           unroll_factor=2):
-        zero_seed = asc2.full([1, tile_cols], 0.0, dtype=asc.float32)
-        sum_sq = asc2.reduce_sum(zero_seed)
+        zero_seed = asctile.full([1, tile_cols], 0.0, dtype=asc.float32)
+        sum_sq = asctile.reduce_sum(zero_seed)
 
         # Inner reduction loop carries `sum_sq` across iterations -> NOT parallel.
-        for tile_id in asc2.range(num_tiles, unroll_factor=2):
+        for tile_id in asctile.range(num_tiles, unroll_factor=2):
             col = tile_id * tile_cols
-            x = asc2.copy_in(x_gm, [row, col], [1, tile_cols])
+            x = asctile.copy_in(x_gm, [row, col], [1, tile_cols])
             x_f32 = x.to(asc.float32)
-            sum_sq = sum_sq + asc2.reduce_sum(x_f32 * x_f32)
+            sum_sq = sum_sq + asctile.reduce_sum(x_f32 * x_f32)
 
-        inv_rms = 1.0 / asc2.sqrt(sum_sq / num_cols + epsilon)
+        inv_rms = 1.0 / asctile.sqrt(sum_sq / num_cols + epsilon)
 
         # Disjoint write-back -> safe to parallelise.
-        for tile_id in asc2.range(num_tiles, unroll_factor=2):
+        for tile_id in asctile.range(num_tiles, unroll_factor=2):
             col = tile_id * tile_cols
-            x = asc2.copy_in(x_gm, [row, col], [1, tile_cols])
-            gamma = asc2.copy_in(gamma_gm_2d, [0, col], [1, tile_cols])
+            x = asctile.copy_in(x_gm, [row, col], [1, tile_cols])
+            gamma = asctile.copy_in(gamma_gm_2d, [0, col], [1, tile_cols])
             x_f32 = x.to(asc.float32)
             gamma_f32 = gamma.to(asc.float32)
             out_f32 = x_f32 * gamma_f32 * inv_rms
-            asc2.copy_out(out_f32.to(x.dtype), out_gm, [row, col])
+            asctile.copy_out(out_f32.to(x.dtype), out_gm, [row, col])
 
 
 def _full_row_launch(x: torch.Tensor, gamma: torch.Tensor, eps: float,

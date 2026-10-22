@@ -8,7 +8,7 @@ concrete defect is found. The exact public schema is:
 Split the even-sized selected dimension into `x0`, `x1` and compute in f32:
 `(x0 * sigmoid(x0)) * x1`; cast once to the input dtype. Output shape equals
 input shape with the selected dimension halved. Numerical work must remain in
-`@asc2.jit`; torch is limited to allocation, contiguity and metadata views.
+`@asctile.jit`; torch is limited to allocation, contiguity and metadata views.
 
 The 20 official routes cover f16/f32/bf16, rank 2 through 5, dimensions
 `-1/0/1/2`, aligned and prime tails, 150K through 134M input elements, ranges

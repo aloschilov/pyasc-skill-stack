@@ -41,12 +41,12 @@ print_section_header "Positive Domain Prompts"
 run_behavior_test \
     "Vector add kernel query" \
     "How do I implement a vector add kernel in pyasc?" \
-    "@asc2\.jit|@asc\.jit|kernel|asc2\.load|asc2\.store|asc2\.tensor|pyasc|asc\." \
+    "@asctile\.jit|@asc\.jit|kernel|asctile\.load|asctile\.store|asctile\.tensor|pyasc|asc\." \
     60
 
 run_behavior_test \
     "Supported syntax query" \
-    "What Python syntax is supported inside @asc2.jit functions in pyasc?" \
+    "What Python syntax is supported inside @asctile.jit functions in pyasc?" \
     "for.*range|supported|unsupported|ConstExpr|syntax|jit" \
     60
 
@@ -58,25 +58,25 @@ run_behavior_test \
 
 run_behavior_test \
     "Data copy API query" \
-    "How do I use asc2.load and asc2.store in pyasc to transfer data?" \
-    "asc2\.load|asc2\.store|asc2\.tensor|TPosition|copy|GM|UB" \
+    "How do I use asctile.copy_in and asctile.copy_out in pyasc to transfer data?" \
+    "asctile\.load|asctile\.store|asctile\.tensor|TensorLocation|copy|GM|UB" \
     60
 
 run_behavior_test \
     "Sync primitives query" \
-    "How do asc2.load and asc2.store relate to pipeline sync in pyasc?" \
-    "asc2\.load|asc2\.store|HardEvent|MTE2|sync|pipeline" \
+    "How do asctile.copy_in and asctile.copy_out relate to pipeline sync in pyasc?" \
+    "asctile\.load|asctile\.store|HardEvent|MTE2|sync|pipeline" \
     60
 
 run_behavior_test \
     "pyasc-api-patterns skill trigger" \
-    "What are the best practices for using asc2.load and asc2.store?" \
-    "asc2\.load|asc2\.store|asc2\.tensor|TPosition|copy|tensor|pyasc|asc\." \
+    "What are the best practices for using asctile.copy_in and asctile.copy_out?" \
+    "asctile\.load|asctile\.store|asctile\.tensor|TensorLocation|copy|tensor|pyasc|asc\." \
     60
 
 run_behavior_test \
     "pyasc-syntax-constraints skill trigger" \
-    "What Python constructs are banned inside @asc2.jit?" \
+    "What Python constructs are banned inside @asctile.jit?" \
     "syntax|unsupported|forbidden|jit|@asc|lambda|print|try" \
     60
 
@@ -108,7 +108,7 @@ run_behavior_test_negative_no_pyasc() {
     local name="$1"
     local prompt="$2"
     local timeout_val="${3:-45}"
-    local drift='@asc2\.jit|@asc\.jit|asc2\.tensor|GlobalTensor|LocalTensor|pyasc.*kernel|Ascend|NPU|asc2\.load.*pyasc|data_copy.*pyasc'
+    local drift='@asctile\.jit|@asc\.jit|asctile\.tensor|GlobalTensor|LocalTensor|pyasc.*kernel|Ascend|NPU|asctile\.load.*pyasc|data_copy.*pyasc'
 
     echo "Testing: $name"
 

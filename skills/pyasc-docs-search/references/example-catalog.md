@@ -1,40 +1,15 @@
-# pyasc Example and Test Catalog
+# Current pyasc v2 example catalog
 
-## Test examples by category
+Relative to the selected source root:
 
-### Unit tests (`~/workspace/pyasc/python/test/unit/`)
+- `python/test/asctile/target/`: handwritten production-oriented target tests
+- `python/test/asctile/kernels/`: focused end-to-end AscTile kernels
+- `python/test/asctile/unit/`: API-level behavior where present
+- `python/tutorials/asctile/`: current high-level tutorials
+- `examples/06_gelu`, `examples/07_swiglu`, `examples/08_rmsnorm`: runnable
+  operator examples
+- `python/test/kernels/`: lower-level `asc` API tests; do not copy them as
+  AscTile syntax without translating the programming model
 
-| Category | Path | Coverage |
-|----------|------|----------|
-| Codegen | `unit/codegen/` | AST visitor, code generation |
-| Basic APIs | `unit/language/basic/` | Vector ops, data copy |
-| Core APIs | `unit/language/core/` | Types, enums, sync |
-| Advanced APIs | `unit/language/adv/` | Matmul, advanced ops |
-| Framework APIs | `unit/language/fwk/` | TPipe, TQue |
-| Host lib | `unit/lib/host/` | Host-side helpers |
-| Runtime | `unit/runtime/` | Config, compilation |
-
-### Kernel tests (`~/workspace/pyasc/python/test/kernels/`)
-
-End-to-end kernel tests that compile and run on Model or NPU backend.
-
-### Generalization tests (`~/workspace/pyasc/python/test/generalization/`)
-
-| Category | Path |
-|----------|------|
-| Basic API generalization | `generalization/basic/` |
-| Advanced API generalization | `generalization/adv/` |
-
-### Backend tests (`~/workspace/pyasc/test/`)
-
-| Category | Path |
-|----------|------|
-| Dialect tests | `test/Dialect/` |
-| Target tests | `test/Target/AscendC/` |
-| Tool tests | `test/tools/` |
-
-## Useful test patterns
-
-- **Mock launcher**: `python/test/unit/` uses `mock_launcher_run` for testing without hardware
-- **Pytest**: Standard pytest runner: `pytest ./python/test/unit/language/basic/test_vector_binary.py`
-- **Build + run**: `bash test/build_llt.sh --run_python_ut`
+Choose the nearest example from the exact selected commit. Record a different
+commit as historical evidence rather than treating it as an API contract.

@@ -12,6 +12,7 @@ integrations/cannbench/comparisons/**/submissions/**/.base-dist/
 integrations/cannbench/comparisons/**/submissions/**/build/
 integrations/cannbench/comparisons/**/submissions/**/dist/
 integrations/cannbench/comparisons/**/submissions/**/*.egg-info/
+integrations/cannbench/comparisons/**/audits/*.jsonl
 
 # CANN Model writes these process-local simulator artifacts in the cwd.
 /instr.bin
@@ -93,3 +94,6 @@ infra/self-hosted-runner/.env
 docker/pyasc-overlay/asc_C/*.so
 docker/pyasc-overlay/asc_C/**/*.so
 .vscode/
+
+# Default CANNBench worker run artifacts (historical workers/runs is retained).
+/integrations/cannbench/workers/.scratch/cannbench/runs/

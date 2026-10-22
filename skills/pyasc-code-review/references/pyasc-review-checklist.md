@@ -1,69 +1,39 @@
-# pyasc Kernel Review Checklist
+# Current-v2 AscTile review checklist
 
-## Category 1: Syntax compliance
+## Contract
 
-| # | Check | Severity |
-|---|-------|----------|
-| 1.1 | All code inside `@asc.jit` uses supported syntax only | Critical |
-| 1.2 | No `print`, `break`, `continue`, `lambda`, `yield` | Critical |
-| 1.3 | No `try/except`, `raise`, `with open` | Critical |
-| 1.4 | No `import`/`from...import` inside JIT | Critical |
-| 1.5 | No nested functions, `global`, `nonlocal` | Critical |
-| 1.6 | No class methods as kernels | Critical |
-| 1.7 | No `async def`/`async with` | Critical |
-| 1.8 | Variables initialized before conditional use | High |
+- [ ] Exact callable name, parameters, defaults, output shape/dtype/list arity
+- [ ] Every task case, dtype, attribute, boundary, and special value covered
+- [ ] No case removal, narrowing, or host numerical fallback
 
-## Category 2: API correctness
+## API and syntax
 
-| # | Check | Severity |
-|---|-------|----------|
-| 2.1 | All APIs exist in documented pyasc surface | Critical |
-| 2.2 | API parameters match documented signatures | High |
-| 2.3 | Tensor positions correct (VECIN for input, VECOUT for output) | High |
-| 2.4 | Data copy direction correct (GM->UB or UB->GM) | High |
-| 2.5 | Element counts and offsets are correct | High |
+- [ ] `import asctile` and at least one real `@asctile.jit` numerical kernel
+- [ ] `global_tensor` + `copy_in/copy_out`; no legacy tile API
+- [ ] Supported JIT options, range kwargs, value kinds, and transpose axes
+- [ ] No unsupported Python constructs inside JIT
+- [ ] `asctile.concat(*tiles)` variadic, never a single list argument
+- [ ] String-typed numeric attrs (`epsilon`/`norm_eps`/`eps` values like
+  `'1e-05'`) coerced with `float()`/`int()` before reaching JIT arguments
+- [ ] List-valued attrs (`group_list`, etc.) stay host metadata: no tensor
+  methods on the list; materialize with whitelisted `torch.tensor` (never
+  `torch.as_tensor`) when the kernel needs them on-device
+- [ ] Host dispatch survives the shape-only gate replay: no unguarded
+  `.item()`/tensor-value reads; genuinely data-dependent reads use a
+  fallback that catches only the replay signature, is unreachable on the
+  real evaluator, and supplies shape metadata only — never numerical values
 
-## Category 3: JIT decoration
+## Memory and numerics
 
-| # | Check | Severity |
-|---|-------|----------|
-| 3.1 | Kernel function has `@asc.jit` decorator | Critical |
-| 3.2 | Kernel function does not return a value | Critical |
-| 3.3 | Device helper functions return top-level only | High |
-| 3.4 | Compile options are valid if specified | Medium |
+- [ ] Ranks/offsets/real shapes match and final physical dimensions align
+- [ ] Tail pad values are operation-neutral
+- [ ] Live local buffers fit memory after unrolling
+- [ ] Dtype promotion/casts and NaN/Inf/signed-zero behavior match the golden
+- [ ] Reductions use correct identities and cross-core combination
 
-## Category 4: Synchronization
+## Performance and evidence
 
-| # | Check | Severity |
-|---|-------|----------|
-| 4.1 | `set_flag`/`wait_flag` present between pipeline stages | Critical |
-| 4.2 | Correct events used (MTE2_V, V_MTE3, MTE3_MTE2) | High |
-| 4.3 | Buffer IDs match between set and wait | High |
-| 4.4 | No missing sync between copy and compute | Critical |
-
-## Category 5: Verification
-
-| # | Check | Severity |
-|---|-------|----------|
-| 5.1 | Output verification present | High |
-| 5.2 | Reference computation is correct | High |
-| 5.3 | Tolerance is reasonable for dtype | Medium |
-| 5.4 | Multiple test shapes if applicable | Low |
-
-## Category 6: Code quality
-
-| # | Check | Severity |
-|---|-------|----------|
-| 6.1 | Implementation matches design document | Medium |
-| 6.2 | No unnecessary hardcoded magic numbers | Medium |
-| 6.3 | Reasonable naming conventions | Low |
-| 6.4 | Launch function properly configured | Medium |
-
-## Scoring
-
-| Score | Criteria |
-|-------|----------|
-| 9-10 | No critical/high issues; clean code |
-| 8-8.9 | No critical issues; minor high issues addressed |
-| 7-7.9 | No critical issues; some high issues remain |
-| < 7 | Critical issues present; must fix before acceptance |
+- [ ] Shape-aware core count and tile size; contiguous DMA where possible
+- [ ] No unnecessary materialization, launch explosion, or repeated cast path
+- [ ] Exact-v2 compile matrix recorded
+- [ ] Camodel and CANNBench claims are scoped and linked independently

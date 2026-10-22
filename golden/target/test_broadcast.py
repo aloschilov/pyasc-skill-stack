@@ -8,67 +8,68 @@
 
 import math
 
-import asc2
+import asctile
 import pytest
 import torch
 
-STATIC = "static"
-DYNAMIC = "dynamic"
+from .helpers import parametrize_is_static
 
 
-@asc2.jit(reuse_alloc=1)
-def broadcast_scalar(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, input_length, output_num_rows,
-                     output_num_cols, tile_shape: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
-    in_gm = asc2.global_tensor(input_ptr, [input_length])
-    out_gm = asc2.global_tensor(output_ptr, [output_num_rows, output_num_cols])
+@asctile.jit(reuse_alloc=1)
+def broadcast_scalar(input_ptr: asctile.GlobalAddress, output_ptr: asctile.GlobalAddress, input_length, output_num_rows,
+                     output_num_cols, tile_shape: asctile.ConstExpr, unroll_factor: asctile.ConstExpr):
+    in_gm = asctile.global_tensor(input_ptr, [input_length])
+    out_gm = asctile.global_tensor(output_ptr, [output_num_rows, output_num_cols])
 
-    cols_per_block = asc2.ceildiv(output_num_cols, asc2.block_num())
-    start_offset = asc2.block_idx() * cols_per_block
-    column_iters = asc2.ceildiv(cols_per_block, tile_shape[1])
+    cols_per_block = asctile.ceildiv(output_num_cols, asctile.block_num())
+    start_offset = asctile.block_idx() * cols_per_block
+    column_iters = asctile.ceildiv(cols_per_block, tile_shape[1])
 
-    for i in asc2.range(column_iters, unroll_factor=unroll_factor):
-        scalar = asc2.copy_in(in_gm, [0])
-        res = asc2.full(tile_shape, scalar)
-        asc2.copy_out(res, out_gm, [0, start_offset + i * tile_shape[1]])
+    for i in asctile.range(column_iters, unroll_factor=unroll_factor):
+        scalar = asctile.copy_in(in_gm, [0])
+        res = asctile.full(tile_shape, scalar)
+        asctile.copy_out(res, out_gm, [0, start_offset + i * tile_shape[1]])
 
 
-@asc2.jit(reuse_alloc=1)
-def broadcast_first_dim(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, input_length, output_num_rows,
-                        output_num_cols, tile_shape: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
-    in_gm = asc2.global_tensor(input_ptr, [input_length])
-    out_gm = asc2.global_tensor(output_ptr, [output_num_rows, output_num_cols])
+@asctile.jit(reuse_alloc=1)
+def broadcast_first_dim(input_ptr: asctile.GlobalAddress, output_ptr: asctile.GlobalAddress, input_length,
+                        output_num_rows, output_num_cols, tile_shape: asctile.ConstExpr,
+                        unroll_factor: asctile.ConstExpr):
+    in_gm = asctile.global_tensor(input_ptr, [input_length])
+    out_gm = asctile.global_tensor(output_ptr, [output_num_rows, output_num_cols])
 
-    rows_per_block = asc2.ceildiv(output_num_rows, asc2.block_num())
-    start_offset = asc2.block_idx() * rows_per_block
-    row_iters = asc2.ceildiv(rows_per_block, tile_shape[0])
+    rows_per_block = asctile.ceildiv(output_num_rows, asctile.block_num())
+    start_offset = asctile.block_idx() * rows_per_block
+    row_iters = asctile.ceildiv(rows_per_block, tile_shape[0])
 
-    column_iters = asc2.ceildiv(output_num_cols, tile_shape[1])
+    column_iters = asctile.ceildiv(output_num_cols, tile_shape[1])
 
-    for j in asc2.range(column_iters, unroll_factor=unroll_factor):
+    for j in asctile.range(column_iters, unroll_factor=unroll_factor):
         col_start_offset = j * tile_shape[1]
-        tensor_part = asc2.copy_in(in_gm, [col_start_offset], [tile_shape[1]])
+        tensor_part = asctile.copy_in(in_gm, [col_start_offset], [tile_shape[1]])
         res = tensor_part.broadcast_to(tile_shape[0], tile_shape[1])
-        for i in asc2.range(row_iters):
-            asc2.copy_out(res, out_gm, [start_offset + i * tile_shape[0], col_start_offset])
+        for i in asctile.range(row_iters):
+            asctile.copy_out(res, out_gm, [start_offset + i * tile_shape[0], col_start_offset])
 
 
-@asc2.jit(reuse_alloc=1)
-def broadcast_last_dim(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, input_length, output_num_rows,
-                       output_num_cols, tile_shape: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
-    in_gm = asc2.global_tensor(input_ptr, [input_length])
-    out_gm = asc2.global_tensor(output_ptr, [output_num_rows, output_num_cols])
+@asctile.jit(reuse_alloc=1)
+def broadcast_last_dim(input_ptr: asctile.GlobalAddress, output_ptr: asctile.GlobalAddress, input_length,
+                       output_num_rows, output_num_cols, tile_shape: asctile.ConstExpr,
+                       unroll_factor: asctile.ConstExpr):
+    in_gm = asctile.global_tensor(input_ptr, [input_length])
+    out_gm = asctile.global_tensor(output_ptr, [output_num_rows, output_num_cols])
 
-    rows_per_block = asc2.ceildiv(output_num_rows, asc2.block_num())
-    start_offset = asc2.block_idx() * rows_per_block
-    row_iters = asc2.ceildiv(rows_per_block, tile_shape[0])
-    column_iters = asc2.ceildiv(output_num_cols, tile_shape[1])
+    rows_per_block = asctile.ceildiv(output_num_rows, asctile.block_num())
+    start_offset = asctile.block_idx() * rows_per_block
+    row_iters = asctile.ceildiv(rows_per_block, tile_shape[0])
+    column_iters = asctile.ceildiv(output_num_cols, tile_shape[1])
 
-    for i in asc2.range(row_iters, unroll_factor=unroll_factor):
+    for i in asctile.range(row_iters, unroll_factor=unroll_factor):
         row_start_offset = start_offset + i * tile_shape[0]
-        tensor_part = asc2.copy_in(in_gm, [row_start_offset], [tile_shape[0]]).reshape(tile_shape[0], 1)
+        tensor_part = asctile.copy_in(in_gm, [row_start_offset], [tile_shape[0]]).reshape(tile_shape[0], 1)
         res = tensor_part.broadcast_to(tile_shape[0], tile_shape[1])
-        for j in asc2.range(column_iters, gm_barrier=True):
-            asc2.copy_out(res, out_gm, [row_start_offset, j * tile_shape[1]])
+        for j in asctile.range(column_iters, gm_barrier=True):
+            asctile.copy_out(res, out_gm, [row_start_offset, j * tile_shape[1]])
 
 
 def get_broadcast_axes(input_shape, output_shape):
@@ -85,7 +86,7 @@ def get_broadcast_axes(input_shape, output_shape):
 
 
 # yapf: disable
-@pytest.mark.parametrize("kernel_type", [STATIC, DYNAMIC])
+@parametrize_is_static()
 @pytest.mark.parametrize("test_name, block_num, input_shapes, input_dtypes, output_shapes, output_dtypes, compile_params, runtime_params, tiling_key, tiling_params", [
 # PYASC_TESTS_BEGIN
     ("broadcast_test_1", 4, ([1, 5, 5], ), (torch.int32, ), ([8, 5, 5], ), (torch.int32, ), None, ([8, 5, 5], ), 11001, (11001, 1, 0, 2, 1, 2, 64, 4, 1, 1, 1, 1, 2, 2, 1, 2, 25, 25, 0, 0, 0, 0, [0, 1, 0, 0, 0], [25, 1, 0, 0, 0], [2, 25, 1, 1, 1], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])),
@@ -130,7 +131,7 @@ def get_broadcast_axes(input_shape, output_shape):
 # PYASC_TESTS_END
 ])
 # yapf: enable
-def test_broadcast(profiler, runs, kernel_type, test_name, block_num, input_shapes, input_dtypes, output_shapes,
+def test_broadcast(profiler, runs, is_static, test_name, block_num, input_shapes, input_dtypes, output_shapes,
                    output_dtypes, compile_params, runtime_params, tiling_key, tiling_params):
     input_shape = input_shapes[0]
     output_shape = output_shapes[0]
@@ -150,7 +151,7 @@ def test_broadcast(profiler, runs, kernel_type, test_name, block_num, input_shap
 
     # Alignment for tile_shape
     ALIGNMENT_ELEMENTS = 32 // dtype.itemsize
-    tile_shape = [tile_shape[0], asc2.ceildiv(tile_shape[1], ALIGNMENT_ELEMENTS) * ALIGNMENT_ELEMENTS]
+    tile_shape = [tile_shape[0], asctile.ceildiv(tile_shape[1], ALIGNMENT_ELEMENTS) * ALIGNMENT_ELEMENTS]
 
     if is_scalar_input:
         input_shape_2d = [1, 1]
@@ -179,8 +180,11 @@ def test_broadcast(profiler, runs, kernel_type, test_name, block_num, input_shap
         out_tensor = torch.ones(output_shape_2d, dtype=dtype)
 
         params = [in_tensor, out_tensor]
-        if kernel_type == STATIC:
-            params.extend([asc2.ConstExpr(1), asc2.ConstExpr(output_shape_2d[0]), asc2.ConstExpr(output_shape_2d[1])])
+        if is_static:
+            params.extend(
+                [asctile.ConstExpr(1),
+                 asctile.ConstExpr(output_shape_2d[0]),
+                 asctile.ConstExpr(output_shape_2d[1])])
         else:
             params.extend([1, output_shape_2d[0], output_shape_2d[1]])
         params.extend([tile_shape, unroll_factor])
@@ -199,11 +203,12 @@ def test_broadcast(profiler, runs, kernel_type, test_name, block_num, input_shap
         out_tensor = torch.ones(output_shape_2d, dtype=dtype)
 
         params = [in_tensor, out_tensor]
-        if kernel_type == STATIC:
-            params.extend(
-                [asc2.ConstExpr(input_length),
-                 asc2.ConstExpr(output_shape_2d[0]),
-                 asc2.ConstExpr(output_shape_2d[1])])
+        if is_static:
+            params.extend([
+                asctile.ConstExpr(input_length),
+                asctile.ConstExpr(output_shape_2d[0]),
+                asctile.ConstExpr(output_shape_2d[1])
+            ])
         else:
             params.extend([input_length, output_shape_2d[0], output_shape_2d[1]])
         params.extend([tile_shape, unroll_factor])

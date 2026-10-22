@@ -11,8 +11,10 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+from source_contract import check_high_level_source, package_sources
 
-PYASC_COMMIT = "ac1222a48c8914d3f81297c7570d1a84f0f26778"
+
+PYASC_COMMIT = "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d"
 PYASC_SOURCE_URL = f"https://gitcode.com/compiler-team/pyasc/tree/{PYASC_COMMIT}"
 
 
@@ -58,9 +60,9 @@ def main() -> None:
     parser.add_argument("--pybind11-wheel", required=True, type=Path)
     parser.add_argument("--license", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--promotions", type=Path)
     args = parser.parse_args()
 
-    args.output_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="cann-bench-wheel-") as temp:
         temp_path = Path(temp)
         base_root = temp_path / "base"
@@ -71,6 +73,10 @@ def main() -> None:
         pybind11_root.mkdir()
         with zipfile.ZipFile(args.base_wheel) as archive:
             archive.extractall(base_root)
+        for source in package_sources(base_root / "cann_bench", args.promotions):
+            problems = check_high_level_source(source)
+            if problems:
+                raise ValueError(f"high-level source contract failed for {source}: {problems}")
         with zipfile.ZipFile(args.runtime_wheel) as archive:
             archive.extractall(runtime_root)
         with zipfile.ZipFile(args.pybind11_wheel) as archive:
@@ -79,7 +85,7 @@ def main() -> None:
         base_dist_info = one(base_root, "*.dist-info")
         runtime_dist_info = one(runtime_root, "*.dist-info")
         pybind11_dist_info = one(pybind11_root, "*.dist-info")
-        for package in ("asc", "asc2"):
+        for package in ("asc", "asctile"):
             source = runtime_root / package
             if not source.is_dir():
                 raise RuntimeError(f"pyasc runtime wheel is missing {package}/")
@@ -97,6 +103,7 @@ def main() -> None:
         add_source_metadata(base_dist_info / "METADATA")
         (base_dist_info / "RECORD").unlink(missing_ok=True)
 
+        args.output_dir.mkdir(parents=True, exist_ok=True)
         subprocess.run(
             [sys.executable, "-m", "wheel", "pack", "--dest-dir", str(args.output_dir), str(base_root)],
             check=True,

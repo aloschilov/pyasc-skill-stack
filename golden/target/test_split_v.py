@@ -6,49 +6,49 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 
-import asc2
+import asctile
 import pytest
 import torch
 
-STATIC = "static"
-DYNAMIC = "dynamic"
+from .helpers import parametrize_is_static
 
 
-@asc2.jit(reuse_alloc=1)
-def split_v(input_ptr: asc2.GlobalAddress, output0_ptr: asc2.GlobalAddress, output1_ptr: asc2.GlobalAddress,
-            input_length, split_boundary, tile_length, ub_chunk_size: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
-    in_gm = asc2.global_tensor(input_ptr, [input_length])
-    out0_gm = asc2.global_tensor(output0_ptr, [split_boundary])
-    out1_gm = asc2.global_tensor(output1_ptr, [input_length - split_boundary])
+@asctile.jit(reuse_alloc=1)
+def split_v(input_ptr: asctile.GlobalAddress, output0_ptr: asctile.GlobalAddress, output1_ptr: asctile.GlobalAddress,
+            input_length, split_boundary, tile_length, ub_chunk_size: asctile.ConstExpr,
+            unroll_factor: asctile.ConstExpr):
+    in_gm = asctile.global_tensor(input_ptr, [input_length])
+    out0_gm = asctile.global_tensor(output0_ptr, [split_boundary])
+    out1_gm = asctile.global_tensor(output1_ptr, [input_length - split_boundary])
 
-    block_loop_num = asc2.ceildiv(asc2.ceildiv(input_length, asc2.block_num()), tile_length)
+    block_loop_num = asctile.ceildiv(asctile.ceildiv(input_length, asctile.block_num()), tile_length)
     block_length = tile_length * block_loop_num
-    block_offset = block_length * asc2.block_idx()
-    chunks_per_tile = asc2.ceildiv(tile_length, ub_chunk_size)
+    block_offset = block_length * asctile.block_idx()
+    chunks_per_tile = asctile.ceildiv(tile_length, ub_chunk_size)
 
-    for i in asc2.range(block_loop_num, unroll_factor=unroll_factor):
+    for i in asctile.range(block_loop_num, unroll_factor=unroll_factor):
         tile_offset = block_offset + i * tile_length
-        for j in asc2.range(chunks_per_tile, gm_barrier=True):
+        for j in asctile.range(chunks_per_tile, gm_barrier=True):
             current_offset = tile_offset + j * ub_chunk_size
             remaining = tile_length - j * ub_chunk_size
             chunk_size = ub_chunk_size if remaining >= ub_chunk_size else remaining
             if current_offset + chunk_size <= split_boundary:
-                tile = asc2.copy_in(in_gm, [current_offset], [ub_chunk_size], real_shape=[chunk_size])
-                asc2.copy_out(tile, out0_gm, [current_offset], real_shape=[chunk_size])
+                tile = asctile.copy_in(in_gm, [current_offset], [ub_chunk_size])
+                asctile.copy_out(tile, out0_gm, [current_offset])
             elif current_offset >= split_boundary:
-                tile = asc2.copy_in(in_gm, [current_offset], [ub_chunk_size], real_shape=[chunk_size])
-                asc2.copy_out(tile, out1_gm, [current_offset - split_boundary], real_shape=[chunk_size])
+                tile = asctile.copy_in(in_gm, [current_offset], [ub_chunk_size])
+                asctile.copy_out(tile, out1_gm, [current_offset - split_boundary])
             else:
                 part1 = split_boundary - current_offset
-                tile1 = asc2.copy_in(in_gm, [current_offset], [ub_chunk_size], real_shape=[part1])
-                asc2.copy_out(tile1, out0_gm, [current_offset], real_shape=[part1])
+                tile1 = asctile.copy_in(in_gm, [current_offset], [ub_chunk_size], real_shape=[part1])
+                asctile.copy_out(tile1, out0_gm, [current_offset], real_shape=[part1])
                 part2 = chunk_size - part1
-                tile2 = asc2.copy_in(in_gm, [split_boundary], [ub_chunk_size], real_shape=[part2])
-                asc2.copy_out(tile2, out1_gm, [0], real_shape=[part2])
+                tile2 = asctile.copy_in(in_gm, [split_boundary], [ub_chunk_size], real_shape=[part2])
+                asctile.copy_out(tile2, out1_gm, [0], real_shape=[part2])
 
 
 # yapf: disable
-@pytest.mark.parametrize("kernel_type", [STATIC, DYNAMIC])
+@parametrize_is_static()
 @pytest.mark.parametrize("test_name, block_num, input_shapes, input_dtypes, output_shapes, output_dtypes, compile_params, runtime_params, tiling_key, tiling_params", [
 # PYASC_TESTS_BEGIN
     ("split_v_test_1", 9, ([1034, 16], ), (torch.float32, ), ([1024, 16], [10, 16]), (torch.float32, torch.float32), (2, ), (2, 2, [1024, 10], 0), 103, (253952, 0, 16, 1, 1, 1, 1, 0, 0, 2, 0, 1839, 1840, 1838, 1840, 2, 9, 9, 0, 0, 16544, 16544, 1, -1, 0, 1, 1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [1, 1, 1, 1, 1, 1, 1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384], [16544, 16544, 16544, 16544, 16544, 16544, 16544, 16544, 16544, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384])),
@@ -81,7 +81,7 @@ def split_v(input_ptr: asc2.GlobalAddress, output0_ptr: asc2.GlobalAddress, outp
 # PYASC_TESTS_END
 ])
 # yapf: enable
-def test_split_2d(profiler, runs, kernel_type, test_name, block_num, input_shapes, input_dtypes, output_shapes,
+def test_split_2d(profiler, runs, is_static, test_name, block_num, input_shapes, input_dtypes, output_shapes,
                   output_dtypes, compile_params, runtime_params, tiling_key, tiling_params):
     input_shape = input_shapes[0]
     dtype = input_dtypes[0]
@@ -90,7 +90,7 @@ def test_split_2d(profiler, runs, kernel_type, test_name, block_num, input_shape
     split_sizes = runtime_params[2]
     unroll_factor = runtime_params[0]
 
-    UB_CHUNK_SIZE = 248 * 1024 // 4 // dtype.itemsize  # 248KB / 4 buffers / size_of(in_out_dtype)
+    UB_CHUNK_SIZE = 248 * 1024 // 2 // dtype.itemsize  # 248KB / 2 buffers / size_of(in_out_dtype)
     ub_chunk_size = tile_length if tile_length <= UB_CHUNK_SIZE else UB_CHUNK_SIZE
     dim0, dim1 = input_shape
     input_length = dim0 * dim1
@@ -101,8 +101,11 @@ def test_split_2d(profiler, runs, kernel_type, test_name, block_num, input_shape
     output1 = torch.empty(split_sizes[1], dim1, dtype=dtype)
 
     params = [input_tensor, output0, output1]
-    if kernel_type == STATIC:
-        params.extend([asc2.ConstExpr(input_length), asc2.ConstExpr(split_boundary), asc2.ConstExpr(tile_length)])
+    if is_static:
+        params.extend(
+            [asctile.ConstExpr(input_length),
+             asctile.ConstExpr(split_boundary),
+             asctile.ConstExpr(tile_length)])
     else:
         params.extend([input_length, split_boundary, tile_length])
     params.extend([ub_chunk_size, unroll_factor])

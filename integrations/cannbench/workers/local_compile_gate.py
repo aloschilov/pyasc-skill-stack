@@ -27,9 +27,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from contracts import case_arguments, load_contract
 
 
-PYASC_COMMIT = "ac1222a48c8914d3f81297c7570d1a84f0f26778"
+PYASC_COMMIT = "0a631f70968c3cb7c33ce45330a85768dd5a6f06"
 PLATFORM = "Ascend950PR_9599"
 
 
@@ -64,6 +65,7 @@ class FakeTensor:
         self.shape = tuple(int(v) for v in shape)
         self.dtype = dtype
         self.device = device
+        self._strides = None
 
     @property
     def ndim(self) -> int:
@@ -79,10 +81,80 @@ class FakeTensor:
         return self.dtype.itemsize
 
     def is_contiguous(self) -> bool:
+        expected = 1
+        for size, stride in zip(reversed(self.shape), reversed(self.stride())):
+            if size == 0:
+                return True
+            if size != 1 and stride != expected:
+                return False
+            expected *= size
         return True
 
-    def contiguous(self) -> "FakeTensor":
-        return self
+    def contiguous(self, *_: Any, **__: Any) -> "FakeTensor":
+        return self if self.is_contiguous() else FakeTensor(self.shape, self.dtype, self.device)
+
+    def expand(self, *sizes: Any) -> "FakeTensor":
+        if len(sizes) == 1 and isinstance(sizes[0], (list, tuple)):
+            sizes = tuple(sizes[0])
+        if len(sizes) < self.ndim:
+            raise RuntimeError("expand cannot reduce tensor rank")
+        leading = len(sizes) - self.ndim
+        shape, strides = [], []
+        padded_shape = (1,) * leading + self.shape
+        original_strides = list(self.stride())
+        for axis in reversed(range(leading)):
+            following = original_strides[0] * padded_shape[axis + 1] if original_strides else 1
+            original_strides.insert(0, following)
+        for axis, raw in enumerate(sizes):
+            target = int(raw)
+            source = 1 if axis < leading else self.shape[axis - leading]
+            if target == -1:
+                if axis < leading:
+                    raise RuntimeError("expand cannot infer a new leading dimension")
+                target = source
+            if target < 0 or (source != target and source != 1):
+                raise RuntimeError("expand dimension is not broadcastable")
+            shape.append(target)
+            strides.append(0 if target != source else original_strides[axis])
+        result = FakeTensor(shape, self.dtype, self.device)
+        result._strides = tuple(strides)
+        return result
+
+    def squeeze(self, dim=None) -> "FakeTensor":
+        if dim is None:
+            shape = tuple(size for size in self.shape if size != 1)
+        else:
+            dimensions = dim if isinstance(dim, (tuple, list)) else (dim,)
+            rank = max(self.ndim, 1)
+            normalized = []
+            for dimension in dimensions:
+                if not -rank <= dimension < rank:
+                    raise IndexError("squeeze dimension out of range")
+                axis = dimension % rank
+                if axis in normalized:
+                    raise RuntimeError("squeeze dimension appears multiple times")
+                normalized.append(axis)
+            shape = tuple(size for axis, size in enumerate(self.shape) if axis not in normalized or size != 1)
+        return FakeTensor(shape, self.dtype, self.device)
+
+    def unsqueeze(self, dim: int) -> "FakeTensor":
+        rank = self.ndim + 1
+        if not -rank <= dim < rank:
+            raise IndexError("unsqueeze dimension out of range")
+        shape = list(self.shape)
+        shape.insert(dim % rank, 1)
+        return FakeTensor(shape, self.dtype, self.device)
+
+    def stride(self, dim: int | None = None):
+        if self._strides is not None:
+            return self._strides if dim is None else self._strides[dim]
+        values = []
+        running = 1
+        for size in reversed(self.shape):
+            values.append(running)
+            running *= size
+        strides = tuple(reversed(values))
+        return strides if dim is None else strides[dim]
 
     def size(self, dim: int | None = None):
         return self.shape if dim is None else self.shape[dim]
@@ -110,8 +182,15 @@ class FakeTensor:
             shape[idx] = self.numel() // known
         return FakeTensor(shape, self.dtype, self.device)
 
-    def flatten(self) -> "FakeTensor":
-        return FakeTensor((self.numel(),), self.dtype, self.device)
+    def flatten(self, start_dim=0, end_dim=-1) -> "FakeTensor":
+        rank = max(self.ndim, 1)
+        if not -rank <= start_dim < rank or not -rank <= end_dim < rank:
+            raise IndexError("flatten dimension out of range")
+        start, end = start_dim % rank, end_dim % rank
+        if start > end:
+            raise RuntimeError("flatten start dimension exceeds end dimension")
+        shape = self.shape[:start] + (math.prod(self.shape[start:end + 1]),) + self.shape[end + 1:]
+        return FakeTensor(shape, self.dtype, self.device)
 
     def __len__(self) -> int:
         return self.shape[0]
@@ -130,6 +209,24 @@ class FakeTorch(types.ModuleType):
             setattr(self, name, dtype)
         self.half = DTYPES["float16"]
         self.float = DTYPES["float32"]
+
+    @staticmethod
+    def broadcast_shapes(*shapes: Any) -> tuple[int, ...]:
+        """Broadcast host shape metadata without evaluating tensor values."""
+        result: list[int] = []
+        for shape in shapes:
+            dims = (shape,) if isinstance(shape, int) else tuple(shape)
+            if any(not isinstance(dim, int) or dim < 0 for dim in dims):
+                raise RuntimeError("broadcast_shapes requires nonnegative integer dimensions")
+            if len(dims) > len(result):
+                result = [1] * (len(dims) - len(result)) + result
+            for offset, dim in enumerate(reversed(dims), 1):
+                current = result[-offset]
+                if current == 1:
+                    result[-offset] = dim
+                elif dim != 1 and dim != current:
+                    raise RuntimeError("Shape mismatch: objects cannot be broadcast to a single shape")
+        return tuple(result)
 
     @staticmethod
     def _shape(args: tuple[Any, ...]) -> tuple[int, ...]:
@@ -155,6 +252,41 @@ class FakeTorch(types.ModuleType):
 
     @staticmethod
     def zeros_like(tensor: FakeTensor, **_: Any) -> FakeTensor:
+        return FakeTensor(tensor.shape, tensor.dtype, tensor.device)
+
+    def arange(self, *args: Any, dtype=None, device=None, **_: Any) -> FakeTensor:
+        """Shape/dtype metadata for torch.arange; values are not materialized."""
+        if len(args) == 1:
+            start, stop, step = 0, args[0], 1
+        elif len(args) == 2:
+            start, stop = args
+            step = 1
+        elif len(args) == 3:
+            start, stop, step = args
+        else:
+            raise TypeError(f"arange expected 1-3 positional arguments, got {len(args)}")
+        if step == 0:
+            raise RuntimeError("arange step must be nonzero")
+        span = stop - start
+        if (step > 0 and span <= 0) or (step < 0 and span >= 0):
+            length = 0
+        else:
+            length = -(-span // step)
+        return FakeTensor((max(int(length), 0),), dtype or self.int64, device or "npu:0")
+
+    def ones(self, *shape: Any, dtype=None, device=None, **_: Any) -> FakeTensor:
+        return FakeTensor(self._shape(shape), dtype or self.float32, device or "npu:0")
+
+    def full(self, shape: Any, fill_value: Any, dtype=None, device=None, **_: Any) -> FakeTensor:
+        dims = tuple(shape) if isinstance(shape, (list, tuple)) else (shape,)
+        return FakeTensor(dims, dtype or self.float32, device or "npu:0")
+
+    @staticmethod
+    def ones_like(tensor: FakeTensor, **_: Any) -> FakeTensor:
+        return FakeTensor(tensor.shape, tensor.dtype, tensor.device)
+
+    @staticmethod
+    def full_like(tensor: FakeTensor, fill_value: Any, **_: Any) -> FakeTensor:
         return FakeTensor(tensor.shape, tensor.dtype, tensor.device)
 
 
@@ -203,7 +335,11 @@ def tensor(shape: Any, dtype: str) -> FakeTensor:
     return FakeTensor(shape, DTYPES[dtype])
 
 
-def case_call(op: str, fn: Any, case: dict[str, Any]) -> Any:
+def case_call(op: str, fn: Any, case: dict[str, Any], proto: dict | None = None) -> Any:
+    if proto is not None:
+        arguments = case_arguments(proto, case, tensor)
+        inspect.signature(fn).bind(**arguments)
+        return fn(**arguments)
     shapes = case["input_shape"]
     dtypes = case["dtype"]
     attrs = case.get("attrs") or {}
@@ -215,6 +351,8 @@ def case_call(op: str, fn: Any, case: dict[str, Any]) -> Any:
         return fn(tensor(shapes[0], dtypes[0]), **attrs)
     if op == "rms_norm":
         return fn(tensor(shapes[0], dtypes[0]), tensor(shapes[1], dtypes[1]), **attrs)
+    if op in {"softmax", "transpose"}:
+        return fn(tensor(shapes[0], dtypes[0]), **attrs)
     if op == "foreach_norm":
         xs = [tensor(shape, dtypes[0]) for shape in shapes[0]]
         return fn(xs, **attrs)
@@ -231,9 +369,21 @@ def load_candidate(path: Path, op: str):
     package = types.ModuleType(package_name)
     package.__path__ = [str(path.parent)]
     sys.modules[package_name] = package
-    runtime = types.ModuleType(f"{package_name}._pyasc_runtime")
+    runtime_name = f"{package_name}._pyasc_runtime"
+    runtime_path = path.parent / "_pyasc_runtime.py"
+    if runtime_path.is_file():
+        runtime_spec = importlib.util.spec_from_file_location(
+            runtime_name, runtime_path
+        )
+        if runtime_spec is None or runtime_spec.loader is None:
+            raise RuntimeError(f"cannot import {runtime_path}")
+        runtime = importlib.util.module_from_spec(runtime_spec)
+        sys.modules[runtime_name] = runtime
+        runtime_spec.loader.exec_module(runtime)
+    else:
+        runtime = types.ModuleType(runtime_name)
+        sys.modules[runtime_name] = runtime
     runtime.ensure_npu_platform = lambda: None
-    sys.modules[runtime.__name__] = runtime
     spec = importlib.util.spec_from_file_location(f"{package_name}.{op}", path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot import {path}")
@@ -281,8 +431,8 @@ def compile_specialization(jit: Any, prepared: tuple[Any, ...]) -> dict[str, Any
 
     _, arg_types, constexprs, codegen_options, compile_options = prepared
     module = jit._run_codegen(Specialization(arg_types, constexprs), codegen_options)
-    # Use the compiler class bound to this JIT object. asc2.JITFunction binds
-    # asc2.runtime.compiler.Compiler; using asc.runtime.Compiler here silently
+    # Use the compiler class bound to this JIT object. asctile.JITFunction binds
+    # asctile.runtime.compiler.Compiler; using asc.runtime.Compiler here silently
     # skips the AscTile lowering pipeline and leaves local tensors untranslated.
     compiler = jit.compiler(compile_options)
     compiler.preprocess_module(module)
@@ -290,16 +440,53 @@ def compile_specialization(jit: Any, prepared: tuple[Any, ...]) -> dict[str, Any
         compiler.run_passes(module)
     compiler.postprocess_module(module)
     source = compiler.run_translation(module)
-    memory = module.op.get_dict_of_int_attr(ir.attr.memory_consumed)
+    # Low-level ``asc.jit`` kernels use explicit/local-auto buffers and the
+    # current v2 pipeline may omit the module-level memory_consumed attribute.
+    # Translation has still completed successfully; treat the absent optional
+    # metadata as unknown/empty instead of failing the compile gate itself.
+    memory = module.op.get_dict_of_int_attr(ir.attr.memory_consumed) or {}
     jit.launcher.check_memory_overflow(memory)
+    kernel_args = [str(kind) for kind in ir.get_kernel_arg_attrs(module)]
+    if any("FftsAddr" in kind for kind in kernel_args):
+        raise RuntimeError("FFTS argument is incompatible with the CANNBench 950PR evaluator")
     return {
         "status": "passed",
         "memory_consumed": memory,
         "ascendc_bytes": len(source.encode("utf-8")),
+        "kernel_args": kernel_args,
+        "has_ffts_arg": any("FftsAddr" in kind for kind in kernel_args),
     }
 
 
-def evaluate(candidate: Path, op: str, cases_path: Path) -> dict[str, Any]:
+def load_compile_cases(cases_path, overlay_root=None, overlay_sha256=None):
+    """Share the numerical runner's source restoration verifier, before dispatch."""
+    if bool(overlay_root) != bool(overlay_sha256):
+        raise ValueError('source overlay and its SHA256 must be paired')
+    cases_path = Path(cases_path)
+    cases = yaml.safe_load(cases_path.read_text(encoding='utf-8'))['cases']
+    restorations = {}
+    if overlay_root is not None:
+        from reconcile_case_source import load_verified_overlay
+        if cases_path.name != 'cases.yaml':
+            raise ValueError('source overlay requires canonical cases.yaml')
+        if not cases:
+            raise ValueError('source overlay requires nonempty cases')
+        for i, case in enumerate(cases):
+            case_id = int(case['case_id'])
+            restored = load_verified_overlay(overlay_root, overlay_sha256,
+                                             cases_path.parent, case_id)
+            if restored is not None:
+                raw, evidence = restored
+                if raw.get('case_id') != case['case_id']:
+                    raise ValueError('source restoration changed case identity')
+                cases[i] = raw
+                restorations[str(case_id)] = evidence
+    return cases, restorations
+
+
+def evaluate(candidate: Path, op: str, cases_path: Path, proto: dict | None = None,
+             *, source_overlay=None, source_overlay_sha256=None) -> dict[str, Any]:
+    cases, restorations = load_compile_cases(cases_path, source_overlay, source_overlay_sha256)
     import asc.runtime.config as config
     from asc.runtime.jit import JITFunction
 
@@ -313,7 +500,6 @@ def evaluate(candidate: Path, op: str, cases_path: Path) -> dict[str, Any]:
         name: value for name, value in vars(module).items()
         if isinstance(value, JITFunction)
     }
-    cases = yaml.safe_load(cases_path.read_text(encoding="utf-8"))["cases"]
     launches: list[Launch] = []
     case_results: list[dict[str, Any]] = []
     compiled: dict[str, dict[str, Any]] = {}
@@ -336,7 +522,7 @@ def evaluate(candidate: Path, op: str, cases_path: Path) -> dict[str, Any]:
                     ),
                 )
             try:
-                case_call(op, fn, case)
+                case_call(op, fn, case, proto)
                 dispatch_error = None
             except Exception as exc:
                 dispatch_error = f"{type(exc).__name__}: {exc}"
@@ -420,6 +606,8 @@ def evaluate(candidate: Path, op: str, cases_path: Path) -> dict[str, Any]:
         "status": "passed" if dispatch_passed == len(cases)
                   and compile_passed == len(cases) else "failed",
         "case_results": case_results,
+        "source_overlay_sha256": source_overlay_sha256,
+        "source_restorations": restorations,
         "specializations": list(compiled.values()),
     }
     return report
@@ -430,11 +618,18 @@ def main() -> int:
     parser.add_argument("--candidate", required=True, type=Path)
     parser.add_argument("--op", required=True)
     parser.add_argument("--cases", type=Path)
+    parser.add_argument("--proto", type=Path)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--source-overlay", type=Path)
+    parser.add_argument("--source-overlay-sha256")
     args = parser.parse_args()
+    if bool(args.source_overlay) != bool(args.source_overlay_sha256):
+        parser.error('--source-overlay and --source-overlay-sha256 must be paired')
     cases = args.cases or Path("integrations/cannbench/tasks") / args.op / "cases.yaml"
     try:
-        report = evaluate(args.candidate, args.op, cases)
+        report = evaluate(args.candidate, args.op, cases, load_contract(args.proto.parent) if args.proto else None,
+                          source_overlay=args.source_overlay,
+                          source_overlay_sha256=args.source_overlay_sha256)
     except Exception as exc:
         report = {
             "schema_version": 1,

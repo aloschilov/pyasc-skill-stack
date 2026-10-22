@@ -1,80 +1,32 @@
-# pyasc Type Constraints
+# Current-v2 type constraints
 
-## Kernel parameter types
+Runtime parameters may include bool/int/float, supported numpy scalars and
+arrays, torch tensors on the launch path, and `asc.GlobalAddress`. Use
+`ConstExpr` for static shapes and compile-time attributes. Do not pass arbitrary
+objects or host containers unless the exact JIT contract explicitly supports
+them as compile-time values.
 
-### Supported as runtime parameters
+`global_tensor` shapes and offsets are integer-like runtime/static values;
+local `copy_in` shapes are static. `copy_in` without a shape and reductions may
+produce `PlainValue`. APIs such as tile `rsqrt`, `where`, or `maximum` can
+require `LocalTensor`, so materialize an aligned tensor when necessary.
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `bool` | Boolean | `def kernel(flag: bool)` |
-| `int` | Integer | `def kernel(n: int)` |
-| `float` | Float | `def kernel(scale: float)` |
-| `numpy` scalar | numpy scalar types | `def kernel(val: np.float32)` |
-| `numpy.ndarray` | numpy array | Passed as data |
-| `torch.Tensor` | PyTorch tensor (NPU mode only) | Auto H2D/D2H transfer |
-| `asc.GlobalAddress` | Global memory pointer | Explicit memory management |
+`PlainValue` defines no `__int__`/`__float__`/`__index__`: calling Python
+`int()`/`float()` on a device value fails at codegen with `TypeError:
+int() argument must be a string, a bytes-like object or a real number,
+not 'PlainValue'`. Never convert a `reduce_sum`/scalar load result into a
+Python control-flow value inside JIT code. Keep the value in the device
+domain: compare and index with it directly, or restructure so host code
+precomputes the control flow. If a scalar index must come from memory,
+load it with a shaped `copy_in` and use device-side arithmetic
+(measured on pinned-runtime moe_re_routing).
 
-### Not supported as runtime parameters
+`asctile.where(cond, a, b)` branches must be tensors or explicitly cast
+values, e.g. `asctile.where(mask, asctile.cast(ONE, out.dtype),
+asctile.cast(ZERO, out.dtype))` or `asctile.full`-materialized constants.
+Passing bare Python floats fails with `AttributeError: 'float' object has
+no attribute 'dtype'` (measured on pinned-runtime nms).
 
-| Type | Workaround |
-|------|------------|
-| `str` | Use `asc.ConstExpr[str]` for compile-time strings |
-| `tuple` | Use `asc.ConstExpr[tuple]` or pass elements separately |
-| `list` | Use `asc.ConstExpr[list]` or pass elements separately |
-| `dict` | Use `asc.ConstExpr[dict]` or decompose |
-| Complex objects | Decompose into supported scalar/tensor types |
-
-## Compile-time parameters (ConstExpr)
-
-For values resolved at compile time:
-
-```python
-@asc.jit
-def kernel(x: asc.GlobalAddress, mode: asc.ConstExpr[int]):
-    if mode == 1:    # resolved at compile time, not runtime
-        ...
-    elif mode == 2:
-        ...
-```
-
-`ConstExpr` is useful for:
-- Branch selection that should be resolved at compile time
-- Container parameters (tuple, list, dict)
-- String parameters
-- Any value that changes the compiled code structure
-
-## Built-in whitelist
-
-Only these built-in functions are available inside `@asc.jit`:
-
-| Built-in | Available |
-|----------|-----------|
-| `dict` | Yes |
-| `float` | Yes |
-| `int` | Yes |
-| `isinstance` | Yes |
-| `issubclass` | Yes |
-| `len` | Yes |
-| `list` | Yes |
-| `range` | Yes |
-| `repr` | Yes |
-| `str` | Yes |
-| `tuple` | Yes |
-| `type` | Yes |
-| `print` | **No** |
-| `open` | **No** |
-| `input` | **No** |
-| `map`, `filter`, `zip` | **No** |
-| `sorted`, `reversed` | **No** |
-| Any stdlib | **No** |
-
-## Tensor dtype
-
-Tensor data types are accessed from the tensor itself:
-
-```python
-data_type = x.dtype           # from GlobalAddress parameter
-buffer_size = n * data_type.sizeof()
-```
-
-Common dtypes: `asc.float32`, `asc.float16`, `asc.int32`, `asc.int8`
+Common dtypes are exposed by both `asc` and `asctile`, including float16,
+bfloat16, float32, signed integers, and bool. Individual operations support
+only subsets; verify their validation function in `python/asctile/language/`.

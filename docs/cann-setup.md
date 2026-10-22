@@ -87,17 +87,18 @@ ls "$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib/"
 
 # Run a pyasc tutorial to verify end-to-end
 cd "$PYASC_SRC"
-python3.10 python/tutorials/01_add/add.py -r Model -v Ascend950PR_9599
+python3.10 python/tutorials/asctile/01-vector-add.py
 ```
 
 Success criteria: The tutorial prints "Sample add run success." with no ISA errors.
 
 ## Evaluation pyasc clone (`pyasc-v2-eval`)
 
-The skill-stack harness imports `asc` / `asc2` from a dedicated, read-only
+Host-mode skill-stack runs import `asc` / `asctile` from a dedicated, read-only
 checkout at `/home/aloschilov/workspace/pyasc-v2-eval`. This clone exists
 purely so every simulator-verified evidence file pins to a specific SHA on
-`compiler-team/pyasc#v2`. Treat the directory as read-only:
+`compiler-team/pyasc#v2`. It must be at the same revision as the skills and
+runner images (`030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`). Treat the directory as read-only:
 
 - Active pyasc development belongs in `/home/aloschilov/workspace/pyasc-fork`
   (or wherever your team-side clone lives), never here.
@@ -113,7 +114,7 @@ Bumping the pinned SHA (only by the evaluation owner):
 ```bash
 cd /home/aloschilov/workspace/pyasc-v2-eval
 git fetch origin
-git checkout <new-sha-on-origin/v2>
+git checkout 030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d
 
 # Re-link the editable so the harness picks the new revision up.
 cd /home/aloschilov/workspace/pyasc-skill-stack
@@ -122,9 +123,9 @@ pip install -e /home/aloschilov/workspace/pyasc-v2-eval
 # Then re-run the matrix and refresh docs/skill-value-q1-findings.md.
 ```
 
-The CI workflow exports `PYASC_EVAL_ROOT=/home/aloschilov/workspace/pyasc-v2-eval`
-so a runner that imports `asc` from any other tree gets a loud warning in
-the evidence record.
+The CI evidence jobs use the revision-coupled Docker image explicitly. The
+`PYASC_EVAL_ROOT` guard remains for manual host-mode runs so importing `asc`
+from another tree produces a loud warning in the evidence record.
 
 ## Running pyasc Kernels
 

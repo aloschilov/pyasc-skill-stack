@@ -223,7 +223,7 @@ green.
 - **Compiler SIMD-fusion A/B (same job):** the `perf-gate` job also runs
   [tests/tools/demo_vf_fusion.py](../tests/tools/demo_vf_fusion.py) `--all`, which
   recompiles each generated kernel with `--cce-simd-vf-fusion` **off vs on** on
-  the same camodel (verifying the "pyasc2 uses no micro-api; the compiler does
+  the same camodel (verifying the "pyasc asctile uses no micro-api; the compiler does
   fusion" positioning — see
   [docs/perf-vs-ascendc-demo.md](perf-vs-ascendc-demo.md)). It is also
   report-only.
@@ -268,7 +268,7 @@ reports a ratio for all 19 cells.
 | `ASCEND_HOME_PATH` | (from set_env.sh) | CANN toolkit root |
 | `LD_LIBRARY_PATH` | (must include simulator) | Simulator libraries |
 | `NODE_TLS_REJECT_UNAUTHORIZED` | `0` (for opencode) | Bypass TLS issues |
-| `PYASC_PERF_IMAGE` | `ghcr.io/<owner>/pyasc-sim-perf:py3.11` | docker_full perf image (perf-gate) |
+| `PYASC_PERF_IMAGE` | `ghcr.io/<owner>/pyasc-sim-perf:py3.11-pyasc-030e9b2c-arm64` | Revision-coupled docker_full perf image (perf-gate) |
 | `OPS_MATH_HOME` / `OPS_NN_HOME` | `/opt/ops-math` / `/opt/ops-nn` (in perf image) | Canonical AscendC reference repos |
 
 ## Exit codes

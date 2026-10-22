@@ -1,12 +1,6 @@
 name: Deploy Pages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - capabilities.yaml
-      - evidence/**
-      - tests/tools/generate_dashboard.py
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -15,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -25,22 +20,37 @@ concurrency:
 jobs:
   build-and-deploy:
     if: >-
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || 'main' }}
+      - name: Require successful CI for this exact main revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          revision=$(git rev-parse HEAD)
+          main_revision=$(git ls-remote origin refs/heads/main | cut -f1)
+          test "$revision" = "$main_revision"
+          successful=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$revision&branch=main&status=success&per_page=10" --jq '.workflow_runs | length')
+          test "$successful" -gt 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - run: pip install pyyaml
-      - run: python tests/tools/generate_dashboard.py --output-dir _site
+      - name: Validate skill binding and build reviewed dashboard
+        run: python dashboard/cannbench/build.py --output-dir _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+      - name: Recheck main before deployment
+        run: test "$(git rev-parse HEAD)" = "$(git ls-remote origin refs/heads/main | cut -f1)"
       - id: deployment
         uses: actions/deploy-pages@v4

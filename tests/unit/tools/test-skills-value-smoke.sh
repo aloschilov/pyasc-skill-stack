@@ -68,6 +68,10 @@ for path in sorted(root.rglob("*.json")):
         data = json.loads(path.read_text())
     except (json.JSONDecodeError, OSError):
         continue
+    # Evidence trees also contain aggregate arrays (for example raw perf
+    # samples).  The provenance contract applies only to evidence records.
+    if not isinstance(data, dict):
+        continue
     if data.get("kind") != "generative":
         continue
     if str(data.get("schema_version", "")) < "4":

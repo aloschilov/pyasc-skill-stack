@@ -1,4 +1,4 @@
-"""CANN Bench ForeachAddcdivScalar interface implemented as a pyasc asc2 kernel.
+"""CANN Bench ForeachAddcdivScalar interface implemented as a pyasc asctile kernel.
 
 Kernel design (pyasc-api-patterns Pattern A, grid-stride variant):
   - 1-D flatten; each block strides over tiles so any element count works.
@@ -18,7 +18,7 @@ Kernel design (pyasc-api-patterns Pattern A, grid-stride variant):
 import torch
 
 import asc
-import asc2
+import asctile
 
 from ._pyasc_runtime import ensure_npu_platform
 
@@ -27,7 +27,7 @@ _NARROW_TILE = 1024
 _MAX_CORES = 72
 
 
-@asc2.jit
+@asctile.jit
 def _addcdiv_scalar_kernel(
     x1_ptr: asc.GlobalAddress,
     x2_ptr: asc.GlobalAddress,
@@ -38,22 +38,22 @@ def _addcdiv_scalar_kernel(
     scalar: float,
     tile_size: asc.ConstExpr[int],
 ):
-    x1_gm = asc2.global_tensor(x1_ptr, [size])
-    x2_gm = asc2.global_tensor(x2_ptr, [size])
-    x3_gm = asc2.global_tensor(x3_ptr, [size])
-    out_gm = asc2.global_tensor(out_ptr, [size])
-    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(),
+    x1_gm = asctile.global_tensor(x1_ptr, [size])
+    x2_gm = asctile.global_tensor(x2_ptr, [size])
+    x3_gm = asctile.global_tensor(x3_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
                         unroll_factor=2):
         off = t * tile_size
         n = tile_size if off + tile_size <= size else size - off
-        x1 = asc2.copy_in(x1_gm, [off], [tile_size], real_shape=[n])
-        x2 = asc2.copy_in(x2_gm, [off], [tile_size], real_shape=[n])
-        x3 = asc2.copy_in(x3_gm, [off], [tile_size], real_shape=[n])
+        x1 = asctile.copy_in(x1_gm, [off], [tile_size], real_shape=[n])
+        x2 = asctile.copy_in(x2_gm, [off], [tile_size], real_shape=[n])
+        x3 = asctile.copy_in(x3_gm, [off], [tile_size], real_shape=[n])
         x1f = x1.to(asc.float32)
         x2f = x2.to(asc.float32)
         x3f = x3.to(asc.float32)
         y = x1f + (x2f / x3f) * scalar
-        asc2.copy_out(y.to(x1.dtype), out_gm, [off], real_shape=[n])
+        asctile.copy_out(y.to(x1.dtype), out_gm, [off], real_shape=[n])
 
 
 def foreach_addcdiv_scalar(

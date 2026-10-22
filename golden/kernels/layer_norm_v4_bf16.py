@@ -23,7 +23,7 @@ import logging
 
 import asc
 import asc.runtime.config as config
-import asc2
+import asctile
 import torch
 import torch.nn.functional as F
 
@@ -42,89 +42,89 @@ BF16_SHAPES = [
 ]
 
 
-@asc2.jit(reuse_alloc=1)
+@asctile.jit(reuse_alloc=1)
 def layer_norm_v4_full_row_kernel(
-    x_ptr: asc2.GlobalAddress,
-    gamma_ptr: asc2.GlobalAddress,
-    beta_ptr: asc2.GlobalAddress,
-    out_ptr: asc2.GlobalAddress,
+    x_ptr: asctile.GlobalAddress,
+    gamma_ptr: asctile.GlobalAddress,
+    beta_ptr: asctile.GlobalAddress,
+    out_ptr: asctile.GlobalAddress,
     num_rows: int,
     num_cols: int,
-    padded_cols: asc2.ConstExpr,
+    padded_cols: asctile.ConstExpr,
     epsilon: asc.ConstExpr[float],
 ):
-    x_gm = asc2.global_tensor(x_ptr, [num_rows, padded_cols])
-    gamma_gm = asc2.global_tensor(gamma_ptr, [1, padded_cols])
-    beta_gm = asc2.global_tensor(beta_ptr, [1, padded_cols])
-    out_gm = asc2.global_tensor(out_ptr, [num_rows, padded_cols])
+    x_gm = asctile.global_tensor(x_ptr, [num_rows, padded_cols])
+    gamma_gm = asctile.global_tensor(gamma_ptr, [1, padded_cols])
+    beta_gm = asctile.global_tensor(beta_ptr, [1, padded_cols])
+    out_gm = asctile.global_tensor(out_ptr, [num_rows, padded_cols])
 
-    for row in asc2.range(
-        asc2.block_idx(), num_rows, asc2.block_num(), unroll_factor=2
+    for row in asctile.range(
+        asctile.block_idx(), num_rows, asctile.block_num(), unroll_factor=2
     ):
-        x_row = asc2.copy_in(x_gm, [row, 0], [1, padded_cols])
+        x_row = asctile.copy_in(x_gm, [row, 0], [1, padded_cols])
         x_f32 = x_row.to(asc.float32)
 
-        mean = asc2.reduce_sum(x_f32, 1, keep_dims=True) / num_cols
-        mean_b = asc2.broadcast_to(mean, 1, padded_cols)
-        sum_x2 = asc2.reduce_sum(x_f32 * x_f32, 1, keep_dims=True) / num_cols
+        mean = asctile.reduce_sum(x_f32, 1, keep_dims=True) / num_cols
+        mean_b = asctile.broadcast_to(mean, 1, padded_cols)
+        sum_x2 = asctile.reduce_sum(x_f32 * x_f32, 1, keep_dims=True) / num_cols
         var = sum_x2 - mean * mean
-        rstd = asc2.rsqrt(var + epsilon)
-        rstd_b = asc2.broadcast_to(rstd, 1, padded_cols)
+        rstd = asctile.rsqrt(var + epsilon)
+        rstd_b = asctile.broadcast_to(rstd, 1, padded_cols)
         xc = x_f32 - mean_b
 
-        gamma_row = asc2.copy_in(gamma_gm, [0, 0], [1, padded_cols]).to(asc.float32)
-        beta_row = asc2.copy_in(beta_gm, [0, 0], [1, padded_cols]).to(asc.float32)
+        gamma_row = asctile.copy_in(gamma_gm, [0, 0], [1, padded_cols]).to(asc.float32)
+        beta_row = asctile.copy_in(beta_gm, [0, 0], [1, padded_cols]).to(asc.float32)
         out_f32 = xc * rstd_b * gamma_row + beta_row
-        asc2.copy_out(out_f32.to(x_row.dtype), out_gm, [row, 0])
+        asctile.copy_out(out_f32.to(x_row.dtype), out_gm, [row, 0])
 
 
-@asc2.jit(reuse_alloc=1)
+@asctile.jit(reuse_alloc=1)
 def layer_norm_v4_split_d_kernel(
-    x_ptr: asc2.GlobalAddress,
-    gamma_ptr: asc2.GlobalAddress,
-    beta_ptr: asc2.GlobalAddress,
-    out_ptr: asc2.GlobalAddress,
+    x_ptr: asctile.GlobalAddress,
+    gamma_ptr: asctile.GlobalAddress,
+    beta_ptr: asctile.GlobalAddress,
+    out_ptr: asctile.GlobalAddress,
     num_rows: int,
     num_cols: int,
     padded_cols: int,
     num_tiles: int,
-    tile_cols: asc2.ConstExpr,
+    tile_cols: asctile.ConstExpr,
     epsilon: asc.ConstExpr[float],
 ):
-    x_gm = asc2.global_tensor(x_ptr, [num_rows, padded_cols])
-    gamma_gm = asc2.global_tensor(gamma_ptr, [1, padded_cols])
-    beta_gm = asc2.global_tensor(beta_ptr, [1, padded_cols])
-    out_gm = asc2.global_tensor(out_ptr, [num_rows, padded_cols])
+    x_gm = asctile.global_tensor(x_ptr, [num_rows, padded_cols])
+    gamma_gm = asctile.global_tensor(gamma_ptr, [1, padded_cols])
+    beta_gm = asctile.global_tensor(beta_ptr, [1, padded_cols])
+    out_gm = asctile.global_tensor(out_ptr, [num_rows, padded_cols])
 
-    for row in asc2.range(
-        asc2.block_idx(), num_rows, asc2.block_num(), unroll_factor=2
+    for row in asctile.range(
+        asctile.block_idx(), num_rows, asctile.block_num(), unroll_factor=2
     ):
-        zero_seed = asc2.full([1, tile_cols], 0.0, dtype=asc.float32)
-        sum_x = asc2.reduce_sum(zero_seed)
-        sum_x2 = asc2.reduce_sum(zero_seed)
-        for tile_id in asc2.range(num_tiles, unroll_factor=2):
+        zero_seed = asctile.full([1, tile_cols], 0.0, dtype=asc.float32)
+        sum_x = asctile.reduce_sum(zero_seed)
+        sum_x2 = asctile.reduce_sum(zero_seed)
+        for tile_id in asctile.range(num_tiles, unroll_factor=2):
             col = tile_id * tile_cols
-            x = asc2.copy_in(x_gm, [row, col], [1, tile_cols])
+            x = asctile.copy_in(x_gm, [row, col], [1, tile_cols])
             x_f32 = x.to(asc.float32)
-            sum_x = sum_x + asc2.reduce_sum(x_f32)
-            sum_x2 = sum_x2 + asc2.reduce_sum(x_f32 * x_f32)
+            sum_x = sum_x + asctile.reduce_sum(x_f32)
+            sum_x2 = sum_x2 + asctile.reduce_sum(x_f32 * x_f32)
 
         mean = sum_x / num_cols
         var = sum_x2 / num_cols - mean * mean
-        rstd = 1.0 / asc2.sqrt(var + epsilon)
+        rstd = 1.0 / asctile.sqrt(var + epsilon)
 
-        for tile_id in asc2.range(num_tiles, unroll_factor=2):
+        for tile_id in asctile.range(num_tiles, unroll_factor=2):
             col = tile_id * tile_cols
-            x = asc2.copy_in(x_gm, [row, col], [1, tile_cols])
-            gamma = asc2.copy_in(gamma_gm, [0, col], [1, tile_cols])
-            beta = asc2.copy_in(beta_gm, [0, col], [1, tile_cols])
+            x = asctile.copy_in(x_gm, [row, col], [1, tile_cols])
+            gamma = asctile.copy_in(gamma_gm, [0, col], [1, tile_cols])
+            beta = asctile.copy_in(beta_gm, [0, col], [1, tile_cols])
             x_f32 = x.to(asc.float32)
             gamma_f32 = gamma.to(asc.float32)
             beta_f32 = beta.to(asc.float32)
-            mean_tile = asc2.full([1, tile_cols], mean, dtype=asc.float32)
+            mean_tile = asctile.full([1, tile_cols], mean, dtype=asc.float32)
             xc = x_f32 - mean_tile
             out_f32 = xc * rstd * gamma_f32 + beta_f32
-            asc2.copy_out(out_f32.to(x.dtype), out_gm, [row, col])
+            asctile.copy_out(out_f32.to(x.dtype), out_gm, [row, col])
 
 
 def _use_split_d(num_cols: int) -> bool:

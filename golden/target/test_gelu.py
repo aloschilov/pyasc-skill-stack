@@ -8,35 +8,35 @@
 
 import math
 
-import asc2
+import asctile
 import pytest
 import torch
 
-STATIC = "static"
-DYNAMIC = "dynamic"
+from .helpers import parametrize_is_static
 
 
-@asc2.jit(reuse_alloc=1)
-def gelu(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, input_length, tile_length: asc2.ConstExpr,
-         TANH_APPROX_FACTOR: asc2.ConstExpr, NEG_SQRT_EIGHT_OVER_PI: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
-    in_gm = asc2.global_tensor(input_ptr, [input_length])
-    out_gm = asc2.global_tensor(output_ptr, [input_length])
+@asctile.jit(reuse_alloc=1)
+def gelu(input_ptr: asctile.GlobalAddress, output_ptr: asctile.GlobalAddress, input_length,
+         tile_length: asctile.ConstExpr, TANH_APPROX_FACTOR: asctile.ConstExpr,
+         NEG_SQRT_EIGHT_OVER_PI: asctile.ConstExpr, unroll_factor: asctile.ConstExpr):
+    in_gm = asctile.global_tensor(input_ptr, [input_length])
+    out_gm = asctile.global_tensor(output_ptr, [input_length])
 
-    block_loop_num = asc2.ceildiv(asc2.ceildiv(input_length, asc2.block_num()), tile_length)
+    block_loop_num = asctile.ceildiv(asctile.ceildiv(input_length, asctile.block_num()), tile_length)
     block_length = tile_length * block_loop_num
-    block_offset = block_length * asc2.block_idx()
+    block_offset = block_length * asctile.block_idx()
 
-    for i in asc2.range(block_loop_num, unroll_factor=unroll_factor):
+    for i in asctile.range(block_loop_num, unroll_factor=unroll_factor):
         current_offset = block_offset + i * tile_length
-        row = asc2.copy_in(in_gm, [current_offset], [tile_length])
+        row = asctile.copy_in(in_gm, [current_offset], [tile_length])
         input_sq = row * row
         input_cub = input_sq * row
         input_cub = row + input_cub * TANH_APPROX_FACTOR
         input_cub = input_cub * NEG_SQRT_EIGHT_OVER_PI
-        input_cub = asc2.exp(input_cub)
+        input_cub = asctile.exp(input_cub)
         input_cub = input_cub + 1
         out = row / input_cub
-        asc2.copy_out(out, out_gm, [current_offset])
+        asctile.copy_out(out, out_gm, [current_offset])
 
 
 def gelu_torch(x: torch.Tensor, TANH_APPROX_FACTOR, NEG_SQRT_EIGHT_OVER_PI):
@@ -50,15 +50,15 @@ def gelu_torch(x: torch.Tensor, TANH_APPROX_FACTOR, NEG_SQRT_EIGHT_OVER_PI):
 
 
 # yapf: disable
-@pytest.mark.parametrize("kernel_type", [STATIC, DYNAMIC])
+@parametrize_is_static()
 @pytest.mark.parametrize("test_name, block_num, input_shapes, input_dtypes, output_shapes, output_dtypes, compile_params, runtime_params, tiling_key, tiling_params", [
 # PYASC_TESTS_BEGIN
     ("gelu_test_1", 72, ([32, 2048, 2304], ), (torch.float32, ), ([32, 2048, 2304], ), (torch.float32, ), None, (2, ), 7, (150994944, 72, 15872)),
 # PYASC_TESTS_END
 ])
 # yapf: enable
-def test_gelu(profiler, runs, kernel_type, test_name, block_num, input_shapes, input_dtypes, output_shapes,
-              output_dtypes, compile_params, runtime_params, tiling_key, tiling_params):
+def test_gelu(profiler, runs, is_static, test_name, block_num, input_shapes, input_dtypes, output_shapes, output_dtypes,
+              compile_params, runtime_params, tiling_key, tiling_params):
     input_shape = input_shapes[0]
     dtype = input_dtypes[0]
     tile_length = tiling_params[2]
@@ -72,8 +72,8 @@ def test_gelu(profiler, runs, kernel_type, test_name, block_num, input_shapes, i
     out_tensor = torch.zeros(input_shape_1d, dtype=dtype)
 
     params = [in_tensor, out_tensor]
-    if kernel_type == STATIC:
-        params.append(asc2.ConstExpr(input_shape_1d[0]))
+    if is_static:
+        params.append(asctile.ConstExpr(input_shape_1d[0]))
     else:
         params.append(input_shape_1d[0])
     params.extend([tile_length, TANH_APPROX_FACTOR, NEG_SQRT_EIGHT_OVER_PI, unroll_factor])

@@ -22,7 +22,7 @@ mkdir -p "$KERNEL_DIR/test"
 cat > "$KERNEL_DIR/README.md" << EOF
 # $KERNEL_NAME kernel
 
-pyasc kernel implementation for the $KERNEL_NAME operation using the asc2 tile-based API.
+pyasc kernel implementation for the $KERNEL_NAME operation using the asctile tile-based API.
 
 ## Files
 

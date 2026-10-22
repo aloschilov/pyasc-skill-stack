@@ -3,7 +3,7 @@ after the in-process passes, BEFORE the host link step (which fails locally).
 No NPU/runtime needed. Capacity for 950PR (C310) UB = 253952 bytes."""
 import os, sys, inspect
 
-_CANN_ENV = "/usr/local/Ascend/ascend-toolkit/latest/set_env.sh"
+_CANN_ENV = "/usr/local/Ascend/cann-9.0.0/set_env.sh"
 if os.path.exists(_CANN_ENV):
     import subprocess
     out = subprocess.check_output(["bash", "-c", f"source {_CANN_ENV} && env"]).decode()
@@ -18,66 +18,66 @@ for _b in ("/usr/local/Ascend/cann-9.0.0/aarch64-linux/bin/bisheng",
         break
 
 import asc
-import asc2
+import asctile
 from asc import DataType
 from asc._C import ir
-from asc.runtime.jit import MockTensor, JITFunction
+from asc.runtime.jit import MockTensor
 from asc.codegen.specialization import Specialization
 from asc.codegen.function_visitor import CodegenOptions
-from asc.runtime.compiler import CompileOptions, Compiler
+from asctile.runtime.compiler import CompileOptions, Compiler
 import asc.runtime.config as config
 
 UB_CAP = 253952
 
 
 def set_platform():
-    plat = config.Platform("Ascend950PR_9599")
+    plat = config.Platform.Ascend950PR_9599
     config.set_platform(config.Backend.Model, plat, check=False)
 
 
 def make_kernel(expr_kind="naive"):
-    """Build a fresh @asc2.jit sigmoid kernel with the chosen math expression."""
+    """Build a fresh @asctile.jit sigmoid kernel with the chosen math expression."""
     if expr_kind == "naive":
         src = (
             "def _k(x_ptr, out_ptr, size, num_tiles, tile_size):\n"
-            "    x_gm = asc2.global_tensor(x_ptr, [size])\n"
-            "    out_gm = asc2.global_tensor(out_ptr, [size])\n"
-            "    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(), unroll_factor=2):\n"
+            "    x_gm = asctile.global_tensor(x_ptr, [size])\n"
+            "    out_gm = asctile.global_tensor(out_ptr, [size])\n"
+            "    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(), unroll_factor=2):\n"
             "        off = t * tile_size\n"
             "        n = tile_size if off + tile_size <= size else size - off\n"
-            "        x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])\n"
+            "        x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[n], pad_value=0.0)\n"
             "        xf = x.to(asc.float32)\n"
-            "        y = asc2.div(1.0, asc2.exp(-xf) + 1.0)\n"
-            "        asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])\n"
+            "        y = asctile.div(1.0, asctile.exp(-xf) + 1.0)\n"
+            "        asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])\n"
         )
     elif expr_kind == "tanh":
         src = (
             "def _k(x_ptr, out_ptr, size, num_tiles, tile_size):\n"
-            "    x_gm = asc2.global_tensor(x_ptr, [size])\n"
-            "    out_gm = asc2.global_tensor(out_ptr, [size])\n"
-            "    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(), unroll_factor=2):\n"
+            "    x_gm = asctile.global_tensor(x_ptr, [size])\n"
+            "    out_gm = asctile.global_tensor(out_ptr, [size])\n"
+            "    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(), unroll_factor=2):\n"
             "        off = t * tile_size\n"
             "        n = tile_size if off + tile_size <= size else size - off\n"
-            "        x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])\n"
+            "        x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[n], pad_value=0.0)\n"
             "        xf = x.to(asc.float32)\n"
-            "        y = asc2.tanh(xf * 0.5) * 0.5 + 0.5\n"
-            "        asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])\n"
+            "        y = asctile.tanh(xf * 0.5) * 0.5 + 0.5\n"
+            "        asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])\n"
         )
     elif expr_kind == "stable":
         src = (
             "def _k(x_ptr, out_ptr, size, num_tiles, tile_size):\n"
-            "    x_gm = asc2.global_tensor(x_ptr, [size])\n"
-            "    out_gm = asc2.global_tensor(out_ptr, [size])\n"
-            "    for t in asc2.range(asc2.block_idx(), num_tiles, asc2.block_num(), unroll_factor=2):\n"
+            "    x_gm = asctile.global_tensor(x_ptr, [size])\n"
+            "    out_gm = asctile.global_tensor(out_ptr, [size])\n"
+            "    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(), unroll_factor=2):\n"
             "        off = t * tile_size\n"
             "        n = tile_size if off + tile_size <= size else size - off\n"
-            "        x = asc2.copy_in(x_gm, [off], [tile_size], real_shape=[n])\n"
+            "        x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[n], pad_value=0.0)\n"
             "        xf = x.to(asc.float32)\n"
             "        s = xf\n"
-            "        y = asc2.exp(asc2.minimum(s, 0.0)) / (asc2.exp(-asc2.abs(s)) + 1.0)\n"
-            "        asc2.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])\n"
+            "        y = asctile.exp(asctile.minimum(s, 0.0)) / (asctile.exp(-asctile.abs(s)) + 1.0)\n"
+            "        asctile.copy_out(y.to(x.dtype), out_gm, [off], real_shape=[n])\n"
         )
-    ns = {"asc": asc, "asc2": asc2}
+    ns = {"asc": asc, "asctile": asctile}
     exec(src, ns)
     fn = ns["_k"]
     # add annotations the JIT needs
@@ -86,7 +86,7 @@ def make_kernel(expr_kind="naive"):
         "size": int, "num_tiles": int,
         "tile_size": asc.ConstExpr[int],
     }
-    return asc2.jit(fn)
+    return asctile.jit(fn)
 
 
 def probe_ub(kernel, tile, dtype_str, compile_kwargs=None):

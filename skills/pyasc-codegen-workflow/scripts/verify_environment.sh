@@ -17,7 +17,7 @@ fi
 # Auto-detect the correct Python: prefer whichever has pyasc installed
 if [ -z "${PYTHON:-}" ]; then
     for candidate in python3.10 python3.11 python3.12 python3.9 python3; do
-        if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import asc" 2>/dev/null; then
+        if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import asc, asctile" 2>/dev/null; then
             PYTHON="$candidate"
             break
         fi
@@ -30,7 +30,7 @@ echo "[INFO] Using Python: $PYTHON ($(command -v "$PYTHON" 2>/dev/null || echo '
 
 PYTHON_VERSION=$($PYTHON --version 2>&1 | awk '{print $2}' || echo "not found")
 
-PYASC_VERSION=$($PYTHON -c "import asc; print(getattr(asc, '__version__', 'installed'))" 2>/dev/null || echo "not installed")
+PYASC_VERSION=$($PYTHON -c "import asc, asctile; print(getattr(asc, '__version__', 'installed'), asctile.__file__)" 2>/dev/null || echo "not installed")
 
 NUMPY_VERSION=$($PYTHON -c "import numpy; print(numpy.__version__)" 2>/dev/null || echo "not installed")
 
@@ -119,7 +119,7 @@ echo "  NPU:        $NPU_AVAILABLE"
 ERRORS=0
 if [ "$PYASC_VERSION" = "not installed" ]; then
     echo ""
-    echo "[WARN] pyasc is not installed. Install with: pip install pyasc"
+    echo "[WARN] matching pyasc v2 runtime is not installed; build/install the selected source commit"
     ERRORS=$((ERRORS + 1))
 fi
 if [ "$NUMPY_VERSION" = "not installed" ]; then

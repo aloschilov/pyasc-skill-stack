@@ -6,7 +6,7 @@
 # output against the golden reference (golden/tutorials/01_add.py).
 #
 # Checks:
-#   - Same API patterns (asc2.load, asc2.store, element-wise add)
+#   - Same API patterns (asctile.copy_in, asctile.copy_out, element-wise add)
 #   - Same sync event types (MTE2_V, V_MTE3, MTE3_MTE2)
 #   - Same verification approach (torch.allclose)
 #   - Both pass static verification
@@ -52,8 +52,8 @@ print_section_header "Phase: Agent Generation"
 
 PROMPT="Write a pyasc vector add kernel. The kernel should:
 - Accept two float32 input tensors x, y and produce output z = x + y
-- Use @asc2.jit decorator
-- Use asc2.tensor, asc2.load, asc2.store, and asc2.range as needed
+- Use @asctile.jit decorator
+- Use asctile.global_tensor, asctile.copy_in, asctile.copy_out, and asctile.range as needed
 - Use pipeline sync with MTE2_V, V_MTE3, MTE3_MTE2 events where applicable
 - Include a launch function and torch.allclose verification
 - Use only supported pyasc syntax
@@ -148,7 +148,7 @@ golden_src=$(cat "$GOLDEN")
 gen_src=$(cat "$GEN_PY")
 
 # API pattern checks
-for pattern in "asc2.load" "asc2.store" "allclose"; do
+for pattern in "asctile.copy_in" "asctile.copy_out" "allclose"; do
     golden_has=false
     gen_has=false
     echo "$golden_src" | grep -q "$pattern" && golden_has=true
@@ -176,18 +176,18 @@ done
 echo ""
 
 # Decorator check
-if echo "$gen_src" | grep -qE '@asc2\.jit|@asc\.jit'; then
-    print_pass "@asc2.jit or @asc.jit decorator present"
+if echo "$gen_src" | grep -qE '@asctile\.jit|@asc\.jit'; then
+    print_pass "@asctile.jit or @asc.jit decorator present"
 else
-    print_fail "@asc2.jit / @asc.jit decorator missing"
+    print_fail "@asctile.jit / @asc.jit decorator missing"
     FAILED=$((FAILED + 1))
 fi
 
 # Tensor API check
-if echo "$gen_src" | grep -q "asc2.tensor"; then
-    print_pass "asc2.tensor used"
+if echo "$gen_src" | grep -q "asctile.global_tensor"; then
+    print_pass "asctile.global_tensor used"
 else
-    print_warn "asc2.tensor not found"
+    print_warn "asctile.global_tensor not found"
 fi
 
 echo ""

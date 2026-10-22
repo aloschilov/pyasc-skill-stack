@@ -1,9 +1,36 @@
 # pyasc v2 blockers exposed by CANNBench generation
 
+## High-level GeLU follow-up: adadd7d6 / local CANN 9.0
+
+- **Verified local numerical/API limitation:** public `asctile.erf` composed
+  into FP32 exact GeLU fails the dense negative-tail checker for all 18 JIT
+  settings. At x=-4.111328125, backend Erf is two float32 ULPs away from the
+  correctly rounded value; cancellation produces approximately 0.303% GeLU
+  relative error. The minimal 64-lane reproduction fails 64/64 lanes while
+  the CPU reference has zero cancellation failures. No compiler patch or
+  lower-level replacement was introduced.
+- **Verified import-order JIT defect:** AscTile-first public flags/cache tests
+  pass; base-JIT-first option discovery makes `reuse_alloc` unknown. The
+  extraction path is correct; inherited option-discovery caching is not.
+- **Lowering evidence, not an assumed missing pass:** allocation/fusion
+  interactions and the existing nested transfer-elimination pass are traced
+  in the [lowering report](../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/LOWERING.md).
+- **Incomplete local runtime qualification:** FP16 reuse+VF structural
+  tests exceed bounded whole-process budgets. Longer logs show repeat and
+  multicore progress, so this is not proof of a hardware or repeat-specific
+  deadlock. Fresh-cache/forced-compilation controls and matched settings are
+  recorded in the campaign report; compile-time sync verification alone is
+  insufficient to promote these combinations.
+
+[Campaign report, exact reproduction commands, and artifacts](../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/README.md).
+These are local results; do not claim the CANN 9.1 remote runner was tested.
+The campaigns below retain their original revisions and historical scope.
+
 Scope: `compiler-team/pyasc` branch `v2`. The original nine-operator campaign
 used `ac1222a48c8914d3f81297c7570d1a84f0f26778`; the four-operator comparison
 uses the then-current `030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`, target
-`Ascend950PR_9599`. “Confirmed” means reproduced by pinned-v2 lowering or an
+`Ascend950PR_9599`. The GeLU deep dive uses the newer
+`0a631f70968c3cb7c33ce45330a85768dd5a6f06`. “Confirmed” means reproduced by pinned-v2 lowering or an
 official NPU report. “Suspected” means the observed symptom is real but its
 root cause has not been isolated.
 
@@ -65,8 +92,36 @@ root cause has not been isolated.
   ForeachAddcdivScalar output still matched Torch. The skill now requires an
   operation-neutral explicit `pad_value`; this is an API semantic constraint,
   not a failed logical-output case.
+- **Native BF16 elementwise arithmetic is incomplete.** A current-v2 GeLU
+  probe lowered native FP16 and FP32 `adv.erfc`/`adv.tanh` routes, but BF16
+  failed at the first `asc.mul`: the accepted destination/source set excludes
+  bfloat16. Exact and tanh BF16 therefore require an explicit FP32 compute
+  path and output cast in this release.
+- **The fused AscendC GeLU primitive is not exposed.** The installed CANN
+  headers provide `AscendC::Gelu`, while commit `0a631f70` has no corresponding
+  pyasc dialect or Python operation. The CANNBench implementation must compose
+  erf/erfc/tanh/exp with basic vector operations. This is a confirmed API gap
+  and a suspected cause of the remaining sub-1x GeLU performance; causality
+  still requires a like-for-like hardware measurement after an upstream
+  binding exists.
 
 ## Confirmed integration and skill-stack defects
+
+- **Base `asc.Compiler` emits an invalid FFTS launch argument on C310.** At
+  `0a631f70`, `_schedule_postprocessing` hard-codes
+  `set_ffts_addr=True`. Eighteen GeLU routes then failed on 950PR in
+  `GetC2cCtrlAddrWrapper` with 207000. An adapter preserving the base pipeline
+  but using `set_ffts_addr=(arch != C310)` removed the hidden argument; the
+  next official run launched and passed its low-level exact routes. Evidence:
+  [`job_24726123eebe`](https://cannbench.com/workspace/jobs/job_24726123eebe),
+  [`job_bcf486ff6371`](https://cannbench.com/workspace/jobs/job_bcf486ff6371).
+- **AscTile JIT extracts options from the wrong dataclass.** The AscTile
+  compiler defines `reuse_alloc`, `static_alloc`, and `vf_fusion`, but inherited
+  `JITFunction.get_config_keywords()` and `__call__()` use base
+  `asc.CompileOptions`. Documented decorators can therefore reject an option
+  at import or leak it into the bound kernel arguments. The CANNBench adapter
+  consistently selects `self.compiler.options_cls`; upstream v2 remains
+  unfixed at the evaluated commit.
 
 - **Raw pointers at launch.** A worker used `Tensor.data_ptr()` and host-side
   slice assignment. The pinned JIT contract needs the tensor itself to retain
@@ -87,6 +142,13 @@ root cause has not been isolated.
   implementation.
 
 ## Official NPU symptoms with suspected roots
+
+- **GeLU case 4:** an AscTile tanh kernel with 72 cores, tile 13,824,
+  `vf_fusion=True`, and `reuse_alloc=1` compiled at 221,184/253,952 bytes UB but
+  timed out on the vector core (507034) for the 67M-element FP16 case. The
+  device then cascade-skipped cases 7–20. The hardware symptom is confirmed;
+  the responsible compiler/runtime mechanism is still suspected. Evidence:
+  [`job_bcf486ff6371`](https://cannbench.com/workspace/jobs/job_bcf486ff6371).
 
 - **SwiGLU case 9:** confirmed runtime failure around
   `narrow(...).contiguous()` with `aclnnInplaceCopy`; the asynchronous trace is

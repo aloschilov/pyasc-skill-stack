@@ -6,37 +6,38 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 
-import asc2
+import asctile
 import pytest
 import torch
 
-from .helpers import DYNAMIC, STATIC, select_elementwise_tile
+from .helpers import parametrize_is_static, select_elementwise_tile
 
 
-@asc2.jit(reuse_alloc=1)
-def addcdiv(input_ptr: asc2.GlobalAddress, x1_ptr: asc2.GlobalAddress, x2_ptr: asc2.GlobalAddress,
-            output_ptr: asc2.GlobalAddress, input_length, tile_length: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
-    input_gm = asc2.global_tensor(input_ptr, [input_length])
-    x1_gm = asc2.global_tensor(x1_ptr, [input_length])
-    x2_gm = asc2.global_tensor(x2_ptr, [input_length])
-    output_gm = asc2.global_tensor(output_ptr, [input_length])
+@asctile.jit(reuse_alloc=1)
+def addcdiv(input_ptr: asctile.GlobalAddress, x1_ptr: asctile.GlobalAddress, x2_ptr: asctile.GlobalAddress,
+            output_ptr: asctile.GlobalAddress, input_length, tile_length: asctile.ConstExpr,
+            unroll_factor: asctile.ConstExpr):
+    input_gm = asctile.global_tensor(input_ptr, [input_length])
+    x1_gm = asctile.global_tensor(x1_ptr, [input_length])
+    x2_gm = asctile.global_tensor(x2_ptr, [input_length])
+    output_gm = asctile.global_tensor(output_ptr, [input_length])
 
-    block_loop_num = asc2.ceildiv(asc2.ceildiv(input_length, asc2.block_num()), tile_length)
+    block_loop_num = asctile.ceildiv(asctile.ceildiv(input_length, asctile.block_num()), tile_length)
     block_length = tile_length * block_loop_num
-    block_offset = asc2.block_idx() * block_length
+    block_offset = asctile.block_idx() * block_length
 
-    for i in asc2.range(block_loop_num, unroll_factor=unroll_factor):
+    for i in asctile.range(block_loop_num, unroll_factor=unroll_factor):
         current_offset = block_offset + i * tile_length
-        input_t = asc2.copy_in(input_gm, [current_offset], [tile_length])
-        x1_t = asc2.copy_in(x1_gm, [current_offset], [tile_length])
-        x2_t = asc2.copy_in(x2_gm, [current_offset], [tile_length])
+        input_t = asctile.copy_in(input_gm, [current_offset], [tile_length])
+        x1_t = asctile.copy_in(x1_gm, [current_offset], [tile_length])
+        x2_t = asctile.copy_in(x2_gm, [current_offset], [tile_length])
         div_t = x1_t / x2_t
         scaled_t = div_t * 0.5
         zt = input_t + scaled_t
-        asc2.copy_out(zt, output_gm, [current_offset])
+        asctile.copy_out(zt, output_gm, [current_offset])
 
 
-@pytest.mark.parametrize("kernel_type", [STATIC, DYNAMIC])
+@parametrize_is_static()
 @pytest.mark.parametrize("test_name, input_shape, input_dtype, tiling", [
     ("addcdiv_test_1", [11734, 16], torch.float32, select_elementwise_tile([11734, 16], 4, 4)),
     ("addcdiv_test_2", [152], torch.float32, select_elementwise_tile([152], 4, 4)),
@@ -64,7 +65,7 @@ def addcdiv(input_ptr: asc2.GlobalAddress, x1_ptr: asc2.GlobalAddress, x2_ptr: a
     ("addcdiv_test_24", [1024, 1024], torch.float16, select_elementwise_tile([1024, 1024], 2, 4)),
     ("addcdiv_test_25", [98166, 128], torch.float16, select_elementwise_tile([98166, 128], 2, 4)),
 ])
-def test_addcdiv(profiler, runs, kernel_type, test_name, input_shape, input_dtype, tiling):
+def test_addcdiv(profiler, runs, is_static, test_name, input_shape, input_dtype, tiling):
     length, tile_length, block_num, unroll_factor = tiling
 
     in_tensor_input = torch.randn([length], dtype=input_dtype)
@@ -76,8 +77,8 @@ def test_addcdiv(profiler, runs, kernel_type, test_name, input_shape, input_dtyp
     out_tensor = torch.zeros([length], dtype=input_dtype)
 
     params = [in_tensor_input, in_tensor_x1, in_tensor_x2, out_tensor]
-    if kernel_type == STATIC:
-        params.append(asc2.ConstExpr(length))
+    if is_static:
+        params.append(asctile.ConstExpr(length))
     else:
         params.append(length)
     params.extend([tile_length, unroll_factor])

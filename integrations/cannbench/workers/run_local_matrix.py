@@ -16,10 +16,11 @@ WORKERS_DIR = Path(__file__).resolve().parent
 CANNBENCH_DIR = WORKERS_DIR.parent
 REPO_ROOT = CANNBENCH_DIR.parent.parent
 DEFAULT_CANDIDATES = CANNBENCH_DIR / "submission" / "cann_bench"
-ALL_OPS = (
-    "sigmoid", "exp", "mish", "gelu", "masked_scale", "swi_glu",
-    "foreach_addcdiv_scalar", "foreach_norm", "rms_norm",
-)
+ALL_OPS = tuple(sorted(
+    path.name
+    for path in (CANNBENCH_DIR / "tasks").iterdir()
+    if path.is_dir() and (path / "cases.yaml").is_file()
+))
 
 
 def evaluate(op: str, candidate_root: Path) -> dict:

@@ -37,7 +37,7 @@ FAILED=0
 print_section_header "Scenario 1: Kernel Dev Prompt"
 
 PROMPT="Implement a pyasc vector add kernel for two float32 tensors of size 1024.
-Use @asc2.jit and asc2.load/asc2.store for data movement and synchronization.
+Use @asctile.jit and asctile.copy_in/asctile.copy_out for data movement and synchronization.
 Follow the pyasc-codegen-workflow phases."
 
 TEST_PROJECT=$(create_test_project "premature-test")
