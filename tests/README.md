@@ -22,7 +22,7 @@ From the repository root:
 | `./tests/run-tests.sh --integration` / `-i` | **L1 + L2 + L3** |
 | `./tests/run-tests.sh --all` | **L1 + L2 + L3** (same selection as `--integration`) |
 | `./tests/run-tests.sh --category unit\|behavior\|integration` | Single category |
-| `./tests/run-tests.sh --test integration/test-simple-kernel.sh` | One script, path relative to `tests/` |
+| `./tests/run-tests.sh --test integration/test-kernel-generation.sh` | One script, path relative to `tests/` |
 | `./tests/run-tests.sh --list` / `-l` | List discovered `test-*.sh` files |
 
 Useful options:
@@ -41,17 +41,17 @@ Useful options:
 
 ```
 tests/
-├── unit/
+├── unit/                             # L1
 │   ├── skills/
-│   │   ├── test-structure.sh    # Skill YAML/layout rules (S-STR-*)
-│   │   └── test-content.sh      # Skill naming/description rules (S-CON-*)
-│   ├── agents/
-│   │   ├── test-structure.sh    # Team AGENTS.md structure (A-STR-*)
-│   │   └── test-content.sh      # Agent content rules (A-CON-*)
-│   └── teams/
-│       ├── test-structure.sh    # Team AGENTS.md structure (T-STR-*)
-│       └── test-content.sh      # Team content rules (T-CON-*)
-├── behavior/
+│   │   ├── test-structure.sh         # Skill YAML/layout rules (S-STR-*)
+│   │   └── test-content.sh           # Skill naming/description rules (S-CON-*)
+│   └── tools/
+│       ├── test-target-pin.sh        # vendored suite vs reference/asctile/PIN.json
+│       ├── test-runtime-backend-dispatch.sh
+│       ├── test-protocol-derivation.sh
+│       ├── test-pyasc-revision-field.sh
+│       └── test-analyze-workflow.sh
+├── behavior/                         # L2 -- makes real provider calls
 │   ├── skills/
 │   │   ├── test-trigger-correctness.sh
 │   │   ├── test-premature-action.sh
@@ -59,26 +59,27 @@ tests/
 │   └── agents/
 │       ├── test-trigger-correctness.sh
 │       └── test-premature-action.sh
-├── integration/
-│   ├── test-simple-kernel.sh
+├── integration/                      # L3
 │   ├── test-kernel-generation.sh
-│   ├── test-golden-comparison.sh
 │   └── test-workflow-execution.sh
 ├── tools/
-│   ├── verify_kernel.py          # Static AST verifier for kernels
-│   ├── score_kernel.py           # Code-review checklist scorer
-│   ├── run_and_verify.py         # Runtime verification (jit / simulator / auto)
-│   ├── pytest_verify_kernel.py   # JIT-focused pytest-style verifier
-│   ├── gen_golden.py             # Golden numpy data generator
-│   ├── eval-report.sh            # Aggregated evaluation report
-│   ├── analyze-session.sh        # OpenCode session inspection
-│   ├── analyze-workflow.sh       # Workflow / ordering heuristics
-│   ├── analyze-tokens.sh         # Token usage (delegates to Python when possible)
-│   └── analyze-token-usage.py    # Token usage parser
+│   ├── run_target_test.py            # runs a target-suite module (used by merge-gate)
+│   ├── verify_pyasc_image.sh         # asserts the sim image matches its pin
+│   ├── verify_kernel.py              # Static AST verifier for kernels
+│   ├── run_and_verify.py             # Runtime verification (jit / simulator / auto)
+│   ├── pytest_verify_kernel.py       # JIT-focused pytest-style verifier
+│   ├── analyze-session.sh            # OpenCode session inspection
+│   ├── analyze-workflow.sh           # Workflow / ordering heuristics
+│   └── analyze-tokens.sh             # Token usage
 ├── lib/
-│   └── test-helpers.sh           # Shared library (sourced by tests and some tools)
-└── run-tests.sh                  # Main test runner
+│   └── test-helpers.sh               # Shared library (sourced by tests and some tools)
+├── ci-gate.sh                        # CI entry point (pr tier)
+└── run-tests.sh                      # Main test runner
 ```
+
+Several scripts under `tools/` are campaign-era leftovers that read from the
+archived `evidence/` tree and no longer have inputs. They are not wired into
+any gate; see [../docs/ci-gates.md](../docs/ci-gates.md).
 
 ---
 
@@ -86,9 +87,9 @@ tests/
 
 | Layer | Directory | Purpose | Typical dependencies |
 |-------|-----------|---------|----------------------|
-| **L1** | `unit/` | Fast, deterministic checks on repo files (skills, teams, `AGENTS.md`) | Bash, repo checkout |
+| **L1** | `unit/` | Fast, deterministic checks on repo files and the target-suite pin | Bash, repo checkout |
 | **L2** | `behavior/` | Agent-in-the-loop checks via OpenCode headless runs | `opencode`, network (model provider) |
-| **L3** | `integration/` | End-to-end scripts (init scripts, golden assets, workflows) | Bash; optional Python/pyasc for deeper paths |
+| **L3** | `integration/` | End-to-end scripts (init scripts, workflows) | Bash; optional Python/pyasc for deeper paths |
 
 The runner discovers tests with:
 
@@ -100,7 +101,7 @@ So new suites must use the `test-*.sh` naming convention.
 
 ## Rule IDs by category
 
-Validators live in [`lib/test-helpers.sh`](lib/test-helpers.sh). Unit scripts call these functions for every skill or team under `skills/` and `teams/`.
+Validators live in [`lib/test-helpers.sh`](lib/test-helpers.sh). Unit scripts call these functions for every skill under `skills/`.
 
 ### Skills (`unit/skills/`)
 
@@ -119,37 +120,10 @@ Validators live in [`lib/test-helpers.sh`](lib/test-helpers.sh). Unit scripts ca
 
 The structure test script header refers to S-STR-01–06; **S-STR-08** is still enforced by `validate_skill_structure` when links are invalid. There is no **S-STR-07** in the current helper implementation. There is no **S-CON-03** code path today.
 
-### Agents (`unit/agents/` — `teams/*/AGENTS.md`)
-
-| ID | Meaning |
-|----|---------|
-| **A-STR-01** | Opening `---` |
-| **A-STR-02** | `description` present *(and separately: `mode` present — same label in code)* |
-| **A-STR-03** | `mode` is `primary` or `subagent` |
-| **A-STR-04** | Each listed skill exists under `skills/<name>/SKILL.md` |
-| **A-STR-07** | `description` length 1–1024 characters |
-| **A-CON-02** | Description matches `SKILL_KEYWORDS` |
-| **A-CON-03** | Agent directory name uses allowed prefix pattern |
-| **A-CON-04** | Markdown contains expected core sections (see `AGENT_REQUIRED_SECTIONS` in helpers) |
-
-**A-STR-05** and **A-STR-06** are not defined in the current validators. **A-CON-01** is not emitted by `validate_agent_content` today.
-
-### Teams (`unit/teams/` — same `AGENTS.md` files as agents)
-
-| ID | Meaning |
-|----|---------|
-| **T-STR-01** | Opening `---` |
-| **T-STR-02** | `description` present |
-| **T-STR-03** | `mode` present |
-| **T-STR-04** | `skills` list present |
-| **T-STR-05** | Each skill dependency exists on disk |
-| **T-STR-06** | `mode` is `primary` or `subagent` |
-| **T-STR-07** | `description` length 1–1024 characters |
-| **T-CON-01** | Team directory name matches `^[a-z0-9]+(-[a-z0-9]+)*$` |
-| **T-CON-02** | Description matches `TEAM_KEYWORDS` |
-| **T-CON-03** | Core principles heading present |
-
-**T-CON-04** and **T-CON-05** are not implemented in `validate_team_content` yet; the team content test file header may still reference a future range.
+The agent and team validators (`A-*`, `T-*`) asserted over `teams/*/AGENTS.md`.
+That tree was archived, so `unit/agents/` and `unit/teams/` were removed rather
+than left reporting "All 0 agent(s) pass" on an empty glob. The validator
+functions still exist in `lib/test-helpers.sh` if agent definitions return.
 
 ### Behavior (`behavior/`)
 
@@ -165,9 +139,7 @@ The structure test script header refers to S-STR-01–06; **S-STR-08** is still 
 
 | Script | Intent |
 |--------|--------|
-| `test-simple-kernel.sh` | Init script, golden assets, basic kernel project layout |
 | `test-kernel-generation.sh` | Kernel generation / workflow smoke tests |
-| `test-golden-comparison.sh` | Golden docs/code consistency |
 | `test-workflow-execution.sh` | Workflow scripts and execution paths |
 
 ---
@@ -217,7 +189,7 @@ source "$SCRIPT_DIR/../../lib/test-helpers.sh"
 
 ### Paths (read-only globals)
 
-- `SKILLS_DIR` — repository root (parent of `skills/` and `teams/`)
+- `SKILLS_DIR` — repository root (parent of `skills/`)
 - `TESTS_DIR` — `tests/`
 - `TOOLS_DIR` — `tests/tools/`
 - `PYTHON` — resolved from `PYASC_PYTHON`
@@ -236,7 +208,7 @@ source "$SCRIPT_DIR/../../lib/test-helpers.sh"
 
 ### Temp projects
 
-- `create_test_project [prefix]` — temp dir with symlinks to `skills`, `teams`, `golden` and a throwaway git repo
+- `create_test_project [prefix]` — temp dir with a symlink to `skills` and a throwaway git repo
 - `cleanup_test_project "$dir"`
 
 ### Session analysis
@@ -289,7 +261,6 @@ Run from repo root or `tests/tools/`; use `PYASC_PYTHON` where noted.
 | [`score_kernel.py`](tools/score_kernel.py) | Checklist score / `--json` |
 | [`run_and_verify.py`](tools/run_and_verify.py) | `--mode jit\|simulator\|auto`, optional `--json` |
 | [`pytest_verify_kernel.py`](tools/pytest_verify_kernel.py) | JIT-oriented verification |
-| [`gen_golden.py`](tools/gen_golden.py) | Golden numpy tensors for ops/shapes |
 
 ---
 

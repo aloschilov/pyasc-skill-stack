@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-KERNEL_NAME="${1:?Usage: $0 <kernel_name>}"
+KERNEL_NAME="${1:?Usage: $0 <kernel_name> [base_dir]}"
 
-TEAM_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)/teams/pyasc-kernel-dev-team"
-KERNELS_DIR="$TEAM_DIR/kernels"
-KERNEL_DIR="$KERNELS_DIR/$KERNEL_NAME"
+# Create the project in the caller's working directory, or in an explicit
+# base_dir. This script used to resolve a path relative to its own location
+# inside the skill stack repository, which meant an installed skill wrote into
+# the skill stack instead of into the user's project.
+BASE_DIR="${2:-$PWD}"
+KERNEL_DIR="$BASE_DIR/$KERNEL_NAME"
 
 if [ -d "$KERNEL_DIR" ]; then
     echo "[WARN] Directory already exists: $KERNEL_DIR"

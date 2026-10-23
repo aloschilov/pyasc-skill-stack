@@ -46,7 +46,9 @@ jobs:
       OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
       OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
       CANNBENCH_JOB_IDS: ${{ inputs.job_ids || vars.CANNBENCH_JOB_IDS }}
-      CANNBENCH_OPENCODE_STATE_ROOT: /home/aloschilov/ci-campaign-state/opencode/run-${{ github.run_id }}-${{ github.run_attempt }}
+      # Set the repository variable CANNBENCH_STATE_ROOT to relocate this off
+      # the runner's home directory; it used to be a hardcoded absolute path.
+      CANNBENCH_OPENCODE_STATE_ROOT: ${{ vars.CANNBENCH_STATE_ROOT || format('{0}/ci-campaign-state', runner.temp) }}/opencode/run-${{ github.run_id }}-${{ github.run_attempt }}
       CANNBENCH_OUTPUT: evidence/cannbench/run-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4

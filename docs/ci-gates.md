@@ -1,62 +1,79 @@
-# CI and CANNBench acceptance
+# CI gates
 
-## Current pipeline
+Two gates, plus a release workflow. Both live in
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
 
-`CI` runs static/L1 checks and CANNBench acceptance unit tests on a GitHub-hosted Ubuntu runner. These checks require no CANN runtime. CANNBench execution belongs on the Ubuntu VM, through the dedicated `cannbench-vm` runner. That runner deliberately has no default labels, so historical queued `arm64` jobs cannot execute there.
+| Gate | Trigger | Duration | What it checks |
+|---|---|---|---|
+| `pr-gate` | every push and PR | seconds | L1 unit tests and static checks |
+| `merge-gate` | push to `main`, manual dispatch | ~30 min | compile-check of the AscTile target suite on the camodel |
+| release | `v*` tag | minutes | `pr-gate` plus archive build and install verification |
 
-`CANNBench gate` captures the complete official site catalog and checks hardware evidence for every listed operator and case. On 2026-10-01, the accepted submission version was `official-tasks/1.1.2`: **53 operators, 1060 cases**. The checked-in snapshot includes the raw catalog, exact task inputs and SHA256 identities. A live capture checks the catalog before and after collecting all tasks. No missing operator, case, unsupported dtype or failed generation is removed from the denominator.
-
-A manual run can generate the entire catalog using `gateway/glm-5.3` plus an independent model review. Workers receive the complete task and pinned API guide; they can edit only their own candidate/design files. A reviewer receives measured compiler feedback, and the reviewed source is compiled again. The daily schedule reads explicitly selected hardware jobs or the pending/latest durable job; it does not create submissions. `OPENCODE_API_KEY` is encrypted in GitHub Secrets, and `OPENCODE_BASE_URL` is a repository variable. They were imported from OpenCode on the VM without saving the key to this repository.
-
-Hardware results must match the catalog version and hardware, include the exact complete case set, final correctness and anti-cheat results, and finite positive candidate/reference timings. Duplicate measurements are rejected rather than merged by fastest case. The true geometric mean is recomputed from `baseline_perf_us / elapsed_us`; the misleading API aggregate is ignored. Local dispatch/lowering and Model smoke results do not satisfy hardware acceptance.
-
-The workflow has two separate results: hardware evidence and skill-stack acceptance. Skill-stack acceptance additionally requires all 53 native-generated candidates (including unchanged candidates requalified from a recorded campaign), native skill traces, a different implementation/review model, exact task and candidate hashes, complete compiler coverage, an installed evaluator-wheel replay, and a durable identity binding to the submitted archive and returned hardware job. An imported historical job alone cannot satisfy this gate.
-
-A manual run with `generate=true` and `submit=true` freezes one fully qualified catalog bundle and sends the first operator batch within fresh available credits. Each operator retains all 20 cases. Later manual runs with `generate=false` and `continue_submissions=true` GET-reconcile existing batches before sending at most one new quota-bounded batch. Scheduled workflows remain GET-only. The authorized daily chat continuation checks the campaign at 19:30 Moscow time, after the current quota reset. No credits are purchased, already submitted operators are not repeated, and failed jobs remain visible. Every batch contains the same evaluator wheel and full bundle, plus a unique `BATCH.json` binding its lowercase function names; hardware acceptance combines the exact 53-operator partition across jobs. A failed or partial generation creates no submission. POST has no retries; durable upload intent is written under the existing shared upload lock before sending. After an ambiguous response, the tool reconciles the unique tag by GET and refuses to repeat POST even when no match is visible. Campaign state, the frozen full bundle and hashed batch archives live outside the runner checkout under `/home/aloschilov/ci-campaign-state/pyasc-cannbench`. Schedules reconcile pending uploads and refresh existing jobs using GET only, including after runner cancellation.
-
-These stages are implemented but full-catalog generation, installed-wheel replay and hardware acceptance have not yet completed. Infrastructure tests are not evidence of 53 correctly generated/accepted kernels.
-
-## Dashboard
-
-Pages downloads the exact artifact from the triggering CANNBench run, including failed gates, and renders every official operator. For a CI-only or dashboard change it prefers a matching revision, then the latest completed CANNBench run. Both source revisions are displayed; evidence from an older revision cannot qualify the current skill-stack revision. Pages always builds the current main so a late old campaign cannot roll back the dashboard code. Missing and failed cases remain visible. Simulator comparison and historical skill-intervention results remain separate diagnostics. No evidence commit is needed for metrics publication. Generation artifacts are retained separately for 90 days. `reuse_run_id` accepts only completed main CANNBench workflow runs. Native candidates and their exact task/skill/phase evidence are validated, then every case is replayed under the current compiler gate; original provenance and compiler report bytes remain alongside explicit derivation hashes. Missing/tampered native records use fresh generation. The full catalog denominator never changes. Each run has a unique artifact directory. A run that fails before uploading hardware evidence is published as missing/failed, preserving the full denominator.
-
-## Commands
-
-On the Mac, for static verification:
+## `pr-gate`
 
 ```bash
-python -m unittest discover -s tests/unit -p 'test_cannbench_*.py' -v
-python integrations/cannbench/ci/validate_catalog.py integrations/cannbench/catalogs/official-tasks-1.1.2-20261001
-bash tests/ci-gate.sh --tier pr
-python tests/tools/generate_dashboard.py --output-dir _site
+bash tests/ci-gate.sh --tier pr      # what CI runs
+bash tests/run-tests.sh --fast       # the same thing, directly
 ```
 
-On the VM, with its existing CANNBench credentials:
+Deterministic structure and content checks over `skills/` and `agents/`, the
+runtime-backend dispatch logic, and an offline drift check comparing the
+vendored target suite against `reference/asctile/PIN.json`. No Docker, no
+CANN, no network, no provider calls.
+
+This is the gate a release tag must pass.
+
+## `merge-gate`
+
+Pulls the pinned `pyasc-sim` image from ghcr.io and compile-checks every
+module in `reference/asctile/target/` with
+`tests/tools/run_target_test.py --backend Model --platform Ascend950PR_9599`.
+
+Compile-only is deliberate. Each module carries roughly 100 parametrised
+cases and the camodel is slow, so the blocking gate verifies that every case
+generates and compiles; full numerical execution is a manual or nightly run.
+See [review-order.md](review-order.md) for running it by hand.
+
+Runs natively on the self-hosted arm64 runner (no x86 emulation). The image
+tag is version-coupled to an immutable pyasc commit — never point it at a
+mutable tag, because a moving runtime silently invalidates every result
+below it.
+
+`test_add_inplace.py` is skipped: 4 of its 20 cases exceed the 192 KB UB
+budget on large shapes even under `--compile-only`. Pending a shape trim or a
+representative-case selection block.
+
+## Release
+
+Tagging `v*` triggers [`release.yml`](../.github/workflows/release.yml): run
+the fast suite, build `tar.gz` and `zip` of exactly `skills/`, `install.sh`,
+`README.md` and `CHANGELOG.md`, assert the unpacked archive contains those
+four entries and nothing else, assert `install.sh --target` links every skill
+from the unpacked archive, then publish with notes from the tag.
+
+## What is not here any more
+
+The campaign-era `perf-gate`, `nightly-gate`, `local-stability-gate`,
+`cloud-dashscope-gate` and `skills-value-report` jobs read from `evidence/`
+and scored model-written kernels in `golden/`. Both were removed from `main`,
+so the jobs were retired with them; `pages.yml` published a dashboard from a
+directory that was never tracked. All of it is on the
+`archive/campaign-2026` branch:
 
 ```bash
-python3 integrations/cannbench/ci/run.py --output evidence/cannbench/ci-current --job-id job_13cb06f8dff9
+git show archive/campaign-2026:.github/workflows/ci.yml
 ```
 
-The GeLU-only example intentionally fails the complete 1060-case gate. It is an example of retaining partial measured evidence, not acceptance of the catalog.
+Restoring any of it means first restoring an evidence source for it to read,
+and that source should be CANNBench rather than checked-in JSON — see
+[evidence-sources.md](evidence-sources.md).
 
-A full campaign is explicitly requested on the VM with:
+## Local test tiers
 
 ```bash
-python3 integrations/cannbench/ci/run.py --output evidence/cannbench/run-unique --generate --submit
+bash tests/run-tests.sh --fast    # L1 only (what CI gates on)
+bash tests/run-tests.sh --all     # adds L2 behavior and L3 integration
 ```
 
-An existing qualified campaign can be continued explicitly with:
-
-```bash
-python3 integrations/cannbench/ci/run.py --output evidence/cannbench/resume-unique --continue-submissions
-```
-
-Compilation and installed-wheel replay use the existing shared execution locks. The runtime wheel and compiler image are pinned by SHA256 in `integrations/cannbench/ci/runtime.json`; a changed image or wheel requires requalification. Runtime packaging includes `asc` and the current public `asctile` package; the historical packaging helper's `asc2` pin is not reused. The hardware jobs are the full numerical and performance oracle. No canonical module is promoted by this campaign.
-
-The dedicated runner is managed by `pyasc-cannbench-runner.service` in the VM user manager, with linger enabled for reboot persistence. `runner_service.py` refuses to replace a different service or interrupt a busy runner.
-
-The output directory must be new. Never overwrite prior snapshots or durable submission state. Credentials stay on the VM. Preserve the historical shared simulator and upload locks. Reconcile an ambiguous submission by GET; never repeat POST automatically. No automatic commit/push.
-
-## Legacy diagnostics
-
-The previous simulator/OpenCode intervention workflow is archived as `docs/ci/legacy-ci.yml` for reference. Its manually selected capability cells, simulator ticks, and report-only 0.70 threshold are historical diagnostics, not the current CANNBench kernel set or hardware gate. The standalone legacy helper scripts and evidence are preserved.
+`tests/behavior/` makes real `opencode` provider calls, so `--all` costs
+money and time and is not run in CI.

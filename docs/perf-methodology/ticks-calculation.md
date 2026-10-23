@@ -53,15 +53,15 @@ exposes a tick-model engine in C++. The relevant symbols, found via
 
 The "tick" is **simulated AI core cycles**, not host CPU cycles. At the
 camodel's wall-clock fixed-point of 50 MHz (per the upstream API spec at
-[golden/docs/python-api/language/generated/asc.language.basic.get_system_cycle.md](../../golden/docs/python-api/language/generated/asc.language.basic.get_system_cycle.md)),
+`golden/docs/python-api/language/generated/asc.language.basic.get_system_cycle.md` on `archive/campaign-2026`),
 1 tick ≈ 20 ns of "device time". The same counter is reachable from inside
 a kernel via `asc.get_system_cycle()` and from Python via
 `asc.runtime.lib.runtime.current_tick()`.
 
 ## 2. Verification: JIT compile time is **not** counted in ticks
 
-Earlier perf docs ([pr190-asc2-range-defaults-impact.md](../pr190-asc2-range-defaults-impact.md),
-[pr190-asc2-range-c310-sweep.md](../pr190-asc2-range-c310-sweep.md))
+Earlier perf docs ([pr190-asc2-range-defaults-impact.md](#archived),
+[pr190-asc2-range-c310-sweep.md](#archived))
 captured `Total tick:` as the headline metric. There was a recurring concern
 that for goldens decorated `@asc2.jit(always_compile=True)` (which forces a
 full bisheng compile on every process launch), the printed tick might
@@ -114,7 +114,7 @@ both `_full_row_launch` and `_split_d_launch`; `matmul_f16.py` has two
 test_cases) **the headline number is the running sum**, not the per-launch
 cost.
 
-The prior C310 sweep ([pr190-asc2-range-c310-sweep.md](../pr190-asc2-range-c310-sweep.md))
+The prior C310 sweep ([pr190-asc2-range-c310-sweep.md](#archived))
 captured `Total tick:` as a single number per Docker run for this reason
 — each cell ran the same `run_kernel` body, so the comparison was
 internally consistent (apples-to-apples), but absolute numbers blend
@@ -382,6 +382,18 @@ be measured identically:
 Runners: [`tests/tools/perf/ascendc_ref_runner.py`](../../tests/tools/perf/ascendc_ref_runner.py)
 (reference) and [`tests/tools/perf/pyasc_gen_runner.py`](../../tests/tools/perf/pyasc_gen_runner.py)
 (generated); orchestrated by [`tests/tools/demo_vector_ops.py`](../../tests/tools/demo_vector_ops.py).
-See [`docs/perf-vs-ascendc-demo.md`](../perf-vs-ascendc-demo.md) for the gate,
+See [`docs/perf-vs-ascendc-demo.md`](#archived) for the gate,
 caveats, and the current cell status (including the generated-side codegen
 blocker for multi-input/reduction kernels).
+
+## Archived references
+
+Links above marked `#archived` pointed at campaign-era documents removed from
+`main`. Recover them with:
+
+```bash
+git checkout archive/campaign-2026 -- \
+  docs/pr190-asc2-range-defaults-impact.md \
+  docs/pr190-asc2-range-c310-sweep.md \
+  docs/perf-vs-ascendc-demo.md
+```

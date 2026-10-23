@@ -4,10 +4,14 @@
 
 | Component | Version | Install |
 |-----------|---------|---------|
-| Python | 3.9-3.12 | System package manager |
-| pyasc | Exact selected v2 commit | Build a wheel from source or use the matching vendored artifact |
-| numpy | < 2.0 | `pip install "numpy<2"` |
-| CANN Toolkit | 8.0.0+ | Huawei Ascend installer |
+| Python | 3.10 or 3.11 | System package manager |
+| pyasc (with `asctile`) | latest `pyasc-dev` | `pip install --pre pyasc-dev` |
+| numpy | < 2.0 | pulled in by `pyasc-dev` |
+| CANN Toolkit | 9.0.0 | Huawei Ascend installer |
+
+Published `pyasc-dev` wheels cover Linux `aarch64` CPython 3.10, and Linux
+`x86_64` CPython 3.10 and 3.11, all requiring glibc 2.35 or newer. Anything
+outside that set needs a source build with `PYASC_SETUP_EXPERIMENTAL=1`.
 
 ## Optional
 
@@ -32,9 +36,10 @@
 1. Install CANN Toolkit
 2. Source the installed toolkit environment (on this machine:
    `source /usr/local/Ascend/cann-9.0.0/set_env.sh`)
-3. Build/install pyasc from the exact selected `v2` commit and install `"numpy<2"`
+3. `python3.10 -m venv .venv && source .venv/bin/activate && pip install --pre pyasc-dev`
 4. (Optional) `pip install torch torch_npu`
-5. Verify: `python3 -c "import asc, asctile; print(asc.__file__, asctile.__file__)"`
+5. Verify: `python3 -c "from asc.experimental import asctile; print(asctile.__file__)"`
+   (legacy source builds expose it as a top-level `import asctile` instead)
 
 ## Model backend setup
 

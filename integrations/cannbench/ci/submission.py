@@ -11,7 +11,12 @@ import zipfile
 from generation_gate import sha256
 from vm_locks import shared_locks, VM_ROOT
 
-STATE_ROOT = Path("/home/aloschilov/ci-campaign-state/pyasc-cannbench")
+# Override with CANNBENCH_STATE_ROOT; the default lands under the system
+# temp dir rather than a hardcoded home directory.
+STATE_ROOT = Path(os.environ.get(
+    "CANNBENCH_STATE_ROOT",
+    Path(tempfile.gettempdir()) / "ci-campaign-state",
+)) / "pyasc-cannbench"
 TERMINAL = {"succeeded", "failed", "correctness_failed", "compile_failed", "cancelled", "canceled"}
 
 

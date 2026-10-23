@@ -92,7 +92,12 @@ def qualify_bundle(bundle, catalog_file, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--credentials-file", type=Path, default=Path("/home/aloschilov/workspace/pyasc-skill-stack/.secrets/cannbench.env"))
+    parser.add_argument(
+        "--credentials-file",
+        type=Path,
+        # Repo-relative, not a hardcoded home directory.
+        default=Path(__file__).resolve().parents[3] / ".secrets/cannbench.env",
+    )
     parser.add_argument("--job-id", action="append", default=[])
     parser.add_argument("--state-file", type=Path, help="Resume an exact durable submission using GETs only")
     parser.add_argument("--generate", action="store_true")

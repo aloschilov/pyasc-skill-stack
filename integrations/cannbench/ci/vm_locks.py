@@ -10,7 +10,10 @@ import sys
 from contextlib import ExitStack
 from contextlib import contextmanager
 
-VM_ROOT = Path("/home/aloschilov/workspace/pyasc-skill-stack")
+# Derived from this file's location (<repo>/integrations/cannbench/ci/),
+# or CANNBENCH_VM_ROOT to point at a checkout elsewhere. Was a hardcoded
+# absolute path to one developer's home directory.
+VM_ROOT = Path(os.environ.get("CANNBENCH_VM_ROOT", Path(__file__).resolve().parents[3]))
 EXECUTION_LOCKS = [VM_ROOT / "integrations/cannbench/comparisons/gelu-adaptive-20260910" / name
                    for name in ("screen.lock", "local.lock")]
 UPLOAD_LOCK = VM_ROOT / "integrations/cannbench/comparisons/gelu-geometry-strategy-20260908/artifacts/remote.lock"

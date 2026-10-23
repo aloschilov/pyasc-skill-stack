@@ -87,44 +87,40 @@ ls "$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib/"
 
 # Run a pyasc tutorial to verify end-to-end
 cd "$PYASC_SRC"
-python3.10 python/tutorials/01_add/add.py -r Model -v Ascend950PR_9599
+python3.10 python/tutorials/asctile/01-vector-add.py
 ```
 
 Success criteria: The tutorial prints "Sample add run success." with no ISA errors.
 
-## Evaluation pyasc clone (`pyasc-v2-eval`)
+## Getting the pyasc runtime
 
-The skill-stack harness imports `asc` / `asc2` from a dedicated, read-only
-checkout at `/home/aloschilov/workspace/pyasc-v2-eval`. This clone exists
-purely so every simulator-verified evidence file pins to a specific SHA on
-`compiler-team/pyasc#v2`. Treat the directory as read-only:
-
-- Active pyasc development belongs in `/home/aloschilov/workspace/pyasc-fork`
-  (or wherever your team-side clone lives), never here.
-- The tree is kept at a detached `HEAD` so `git status` flags any accidental
-  branch checkout.
-- A `.git/hooks/pre-commit` refuses every commit with a pointer back to
-  `pyasc-fork`.
-- `EVAL-ONLY.README.md` is excluded via `.git/info/exclude` so it does not
-  flip the `pyasc_revision.dirty` bit recorded in evidence files.
-
-Bumping the pinned SHA (only by the evaluation owner):
+Install the published wheel into a clean virtualenv:
 
 ```bash
-cd /home/aloschilov/workspace/pyasc-v2-eval
-git fetch origin
-git checkout <new-sha-on-origin/v2>
-
-# Re-link the editable so the harness picks the new revision up.
-cd /home/aloschilov/workspace/pyasc-skill-stack
-pip install -e /home/aloschilov/workspace/pyasc-v2-eval
-
-# Then re-run the matrix and refresh docs/skill-value-q1-findings.md.
+python3 -m venv .venv
+.venv/bin/pip install --pre pyasc-dev
 ```
 
-The CI workflow exports `PYASC_EVAL_ROOT=/home/aloschilov/workspace/pyasc-v2-eval`
-so a runner that imports `asc` from any other tree gets a loud warning in
-the evidence record.
+`asctile` is compiled into the wheel. Verify you got a usable one:
+
+```bash
+.venv/bin/python -c "from asc.experimental import asctile; print(asctile.__file__)"
+```
+
+A legacy source build exposes the module top-level as `import asctile`
+instead; both layouts are handled by the skills and by
+`reference/asctile/conftest.py`.
+
+> **Watch for shadowing.** A stale editable checkout can leave an `asctile/`
+> directory with no `__init__.py` on `sys.path`. Python imports that as an
+> empty namespace package, so `import asctile` *succeeds* with
+> `__file__ is None` and nothing in it works. If you see
+> `module 'asctile' has no attribute 'jit'`, this is why — use a clean venv.
+
+Each published wheel records its own source commit in its PyPI metadata,
+because the build tracks the upstream default branch. Read that rather than
+assuming a fixed revision; `scripts/sync-target-suite.sh` uses it as the
+default ref when re-vendoring the target suite.
 
 ## Running pyasc Kernels
 

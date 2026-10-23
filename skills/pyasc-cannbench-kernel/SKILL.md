@@ -100,7 +100,10 @@ coordinator; do not claim the whole project lacks local validation.
 
 Never claim numerical correctness or performance from the local compile gate.
 Only camodel execution can provide local numerical evidence; only CANNBench on
-the real NPU is the acceptance/performance oracle. In particular, a VF/reuse
+the real NPU is the acceptance/performance oracle. A ratio is only meaningful
+against a defined CANN-side case — read [the TTK manifest](references/ttk.md)
+before quoting a fraction of CANN, and report `blocked` rather than inventing
+a baseline. In particular, a VF/reuse
 kernel that fits the static UB budget can still trigger a vector-core timeout
 on a large case.
 

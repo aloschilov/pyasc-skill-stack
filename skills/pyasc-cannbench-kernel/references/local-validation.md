@@ -105,8 +105,9 @@ failure as evidence rather than hiding it.
 
 Use the configured native runtime for representative smoke tests. The following
 setup notes are historical provisioning evidence, not worker instructions to
-install or rebuild: the AArch64 build used
-`LLVM_INSTALL_PREFIX=/home/aloschilov/workspace/llvm`. The CMake
+install or rebuild: the AArch64 build used `LLVM_INSTALL_PREFIX` pointing at a
+local LLVM install (set it to your own path; there is no standard location).
+The CMake
 graph has an observed generated-header race: if a parallel clean build misses
 `AscendCDialect.h.inc`, run once with `PYASC_SETUP_JOBS=1`, then continue the
 same build directory in parallel. GCC `-O3` may use roughly 12 GB RSS and about

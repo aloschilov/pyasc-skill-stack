@@ -1,0 +1,83 @@
+name: Release
+
+# Tags are the release mechanism. There is no release/<date>/ directory and
+# there should never be one again: git already versions trees, and a dated
+# folder is a copy that drifts from the thing it copied.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Gate on the fast suite
+        run: bash tests/run-tests.sh --fast
+
+      - name: Build archives
+        run: |
+          set -euo pipefail
+          # Exactly the installable surface: the skills, the installer that
+          # links them, and the two documents a reader needs. Not the
+          # reference suite (it is pinned to a pyasc commit and tracks
+          # upstream, not this tag), not CI, not integrations.
+          PAYLOAD=(skills install.sh README.md CHANGELOG.md)
+          for p in "${PAYLOAD[@]}"; do
+            [ -e "$p" ] || { echo "missing from payload: $p" >&2; exit 1; }
+          done
+          NAME="pyasc-skill-stack-${GITHUB_REF_NAME}"
+          # A CI checkout is clean, but these excludes make the archive
+          # identical when built from a working tree that has been run in.
+          tar czf "${NAME}.tar.gz" \
+            --exclude='__pycache__' --exclude='*.pyc' --exclude='.DS_Store' \
+            "${PAYLOAD[@]}"
+          zip -qr "${NAME}.zip" "${PAYLOAD[@]}" \
+            -x '*__pycache__*' '*.pyc' '*.DS_Store'
+          echo "NAME=${NAME}" >> "$GITHUB_ENV"
+
+      - name: Verify the archives unpack to the payload and nothing else
+        run: |
+          set -euo pipefail
+          # A release archive that quietly grows an extra directory is how a
+          # repository starts accumulating release/<date>/ trees again.
+          d="$(mktemp -d)"
+          tar xzf "${NAME}.tar.gz" -C "$d"
+          # LC_ALL=C: the default locale sorts case-insensitively, so the
+          # expected string would depend on the runner image.
+          got="$(cd "$d" && ls -A | LC_ALL=C sort | tr '\n' ' ')"
+          want="CHANGELOG.md README.md install.sh skills "
+          if [ "$got" != "$want" ]; then
+            echo "archive contents differ" >&2
+            echo "  want: $want" >&2
+            echo "  got:  $got" >&2
+            exit 1
+          fi
+          test -x "$d/install.sh" || { echo "install.sh is not executable" >&2; exit 1; }
+          n=$(find "$d/skills" -mindepth 1 -maxdepth 1 -type d | wc -l)
+          echo "archive carries $n skills"
+          [ "$n" -gt 0 ] || { echo "no skills in archive" >&2; exit 1; }
+          junk=$(find "$d" \( -name '__pycache__' -o -name '*.pyc' \) | wc -l)
+          [ "$junk" -eq 0 ] || { echo "archive carries $junk bytecode artefact(s)" >&2; exit 1; }
+
+          # The installer must work from the unpacked archive, not just from a
+          # git checkout -- that is the whole point of shipping it.
+          s="$(mktemp -d)"
+          (cd "$d" && ./install.sh --target "$s")
+          linked=$(find "$s" -mindepth 1 -maxdepth 1 | wc -l)
+          echo "install.sh --target linked $linked skills"
+          [ "$linked" -eq "$n" ] || { echo "linked $linked of $n skills" >&2; exit 1; }
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "${NAME}.tar.gz" "${NAME}.zip" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-from-tag

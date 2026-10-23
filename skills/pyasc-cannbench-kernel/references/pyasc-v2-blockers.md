@@ -1,7 +1,14 @@
 # Pinned pyasc v2 limitations relevant to CANNBench
 
-This is a routing summary. Detailed evidence and confidence labels live in
-`docs/pyasc-v2-cannbench-blockers.md`.
+This is a routing summary. The detailed evidence, confidence labels and
+reproducers were campaign artefacts and are no longer on `main`. Recover them
+with:
+
+```bash
+git checkout archive/campaign-2026 -- \
+  docs/pyasc-v2-cannbench-blockers.md \
+  integrations/cannbench/comparisons/gelu-asctile-jit-20260907/
+```
 
 - Generated AscendC can declare the same scalar identifier for f16 and bf16,
   producing a `c0_f16` redefinition. Isolate the half types or bridge through a
@@ -46,14 +53,14 @@ This is a routing summary. Detailed evidence and confidence labels live in
   `@asctile.jit(reuse_alloc=1)` raises unknown option. Extraction itself uses
   `self.compiler.options_cls`. Record this import-order defect; do not load a
   concrete-options adapter or patch the compiler in the high-level campaign.
-  [Reproducer](../../../../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/jit_probe.py).
+  Reproducer: `.../gelu-asctile-jit-20260907/jit_probe.py` on `archive/campaign-2026`.
 - Public-erf FP32 exact GeLU fails dense negative-tail qualification locally
   in the historical GeLU snapshot at `adadd7d6` / CANN 9.0 for all 18 reuse/static/fusion combinations. A
   64-element constant-input reproducer isolates backend Erf error amplified
   by cancellation. This is not a measured NPU result, and compiling all 20
   shapes does not override it. Keep submission blocked until repaired through
   a permitted public API/backend change.
-  [Evidence](../../../../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/evidence/numeric-reproducer.json).
+  Evidence: `.../gelu-asctile-jit-20260907/evidence/numeric-reproducer.json` on `archive/campaign-2026`.
 - Multi-tile/repeated FP16 Model execution at this pin requires an explicit
   runtime gate even after `verify_sync=True` passes. Fresh-cache exact GeLU
   with reuse1/VF=true exceeds a 120-second whole-child budget with repeat1
@@ -61,7 +68,7 @@ This is a routing summary. Detailed evidence and confidence labels live in
   traces do show progress through repeats and eight-core launches. Controls
   disabling either reuse or VF, and FP32 controls, complete. Do not infer
   repeat-specific/NPU deadlock or a cache-only cause from deadline exhaustion.
-  [Bounded controls](../../../../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/evidence/tail-controls/summary.json).
+  Bounded controls: `.../gelu-asctile-jit-20260907/evidence/tail-controls/summary.json` on `archive/campaign-2026`.
 - Static UB success does not prove a large VF-fused loop is runnable. A
   72-core, tile-13,824 GeLU tanh route with VF+reuse fit 221,184 bytes but timed
   out on the vector core in official case 4. Treat the combination as unsafe
