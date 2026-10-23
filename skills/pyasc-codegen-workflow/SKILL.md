@@ -96,6 +96,7 @@ measurement beyond noise.
 
 ## Resources
 
+- [Request workflow and gate taxonomy](references/workflow.md)
 - [Phase 0](references/phase0-environment.md)
 - [Phase 1](references/phase1-design.md)
 - [Phase 2](references/phase2-implementation.md)

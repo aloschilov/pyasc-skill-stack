@@ -133,5 +133,8 @@ wheel hash, and pyasc commit. A queued job is not a completed run.
 ## References
 
 - [JIT diagnostics](references/jit-diagnostics.md)
-- [Verification patterns](references/verification-patterns.md)
+- [Verification patterns](references/verification-patterns.md) — preflight and gate reporting
+- [Execution example](references/execution-example.md) — a complete, tested simulator run
+- [Hardware targets and measurement](references/hardware.md)
+- [Report template](references/report-template.md)
 - `pyasc-cannbench-kernel/references/local-validation.md`
