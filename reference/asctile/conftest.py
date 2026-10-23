@@ -40,9 +40,42 @@ import pytest
 try:
     from asc.experimental import asctile as _asctile
 except ImportError:  # pragma: no cover - legacy source build exposes it top-level
-    pass
+    _asctile = None
 else:
     sys.modules["asctile"] = _asctile
+
+if _asctile is None or not hasattr(_asctile, "jit"):
+    # Neither path produced a usable module. Say so here, once, instead of
+    # letting all 18 test modules die at import with
+    # `AttributeError: module 'asctile' has no attribute 'jit'`, which reads
+    # like a broken suite rather than a broken environment.
+    try:
+        import asctile as _fallback
+    except ImportError:
+        _found = "nothing importable as `asctile`"
+    else:
+        _found = f"`asctile` from {_fallback.__file__!r}"
+        if hasattr(_fallback, "jit"):
+            _asctile = _fallback  # legacy source build; nothing more to do
+    if _asctile is None or not hasattr(_asctile, "jit"):
+        try:
+            import asc as _asc
+            _asc_where = _asc.__file__
+        except ImportError:
+            _asc_where = "not installed"
+        raise RuntimeError(
+            "No usable asctile runtime on this interpreter.\n"
+            f"  python           {sys.executable}\n"
+            f"  asc              {_asc_where}\n"
+            f"  asctile          {_found}\n"
+            "A directory named `asctile/` with no __init__.py imports as an "
+            "empty namespace package, so `import asctile` can succeed and "
+            "still be useless -- that is usually a stale editable checkout on "
+            "sys.path shadowing the real runtime.\n"
+            "Install the published wheel into a clean venv:\n"
+            "  python3 -m venv .venv && .venv/bin/pip install --pre pyasc-dev\n"
+            "See reference/README.md."
+        )
 # ---------------------------------------------------------------------------
 
 
