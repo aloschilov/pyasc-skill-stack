@@ -24,20 +24,6 @@ for skill_dir in "$SKILLS_DIR"/skills/*/; do
     fi
 done
 
-# Validate team structure
-echo ""
-echo "--- Team validation ---"
-
-for team_dir in "$SKILLS_DIR"/teams/*/; do
-    team_file="$team_dir/AGENTS.md"
-    if [ -f "$team_file" ]; then
-        TESTED=$((TESTED + 1))
-        if ! validate_team_structure "$team_file"; then
-            ERRORS=$((ERRORS + 1))
-        fi
-    fi
-done
-
 echo ""
 echo "Tested: $TESTED items"
 

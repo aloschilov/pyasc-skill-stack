@@ -1,5 +1,9 @@
 # Evaluation methodology
 
+> Paths marked `(archived)` were removed from `main` with the campaign
+> scoreboard. Recover any of them with
+> `git checkout archive/campaign-2026 -- <path>`.
+
 This document describes what the `pyasc-skill-stack` matrix is, what it
 measures, and how to read its numbers without overclaiming.
 
@@ -39,7 +43,7 @@ task cell (capabilities.yaml)
 
 A task cell is the unit of work: `(operation, dtype, platform, prompt,
 shapes, prompt_variants, golden, ...)` as defined in
-[capabilities.yaml](../capabilities.yaml). One task cell yields one or
+`capabilities.yaml` (archived). One task cell yields one or
 more evidence files; the file name suffix encodes the
 `(model_profile, skills_mode)` slice it was produced under, for example
 `evidence/abs-f16-generative-cloud-default-off.json`.
@@ -70,7 +74,7 @@ the next deliverable.
 
 Purpose: show which pyasc kernel patterns are covered.
 
-Fields (already in [capabilities.yaml](../capabilities.yaml) and
+Fields (already in `capabilities.yaml` (archived) and
 `evidence/*.json`):
 
 | Field | Source |
@@ -408,7 +412,7 @@ them on a representative platform.
 
 ## Summary-level additive fields (schema v2)
 
-The top-level [`evidence/skills-value-summary.json`](../evidence/skills-value-summary.json)
+The top-level `evidence/skills-value-summary.json` (archived)
 document carries a few additive freshness/run-status fields that the
 dashboard reads to surface what the most recent nightly actually
 measured. They are emitted by
@@ -547,10 +551,10 @@ or `--prompt-variant` that contradict the derived values exit 1.
 | `P6`        | `opencode-skills-on-guided`       | `on`          | `guided`         | `false`     |
 
 `agents_md=true` means the baseline AGENTS.md vendored at
-[`docs/baseline/pyasc-fork-AGENTS.md`](baseline/pyasc-fork-AGENTS.md)
+`baseline/pyasc-fork-AGENTS.md` (archived)
 is copied into the test project as `AGENTS.md`. This is the **baseline**
 AGENTS.md from the upstream pyasc-fork checkout, *not* the skill-stack
-AGENTS.md at [`teams/pyasc-kernel-dev-team/AGENTS.md`](../teams/pyasc-kernel-dev-team/AGENTS.md)
+AGENTS.md at `teams/pyasc-kernel-dev-team/AGENTS.md` (archived)
 (which is mounted only under `skills_mode=on`). Mixing the two would
 conflate "skill value" with "baseline-AGENTS.md value", so the
 collector refuses `--protocol-id P4 --skills-mode on` and
@@ -642,15 +646,15 @@ Phase 1 of the quarterly roadmap promotes each capability cell from
 self-description of what the cell claims to prove". The fields are
 additive on `schema_version: "3"` — no schema bump, no prompt rewrite,
 no kernel behavior change. Today's consumers
-([check_capabilities.py](../tests/tools/check_capabilities.py),
-[capabilities.yaml](../capabilities.yaml)) read them; downstream
+(`tests/tools/check_capabilities.py` (archived),
+`capabilities.yaml` (archived)) read them; downstream
 dashboard / aggregator panels will land in Phase 2/3.
 
 [docs/glossary.md](glossary.md) is the single source of truth for the
 terminology used by these fields and for the standard pyasc / asc2 /
 CANN vocabulary. The same file documents the ReLU scope decision
 (`relu` is covered by pattern under the `abs` op's
-`representative_of` list; see [docs/glossary.md §7](glossary.md#7-operator-coverage-notes)).
+`representative_of` list; see `glossary.md#7-operator-coverage-notes` (archived)).
 
 ### Required fields per cell
 
@@ -668,11 +672,11 @@ CANN vocabulary. The same file documents the ReLU scope decision
 
 Allowed values for the enum fields and the canonical
 `unsupported_regimes` slug list are documented in
-[docs/glossary.md §6](glossary.md#6-cell-metadata-enums).
+`glossary.md#6-cell-metadata-enums` (archived).
 
 ### Cross-field consistency
 
-[`check_capabilities.py`](../tests/tools/check_capabilities.py)
+`tests/tools/check_capabilities.py` (archived)
 enforces the following invariants (hard-fail by default, demote to
 warnings with `--no-strict-metadata`):
 
@@ -682,14 +686,14 @@ warnings with `--no-strict-metadata`):
 - Tier `reduction` ⇒ `reduce_axis` must be set.
 - `tail_behavior == host_dispatcher` ⇔ `partitioning == host_dispatcher`.
 - Every `unsupported_regimes` entry must be in the canonical set
-  documented in [docs/glossary.md §6](glossary.md#6-cell-metadata-enums).
+  documented in `glossary.md#6-cell-metadata-enums` (archived).
 
 ### Golden-header ↔ capabilities.yaml mirroring
 
 Every golden under [golden/kernels/](../golden/kernels/) carries a
 "Cell metadata (mirrors capabilities.yaml; do not drift)" block in
 its top-of-file docstring. The
-[tests/unit/tools/test-golden-header.sh](../tests/unit/tools/test-golden-header.sh)
+`tests/unit/tools/test-golden-header.sh` (archived)
 PR-gate test greps each golden's docstring for the cell's
 `shape_regime`, `tail_behavior`, and `partitioning` strings and fails
 if either source has drifted from the other. Reporting and prompt

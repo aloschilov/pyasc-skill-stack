@@ -822,7 +822,7 @@ def smoke_dashboard_payload() -> None:
         "renderPerfBanner",
         "perf-banner",
         "perf-cards",
-        "Performance vs hand-written AscendC",
+        "Historical simulator diagnostic vs AscendC",
         "clear the ratio",
         # Compiler SIMD-fusion panel renderer + CSS hooks.
         "renderVfFusion",

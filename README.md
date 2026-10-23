@@ -2,7 +2,11 @@
 
 Reusable Agent skill modules for pyasc kernel development on Huawei Ascend NPUs using the **asctile** high-level tile-based API.
 
+**Scope:** writing an asctile kernel, verifying it, tuning its performance, and configuring CANNBench — and nothing else. Ten skills, one installer, one pinned correctness reference.
+
 With skills installed, a short prompt like _"Develop an abs operator for float16, shapes [1,128], [4,2048], [32,4096]"_ is enough — the agent handles environment setup, design, implementation, review, and verification autonomously.
+
+**What counts as evidence:** the Huawei-authored target suite in `reference/asctile/target/` proves correctness, CANNBench produces the performance ratio, and the TTK manifest defines the CANN-side baseline that ratio is measured against. **No model-written kernel is a reference** — for correctness, for tuning, or as a baseline. See [docs/evidence-sources.md](docs/evidence-sources.md).
 
 ## Target users
 
@@ -44,8 +48,6 @@ These must be available on the host before starting:
 No `aarch64` CPython 3.11 wheel, no macOS, no Windows, and no other Python versions are published. `pip` resolves the newest version that has a wheel for your platform, so different hosts legitimately land on different versions.
 
 The wheel supplies the compiler and runtime only. **CANN, its drivers, and any hardware are installed separately** and are not bundled.
-
-> **Historical pins.** Earlier revisions of this repository pinned pyasc revision `030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`, and `CANONICAL.json` records `0a631f70968c3cb7c33ce45330a85768dd5a6f06` as the CANNBench campaign runtime. Both are **development artifacts from past campaigns, not user dependencies**. Each published wheel instead records its own source commit in its PyPI metadata, because the build tracks the upstream default branch; read it with the command in Step 4 rather than assuming any fixed revision.
 
 ### Step 1. Clone the repository
 
@@ -200,8 +202,10 @@ After the agent finishes, run the generated kernel manually:
 ```bash
 source "$CANN_HOME/set_env.sh"
 export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
-python3.10 teams/pyasc-kernel-dev-team/kernels/<kernel_name>/kernel.py -r Model -v Ascend950PR_9599
+python3.10 <kernel_project>/kernel.py -r Model -v Ascend950PR_9599
 ```
+
+`Backend.Model` is the simulator, not hardware. A pass here is a simulator pass and reports should say so. A worked, runnable example is in [`skills/pyasc-build-run-verify/references/execution-example.md`](skills/pyasc-build-run-verify/references/execution-example.md).
 
 ## What the agent does
 
@@ -209,7 +213,7 @@ When skills are discovered correctly, the agent:
 
 1. Loads `pyasc-codegen-workflow` and follows a 4-phase workflow (Phase 0 → 1 → 2 → 3)
 2. Initializes the kernel project directory
-3. Retrieves documentation from the golden set and asctile kernel references
+3. Retrieves documentation from the asctile kernel references and the pinned target suite
 4. Writes a design document with asctile API selection and syntax checks
 5. Implements `kernel.py` using the asctile kernel template and reviewed patterns
 6. Conducts self-review and acceptance review against pyasc constraints
@@ -232,35 +236,39 @@ If the agent requires any of the above, there is likely a problem with skill dis
 
 ```
 pyasc-skill-stack/
-├── skills/                           # Skill modules (agent reads these)
+├── skills/                           # Skill modules (agent reads these) — the product
 │   ├── pyasc-codegen-workflow/       # Core 4-phase workflow (asctile)
 │   ├── pyasc-api-patterns/           # asctile API usage patterns
 │   ├── pyasc-syntax-constraints/     # Supported syntax inside @asctile.jit
 │   ├── pyasc-docs-search/            # Documentation index
 │   ├── pyasc-build-run-verify/       # Build, run, verification
 │   ├── pyasc-code-review/            # Code review checklist
+│   ├── pyasc-target-operator/        # Authoring and extending the target suite
+│   ├── pyasc-cannbench-kernel/       # CANNBench operators and performance config
 │   ├── pyasc-env-check/              # Environment verification
 │   └── pyasc-task-focus/             # Task tracking
-├── teams/
-│   └── pyasc-kernel-dev-team/
-│       ├── AGENTS.md                 # Team agent definition
-│       ├── quickstart.md             # Manual development guide
-│       └── kernels/                  # Generated kernel workspace
-├── golden/
-│   ├── tutorials/                    # Golden reference tutorial (asctile vadd)
-│   ├── kernels/                      # Golden kernels per tier (abs, reduce_sum, gelu, leaky_relu, softmax)
-│   ├── archive/                      # Archived golden kernels (sub, mul — covered by tier 0)
-│   └── docs/                         # Local pyasc API documentation
-├── tests/                            # Automated test pyramid
+├── reference/
+│   └── asctile/                      # THE correctness reference
+│       ├── target/                   # Huawei-authored suite, 18 modules / 891 cases
+│       ├── PIN.json                  # upstream, path, commit, per-file sha256
+│       └── conftest.py               # runtime resolution across both import layouts
+├── scripts/
+│   ├── sync-target-suite.sh          # re-vendor the suite (finds it by content)
+│   └── check-target-pin.sh           # offline drift check, runs in --fast
+├── integrations/cannbench/           # CANNBench tasks: 11 operators
+├── tests/
 │   ├── run-tests.sh                  # Test runner
-│   ├── ci-gate.sh                    # CI entry point (pr/merge/nightly)
+│   ├── ci-gate.sh                    # CI entry point (pr tier)
 │   ├── unit/                         # L1: structure/content checks
-│   ├── behavior/                     # L2: trigger/action checks
+│   ├── behavior/                     # L2: trigger/action checks (makes provider calls)
 │   └── integration/                  # L3: end-to-end workflow
-├── opencode.json                     # Skill discovery config
-└── docs/
-    └── cann-setup.md                 # CANN environment setup guide
+├── docs/                             # evidence-sources, verification-status, review-order, …
+├── install.sh                        # symlinks skills into agent directories
+├── CHANGELOG.md
+└── opencode.json                     # Skill discovery config
 ```
+
+The campaign that produced this repository — evidence JSON, model-written `golden/` kernels, `capabilities.yaml`, `teams/` and dated reports — was removed from `main` and preserved on the `archive/campaign-2026` branch (tag `archive-campaign-2026`). Recover any of it with `git checkout archive/campaign-2026 -- <path>`.
 
 ## Skills library
 
@@ -272,35 +280,51 @@ pyasc-skill-stack/
 | `pyasc-docs-search` | Local-first documentation and tutorial search |
 | `pyasc-build-run-verify` | JIT compilation, simulator execution, output verification |
 | `pyasc-code-review` | Code review against pyasc constraints |
+| `pyasc-target-operator` | Authoring and extending the upstream target suite |
+| `pyasc-cannbench-kernel` | CANNBench operators, local compile gate, performance configuration |
 | `pyasc-env-check` | Python, pyasc, CANN, numpy environment checks |
 | `pyasc-task-focus` | Task focus and attention management |
 
 ### Install the skills globally
 
 ```bash
-./install.sh            # symlink all skills into Cursor + opencode
-./install.sh --claude   # also link ~/.claude/skills
-./install.sh --agents   # also link ~/.agents/skills
+./install.sh                      # symlink all skills into Cursor + opencode
+./install.sh --claude             # also link ~/.claude/skills
+./install.sh --agents             # also link ~/.agents/skills
+./install.sh --target ./my-dir    # link into one explicit directory instead
 ```
 
 Each skill stays in this repo; `install.sh` creates symlinks under
 `~/.cursor/skills` and `~/.config/opencode/skills`. Re-run after adding,
 removing, or moving skills (stale links are pruned automatically).
-
-The `teams/pyasc-kernel-dev-team` agent is repo-scoped (it relies on the
-in-repo `golden/` set) and is intentionally not installed globally.
+`--target DIR` *replaces* the default destinations rather than adding to them,
+which is what the release archive is verified against.
 
 ## Testing
 
 ```bash
-# Quick PR gate (L1 + JIT verification, < 60s)
-bash tests/ci-gate.sh --tier pr
-
-# Full test suite
-bash tests/run-tests.sh --all
+bash tests/run-tests.sh --fast    # L1: structure and content, no network, seconds
+bash tests/ci-gate.sh --tier pr   # what CI runs on every PR
+bash tests/run-tests.sh --all     # adds L2/L3
 ```
 
+`--fast` is the gate: it must pass before a release tag builds. Note that
+`tests/behavior/` makes real `opencode` provider calls, so `--all` costs money
+and time.
+
+Running the correctness reference itself is separate — see
+[docs/review-order.md](docs/review-order.md) — and needs CANN plus an
+installed `pyasc-dev` wheel.
+
 See [tests/README.md](tests/README.md) for details.
+
+## Releases
+
+Tags, not directories. Pushing a `v*` tag runs the fast suite, builds
+`tar.gz` and `zip` containing exactly `skills/`, `install.sh`, `README.md` and
+`CHANGELOG.md`, verifies that the archive installs, and publishes it. See
+[.github/workflows/release.yml](.github/workflows/release.yml) and
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Headless run (CI / scripted)
 
@@ -314,32 +338,24 @@ script -qc 'opencode run "Help me develop an abs operator that supports float16 
 
 The `script -qc` wrapper provides the pseudo-TTY that `opencode run` requires in headless environments.
 
-## How this matrix is evaluated
+## Verification status
 
-The pyasc-skill-stack matrix is an evidence-backed **capability dashboard** and an **OpenCode skills-intervention experiment**. It compares OpenCode runs with pyasc skills enabled against OpenCode runs with pyasc skills disabled. The score belongs to the full generation protocol — task cell, prompt variant, OpenCode harness, model/profile, allowed context, skill mode, budget, and evaluator — not to a bare model.
+What has been verified and what is still blocked is tracked in
+[docs/verification-status.md](docs/verification-status.md), updated in place
+rather than by date. Gate statuses are `passed | failed | blocked | not-run`;
+a missing runtime, provider or device is an honest `blocked`, never a
+fabricated pass.
 
-This is **not** a "model vs skills" comparison. The model is one held-constant variable inside the protocol, alongside the prompt variant, timeout, max attempts, evaluator, and allowed filesystem. The two legs of the comparison are `OpenCode + pyasc-skills` and `OpenCode without pyasc-skills`. Guided prompts, golden references, oracle workarounds, and human hints are separate interventions and are labeled separately rather than folded into the skills effect.
+Current headline: install, skill discovery, compile and numerical gates pass
+on the simulator with a hand-written kernel. The **generation** gate — an
+agent producing the kernel from a plain-language request — is `blocked` on a
+locally configured 8192-token output ceiling, diagnosed in that document.
+Hardware and performance are `not-run`.
 
-The CI matrix in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) is *designed* as a paired skills-on/off intervention. A per-pair validity classifier in [`tests/tools/compare_skills_value.py`](tests/tools/compare_skills_value.py) checks whether each off-leg actually produced evidence comparable to its on-leg counterpart; off-legs flagged as instrumentation/configuration failures (no resolved model, zero tokens, no artifact) are excluded from the headline pass-rate so the dashboard does not imply a clean 0% no-skills baseline when none was measured. The full contract — protocol taxonomy (P0..P8), failure taxonomy (F1..F13), evidence schema v4 (proposed), and baseline-validity rules — lives in [docs/evaluation-methodology.md](docs/evaluation-methodology.md).
-
-## Capabilities dashboard
-
-A live view of the capabilities matrix is published automatically on every push to `main`:
-
-**[https://aloschilov.github.io/pyasc-skill-stack/](https://aloschilov.github.io/pyasc-skill-stack/)**
-
-The matrix is organized around four **complexity tiers** that represent genuinely distinct generative challenges, rather than listing every elementwise operation individually:
-
-| Tier | Name | What it tests |
-|------|------|--------------|
-| 0 | Elementwise | Template substitution: `load` -> single `asctile.*()` call -> `store` |
-| 1 | Reduction | Output shape differs from input; accumulation logic |
-| 2 | Composed | No single asctile builtin; agent must compose multiple API calls |
-| 3 | Advanced | Multi-dimensional tiling, accumulator management, placement |
-
-Each tier has representative operations with prompts. Proving a representative (e.g. `abs` for unary elementwise) gives high confidence that structurally identical operations (e.g. `exp`, `log`, `sqrt`) can also be generated.
-
-The dashboard is generated from `capabilities.yaml` and `evidence/*.json` by `tests/tools/generate_dashboard.py` and deployed via GitHub Pages. Click any status badge to see evidence details and the prompt used.
+The evaluation protocol taxonomy, failure taxonomy and evidence schema are in
+[docs/evaluation-methodology.md](docs/evaluation-methodology.md). The
+capability dashboard that once rendered from `capabilities.yaml` and
+`evidence/*.json` was retired with them; it is on `archive/campaign-2026`.
 
 ## License
 

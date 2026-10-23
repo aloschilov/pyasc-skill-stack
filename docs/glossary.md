@@ -1,7 +1,11 @@
 # Glossary — pyasc / asc2 / capability cell metadata
 
+> Paths marked `(archived)` were removed from `main` with the campaign
+> scoreboard. Recover any of them with
+> `git checkout archive/campaign-2026 -- <path>`.
+
 This is the single source of truth for the terminology used by
-[capabilities.yaml](../capabilities.yaml), the golden kernels under
+`capabilities.yaml` (archived), the golden kernels under
 [golden/kernels/](../golden/kernels/), and the evaluation methodology
 in [docs/evaluation-methodology.md](evaluation-methodology.md).
 
@@ -15,7 +19,7 @@ what each cell *claims to prove*. They do not change the prompt the
 agent sees and they do not change kernel behavior. The cell metadata
 must mirror the golden kernel's docstring header (see
 [golden/kernels/](../golden/kernels/)); the
-[tests/tools/check_capabilities.py](../tests/tools/check_capabilities.py)
+`tests/tools/check_capabilities.py` (archived)
 gate refuses drift between the two.
 
 ---
@@ -29,7 +33,7 @@ gate refuses drift between the two.
 - **dtype** — the element type of a tensor, one of `float16` /
   `float32` in the current matrix. Example: `reduce_sum/f16` differs
   from `reduce_sum/f32` only in `dtype` and the corresponding
-  `OUT_PAD` constant in [`golden/kernels/reduce_sum_f16.py`](../golden/kernels/reduce_sum_f16.py).
+  `OUT_PAD` constant in `golden/kernels/reduce_sum_f16.py` (archived).
 - **contiguous layout** — a layout where neighboring elements along
   the last axis are at adjacent memory addresses; every asc2 kernel
   in this repo assumes contiguous inputs.
@@ -48,7 +52,7 @@ gate refuses drift between the two.
 - **UB** — Unified Buffer, the on-core scratchpad for vector ops.
   Default destination of `asc2.load(gm, ...)` when no `location=` is
   given. The full-row RMSNorm path requires that one row tile fits in
-  UB (see [`rms_norm_f16.py`](../golden/kernels/rms_norm_f16.py)
+  UB (see `golden/kernels/rms_norm_f16.py` (archived)
   `UB_BUDGET_BYTES = 64 * 1024`).
 - **L1** — a smaller on-core buffer between UB and L0; not used
   explicitly by any current golden.
@@ -56,7 +60,7 @@ gate refuses drift between the two.
   reads `A` from L0A and `B` from L0B, so the matmul golden uses
   `asc2.load(..., location=asc2.TileLocation.L0A)` and
   `... = asc2.TileLocation.L0B` (see
-  [`matmul_f16.py`](../golden/kernels/matmul_f16.py)).
+  `golden/kernels/matmul_f16.py` (archived)).
 
 ## §3 Compute partitioning
 
@@ -69,11 +73,11 @@ gate refuses drift between the two.
   the per-launch block index. Element-wise goldens use `CORE_NUM = 16`;
   RMSNorm uses `CORE_NUM = 8`.
 - **block grid** — a 2-D `(m_block, n_block)` grid over the output
-  matrix; used by [`matmul_f16.py`](../golden/kernels/matmul_f16.py).
+  matrix; used by `golden/kernels/matmul_f16.py` (archived).
 - **host dispatcher** — a Python-side function on the host that picks
   one of several `@asc2.jit` kernels before launch. Example:
   `rms_norm_launch(x, gamma, eps)` in
-  [`rms_norm_f16.py`](../golden/kernels/rms_norm_f16.py) routes to
+  `golden/kernels/rms_norm_f16.py` (archived) routes to
   `_full_row_launch` or `_split_d_launch` based on
   `num_cols * dtype_bytes <= UB_BUDGET_BYTES and num_cols % 8 == 0`.
 - **full-row path** — a kernel variant where one entire row fits in
@@ -94,7 +98,7 @@ gate refuses drift between the two.
 - **accumulator dtype** — the dtype the partial sums are held in. All
   current reducing/composed goldens hold the accumulator in `float32`
   regardless of input dtype:
-  [`reduce_sum_f16.py`](../golden/kernels/reduce_sum_f16.py)
+  `golden/kernels/reduce_sum_f16.py` (archived)
   promotes via `x_f32 = x.to(asc.float32)` before
   `asc2.reduce_sum(x_f32 * x_f32)`; the matmul cube accumulator is
   always `float32`.
@@ -138,7 +142,7 @@ gate refuses drift between the two.
 
 These are the Phase 1 capability-cell metadata fields. All are
 additive on `schema_version: "3"`; no consumer outside
-[check_capabilities.py](../tests/tools/check_capabilities.py) reads
+`tests/tools/check_capabilities.py` (archived) reads
 them today.
 
 ### `shape_regime`
@@ -248,7 +252,7 @@ separate cell with its own metadata.
 
 Stored as a string so PyYAML's safe-load does not coerce `0` to
 `int(0)` or `-inf` to `float('-inf')`. The current consumer
-([check_capabilities.py](../tests/tools/check_capabilities.py)) does
+(`tests/tools/check_capabilities.py` (archived)) does
 string-only comparison; downstream consumers that want the numeric
 value must `float(...)` explicitly. Allowed values: `"0"`, `"1"`,
 `"-inf"`, `"+inf"`, or `null` (no single identity, e.g. softmax).
@@ -285,4 +289,4 @@ The path forward, if a future generative failure shows that the
 is to add a *new* cell for that specific operator with its own
 prompt and golden. Until then, the chip on the Tier-0 dashboard
 implicitly covers ReLU; the `coverage_note` field on the
-[`abs`](../capabilities.yaml) op records this decision.
+`capabilities.yaml` (archived) op records this decision.

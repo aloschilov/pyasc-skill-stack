@@ -48,7 +48,7 @@ before widening tiles; only real-NPU timings establish speed.
 Measured local qualification at this pin (CANN 9.0 / 950PR_9599) rejects the
 public-erf FP32 exact path on dense negative-tail inputs for **all 18 JIT
 configurations**, despite successful compilation and smaller smoke tests.
-Read the [minimal reproduction and campaign report](../../../../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/README.md)
+Read the minimal reproduction and campaign report (`integrations/cannbench/comparisons/gelu-asctile-jit-20260907/README.md` on the `archive/campaign-2026` branch)
 before promoting GeLU. Increasing tile size or changing allocation does not
 repair this measured numerical failure. Do not substitute a polynomial or
 silently relabel tanh as exact.

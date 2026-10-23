@@ -166,12 +166,18 @@ remain for another official run in the current quota window.
 
 ## CANNBench site MCP
 
-The project-level `opencode.json` registers `cann-bench-site`. Local setup:
+The project-level `opencode.json` registers `cann-bench-site` with
+`"enabled": false`. It launches `./integrations/cannbench/site-mcp.sh`, which
+requires `.secrets/cannbench.env` — gitignored, so a fresh clone does not have
+it and the server cannot start. Shipping it enabled means every new clone
+fails on startup, so it is opt-in.
+
+Local setup:
 
 ```bash
 bash integrations/cannbench/setup-site-mcp.sh
 # Create .secrets/cannbench.env (mode 0600) with BENCHSITE_API_TOKEN,
-# then verify:
+# flip "enabled": true for cann-bench-site in opencode.json, then verify:
 opencode mcp list
 ```
 

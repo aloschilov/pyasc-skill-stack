@@ -80,7 +80,7 @@ now on `archive/campaign-2026`) read its reference rows from an absolute path
 outside the repository:
 
 ```
-/home/aloschilov/Documents/Codex/2026-09-04/new-chat/outputs/ttk-csv-recovered/
+~/Documents/<date>/.../ttk-csv-recovered/
     concatd_selected_representative_adjusted.csv
 ```
 

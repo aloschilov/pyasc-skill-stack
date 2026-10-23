@@ -1,278 +1,79 @@
-# CI Gate Tiers
+# CI gates
 
-Three gate tiers ensure fast feedback on PRs while reserving expensive checks for merge and nightly runs.
+Two gates, plus a release workflow. Both live in
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
 
-## Tiers
+| Gate | Trigger | Duration | What it checks |
+|---|---|---|---|
+| `pr-gate` | every push and PR | seconds | L1 unit tests and static checks |
+| `merge-gate` | push to `main`, manual dispatch | ~30 min | compile-check of the AscTile target suite on the camodel |
+| release | `v*` tag | minutes | `pr-gate` plus archive build and install verification |
 
-| Tier | Trigger | Time budget | What runs |
-|------|---------|-------------|-----------|
-| **pr** | Every push / PR | < 30s | L1 unit tests + JIT verification of golden kernels |
-| **merge** | Merge to main | < 5 min | PR tier + simulator execution of golden kernels |
-| **nightly** | Scheduled (daily) | 15-30 min | Merge tier + L2 behavior + L3 agentic integration |
-
-## Entry point
+## `pr-gate`
 
 ```bash
-bash tests/ci-gate.sh --tier pr        # Fast PR gate
-bash tests/ci-gate.sh --tier merge     # Merge gate (includes simulator)
-bash tests/ci-gate.sh --tier nightly   # Full nightly run
+bash tests/ci-gate.sh --tier pr      # what CI runs
+bash tests/run-tests.sh --fast       # the same thing, directly
 ```
 
-## PR gate (`--tier pr`)
+Deterministic structure and content checks over `skills/` and `agents/`, the
+runtime-backend dispatch logic, and an offline drift check comparing the
+vendored target suite against `reference/asctile/PIN.json`. No Docker, no
+CANN, no network, no provider calls.
 
-Runs in under 30 seconds. Suitable for pre-commit hooks and PR checks.
+This is the gate a release tag must pass.
 
-1. `run-tests.sh --fast` -- L1 structural and content validation (skills, agents, teams)
-2. JIT verification of all golden kernels via `pytest_verify_kernel.py` -- confirms pyasc JIT compilation works without needing the simulator
-3. `check_evidence_paths.py` -- rejects machine-specific `/home/` or `/Users/` paths in committed perf evidence JSON
+## `merge-gate`
 
-No network, no simulator, no opencode required.
+Pulls the pinned `pyasc-sim` image from ghcr.io and compile-checks every
+module in `reference/asctile/target/` with
+`tests/tools/run_target_test.py --backend Model --platform Ascend950PR_9599`.
 
-## Merge gate (`--tier merge`)
+Compile-only is deliberate. Each module carries roughly 100 parametrised
+cases and the camodel is slow, so the blocking gate verifies that every case
+generates and compiles; full numerical execution is a manual or nightly run.
+See [review-order.md](review-order.md) for running it by hand.
 
-Runs in under 5 minutes. Requires CANN simulator environment.
+Runs natively on the self-hosted arm64 runner (no x86 emulation). The image
+tag is version-coupled to an immutable pyasc commit — never point it at a
+mutable tag, because a moving runtime silently invalidates every result
+below it.
 
-1. Everything in PR gate
-2. Simulator execution of all golden kernels via `run_and_verify.py --mode simulator` -- confirms numerical correctness with `np.testing.assert_allclose`
+`test_add_inplace.py` is skipped: 4 of its 20 cases exceed the 192 KB UB
+budget on large shapes even under `--compile-only`. Pending a shape trim or a
+representative-case selection block.
 
-Requires: `source $HOME/Ascend/cann/set_env.sh` and `LD_LIBRARY_PATH` set. See [cann-setup.md](cann-setup.md).
+## Release
 
-The GitHub Actions `merge-gate` job runs **natively on the self-hosted arm64
-Mac runner** (no x86 emulation), pulling the arm64 leg of the multiarch
-`pyasc-sim` image. It is still sharded via the 4-shard matrix, though on the
-single Mac runner the shards currently serialize; the matrix is retained while
-we gather wall-clock metrics before deciding on the shard count.
+Tagging `v*` triggers [`release.yml`](../.github/workflows/release.yml): run
+the fast suite, build `tar.gz` and `zip` of exactly `skills/`, `install.sh`,
+`README.md` and `CHANGELOG.md`, assert the unpacked archive contains those
+four entries and nothing else, assert `install.sh --target` links every skill
+from the unpacked archive, then publish with notes from the tag.
 
-`bfloat16` goldens are **first-class** here: the native arm64 pyasc build has
-full bf16 IR lowering, so `*_bf16.py` goldens (e.g. `layer_norm_v4_bf16`) are
-sharded and verified in the same loop as every other capability cell -- they
-are part of the blocking merge-gate, not a separate step. (The old GitHub-hosted
-amd64 build lacked bf16 IR lowering, which is why bf16 used to be carved out into
-a non-blocking `perf-gate` step; that carve-out is gone.)
+## What is not here any more
 
-## Nightly gate (`--tier nightly`)
+The campaign-era `perf-gate`, `nightly-gate`, `local-stability-gate`,
+`cloud-dashscope-gate` and `skills-value-report` jobs read from `evidence/`
+and scored model-written kernels in `golden/`. Both were removed from `main`,
+so the jobs were retired with them; `pages.yml` published a dashboard from a
+directory that was never tracked. All of it is on the
+`archive/campaign-2026` branch:
 
-Runs in 15-30 minutes. Requires opencode CLI and CANN simulator.
+```bash
+git show archive/campaign-2026:.github/workflows/ci.yml
+```
 
-1. Everything in merge gate
-2. `run-tests.sh --all` -- L2 behavior tests (agent trigger correctness, premature action detection) and L3 integration tests (full agent-in-the-loop kernel generation)
+Restoring any of it means first restoring an evidence source for it to read,
+and that source should be CANNBench rather than checked-in JSON — see
+[evidence-sources.md](evidence-sources.md).
 
-Requires: opencode CLI on PATH, CANN simulator environment.
+## Local test tiers
 
-The GitHub Actions `nightly-gate` job runs the Phase 0 protocol-axis matrix
-(P2/P3 — trimmed from P2/P3/P4/P6 to fit the single-runner 24h budget below)
-against the remote DashScope **`cloud-default`** profile (glm-5), gated on the
-`DASHSCOPE_API_KEY` secret. It is **report-only** (no P6 hard-fail threshold). Cloud inference needs no host Ollama, so the legs only serialize on
-the Mac runner for the camodel docker sim verify. The
-**`cloud-dashscope-gate`** job is also enabled. It runs a cross-vendor
-comparison matrix of three DashScope models — the two incumbents
-(`glm-5.1`, `qwen3.7-max`) plus `glm-5.2` — **skills-on only** (the skills-off
-cloud legs were dropped to fit the single-runner 24h budget below; the on/off
-A/B is still measured on `local-stability-gate`). Four further flagships
-(`deepseek-v4-pro`, `kimi-k2.7-code`,
-`MiniMax-M2.5`, `qwen3-coder-next`) were evaluated for the comparison set but
-the current DashScope key returns `Model.AccessDenied` for them (verified
-2026-07-24); their profile templates exist and are ready to add to the matrix
-once model access is granted. Every listed profile is measured over the
-**same** unified generative cell list (see "Unified kernel list" below), so all
-dashboard cards compare an identical set of kernels. It runs 3 skills-on cloud
-legs (one per model) on the single Mac nightly runner (`continue-on-error:
-true`); it is gated on the `DASHSCOPE_API_KEY` secret and self-skips if unset.
-It uses the same **1200 s** per-attempt agent budget as `nightly-gate` and
-`local-stability-gate` (previously a tighter 420 s that lost even trivial cells
-like `abs/float32` to `exit 124` timeouts), so cell measurement is
-apples-to-apples across every gate.
+```bash
+bash tests/run-tests.sh --fast    # L1 only (what CI gates on)
+bash tests/run-tests.sh --all     # adds L2 behavior and L3 integration
+```
 
-The **`local-stability-gate`** runs **`qwen3-coder:30b`** skills on/off. The
-model must be pre-pulled on the Mac's native Ollama (`ollama pull
-qwen3-coder:30b`); legs skip cleanly when it is missing. (`gpt-oss:120b` was
-dropped from the matrix to fit the single-runner 24h budget below — it was dead
-weight at 0-1/19 and its ~68 GB footprint is the heaviest local model.)
-
-**24h queued-job budget (two parallel runners):** GitHub auto-cancels any job
-left queued for 24h. The full nightly serialized on a single runner overran that
-and partial-cancelled (`perf-gate` never ran). Two mitigations keep a complete
-nightly — including `perf-gate` — under the limit:
-
-1. **Two arm64 runners** on the Mac (`infra/self-hosted-runner/compose.arm64.yml`
-   now defines `runner` + `runner2`, each with its own path-aligned work dir
-   `${AR_BASE}/work` / `${AR_BASE2}/work`), so matrix legs fan out in parallel
-   instead of serializing. Freed up by dropping the 68 GB `gpt-oss:120b` local
-   model. Docker container names are uuid-suffixed, so concurrent sim containers
-   never clash.
-2. **`--max-attempts 2`** (was 3) across the generative gates — the 3rd attempt
-   almost never converted a failure, so dropping it trims ~1/3 of the
-   retry-heavy leg time at negligible pass-rate cost.
-
-The earlier trims (cloud skills-on only, local qwen3-coder-30b only, protocol
-P2/P3) still apply. Restore dropped legs incrementally as the two-runner
-headroom allows.
-
-**Per-job 6h execution cap (distinct from the 24h queue wall):** GitHub applies
-*two* independent limits. The **24h** wall above is how long a job may sit
-*queued* waiting for a runner (solved by the two runners). Separately, every job
-has an implicit **6h execution cap** (`timeout-minutes: 360` default) once it
-*starts*. With the two-runner fan-out the total nightly wall is ~21.7h (under
-24h), but five legs legitimately need 6.5-7.5h of run time and were being
-cancelled at exactly `6h0m0s` ("The job has exceeded the maximum execution time
-of 6h0m0s"): both `local-stability-gate` legs (~6.5h), the two slowest
-`cloud-dashscope-gate` legs (qwen3.7-max/glm-5.2, ~7.1h — only 16/19 cells
-reached at 6h), and `perf-gate` (~6.7h; `demo_vector_ops` ~3.1h then
-`demo_vf_fusion` cut off ~2.9h in). Every job now sets an explicit
-`timeout-minutes` above its measured runtime: `perf-gate`,
-`cloud-dashscope-gate`, `local-stability-gate` = **480** (8h, ~1h margin),
-`nightly-gate` = **300** (5h; P3 is ~3.3h), `merge-gate` = **60**, `pr-gate` /
-`skills-value-report` = **30**. The 8h caps still bound a genuinely hung leg
-rather than letting it run indefinitely.
-
-### Host memory (128 GB Mac)
-
-Every CI job now runs natively on the two self-hosted arm64 Mac runners
-(`pr-gate`, `merge-gate`, `perf-gate`, `nightly-gate`, `local-stability-gate`,
-`skills-value-report`); nightly-tier legs fan out across both (see the two-runner
-note above) while pr/merge tiers serialize on one. Both runners share the
-128 GB host with the ~46 GB Parallels VM (the dev Linux box), the Docker Desktop
-VM (camodel sims), and macOS. `gpt-oss:120b` alone is ~68 GB resident and `qwen3-coder:30b` is
-~18 GB, so **two co-resident models would overrun the host and thrash swap.**
-Because Ollama keeps a model warm for `keep_alive` (5 min default), the
-local-model legs (`local-stability-gate`) run a **Free host Ollama memory** step
-([tests/tools/free_ollama_memory.py](../tests/tools/free_ollama_memory.py))
-that unloads any model a prior leg left warm, bounding the peak Ollama
-footprint to the single model the upcoming leg loads. (`nightly-gate` runs on
-cloud DashScope and loads no local model.)
-
-Recommended host-side belt-and-braces (set on the Mac's native Ollama, which
-CI cannot configure): `OLLAMA_MAX_LOADED_MODELS=1` and a short
-`OLLAMA_KEEP_ALIVE` (e.g. `1m`). If the Parallels VM does not need to be up
-during a nightly, shrinking its RAM reservation frees the most headroom for
-`gpt-oss:120b`.
-
-### Host sleep prevention (caffeinate)
-
-macOS Energy Saver will sleep the Mac mid-nightly — one run was killed at
-~21.7h by host sleep, *not* by the 24h queue limit (the nightly wall is under
-24h). The runner host must be configured to prevent automatic sleeping while a
-nightly is in flight; this is host-side config that CI itself cannot enforce:
-
-- Preferred: run each runner agent under `caffeinate -is` so the host stays
-  awake only while the agent process is alive.
-- Alternative: System Settings → Energy Saver → "Prevent automatic sleeping
-  when the display is off" (permanent), or `sudo pmset -a sleep 0` (disables
-  sleep entirely; blunt but effective).
-
-## Perf gate (`perf-gate`, report-only)
-
-A separate **nightly, non-blocking** GitHub Actions job (`continue-on-error:
-true`) that measures perf-vs-AscendC for every demo cell and publishes the
-result to the dashboard. It is **not** part of `ci-gate.sh`; it runs only on the
-schedule / `workflow_dispatch tier=nightly`, alongside `nightly-gate`.
-
-For each cell the harness ([tests/tools/demo_vector_ops.py](../tests/tools/demo_vector_ops.py)
-`--all`) builds the canonical `ops-math`/`ops-nn` AscendC reference and the
-generated pyasc kernel on the same `Ascend950PR_9599` camodel, then computes
-`ratio = ref_ticks / gen_ticks`. The demo cell list is **derived automatically**
-from every `perf_ratio_demo` block in `capabilities.yaml` (via
-[tests/tools/load_capability_cells.py](../tests/tools/load_capability_cells.py)),
-so adding a new kernel only requires updating capabilities + harness op wiring,
-As of the unified-coverage pass, **every** generative cell carries a
-`perf_ratio_demo` block, so the perf gate measures all 19 cells (up from 11) —
-there is a perf ratio for every operation row, no "—" placeholders. Four new
-canonical `ops-nn` references were wired for this (`aclnnGelu`,
-`aclnnLeakyRelu`, `aclnnMatmul` via `mat_mul_v3`, `aclnnSoftmax` via
-`softmax_v2`) in [tests/tools/perf/ascendc_ref_runner.py](../tests/tools/perf/ascendc_ref_runner.py);
-their sources are already baked into the perf image's `/opt/ops-nn`, so no image
-rebuild is needed. Because the perf image strips `.git` from the vendored
-sources, `ascendc_ref_runner._ensure_thirdparty_siblings` creates the `ops-base`
-/ `ops-tensor` sibling dirs that `ops-nn`'s third-party cmake modules look for,
-so their pinned-SHA `git checkout` step is bypassed and ops-nn references build
-offline. **Cross-repo hazard (fixed):** ops-nn and ops-math resolve those
-sibling paths to the *same* absolute `/ops-base`, but ship different opbase
-trees (ops-nn a source tree, ops-math a packaged `pkg_inc` layout that its
-`FindOPBASE.cmake` needs). An ops-nn build left `/ops-base` pointing at its own
-source tree, so the subsequent ops-math opapi-shim build (which produces
-`libcust_opapi.so` for ops-nn's `l0op` symbols) failed with `Could NOT find
-OPBASE (missing: OPBASE_INC_DIR)` — silently zeroing out every ops-nn ratio.
-`_ensure_thirdparty_siblings` now **re-points** the shared symlink at the current
-repo's vendored copy on every build instead of skipping when it already exists.
-Two golden-kernel launches also needed explicit non-tensor args the auto-prober
-cannot infer (else the launch no-ops at `Total tick ~= 11`): `matmul` needs CUBE
-tiling scalars and `leaky_relu` needs `alpha=0.01` (matched to the reference's
-`negativeSlope`), both supplied by input builders in
-[tests/tools/perf/pyasc_gen_runner.py](../tests/tools/perf/pyasc_gen_runner.py).
-not a hand-maintained `CELLS` table. The 0.70 gate is **reported, never enforced**,
-so documented honest misses (`apply_adam` ~0.46, `batch_norm_v3` ~0.10) stay
-green.
-
-- **Image:** runs inside the docker_full perf image
-  `ghcr.io/<owner>/pyasc-sim-perf:py3.11`, which extends `pyasc-sim` with the
-  vendored `ops-math`/`ops-nn` reference repos, the `pyasc-v2-eval` tree, and
-  the `dav_3510`/`Ascend950PR_9599` simulators. Built **manually** on the host
-  that has the private clones via
-  [docker/build-perf-image.sh](../docker/build-perf-image.sh)
-  (`docker/build-perf-image.sh --push`); CI only `docker pull`s it.
-- **Output:** `evidence/perf-vs-ascendc/*.json` + an aggregated
-  `evidence/perf-summary.json` (via
-  [tests/tools/perf/aggregate_perf.py](../tests/tools/perf/aggregate_perf.py)),
-  uploaded as the `evidence-perf` artifact.
-- **Commit + publish:** the single-writer `skills-value-report` job merges the
-  `evidence-perf` artifact, re-aggregates, and commits `perf-summary.json` +
-  `perf-vs-ascendc/*.json` to `main`. The `pages.yml` `evidence/**` trigger then
-  redeploys the dashboard, whose perf panel renders `perf-summary.json` (falling
-  back to each cell's curated `perf_ratio_demo` in `capabilities.yaml` when no
-  measured summary is present, e.g. local/dev renders).
-- **Compiler SIMD-fusion A/B (same job):** the `perf-gate` job also runs
-  [tests/tools/demo_vf_fusion.py](../tests/tools/demo_vf_fusion.py) `--all`, which
-  recompiles each generated kernel with `--cce-simd-vf-fusion` **off vs on** on
-  the same camodel (verifying the "pyasc2 uses no micro-api; the compiler does
-  fusion" positioning — see
-  [docs/perf-vs-ascendc-demo.md](perf-vs-ascendc-demo.md)). It is also
-  report-only.
-  [tests/tools/perf/aggregate_vf_fusion.py](../tests/tools/perf/aggregate_vf_fusion.py)
-  writes `evidence/vf-fusion-summary.json` (per-cell `ticks_off`/`ticks_on`/
-  `fusion_speedup` + an `improved`/`neutral`/`regressed` verdict); both it and
-  `evidence/vf-fusion/*.json` ride the same `evidence-perf` artifact and are
-  committed by `skills-value-report`. The dashboard renders them in a **Compiler
-  SIMD fusion** panel. (bf16 golden verification no longer lives here -- it is a
-  first-class part of the blocking `merge-gate`; see Merge gate above.)
-
-Committed perf evidence uses **repo-relative paths** only (`golden/kernels/...`,
-`evidence/perf/_build_cache/logs/...`). The PR gate runs
-[tests/tools/check_evidence_paths.py](../tests/tools/check_evidence_paths.py) to
-reject `/home/` and `/Users/` prefixes in perf/vf-fusion JSON.
-
-The GitHub Actions `nightly-gate` (and local-stability matrix legs) discover
-generative cells from `capabilities.yaml` via
-[tests/tools/list_generative_cells.py](../tests/tools/list_generative_cells.py)
-(every cell with a non-empty `prompt` on `Ascend950PR_9599`).
-
-### Unified kernel list
-
-All model legs — `nightly-gate`, `local-stability-gate`, and
-`cloud-dashscope-gate` — enumerate their kernels from the **same**
-`list_generative_cells.py` call, so the generative cell list is a single source
-of truth (currently **19 cells**). Divergent dashboard denominators (e.g. some
-cards showing 12 cells, others 15) are therefore never a config drift; they are
-**stale evidence** from earlier eras when the matrix had fewer cells, because
-the aggregator counts each profile's own evidence files rather than the
-canonical list. To keep every profile comparable, a full-refresh nightly
-re-measures all profiles (cloud + local) over the current list in one run so
-every card reads N/N with the same N. The perf surface is unified the same way:
-every generative cell now carries a `perf_ratio_demo` block, so the perf gate
-reports a ratio for all 19 cells.
-
-## Environment variables
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `PYASC_PYTHON` | `python3.10` | Python interpreter with pyasc |
-| `ASCEND_HOME_PATH` | (from set_env.sh) | CANN toolkit root |
-| `LD_LIBRARY_PATH` | (must include simulator) | Simulator libraries |
-| `NODE_TLS_REJECT_UNAUTHORIZED` | `0` (for opencode) | Bypass TLS issues |
-| `PYASC_PERF_IMAGE` | `ghcr.io/<owner>/pyasc-sim-perf:py3.11` | docker_full perf image (perf-gate) |
-| `OPS_MATH_HOME` / `OPS_NN_HOME` | `/opt/ops-math` / `/opt/ops-nn` (in perf image) | Canonical AscendC reference repos |
-
-## Exit codes
-
-- `0` -- all checks passed
-- `1` -- one or more checks failed
-- `2` -- environment prerequisites missing (e.g., simulator not available for merge tier)
+`tests/behavior/` makes real `opencode` provider calls, so `--all` costs
+money and time and is not run in CI.

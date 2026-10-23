@@ -1,26 +1,39 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-KERNEL_NAME="${1:?Usage: $0 <kernel_name>}"
+KERNEL_NAME="${1:?Usage: $0 <kernel_name> [base_dir]}"
 
-TEAM_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)/teams/pyasc-kernel-dev-team"
-KERNEL_DIR="$TEAM_DIR/kernels/$KERNEL_NAME"
+# Must match init_kernel_project.sh: the caller's working directory by
+# default, not a path relative to this script inside the skill stack.
+BASE_DIR="${2:-$PWD}"
+KERNEL_DIR="$BASE_DIR/$KERNEL_NAME"
 ENV_FILE="$KERNEL_DIR/docs/environment.json"
 
 if [ ! -d "$KERNEL_DIR" ]; then
     echo "[ERROR] Kernel directory not found: $KERNEL_DIR"
-    echo "[INFO] Run init_kernel_project.sh first."
+    echo "[INFO] Run init_kernel_project.sh '$KERNEL_NAME' first (from the same"
+    echo "       directory, or pass the same base_dir to both)."
     exit 1
 fi
 
 # asctile lives at asc.experimental.asctile in the published pyasc-dev wheel,
 # but older source builds expose it as a top-level module. Probe both.
+#
+# The hasattr(asctile, "jit") check is load-bearing, not defensive. A stale
+# editable checkout can leave an `asctile/` directory with no __init__.py on
+# sys.path, which Python imports as an empty namespace package: the import
+# succeeds, asctile.__file__ is None, and nothing in it works. Without this
+# check the probe reports "Environment looks good" on an environment that
+# cannot compile a single kernel.
 ASCTILE_PROBE='
 try:
     from asc.experimental import asctile
 except ImportError:
     import asctile
+assert hasattr(asctile, "jit"), (
+    "imported asctile has no jit (%r) - probably a stale checkout on sys.path"
+    % (getattr(asctile, "__file__", None),)
+)
 '
 
 # Auto-detect the correct Python: prefer whichever has pyasc installed
