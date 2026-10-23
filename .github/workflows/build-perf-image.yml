@@ -1,0 +1,49 @@
+name: Build pyasc-sim-perf image
+
+on:
+  workflow_dispatch:
+    inputs:
+      pyasc_rev:
+        description: "pyasc git rev (must match the skill-stack runtime pin)"
+        type: string
+        default: 030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build-pyasc-sim-perf
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build + push pyasc-sim-perf (${{ inputs.pyasc_rev }})
+    runs-on: [self-hosted, arm64]
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build + push revision-coupled perf image
+        env:
+          OWNER: ${{ github.repository_owner }}
+          PYASC_GIT_REV: ${{ inputs.pyasc_rev }}
+          WORKSPACE_ROOT: ${{ vars.PYASC_WORKSPACE_ROOT || '/home/aloschilov/workspace' }}
+          ASCEND_HOME_PATH: ${{ vars.ASCEND_HOME_PATH || '/usr/local/Ascend/cann-9.0.0' }}
+        run: bash docker/build-perf-image.sh --push
+
+      - name: Verify published runtime pin
+        env:
+          OWNER: ${{ github.repository_owner }}
+          PYASC_GIT_REV: ${{ inputs.pyasc_rev }}
+        run: |
+          short_rev="${PYASC_GIT_REV:0:8}"
+          image="ghcr.io/${OWNER}/pyasc-sim-perf:py3.11-pyasc-${short_rev}-arm64"
+          tests/tools/verify_pyasc_image.sh "$image"

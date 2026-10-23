@@ -1,0 +1,140 @@
+name: CANNBench gate
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      generate:
+        description: 'Generate the complete official catalog with GLM-5.3 and independent review'
+        type: boolean
+        default: true
+      job_ids:
+        description: 'Exact hardware job IDs for this qualification, comma separated'
+        type: string
+        default: ''
+      submit:
+        description: 'Start quota-bounded batches of the fully qualified catalog'
+        type: boolean
+        default: false
+      numerical_reports:
+        description: 'VM path to frozen 1060-case numerical reports; required for submit, exact candidate hashes are revalidated'
+        type: string
+        default: ''
+      continue_submissions:
+        description: 'Continue the durable qualified campaign within fresh credits'
+        type: boolean
+        default: false
+      reuse_run_id:
+        description: 'Completed trusted main CANNBench run whose native candidates should be requalified'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cannbench-hardware
+  cancel-in-progress: false
+
+jobs:
+  cannbench-gate:
+    # A dedicated VM runner has only this custom label (no default labels),
+    # so it cannot accidentally pick up historical arm64 simulator jobs.
+    # This workflow never runs untrusted PR code on the credential-bearing VM.
+    runs-on: cannbench-vm
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 1440
+    env:
+      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+      OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
+      CANNBENCH_JOB_IDS: ${{ inputs.job_ids || vars.CANNBENCH_JOB_IDS }}
+      CANNBENCH_OPENCODE_STATE_ROOT: /home/aloschilov/ci-campaign-state/opencode/run-${{ github.run_id }}-${{ github.run_attempt }}
+      CANNBENCH_OUTPUT: evidence/cannbench/run-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate trusted reuse run
+        if: github.event_name == 'workflow_dispatch' && inputs.reuse_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REUSE_RUN_ID: ${{ inputs.reuse_run_id }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PYCODE'
+          import json, os, re, urllib.request
+          run = os.environ['REUSE_RUN_ID']
+          if not re.fullmatch(r'[0-9]+', run):
+              raise ValueError('Invalid reuse run ID')
+          request = urllib.request.Request(
+              'https://api.github.com/repos/' + os.environ['GH_REPOSITORY'] + '/actions/runs/' + run,
+              headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json'})
+          with urllib.request.urlopen(request) as response:
+              metadata = json.load(response)
+          if (metadata['head_branch'] != 'main' or metadata['status'] != 'completed'
+                  or metadata['path'] != '.github/workflows/cannbench.yml'
+                  or metadata['event'] not in ('workflow_dispatch', 'schedule')):
+              raise ValueError('Only completed trusted main CANNBench runs can be reused')
+          PYCODE
+      - uses: actions/download-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && inputs.reuse_run_id != ''
+        with:
+          name: cannbench-generation
+          path: .cannbench-reuse
+          run-id: ${{ inputs.reuse_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify VM prerequisites
+        run: |
+          command -v python3
+          command -v opencode
+          test -n "$OPENCODE_API_KEY"
+          test -n "$OPENCODE_BASE_URL"
+          python3 -c 'import yaml'
+      - name: Capture full catalog, generate and validate exact hardware results
+        env:
+          GENERATE: ${{ github.event_name == 'workflow_dispatch' && inputs.generate }}
+          SUBMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.submit }}
+          CONTINUE_SUBMISSIONS: ${{ github.event_name == 'workflow_dispatch' && inputs.continue_submissions }}
+          REUSE_RUN_ID: ${{ inputs.reuse_run_id }}
+          NUMERICAL_REPORTS: ${{ inputs.numerical_reports }}
+        run: |
+          set -euo pipefail
+          if [ "$SUBMIT" = "true" ]; then
+            test -n "$NUMERICAL_REPORTS"
+            test -f "$NUMERICAL_REPORTS"
+          fi
+          export OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX=65536
+          export OPENCODE_CONFIG_CONTENT="$(python3 - <<'PY'
+          import json, os
+          print(json.dumps({'provider': {'gateway': {
+            'npm': '@ai-sdk/openai-compatible',
+            'options': {'baseURL': os.environ['OPENCODE_BASE_URL'], 'apiKey': os.environ['OPENCODE_API_KEY']},
+            'models': {'glm-5.3': {'name': 'GLM-5.3', 'limit': {'context': 256000, 'output': 65536},
+                                   'options': {'thinking': {'type': 'enabled'}, 'reasoningEffort': 'low', 'reasoning_effort': 'low'}}}
+          }}}))
+          PY
+          )"
+          args=()
+          if [ "$GENERATE" = "true" ]; then args+=(--generate); fi
+          if [ "$SUBMIT" = "true" ]; then args+=(--submit); fi
+          if [ -n "$NUMERICAL_REPORTS" ]; then args+=(--numerical-reports "$NUMERICAL_REPORTS"); fi
+          if [ "$CONTINUE_SUBMISSIONS" = "true" ]; then args+=(--continue-submissions); fi
+          if [ -n "$REUSE_RUN_ID" ]; then args+=(--reuse-generation "$PWD/.cannbench-reuse"); fi
+          python3 integrations/cannbench/ci/run.py \
+            --output "$CANNBENCH_OUTPUT" "${args[@]}"
+      - name: Upload measured evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cannbench-evidence
+          path: ${{ env.CANNBENCH_OUTPUT }}/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Upload generation and compiler evidence
+        if: always() && inputs.generate
+        uses: actions/upload-artifact@v4
+        with:
+          name: cannbench-generation
+          path: ${{ env.CANNBENCH_OUTPUT }}/generation/
+          if-no-files-found: warn
+          retention-days: 90

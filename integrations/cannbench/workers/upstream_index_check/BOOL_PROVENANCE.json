@@ -1,0 +1,9 @@
+{
+  "source_commit": "08d519c503843bce5fd4672ffa2259abeb22fb00",
+  "source_path": "src/kernel_eval/data/data_generator.py",
+  "source_sha256": "7982bf199f32646810c2174c445b9a4c82115d8e088fd289a45ef88bfeea2b28",
+  "method": "DataGenerator._gen_bool",
+  "method_sha256": "f92e85b53825bed902f0eec664f43f9c70b519b18fb52ae1248773909723c7aa",
+  "extracted_module_sha256": "85ed3923ed8fd3cec795a729e7ab707cb9c3d19672dea7ac7179d5146d734979",
+  "header_adjustment": "Removed stray literal 6 before upstream copyright comment; extracted method unchanged."
+}
