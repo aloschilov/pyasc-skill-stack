@@ -1,156 +1,149 @@
 ---
 name: pyasc-target-operator
-description: Fixed procedure for authoring a pyasc2 "target operator" (a hand-written @asc2.jit kernel + pytest target test that mirrors a CANN ops-* operator on production shapes) inside the pyasc compiler repo. Covers the target test layout, the canonical elementwise template, the branch-off-v2 + commit routine, ops-* reference discovery, and the exact run/verify command. Trigger — implementing a new operator as a target test in python/test/asc2/target/, or running/verifying target tests on the simulator.
+description: Procedure for authoring and verifying a current-v2 handwritten asctile target operator under python/test/asctile/target. Use for target tests, handwritten reference kernels, simulator verification, and CANN operator parity work.
 ---
 
-# pyasc Target Operator (asc2)
+# Current-v2 target operator workflow
 
-A **target operator** is a hand-written `@asc2.jit` kernel plus a pytest suite that
-reproduces the behavior (and production shapes/tiling) of a CANN `ops-*` operator,
-living **inside the pyasc compiler repo** under `python/test/asc2/target/`. It is the
-ground-truth, on-simulator implementation a kernel author commits on a feature branch.
+A target operator is a handwritten `@asctile.jit` kernel plus pytest coverage
+inside the pyasc repository. For the current v2 tree the location is
+`python/test/asctile/target/`; `python/test/asc2/target/` is obsolete.
 
-This skill is the **fixed running procedure**: follow it exactly. The only things that
-vary per operator are the math, the dtype, and the shape list — everything else below is
-identical for every target operator.
+## Version discipline
 
-## 1. Version-control routine (do this first)
-
-The repo is a fresh clone with `v2` already checked out at the exact commit that
-matches the installed `asc2`. **Branch off the CURRENT checkout — do not change which
-commit is checked out:**
+Record the exact base before editing:
 
 ```bash
-git switch -c <op>-target         # e.g. reciprocal-target ; branches from current HEAD
+git fetch origin v2
+git rev-parse origin/v2
+git switch -c <op>-target origin/v2
 ```
 
-> **Do NOT `git fetch`, `git pull`, `git checkout <other-rev>`, or fast-forward `v2`.**
-> The checked-out commit is pinned to the installed/built `asc2`; moving to a newer
-> `origin/v2` will desync the API (e.g. the `asc2.load` signature) from the runtime and
-> your tests will fail to compile. Always branch from what is already checked out.
+If a campaign intentionally pins another revision, use that recorded revision
+instead of the fetch/switch example above. The CANNBench campaign is pinned to
+`0a631f70968c3cb7c33ce45330a85768dd5a6f06` (runtime authority). The historical
+high-level GeLU campaign pinned `adadd7d66ed0ee16d33d79487bf584899a26ef1e` and
+is not CANNBench authority; preserve historical results at their original
+revisions. Never mix source from one commit with
+a wheel/runtime from another. Build from source when the selected v2 commit is
+not distributed as a Python package; do not replace it with a repository wheel
+from another revision.
 
-Author your work, run it green (section 5), then commit **only the operator files** you
-added (the test file, and any helper module). Do not commit injected tooling
-(`opencode.json`, `skills/`, `.agent-prompt.txt`, `agent-output.txt`) — they are
-git-excluded; verify with `git status` that your commit is clean.
+Use prebuilt local compile/CaModel environments within a worker's assigned
+budget. Missing dependencies are a reported limitation; workers do not install
+packages or start source builds unless asked.
+
+## Source layout and reference selection
+
+New work is authored in a pyasc checkout. **Confirm the current path before
+assuming one** — upstream has carried this suite at `python/test/asc2/target/`,
+then `python/test/asctile/target/`, and relocated it under `experimental/`
+when AscTile was localised there. Locate it by content rather than memory:
 
 ```bash
-git add python/test/asc2/target/test_<op>.py
-git commit -m "Add <Op> target operator (float32) for production shapes"
+grep -rl --include='test_*.py' 'asctile\.jit' . | xargs grep -l 'asctile\.global_tensor'
 ```
 
-## 2. Where the operator goes
+- New test: `<suite>/test_<op>.py`, at whatever path the command above reports.
+- Shared fixtures: the suite's own `conftest.py` plus the ancestor one that
+  defines `require_c310`.
+- Start from the closest current sibling: `test_vadd.py` for elementwise,
+  `test_reduce_sum.py`/`test_reduce_max.py` for reductions,
+  `test_softmax.py` for normalization, and `test_transpose.py` for movement.
 
-- Test file: `python/test/asc2/target/test_<op>.py` (one file per operator).
-- Fixtures are provided by the shared `python/test/asc2/conftest.py` +
-  `python/test/asc2/target/conftest.py`: `backend`, `platform`, `set_platform`
-  (autouse), `require_c310`, `profiler`, `runs`, `--compile-only`. You do **not** write
-  these — just use `profiler` and `runs` in the test signature.
-- **Model your file on the closest existing sibling target test.** List the directory
-  (`ls python/test/asc2/target/`) and open the nearest match: for a **unary elementwise**
-  op use `test_vadd.py` / `test_gelu.py`; for reductions `test_reduce_sum.py`; for
-  normalization `test_softmax.py`, etc. Mirror that file's structure, imports, kernel
-  shape, host launcher, parametrization, and golden style. The template below is the
-  canonical elementwise form (matches `test_vadd.py`).
+### Reading siblings without a checkout
 
-## 3. Canonical elementwise target test (template)
+This repository vendors a pinned copy of the suite at
+[`reference/asctile/target/`](../../reference/asctile/target/), which is enough
+to read the canonical patterns. It is a **snapshot, not the upstream tree**:
+check [`reference/asctile/PIN.json`](../../reference/asctile/PIN.json) for which
+version it is, and never author a new test there. Refresh it with
+`scripts/sync-target-suite.sh`; verify it with `scripts/check-target-pin.sh`.
+- Use the matching `gitcode.com/cann/ops-*` implementation as semantic and
+  tiling reference. Do not copy its C++ as the pyasc implementation.
 
-Adapt the math (`zt = ...`) and arity for your operator; keep the tiling/launch scaffold.
+Use public `asctile` annotations, dtypes, JIT, tile math, copy operations, and
+range. New high-level campaign source must not import low-level `asc`/`asc2`,
+author `inline`/`inline_vf` code, or implement a long Numerical Recipes/Horner
+polynomial. Compiler-generated register code from `vf_fusion=True` is allowed.
+
+## Canonical elementwise structure
 
 ```python
-import asc2
+import asctile
 import pytest
 import torch
 
+@asctile.jit(reuse_alloc=1)
+def op_kernel(x_ptr: asctile.GlobalAddress, out_ptr: asctile.GlobalAddress,
+              size: int, tile_size: asctile.ConstExpr[int]):
+    x_gm = asctile.global_tensor(x_ptr, [size])
+    out_gm = asctile.global_tensor(out_ptr, [size])
+    for tile_id in asctile.range(asctile.block_idx(),
+                                 asctile.ceildiv(size, tile_size),
+                                 asctile.block_num(), unroll_factor=2):
+        offset = tile_id * tile_size
+        valid = min(size - offset, tile_size)
+        x = asctile.copy_in(
+            x_gm, [offset], [tile_size], real_shape=[valid], pad_value=1
+        )
+        one = asctile.full([tile_size], 1.0, dtype=x.dtype)
+        out = one / x
+        asctile.copy_out(out, out_gm, [offset], real_shape=[valid])
 
-@asc2.jit(static_alloc=True, reuse_ub=True)
-def <op>_kernel_1D(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress,
-                   input_shape: asc2.ConstExpr, output_shape: asc2.ConstExpr,
-                   block_loop_num: asc2.ConstExpr, block_loop_num_tail: asc2.ConstExpr,
-                   tile_length: asc2.ConstExpr, block_length: asc2.ConstExpr,
-                   UNROLL_FACTOR: asc2.ConstExpr):
-    x = asc2.tensor(input_ptr, input_shape)
-    z = asc2.tensor(output_ptr, output_shape)
-
-    block_offset = asc2.block_idx() * block_length
-    loop_count = block_loop_num
-    if asc2.block_idx() == (asc2.block_num() - 1):
-        loop_count = block_loop_num_tail
-
-    for i in asc2.range(loop_count, unroll_factor=UNROLL_FACTOR):
-        current_offset = block_offset + i * tile_length
-        xt = asc2.load(x, [tile_length], offsets=[current_offset])
-        zt = 1.0 / xt                      # <-- operator math (out = 1/x); see section 4
-        asc2.store(zt, z, offsets=[current_offset])
-
-
-@pytest.mark.parametrize(
-    "core_num, unroll_factor, input_shape, input_dtype, output_shape, output_dtype, tiling_key, tiling_values", [
-        # one row per shape: tiling_values = [length, 0, tile_length, core_num]
-        (16, 2, [1024], torch.float32, [1024], torch.float32, 8, [1024, 0, 128, 16]),
-        # ... remaining shapes ...
-    ])
-def test_<op>(profiler, runs, core_num, unroll_factor, input_shape, input_dtype, output_shape, output_dtype,
-              tiling_key, tiling_values):
-    _, _, tile_length, core_num = tiling_values
-
-    input_shape_1d = [torch.prod(torch.tensor(input_shape[:])).item()]
-    length = input_shape_1d[0]
-
-    # 32-byte alignment for tile_length
-    ALIGNMENT_ELEMENTS = 32 // input_dtype.itemsize
-    tile_length = asc2.ceildiv(tile_length, ALIGNMENT_ELEMENTS) * ALIGNMENT_ELEMENTS
-
-    block_loop_num = asc2.ceildiv(asc2.ceildiv(length, core_num), tile_length)
-    block_length = tile_length * block_loop_num
-    block_loop_num_tail = asc2.ceildiv(length - block_length * (core_num - 1), tile_length)
-    padded_length = block_length * (core_num - 1) + tile_length * block_loop_num_tail
-    padded_shape = [padded_length]
-
-    in_tensor = torch.full(padded_shape, dtype=input_dtype, fill_value=1.0)
-    in_tensor[:length] = torch.randn(input_shape_1d, dtype=input_dtype)
-    out_tensor = torch.zeros(padded_shape, dtype=output_dtype)
-
+def test_op(profiler, runs):
+    x = torch.randn(1025, dtype=torch.float32)
+    out = torch.empty_like(x)
     with profiler.profile():
         for _ in range(runs):
-            <op>_kernel_1D[core_num](in_tensor, out_tensor, padded_shape, padded_shape,
-                                     block_loop_num, block_loop_num_tail, tile_length, block_length, unroll_factor)
-
-    expected = torch.reciprocal(in_tensor)        # <-- torch golden for the SAME math
-    torch.testing.assert_close(out_tensor[:length], expected[:length], atol=1e-3, rtol=1e-3)
+            op_kernel[16](x, out, x.numel(), 1024)
+    torch.testing.assert_close(out, torch.reciprocal(x), atol=1e-3, rtol=1e-3)
 ```
 
-Notes that matter:
-- **Flatten any shape to 1D** with `torch.prod(...)`; tile over the flat length.
-- **Pad** the flat length up to `block_length*(core_num-1) + tile_length*tail` so every
-  core/tile is full; only compare the first `length` elements against the golden.
-- Pick `core_num` ≤ the platform core count and a `tile_length` (UB-bounded, then
-  32-byte aligned by the host code). A safe default `tile_length` is a few KB worth of
-  elements (e.g. 128–10496 for f32); choose smaller `core_num` for tiny shapes so each
-  core gets ≥1 tile. The host code derives all loop counts from `(length, core_num,
-  tile_length)`.
-- **Golden is pure torch**, compared with `torch.testing.assert_close(atol=1e-3,
-  rtol=1e-3)`. Avoid inputs at/near singularities (e.g. for `1/x`, fill padding with 1.0
-  and draw `randn`, which is ~never 0).
-- The launch form is `kernel[core_num](*args)`; pass `asc2.ConstExpr` host scalars as
-  plain ints here (they bind to the `ConstExpr` params).
+Keep input/output descriptors, local shapes, offsets, and `real_shape` ranks
+consistent. Tail padding must be neutral for the operation. Pass tensors
+directly to the launch; never use `data_ptr()`.
+For runtime tails, use the supported JIT builtin `min(size - offset, tile_size)`.
+Do not assign `size - offset` to a variable and then replace it with the
+compile-time tile size inside an `if`: that changes its type from PlainValue
+to Python `int` and fails codegen at the campaign pin.
 
-## 4. Operator math + ops-* reference
+## JIT options and baselines
 
-- The operator math comes from the task (e.g. `out = 1 / x`). asc2 has **no
-  `reciprocal`** builtin — express `1/x` as `1.0 / xt` (tile rdiv) or via `asc2.div`.
-  Browse `dir(asc2)` for available elementwise builtins (`add, sub, mul, div, exp, log,
-  sqrt, rsqrt, abs, tanh, erf, relu, maximum, minimum, where, ...`).
-- **Discover the matching CANN `ops-*` reference yourself** using the remote operator map
-  in the `pyasc-docs-search` skill (the `gitcode.com/cann/ops-*` repositories). Pick the
-  repo/op whose semantics match (for `reciprocal`: `ops-math` → `math/reciprocal`; also
-  see `div` / `real_div`). Use it only as the semantic/tiling ground truth — do not copy
-  CANN C++; the deliverable is the asc2 kernel + torch golden above. Cite the chosen
-  reference in the commit message.
+Compare bare `@asctile.jit` defaults with `@asctile.jit(reuse_alloc=1)` on the
+same source and geometry. The latter's "legacy implementation" names an
+internal reuse pass; it remains the public AscTile API. Keep synchronization
+ON (`insert_sync=True`). Plan `reuse_alloc={0,1,2}` ×
+`static_alloc={None,False,True}` × `vf_fusion={False,True}`; record unsupported,
+failed, and untested cells as well as successful ones. Static allocation,
+reuse, and VF fusion interact with UB, unrolling, correctness, and runtime
+performance; do not infer speed or safety from a successful UB check.
 
-## 5. Run / verify (the fixed command)
+Follow the [JIT matrix and diagnostics](../pyasc-api-patterns/references/api-jit-options.md)
+to test actual decorators/effective options in fresh processes and both import
+orders. Separate in-process option-discovery caches from compiled artifacts.
+At the GeLU pin, base `JITFunction.get_config_keywords()` before AscTile
+discovery triggers an inherited-cache rejection of `reuse_alloc`; cold
+AscTile-first probes pass. Extraction uses `self.compiler.options_cls`.
+Do not assume JIT is broken, monkeypatch it, or introduce a custom JIT or
+unsupported `run_asctile_passes` option.
 
-Source the CANN simulator env (see `pyasc-build-run-verify`), then from the **repo root**:
+## Coverage and performance
+
+- Parameterize production shapes, dtypes, attributes, boundary sizes, and
+  special values—not only a teaching shape.
+- Select core count from workload size and platform capacity. Tiny shapes must
+  not launch empty work on most cores; large shapes should use the full grid.
+- Derive tile size from dtype, live local tensors, `unroll_factor`, and UB
+  capacity. A compile pass at one shape is not a UB proof for all cases.
+- For reductions, use the correct padding identity and pack contiguous rows;
+  see `pyasc-api-patterns/references/reduction-tiling.md`.
+- Compare every logical output element with the pure-torch golden using
+  dtype-appropriate tolerance and explicit NaN/Inf handling where required.
+
+## Verification
+
+From the pyasc repository root, using a runtime built from the same commit:
 
 ```bash
 export ASCEND_HOME_PATH=/usr/local/Ascend/cann-9.0.0
@@ -159,76 +152,20 @@ export PATH=$ASCEND_HOME_PATH/tools/bisheng_compiler/bin:$PATH
 SIM=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599
 export LD_LIBRARY_PATH=$SIM/camodel:$SIM/lib:$SIM/lib64:$ASCEND_HOME_PATH/lib64:$LD_LIBRARY_PATH
 
-python3 -m pytest python/test/asc2/target/test_<op>.py \
-    --backend Model --platform Ascend950PR_9599 -p no:cacheprovider -q
+python3 -m pytest python/test/asctile/target/test_<op>.py \
+  --compile-only --backend Model --platform Ascend950PR_9599 -q
+python3 -m pytest python/test/asctile/target/test_<op>.py \
+  --backend Model --platform Ascend950PR_9599 -q
 ```
 
-- Run from the repo root so `import asc2` resolves to the **installed/built** compiler,
-  not this clone's unbuilt `python/asc2` source. `asc2` is already importable here.
-- **NEVER build pyasc from source.** Do not run `cmake`, `ninja`, `pip install .`,
-  `pip install -e .`, or any LLVM/MLIR build — `asc2` is already installed and importable.
-  Confirm once with `python3 -c "import asc2; print(asc2.__file__)"`. If (and only if)
-  that import fails, STOP and report the failure; do not attempt to build.
-- The Model simulator is slow (~30–60 s per case). **Verify only *feasible* shapes** on
-  the simulator and `--compile-only` the rest — apply the feasibility predicate from
-  `pyasc-build-run-verify`.
-- Iterate until all selected shapes pass, then commit (section 1).
+Use `--compile-only` for the whole matrix first. Run feasible numerical cases
+on camodel and record any omitted routes. Only real-NPU/CANNBench measurements
+establish production performance.
 
-## 6. Variants (N-ary elementwise, reductions)
+## Definition of done
 
-**N-ary elementwise (2+ inputs, e.g. `add`, `addcdiv = a + value*(b/c)`).** Same
-scaffold as section 3, just add one `GlobalAddress` input pointer + one
-`asc2.tensor` + one `asc2.load` per input, all sharing the same flat tiling, and
-fold a host-side scalar (e.g. `addcdiv`'s `value`) in as a plain Python float in
-the compute line (`zt = at + value * (bt / ct)`). Allocate/randn every input
-buffer; pad them all to the same `padded_length`. Golden uses the matching torch
-op (`torch.addcdiv(a, b, c, value=value)`).
-
-**Reductions (e.g. `reduce_max`, `reduce_min`, `reduce_mean`).** Model on
-`test_reduce_sum.py`, which reduces a 2-D `[rows, cols]`:
-- Flatten the input to 2-D: for a **last-axis** reduction, `rows =
-  prod(shape[:-1])`, `cols = shape[-1]`, output `[rows]` (drop the last axis).
-- One core-block owns a slab of rows; loop column-tiles with a running
-  accumulator initialized to the reduction identity (`asc2.zeros(...)` for sum;
-  for max seed with the first tile or a very negative `asc2.full(...)`), folding
-  each `asc2.reduce_max(tile, 1)` (axis 1) into the accumulator with
-  `asc2.maximum(acc, part)`. `asc2.store` the per-row result.
-- **Choose your own `tile_shape`** from the shape + UB budget + core count. The
-  long `tiling_values` vector baked into `test_reduce_sum.py` is CANN tiling
-  provenance — you do **not** need to reproduce it; pass only the tile sizes you
-  pick. Compare only `out[:rows]` to `torch.amax(in, dim=-1)` (or
-  `torch.sum/mean/...`).
-- **Tiling selection is the dominant performance lever, not a formality.** A fixed
-  tiny tile (e.g. an aligned `[8, 8]`) on a few cores is ~100x slower than CANN.
-  Three levers decide the ratio, in order of impact:
-  1. **Use every AI core** — spread `rows` across the full core grid
-     (`core_num = platform core count`, e.g. 72 on `Ascend950PR_9599`);
-     `rows_per_block = ceildiv(rows, core_num)` drives tile sizing. Pinning
-     `core_num` to 4-8 is a 9-18x deficit.
-  2. **Keep the reduce axis contiguous — `tile_cols = C` (do NOT align/pad it).**
-     Load each `[tile_rows, C]` block as one contiguous run and pad only the flat
-     total to 32 B, never per-row; aligning `tile_cols` up wastes DMA on a
-     memory-bound op (`C=4 -> 8` doubles traffic).
-  3. **Size `tile_rows` to the per-core block, then the ~192 KB physical UB** — a
-     few large tiles per block; double buffering is secondary (do not shrink tiles
-     just to add iterations).
-  For `C == 1` reshape instead of reducing; for a `C` wider than UB, tile the
-  column axis with a per-row accumulator. Full recipe (with a host-side selector):
-  [`pyasc-api-patterns` → Reduction tiling selection](../pyasc-api-patterns/references/reduction-tiling.md).
-- **CRITICAL — pad the INPUT with the reduction identity, not 0.** When you pad
-  the column dimension, the kernel still reduces the padding elements, so they
-  must be neutral for the specific reduction: `0` for `sum`/`mean`, **`-inf`
-  (e.g. `torch.full(..., float("-inf"))`) for `max`**, **`+inf` for `min`**,
-  `1` for `prod`. `test_reduce_sum.py` pads with `0` only because 0 is the sum
-  identity — copying that for a max/min reduction is a silent bug that passes for
-  all-positive inputs but corrupts any row whose real values are all-negative.
-  (Fill padding with the identity, then write the real block with `randn`.)
-
-## 7. Definition of done
-
-- Branch `<op>-target` created off `v2`.
-- `python/test/asc2/target/test_<op>.py` present, modeled on the closest sibling, all
-  requested shapes parametrized, pure-torch golden with `torch.testing.assert_close`.
-- The chosen `ops-*` reference is identified and cited in the commit message.
-- Feasible shapes pass on `--backend Model`; the work is committed with a clean
-  `git status` (no injected tooling in the commit).
+- Exact v2 commit and runtime provenance recorded.
+- Target file is based on a current sibling and covers the requested domain.
+- Whole matrix compiles; feasible model cases match the golden.
+- CANN reference and remaining compiler/runtime blockers are documented.
+- Commit only the intended target/test files when a commit was requested.
