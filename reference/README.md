@@ -34,6 +34,28 @@ Target tests move between PyAsc versions — the upstream path has been
 was deleted outright when AscTile was relocated under `experimental/`. Treat
 this snapshot as a pin to refresh, never as a permanent fixture.
 
+That is why the sync finds the suite by **content** — files using both
+`asctile.jit` and `asctile.global_tensor` — rather than by a remembered path.
+Matching on path or filename would be wrong twice over: the path has already
+moved, and `test_vadd.py` exists three times in a typical checkout, the other
+two being low-level `asc.jit` kernels that would import cleanly and verify
+entirely the wrong thing.
+
+A dry run against a local checkout confirms both halves:
+
+```
+$ scripts/sync-target-suite.sh --source ~/workspace/pyasc-fork --dry-run
+[sync] suite: experimental/asctile/python/test/target (23 files)
+  added     test_gather.py
+  added     test_rms_norm.py
+  ...
+  removed   test_matmul_k_tiled.py
+```
+
+It located the suite at its **current** path under `experimental/`, not the one
+recorded in the pin, and the decoys did not appear. The pending drift is real:
+nine tests added upstream, three no longer in `target/`.
+
 ### Local modifications
 
 Exactly one, and it is confined to `asctile/conftest.py`: an alias registering
