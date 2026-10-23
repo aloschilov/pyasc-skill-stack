@@ -10,11 +10,40 @@ from contextlib import ExitStack
 import importlib
 import importlib.util
 import os
+import sys
 from unittest.mock import patch
 
 from asc.lib.profiling import Profiler, task_time_median
 from asc.runtime import config
 import pytest
+
+# --- Local addition, not upstream ------------------------------------------
+# The vendored test files are kept byte-identical to upstream so that
+# scripts/sync-target-suite.sh can compare them by hash. They all do a bare
+# `import asctile`, which is how a legacy source build exposes the module. The
+# published pyasc-dev wheel exposes it as asc.experimental.asctile instead, so
+# without this alias the entire suite fails to import against a wheel install.
+#
+# Registering the alias here rather than editing 18 test files keeps the
+# snapshot diffable against upstream. conftest.py is imported before any test
+# module, so the alias is in place by the time they run.
+#
+# The alias is installed unconditionally when asc.experimental.asctile exists,
+# and deliberately NOT guarded on `"asctile" not in sys.modules`. A bare
+# `import asctile` can succeed and still be useless: a half-built or stale
+# editable checkout leaves an `asctile/` directory with no __init__.py, which
+# Python happily imports as an empty namespace package. The tests then fail
+# with `AttributeError: module 'asctile' has no attribute 'jit'`, which reads
+# like a broken test suite rather than a broken environment. Preferring the
+# installed runtime makes "the runtime you installed is the runtime you test"
+# true by construction.
+try:
+    from asc.experimental import asctile as _asctile
+except ImportError:  # pragma: no cover - legacy source build exposes it top-level
+    pass
+else:
+    sys.modules["asctile"] = _asctile
+# ---------------------------------------------------------------------------
 
 
 class StubProfiler:

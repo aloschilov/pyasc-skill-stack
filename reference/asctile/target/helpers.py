@@ -6,14 +6,17 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 
-# Shared tiling helpers for the asc2 target op tests (addcdiv, reciprocal,
+# Shared tiling helpers for the asctile target op tests (addcdiv, reciprocal,
 # reduce_max). Kept here so the UB-budget query and the elementwise/reduce tile
 # selectors are defined once instead of copy-pasted per test file.
 
 import math
 
-STATIC = "static"
-DYNAMIC = "dynamic"
+import pytest
+
+
+def parametrize_is_static(param: str = "is_static"):
+    return pytest.mark.parametrize(param, (True, False), ids=("static", "dynamic"))
 
 
 def ub_budget_bytes(default=192 * 1024):

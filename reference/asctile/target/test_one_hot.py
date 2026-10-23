@@ -8,32 +8,32 @@
 
 import math
 
-import asc2
+import asctile
 import pytest
 import torch
 
-STATIC = "static"
-DYNAMIC = "dynamic"
+from .helpers import parametrize_is_static
 
 
-@asc2.jit(reuse_alloc=1)
-def one_hot(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, arange_ptr: asc2.GlobalAddress,
-            on_value: asc2.ConstExpr, off_value: asc2.ConstExpr, input_total, depth: asc2.ConstExpr,
-            unroll_factor: asc2.ConstExpr):
-    in_gm = asc2.global_tensor(input_ptr, [input_total])
-    out_gm = asc2.global_tensor(output_ptr, [input_total * depth])
-    arange_gm = asc2.global_tensor(arange_ptr, [depth])
+@asctile.jit(reuse_alloc=1)
+def one_hot(input_ptr: asctile.GlobalAddress, output_ptr: asctile.GlobalAddress, arange_ptr: asctile.GlobalAddress,
+            on_value: asctile.ConstExpr, off_value: asctile.ConstExpr, input_total, depth: asctile.ConstExpr,
+            unroll_factor: asctile.ConstExpr):
+    in_gm = asctile.global_tensor(input_ptr, [input_total])
+    out_gm = asctile.global_tensor(output_ptr, [input_total * depth])
+    arange_gm = asctile.global_tensor(arange_ptr, [depth])
 
-    block_length = asc2.ceildiv(input_total, asc2.block_num())
-    block_offset = asc2.block_idx() * block_length
+    block_length = asctile.ceildiv(input_total, asctile.block_num())
+    block_offset = asctile.block_idx() * block_length
 
-    arange_tile = asc2.copy_in(arange_gm, [0], [depth])
-    for i in asc2.range(block_length, unroll_factor=unroll_factor):
+    arange_tile = asctile.copy_in(arange_gm, [0], [depth])
+    for i in asctile.range(block_length, unroll_factor=unroll_factor):
         idx_pos = block_offset + i
-        idx_scalar = asc2.copy_in(in_gm, [idx_pos])
-        mask = asc2.equal(arange_tile, idx_scalar)
-        result = asc2.where(mask, asc2.number(on_value, output_ptr.dtype), asc2.number(off_value, output_ptr.dtype))
-        asc2.copy_out(result, out_gm, [idx_pos * depth])
+        idx_scalar = asctile.copy_in(in_gm, [idx_pos])
+        mask = asctile.equal(arange_tile, idx_scalar)
+        result = asctile.where(mask, asctile.cast(on_value, output_ptr.dtype),
+                               asctile.cast(off_value, output_ptr.dtype))
+        asctile.copy_out(result, out_gm, [idx_pos * depth])
 
 
 # Shapes derived from CSV column `stc_ori_inputs`/`stc_ori_outputs` of the ops-math
@@ -45,13 +45,13 @@ def one_hot(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, arang
 #   otherwise                -> 56 cores
 # `unroll_factor=1` for every case: the current kernel emits depth-sized tiles
 # inside a per-element loop, and parallel unroll>1 races on the splat UB slot
-# used to materialise idx_scalar inside `asc2.equal`. CANN's CSV `tilingValues`
+# used to materialise idx_scalar inside `asctile.equal`. CANN's CSV `tilingValues`
 # include a CANN-side unroll hint that does not translate one-to-one to this
 # kernel's loop structure.
 # `axis` is recorded for documentation; the kernel produces depth-innermost output
 # (functionally equivalent to axis=-1) regardless. Tests verify functional one-hot
 # correctness, not GM byte-layout parity with CANN.
-@pytest.mark.parametrize("kernel_type", [STATIC, DYNAMIC])
+@parametrize_is_static()
 @pytest.mark.parametrize(
     "block_num, unroll_factor, input_shape, input_dtype, output_shape, output_dtype, axis, depth, on_value, off_value",
     [
@@ -75,7 +75,7 @@ def one_hot(input_ptr: asc2.GlobalAddress, output_ptr: asc2.GlobalAddress, arang
         (56, 1, [1259, 1, 192, 2, 127], torch.int32, [1259, 1, 192, 2, 127, 3], torch.float32, -1, 3, 10.5, 30.6),
     ],
 )
-def test_one_hot(profiler, runs, kernel_type, block_num, unroll_factor, input_shape, input_dtype, output_shape,
+def test_one_hot(profiler, runs, is_static, block_num, unroll_factor, input_shape, input_dtype, output_shape,
                  output_dtype, axis, depth, on_value, off_value):
     input_total = math.prod(input_shape)
 
@@ -85,8 +85,8 @@ def test_one_hot(profiler, runs, kernel_type, block_num, unroll_factor, input_sh
     out_tensor = torch.zeros(input_total * depth, dtype=output_dtype)
 
     params = [indices_flat, out_tensor, arange_t, on_value, off_value]
-    if kernel_type == STATIC:
-        params.append(asc2.ConstExpr(input_total))
+    if is_static:
+        params.append(asctile.ConstExpr(input_total))
     else:
         params.append(input_total)
     params.extend([depth, unroll_factor])

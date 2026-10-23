@@ -8,37 +8,37 @@
 
 import math
 
-import asc2
+import asctile
 import pytest
 import torch
 
-STATIC = "static"
-DYNAMIC = "dynamic"
+from .helpers import parametrize_is_static
 
 
-@asc2.jit(reuse_alloc=1)
-def select(cond_ptr: asc2.GlobalAddress, input_x_ptr: asc2.GlobalAddress, input_y_ptr: asc2.GlobalAddress,
-           output_ptr: asc2.GlobalAddress, input_length, tile_length: asc2.ConstExpr, unroll_factor: asc2.ConstExpr):
-    c = asc2.global_tensor(cond_ptr, [input_length])
-    x = asc2.global_tensor(input_x_ptr, [input_length])
-    y = asc2.global_tensor(input_y_ptr, [input_length])
-    z = asc2.global_tensor(output_ptr, [input_length])
+@asctile.jit(reuse_alloc=1)
+def select(cond_ptr: asctile.GlobalAddress, input_x_ptr: asctile.GlobalAddress, input_y_ptr: asctile.GlobalAddress,
+           output_ptr: asctile.GlobalAddress, input_length, tile_length: asctile.ConstExpr,
+           unroll_factor: asctile.ConstExpr):
+    c = asctile.global_tensor(cond_ptr, [input_length])
+    x = asctile.global_tensor(input_x_ptr, [input_length])
+    y = asctile.global_tensor(input_y_ptr, [input_length])
+    z = asctile.global_tensor(output_ptr, [input_length])
 
-    block_loop_num = asc2.ceildiv(asc2.ceildiv(input_length, asc2.block_num()), tile_length)
+    block_loop_num = asctile.ceildiv(asctile.ceildiv(input_length, asctile.block_num()), tile_length)
     block_length = tile_length * block_loop_num
-    block_offset = asc2.block_idx() * block_length
+    block_offset = asctile.block_idx() * block_length
 
-    for i in asc2.range(block_loop_num, unroll_factor=unroll_factor):
+    for i in asctile.range(block_loop_num, unroll_factor=unroll_factor):
         current_offset = block_offset + i * tile_length
-        ct = asc2.copy_in(c, [current_offset], [tile_length])
-        xt = asc2.copy_in(x, [current_offset], [tile_length])
-        yt = asc2.copy_in(y, [current_offset], [tile_length])
-        zt = asc2.where(ct != 0, xt, yt)
-        asc2.copy_out(zt, z, [current_offset])
+        ct = asctile.copy_in(c, [current_offset], [tile_length])
+        xt = asctile.copy_in(x, [current_offset], [tile_length])
+        yt = asctile.copy_in(y, [current_offset], [tile_length])
+        zt = asctile.where(ct != 0, xt, yt)
+        asctile.copy_out(zt, z, [current_offset])
 
 
 # yapf: disable
-@pytest.mark.parametrize("kernel_type", [STATIC, DYNAMIC])
+@parametrize_is_static()
 @pytest.mark.parametrize("test_name, block_num, input_shapes, input_dtypes, output_shapes, output_dtypes, compile_params, runtime_params, tiling_key, tiling_params", [
 # PYASC_TESTS_BEGIN
     ("select_test_1", 40, ([2048, 1, 30], [2048, 1, 30], [2048, 1, 30]), (torch.int8, torch.float32, torch.float32), ([2048, 1, 30], ), (torch.float32, ), None, (2, ), 8, (61440, 768, 40, 0)),
@@ -76,7 +76,7 @@ def select(cond_ptr: asc2.GlobalAddress, input_x_ptr: asc2.GlobalAddress, input_
 # PYASC_TESTS_END
 ])
 # yapf: enable
-def test_select(profiler, runs, kernel_type, test_name, block_num, input_shapes, input_dtypes, output_shapes,
+def test_select(profiler, runs, is_static, test_name, block_num, input_shapes, input_dtypes, output_shapes,
                 output_dtypes, compile_params, runtime_params, tiling_key, tiling_params):
     input_shape = input_shapes[1]
     dtype = input_dtypes[1]
@@ -92,8 +92,8 @@ def test_select(profiler, runs, kernel_type, test_name, block_num, input_shapes,
     out_tensor = torch.zeros(input_shape_1d, dtype=dtype)
 
     params = [in_tensor_c, in_tensor_x, in_tensor_y, out_tensor]
-    if kernel_type == STATIC:
-        params.append(asc2.ConstExpr(input_shape_1d[0]))
+    if is_static:
+        params.append(asctile.ConstExpr(input_shape_1d[0]))
     else:
         params.append(input_shape_1d[0])
     params.extend([tile_length, unroll_factor])

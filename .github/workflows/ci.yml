@@ -25,15 +25,11 @@ permissions:
   packages: read
 
 env:
-  # NB: this image tag is built from docker/Dockerfile with
-  # PYASC_GIT_URL=https://gitcode.com/compiler-team/pyasc.git and
-  # PYASC_GIT_REV pinned to the SHA recorded in
-  # docs/skill-value-q1-findings.md "Setup" section. Bumping the host-side
-  # pyasc-v2-eval pin therefore requires rebuilding+repushing this image
-  # so docker fallback runs stay consistent with the host-runtime baseline.
-  PYASC_SIM_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim:py3.11
+  # Version-coupled to the same immutable current-v2 commit documented by the
+  # skills. Never point CI at an unversioned/mutable runtime tag.
+  PYASC_SIM_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim:py3.11-pyasc-030e9b2c
   # docker_full perf image: pyasc-sim + vendored ops-math/ops-nn +
-  # pyasc-v2-eval + dav_3510/Ascend950PR_9599 sims. Built manually on the
+  # dav_3510/Ascend950PR_9599 sims. Built manually on the
   # host (docker/build-perf-image.sh) and pushed; CI only pulls it. The
   # nightly perf-gate runs the full perf-vs-AscendC harness inside it.
   # ARM64-ONLY: the camodel sims + pyasc native extension are arm64, so the
@@ -41,9 +37,9 @@ env:
   # (runs-on: [self-hosted, arm64] - the MacBook Docker Desktop runner). The tag
   # carries an explicit -arm64 suffix so it is never confused with the amd64
   # pyasc-sim base.
-  PYASC_PERF_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim-perf:py3.11-arm64
-  # Hard pin so the harness aborts if a runner accidentally imports a
-  # pyasc tree other than pyasc-v2-eval (e.g. the user's dev fork).
+  PYASC_PERF_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim-perf:py3.11-pyasc-030e9b2c-arm64
+  # Host-only fallback pin for ad-hoc/manual runs. CI evidence explicitly uses
+  # --runtime-backend docker so it cannot resolve to this older host checkout.
   PYASC_EVAL_ROOT: /home/aloschilov/workspace/pyasc-v2-eval
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -124,7 +120,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull pyasc-sim image
-        run: docker pull ${{ env.PYASC_SIM_IMAGE }}
+        run: |
+          docker pull "${{ env.PYASC_SIM_IMAGE }}"
+          tests/tools/verify_pyasc_image.sh "${{ env.PYASC_SIM_IMAGE }}"
 
       - name: Simulator verification of golden kernels (shard ${{ matrix.shard }})
         run: |
@@ -184,14 +182,14 @@ jobs:
             idx=$((idx + 1))
           done
           # Fork target-test goldens (compile-check on 4d1db41d): the canonical
-          # upstream kernels vendored from pyasc-fork/v2-eval into golden/target/.
+          # upstream kernels vendored from pyasc-fork/v2-eval into reference/asctile/target/.
           # Compile-only (fast — the fork tests have ~100 cases each; the simulator
           # runtime is slow, so the merge-gate verifies COMPILE here; the __main__
           # goldens above provide the runtime verification). Run on shard 0 only
           # (no shard-assignment needed — ~2min total for 18 tests).
           if [ "$SHARD" -eq 0 ]; then
             echo "--- [shard 0] Fork target-test compile-check ---"
-            for fork_test in golden/target/test_*.py; do
+            for fork_test in reference/asctile/target/test_*.py; do
               [ -f "$fork_test" ] || continue
               fbase="$(basename "$fork_test")"
               # test_add_inplace: 4 cases (large shapes) hit UB overflow
@@ -243,7 +241,7 @@ jobs:
   # The same job also runs the --cce-simd-vf-fusion off-vs-on A/B
   # (demo_vf_fusion.py) on each generated kernel and publishes
   # evidence/vf-fusion-summary.json for the dashboard's "Compiler SIMD fusion"
-  # panel (verifies the "pyasc2 uses no micro-api; the compiler does fusion"
+  # panel (verifies the "pyasc asctile uses no micro-api; the compiler does fusion"
   # positioning). Also report-only.
   #
   # bf16 goldens are NOT verified here anymore: now that merge-gate runs on the
@@ -315,6 +313,7 @@ jobs:
             sleep $((attempt * 15))
           done
           if [ "$available" = "true" ]; then
+            tests/tools/verify_pyasc_image.sh "$PYASC_PERF_IMAGE"
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
@@ -345,7 +344,7 @@ jobs:
         if: steps.perf_image.outputs.available == 'true'
         run: |
           # Compiles each generated kernel with the bisheng vector-fusion flag
-          # off vs on on the same camodel (the "pyasc2 uses no micro-api; the
+          # off vs on on the same camodel (the "pyasc asctile uses no micro-api; the
           # compiler does fusion" verification). Report-only like the perf gate;
           # ref builds are reused from the demo_vector_ops run's _build_cache.
           # Container-leak guard (see merge-gate / perf-gate).
@@ -467,6 +466,9 @@ jobs:
             if [ "$pulled" != "true" ]; then
               echo "::warning::pyasc-sim image $PYASC_SIM_IMAGE unavailable after 3 attempts; skipping nightly leg"
               available=false
+            elif ! tests/tools/verify_pyasc_image.sh "$PYASC_SIM_IMAGE"; then
+              echo "::error::pyasc-sim image does not match the pinned pyasc runtime"
+              exit 1
             fi
           fi
 
@@ -500,7 +502,7 @@ jobs:
             echo "=== Generative evidence: $op / $dtype (protocol_id=$PROTOCOL_ID) ==="
             if python3.10 tests/tools/collect_generative_evidence.py \
                 --op "$op" --dtype "$dtype" \
-                --runtime --runtime-backend auto --timeout 1200 \
+                --runtime --runtime-backend docker --timeout 1200 \
                 --agent-backend docker \
                 --docker-timeout "$DOCKER_TO" \
                 --archive-dir generative-archive \
@@ -671,6 +673,9 @@ jobs:
             if [ "$pulled" != "true" ]; then
               echo "::warning::pyasc-sim image $PYASC_SIM_IMAGE unavailable after 3 attempts; skipping $PROFILE leg"
               available=false
+            elif ! tests/tools/verify_pyasc_image.sh "$PYASC_SIM_IMAGE"; then
+              echo "::error::pyasc-sim image does not match the pinned pyasc runtime"
+              exit 1
             fi
           fi
 
@@ -709,7 +714,7 @@ jobs:
             echo "=== Generative evidence: $op / $dtype ($PROFILE, skills_mode=$SKILLS_MODE) ==="
             if python3.10 tests/tools/collect_generative_evidence.py \
                 --op "$op" --dtype "$dtype" \
-                --runtime --runtime-backend auto --timeout 1200 \
+                --runtime --runtime-backend docker --timeout 1200 \
                 --agent-backend docker \
                 --docker-timeout "$DOCKER_TO" \
                 --archive-dir generative-archive \
@@ -829,7 +834,9 @@ jobs:
         # opencode runs INSIDE this image (--agent-backend docker below), which
         # now carries node + opencode; no host npm install or global config.
         if: steps.secret.outputs.available == 'true'
-        run: docker pull ${{ env.PYASC_SIM_IMAGE }}
+        run: |
+          docker pull "${{ env.PYASC_SIM_IMAGE }}"
+          tests/tools/verify_pyasc_image.sh "${{ env.PYASC_SIM_IMAGE }}"
 
       - name: Run OpenCode skills-intervention leg (profile=${{ matrix.profile }}, skills_mode=${{ matrix.skills_mode }})
         if: steps.secret.outputs.available == 'true'
@@ -853,7 +860,7 @@ jobs:
             echo "=== Generative evidence: $op / $dtype ($PROFILE, skills_mode=$SKILLS_MODE) ==="
             if python3.10 tests/tools/collect_generative_evidence.py \
                 --op "$op" --dtype "$dtype" \
-                --runtime --runtime-backend auto --timeout 1200 \
+                --runtime --runtime-backend docker --timeout 1200 \
                 --agent-backend docker \
                 --docker-timeout "$DOCKER_TO" \
                 --archive-dir generative-archive \
@@ -906,6 +913,9 @@ jobs:
     # Pure-Python aggregation + commit/push; seconds of work.
     timeout-minutes: 30
     needs: [nightly-gate, local-stability-gate, cloud-dashscope-gate, perf-gate]
+    concurrency:
+      group: skills-value-report-${{ github.repository }}
+      cancel-in-progress: false
     if: >-
       always() &&
       (github.event_name == 'schedule' ||
@@ -913,6 +923,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # A nightly can wait behind long-running matrix legs for hours. Check
+          # out the current branch tip, not the workflow's stale trigger SHA,
+          # so generated summaries do not immediately conflict with main.
+          ref: main
           # We commit back to main, so fetch full history.
           fetch-depth: 0
 
@@ -1047,13 +1061,10 @@ jobs:
             git commit -m "chore: update generative evidence and OpenCode skills-intervention report from nightly run
 
           Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            # The nightly run spans hours; rebase onto the latest origin/main
-            # so the evidence commit lands cleanly even if a developer pushed
-            # during the run. Avoids a non-fast-forward push failure that would
-            # leave the fresh evidence stranded off main. Tree is clean
-            # post-commit, so the rebase cannot collide with uncommitted work.
-            git fetch origin
-            git rebase origin/main
+            # The job checks out the current main tip immediately before this
+            # short aggregation phase. A genuinely concurrent push now fails
+            # safely instead of attempting to rebase generated JSON and
+            # leaving the workflow in a conflict state.
             git push
           fi
 
