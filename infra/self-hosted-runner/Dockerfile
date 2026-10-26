@@ -10,6 +10,23 @@
 # as a sibling container with the workspace bind-mounted at its host path, which
 # needs a daemon and a work dir the job controls -- see compose.arm64.yml.
 #
+# REBUILD THIS IMAGE PERIODICALLY. GitHub retires old runner binaries, and a
+# retired one fails in a way that reads as a credential problem rather than a
+# version problem: it connects, registers, prints "Listening for Jobs", then
+# "Runner version vX is deprecated and cannot receive messages", deregisters
+# and loops. The runner never appears online. DISABLE_AUTO_UPDATE does not
+# save you and neither does turning it off -- the update is delivered over the
+# message channel the deprecated runner is barred from. Only a rebuild on a
+# current base fixes it. 2026-10-26: v2.335.1 was refused, rebuilding gave
+# v2.338.2.
+#
+# Docker Desktop's keychain credstore blocks pulls and builds over SSH, so
+# build on another arm64 Linux host and ship the result:
+#   DOCKER_CONFIG=$(mktemp -d) && echo '{}' > "$DOCKER_CONFIG/config.json"
+#   docker build --pull -t pyasc-ci-runner:latest infra/self-hosted-runner/
+#   docker save pyasc-ci-runner:latest | ssh <mac> docker load
+# --pull matters: without it the stale base is reused and nothing changes.
+#
 # IMPORTANT: pin to the ubuntu-jammy (22.04) tag, NOT :latest (= ubuntu-focal /
 # 20.04). actions/setup-python's python-versions has NO prebuilt Python 3.10 for
 # 20.04/arm64 (perf-gate on the Mac fails outright) and on 20.04/x64 it falls back

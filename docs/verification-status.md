@@ -18,8 +18,9 @@ provider or device is an honest `blocked`, never a fabricated pass.
 | compile | `passed` | codegen produced a kernel binary; output left untouched under `PYASC_DRY_RUN=1` |
 | numerical | `passed` | simulator execution matches the NumPy reference exactly, tail included |
 | target suite (collection) | `passed` | all cases across 24 modules collect against the published wheel (1155 at `d0f64a63`; re-derive, do not quote) |
-| target suite (compile) | `passed` | 23 of 24 modules compile-check in the pinned image; 1 `blocked`, 0 failed — see below |
-| simulator image | `passed` | pinned digest pulls anonymously and `asc.experimental.asctile.jit` imports |
+| target suite (compile) | `passed` | 23 of 24 modules compile-check in the pinned dev overlay; 1 `blocked`, 0 failed — see below |
+| simulator image | `passed` | pinned overlay digest pulls anonymously; `asc.experimental.asctile.jit` imports and torch/pytest match the pin |
+| CI execution | `passed` | `pr-gate` runs green on the self-hosted arm64 runner — see below |
 | hardware | `not-run` | no `/dev/davinci*` and no `npu-smi` on this host; simulator only |
 | performance | `not-run` | a simulator result is not a hardware measurement |
 
@@ -40,6 +41,12 @@ see [`evidence-sources.md`](evidence-sources.md). Full sweep on Linux aarch64,
 ```
 compile-checked 24 module(s); 0 failed; 1 blocked
 ```
+
+That result is from the upstream overlay image, and it is identical to the one
+the repository used to get from an overlay it built itself — same 23 passes,
+same single blocked module, same per-module timings within noise. Adopting
+upstream's image changed nothing about the outcome, which is the evidence that
+it was a safe swap rather than a new environment with new behaviour.
 
 Roughly 12 minutes end to end. The one blocked module is `test_kl_div.py`:
 the process is killed with SIGKILL (exit 137) even with 27 GB free.
@@ -76,6 +83,30 @@ that mode upstream mocks kernel launch and the numerical assertions. A green
 sweep means 23 modules build against the pinned runtime. It says nothing about
 whether any of them computes the right answer. Numerical execution of the
 suite on the camodel remains `not-run`.
+
+## CI actually runs
+
+Worth stating plainly, because for a while it did not. Every job in `ci.yml`
+targets `[self-hosted, arm64]`, and until 2026-10-26 the only registered
+runner carried the label `cannbench-vm`. Nothing matched, so runs sat queued
+indefinitely and the gate's green-ness was never tested — a workflow that
+cannot be scheduled looks the same as one that has not been triggered.
+
+An arm64 runner now serves it from a Mac via Docker Desktop
+(`infra/self-hosted-runner/`), and `pr-gate` reports green on it.
+
+Bringing it up surfaced one failure mode worth knowing, because it does not
+look like what it is: the prebuilt runner image carried v2.335.1, which GitHub
+has retired. A retired runner connects, registers, prints "Listening for
+Jobs", is then told it "cannot receive messages", deregisters, and loops — so
+it never shows as online and the symptom reads as a bad credential. Auto-update
+cannot fix it, since the update arrives over the channel the runner is barred
+from. Rebuilding the image on a current base (v2.338.2) fixed it. The
+Dockerfile now says so.
+
+The runner is registered with a one-hour registration token rather than a PAT,
+so it will not re-register after a reboot. See `.env.example` for the durable
+setup.
 
 ## What the numerical gate covered
 
