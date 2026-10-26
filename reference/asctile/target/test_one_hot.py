@@ -8,7 +8,7 @@
 
 import math
 
-import asctile
+from asc.experimental import asctile
 import pytest
 import torch
 
@@ -31,8 +31,7 @@ def one_hot(input_ptr: asctile.GlobalAddress, output_ptr: asctile.GlobalAddress,
         idx_pos = block_offset + i
         idx_scalar = asctile.copy_in(in_gm, [idx_pos])
         mask = asctile.equal(arange_tile, idx_scalar)
-        result = asctile.where(mask, asctile.cast(on_value, output_ptr.dtype),
-                               asctile.cast(off_value, output_ptr.dtype))
+        result = asctile.where(mask, on_value, off_value).to(output_ptr.dtype)
         asctile.copy_out(result, out_gm, [idx_pos * depth])
 
 

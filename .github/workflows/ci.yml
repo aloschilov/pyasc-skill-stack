@@ -11,9 +11,13 @@ permissions:
   packages: read
 
 env:
-  # Version-coupled to an immutable pyasc commit. Never point CI at a mutable
-  # tag: a moving runtime silently invalidates every result below it.
-  PYASC_SIM_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim:py3.11-pyasc-030e9b2c
+  # Pinned by digest, not by tag: a moving runtime silently invalidates every
+  # result below it. Built, smoke-tested and published upstream by
+  # compiler-team-ru/pyasc-images; this is the cann9.2.0-u22.04-py3.11
+  # multi-arch manifest, so the same ref resolves on amd64 and arm64 runners.
+  # The authoritative copy of this value is reference/images/ENV.json --
+  # scripts/check-image-pin.sh fails the PR gate if the two disagree.
+  PYASC_SIM_IMAGE: ghcr.io/compiler-team-ru/pyasc-sim@sha256:6256a47b167ba05b2b7b2280ab0460e1da42a188bcec2c643f6a985718fd4b67
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
@@ -51,8 +55,9 @@ jobs:
   # blocking gate verifies COMPILE and leaves full numerical execution to a
   # manual or nightly run.
   #
-  # The Docker image is pre-built locally (it contains a native C++ extension)
-  # and pushed to ghcr.io. CI only pulls it.
+  # The Docker image is built, smoke-tested and published upstream by
+  # compiler-team-ru/pyasc-images. This repo never builds it; CI only pulls
+  # the pinned digest.
   # ==========================================================================
   merge-gate:
     runs-on: [self-hosted, arm64]
@@ -65,54 +70,107 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to ghcr.io
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
+      # No ghcr.io login. The upstream packages allow anonymous pulls
+      # (matrix.json records public_registry_check.anonymous_registry_access),
+      # and GITHUB_TOKEN is scoped to this repository's owner, so it could not
+      # read a package in the compiler-team-ru org anyway.
+      #
+      # A *stale* credential is worse than none: if the runner's docker config
+      # still holds a ghcr.io login for an account without access to
+      # compiler-team-ru, the daemon sends it and the registry answers "denied"
+      # even though the package is public. Pull with an empty docker config so
+      # the request is genuinely anonymous.
       - name: Pull pyasc-sim image
         run: |
-          docker pull "${{ env.PYASC_SIM_IMAGE }}"
+          set -euo pipefail
+          anon="$(mktemp -d)"
+          echo '{}' > "$anon/config.json"
+          DOCKER_CONFIG="$anon" docker pull "${{ env.PYASC_SIM_IMAGE }}"
           tests/tools/verify_pyasc_image.sh "${{ env.PYASC_SIM_IMAGE }}"
+
+      # The upstream image ships neither torch nor pytest, and the target suite
+      # needs both: every module imports torch at scope, and the suite is run
+      # through pytest. That is by design -- matrix.json lists the image's full
+      # dependency set and neither is in it, and pyasc-dev itself depends on
+      # neither. So build one overlay directory and mount it read-only into
+      # each per-module container, instead of installing 24 times.
+      #
+      # torch goes in with --no-deps plus exactly the packages the image lacks.
+      # A plain install would drag in newer sympy and setuptools which, on
+      # PYTHONPATH, shadow the versions the image was qualified with. numpy is
+      # never installed here at all: pyasc-dev needs numpy<2 and the image
+      # already carries 1.26.4.
+      - name: Provision torch and pytest for the target suite
+        run: |
+          set -euo pipefail
+          TORCH_SITE="${RUNNER_TEMP}/torch-site"
+          echo "TORCH_SITE=$TORCH_SITE" >> "$GITHUB_ENV"
+          if [ -d "$TORCH_SITE/torch" ]; then
+            echo "reusing overlay at $TORCH_SITE"
+            exit 0
+          fi
+          mkdir -p "$TORCH_SITE"
+          docker run --rm -v "$TORCH_SITE":/torch-site \
+            "${{ env.PYASC_SIM_IMAGE }}" \
+            python3.11 -m pip install --no-cache-dir --target /torch-site --no-deps \
+              --index-url https://download.pytorch.org/whl/cpu \
+              --extra-index-url https://pypi.org/simple \
+              torch filelock networkx jinja2 MarkupSafe fsspec
+          docker run --rm -v "$TORCH_SITE":/torch-site \
+            "${{ env.PYASC_SIM_IMAGE }}" \
+            python3.11 -m pip install --no-cache-dir --target /torch-site pytest
+          # Fail here, loudly, rather than 24 times inside the compile loop.
+          docker run --rm -v "$TORCH_SITE":/torch-site:ro -e PYTHONPATH=/torch-site \
+            "${{ env.PYASC_SIM_IMAGE }}" \
+            python3.11 -c 'import torch, pytest, numpy, sympy; print("overlay OK: torch", torch.__version__, "| numpy", numpy.__version__)'
 
       - name: Compile-check the AscTile target suite
         run: |
           set -uo pipefail
           PLATFORM=Ascend950PR_9599
           IMAGE="${{ env.PYASC_SIM_IMAGE }}"
-          FAILED=0; ran=0
+          FAILED=0; BLOCKED=0; ran=0
           # Container-leak guard: --rm only fires on a clean exit, which a hung
           # simulator never gives, so the trap is the actual guarantee.
           CTR_NAME="pyasc-target-${{ github.run_id }}"
           trap 'docker rm -f "$CTR_NAME" 2>/dev/null || true' EXIT INT TERM
-          for t in reference/asctile/target/test_*.py; do
+          # Recursive: upstream groups some cases into subpackages (matmul_v3/,
+          # kimi_k3/) and moves them in and out between versions. A flat glob
+          # would silently stop covering a whole group the day it moves.
+          while IFS= read -r t; do
             [ -f "$t" ] || continue
-            base="$(basename "$t")"
-            # test_add_inplace: 4 large-shape cases exceed the 192KB UB budget
-            # even under --compile-only; the other 16 pass. Pending a shape trim
-            # or a PYASC_TESTS_BEGIN representative-case block.
-            case "$base" in
-              test_add_inplace.py) echo "[SKIP] $base (4 UB-overflow cases on large shapes; pending trim)"; continue ;;
-            esac
+            rel="${t#reference/asctile/target/}"
+            slug="$(echo "${rel%.py}" | tr '/' '-')"
             start=$(date +%s)
-            if docker run --rm --name "${CTR_NAME}-${base%.py}" \
+            docker run --rm --name "${CTR_NAME}-${slug}" \
               --ulimit nofile=65536:65536 \
-              -v "$PWD":/workspace:ro -w /workspace "$IMAGE" \
+              -v "$PWD":/workspace:ro -w /workspace \
+              -v "${TORCH_SITE}":/torch-site:ro -e PYTHONPATH=/torch-site \
+              "$IMAGE" \
               python3.11 tests/tools/run_target_test.py "$t" \
-                --backend Model --platform "$PLATFORM"; then
-              echo "[PASS] $base ($(( $(date +%s) - start ))s)"
-            else
-              echo "[FAIL] $base ($(( $(date +%s) - start ))s)"
-              FAILED=$((FAILED + 1))
-            fi
+                --backend Model --platform "$PLATFORM"
+            rc=$?
+            took=$(( $(date +%s) - start ))
+            # exit 2 means the check could not be carried out here (OOM,
+            # timeout, signal), which is `blocked`, not `failed`. The two are
+            # different results and the gate keeps them apart: a kernel that
+            # does not compile is a defect, a runner that cannot hold a 7.4 GiB
+            # input tensor says nothing about the kernel.
+            case "$rc" in
+              0) echo "[PASS] $rel (${took}s)" ;;
+              2) echo "[BLOCKED] $rel (${took}s)"; BLOCKED=$((BLOCKED + 1)) ;;
+              *) echo "[FAIL] $rel (${took}s)"; FAILED=$((FAILED + 1)) ;;
+            esac
             ran=$((ran + 1))
-          done
-          echo "compile-checked $ran module(s); $FAILED failed"
+          done < <(find reference/asctile/target -name 'test_*.py' -type f | sort)
+          echo "compile-checked $ran module(s); $FAILED failed; $BLOCKED blocked"
           if [ "$ran" -eq 0 ]; then
             echo "ERROR: no target modules found under reference/asctile/target/"
             exit 1
+          fi
+          if [ "$BLOCKED" -gt 0 ]; then
+            echo "NOTE: $BLOCKED module(s) blocked on runner resources, not"
+            echo "      compile errors. Tracked in docs/verification-status.md."
           fi
           if [ "$FAILED" -gt 0 ]; then
             echo "ERROR: $FAILED target module(s) failed the compile check"

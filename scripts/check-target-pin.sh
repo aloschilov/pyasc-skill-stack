@@ -46,14 +46,19 @@ done < <(jq -r '.files | to_entries[] | "\(.key)\t\(.value)"' "${PIN}")
 
 # Untracked additions: a file present in the suite but absent from the pin
 # means someone edited the snapshot by hand instead of re-syncing.
-for f in "${DEST}"/target/*.py; do
-  base="$(basename "$f")"
+#
+# Recursive, because upstream groups some tests into subpackages (matmul_v3/,
+# kimi_k3/) and moves them in and out between versions. A non-recursive glob
+# would not notice an entire subpackage appearing or being tampered with.
+while IFS= read -r rel; do
+  [[ -n "${rel}" ]] || continue
+  base="$(basename "${rel}")"
   [[ "${base}" == "conftest.py" || "${base}" == "__init__.py" ]] && continue
-  if [[ "$(jq -r --arg k "${base}" '.files[$k] // "missing"' "${PIN}")" == "missing" ]]; then
-    echo "[pin] FAIL: ${base} is in the tree but not in the pin" >&2
+  if [[ "$(jq -r --arg k "${rel}" '.files[$k] // "missing"' "${PIN}")" == "missing" ]]; then
+    echo "[pin] FAIL: ${rel} is in the tree but not in the pin" >&2
     fail=1
   fi
-done
+done < <(cd "${DEST}/target" 2>/dev/null && find . -name '*.py' -type f | sed 's|^\./||' | sort)
 
 # --- Runtime agreement (advisory) --------------------------------------------
 # The suite should match the runtime it will be run against. Report, never fail:

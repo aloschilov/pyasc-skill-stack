@@ -1,5 +1,16 @@
 # CANNBench evaluation reports
 
+> **The linked report files are not in this repository.** They live under
+> `integrations/cannbench/comparisons/`, which is gitignored: these are bulky
+> generated run artefacts, and they were never committed, so they are not on
+> the `archive/campaign-2026` branch either. The links below resolve only on a
+> machine that still holds the original run output.
+>
+> What is durable is the prose on this page — the numbers, job ids and
+> conclusions are quoted inline precisely so the finding survives the
+> artefacts. Treat a link here as a pointer to provenance, not as something
+> you can click.
+
 ## GeLU tiling / reuse-allocation follow-up (2026-09-08)
 
 - [Report: all 20 tile shapes, AIV launched/useful counts, reuse_alloc and UB](../integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/README.md)

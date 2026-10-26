@@ -1195,7 +1195,7 @@ function svbHelp(text) {
 
 var SVB_TIPS = {
   profile: "An OpenCode model profile defined under "
-    + "docker/opencode-profiles/. The profile pins one LLM (cloud or "
+    + "integrations/opencode/profiles/. The profile pins one LLM (cloud or "
     + "local) and identical OpenCode settings (timeout, max attempts, "
     + "tools). For each capability cell, the same profile is run twice: "
     + "once with the pyasc skills mounted (skills-on) and once without "

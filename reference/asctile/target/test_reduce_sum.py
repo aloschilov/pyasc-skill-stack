@@ -8,7 +8,7 @@
 
 import math
 
-import asctile
+from asc.experimental import asctile
 import pytest
 import torch
 

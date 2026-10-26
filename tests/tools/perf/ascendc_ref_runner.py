@@ -668,7 +668,8 @@ def _ensure_third_party_patches(repo: Repo) -> None:
 def _ensure_thirdparty_siblings(repo: Repo) -> None:
     """ops-nn's third-party cmake modules (opbase, ops-tensor) pin a git SHA and
     run ``git checkout <sha>`` inside the vendored ``third_party/<dep>`` dir. The
-    perf image strips ``.git`` from the vendored sources (docker/build-perf-image.sh),
+    perf image stripped ``.git`` from the vendored sources (the retired
+    ``docker/build-perf-image.sh``, now on ``archive/campaign-2026``),
     so that checkout hard-fails with "not a git repository" and blocks every
     ops-nn reference build. Each module has a no-git escape hatch: if a sibling
     source dir exists at ``${PROJECT_SOURCE_DIR}/../../ops-base`` (opbase) or

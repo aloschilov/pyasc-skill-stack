@@ -12,7 +12,7 @@ trace back to one of them, it is not evidence.
 ```mermaid
 graph TD
   Q["What is being claimed?"]
-  Q -->|correctness| T["AscTile target suite<br/>Huawei-authored, 18 modules"]
+  Q -->|correctness| T["AscTile target suite<br/>Huawei-authored, 24 modules"]
   Q -->|performance| C["CANNBench<br/>11 operators"]
   Q -->|CANN baseline| K["TTK manifest<br/>42-column CSV"]
   T --> V["passed / failed"]
@@ -33,10 +33,18 @@ This cuts both ways. A model-written kernel that matches another model-written
 kernel to the last bit has demonstrated nothing, and a model-written kernel
 that beats one on ticks has not demonstrated speed.
 
+One clarification, because the name invites the wrong conclusion: the suite
+contains a `kimi_k3/` subpackage. That is upstream-authored content in
+Huawei's own test tree, vendored verbatim like everything else under
+`reference/asctile/target/`, and it is a reference. The rule above is about
+kernels *this* repository's agents produce, not about how upstream chose to
+name a directory. Judge provenance by who wrote and ships the code, not by
+what it is called.
+
 ## Correctness — the AscTile target suite
 
-Huawei-authored, vendored from upstream `pyasc` and pinned. 18 test modules,
-891 parametrised cases, each asserting numerical output against a reference
+Huawei-authored, vendored from upstream `pyasc` and pinned. 24 test modules,
+1155 parametrised cases, each asserting numerical output against a reference
 the suite computes itself.
 
 The suite needs a working AscTile runtime; `reference/asctile/conftest.py`
@@ -51,12 +59,30 @@ resolves one and fails with a readable diagnostic if neither
 Run it:
 
 ```bash
-pytest reference/asctile/target/test_add.py --backend Model --platform Ascend950PR_9599
+pytest reference/asctile/target/test_vadd.py --backend Model --platform Ascend950PR_9599
 ```
 
 `Backend.Model` is the camodel simulator, not hardware. A pass there is a
 simulator pass, and reports should say so — see
 [`../skills/pyasc-build-run-verify/references/hardware.md`](../skills/pyasc-build-run-verify/references/hardware.md).
+
+### What the runtime underneath is qualified for
+
+The suite runs inside the simulator image pinned by
+[`../reference/images/ENV.json`](../reference/images/ENV.json), built and
+published by `compiler-team-ru/pyasc-images`. That image carries its own
+verification scope, and it is a narrow one. Quoting `matrix.json` verbatim:
+
+> Upstream vector-add compile and simulator smoke, 128 float32 elements. No
+> hardware or broad numerical qualification.
+
+So the image is evidence that the toolchain installs and runs, nothing more.
+Every correctness claim above rests on the target suite, not on the image
+having been "tested". The two are separate gates and should stay that way in
+any report.
+
+The image also ships neither `torch` nor `pytest`, both of which the suite
+needs; CI installs them into a read-only overlay rather than into the image.
 
 ## Performance — CANNBench
 
@@ -87,7 +113,7 @@ See [`../skills/pyasc-cannbench-kernel/references/ttk.md`](../skills/pyasc-cannb
 
 | Source | State |
 |---|---|
-| Target suite | Vendored and pinned; collects 891 cases. Compile-checked in `merge-gate`. Full numerical execution on the camodel is a v0.2.0 gate. |
+| Target suite | Vendored and pinned; collects 1155 cases. Compile-checked in `merge-gate`. Full numerical execution on the camodel is a v0.2.0 gate. |
 | CANNBench | Task definitions tracked. The campaign-era runner and its results were archived; a scorer that produces ratios from a clean clone is v0.2.0. |
 | TTK | Column shape and role documented. The generator read an absolute path outside the repository, so the manifest is **not reproducible here yet** — v0.2.0. |
 

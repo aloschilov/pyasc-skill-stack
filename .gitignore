@@ -64,9 +64,5 @@ rerun-phase10-*.log
 # hosts, never in the repo. The committed template is .env.example.
 infra/self-hosted-runner/.env
 
-# Large binary files in Docker overlay (built locally, not tracked).
-# Per-arch subdirectories (x86_64/, aarch64/) keep their host-built .so
-# locally; both are picked up by docker/Dockerfile.overlay at build time.
-docker/pyasc-overlay/asc_C/*.so
-docker/pyasc-overlay/asc_C/**/*.so
-docker/*.bundle
+# (The docker/ overlay and bundle entries that used to live here went away
+# with the self-built simulator images; see reference/images/ENV.json.)

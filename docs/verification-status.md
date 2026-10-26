@@ -17,7 +17,9 @@ provider or device is an honest `blocked`, never a fabricated pass.
 | review | `not-run` | depends on generation |
 | compile | `passed` | codegen produced a kernel binary; output left untouched under `PYASC_DRY_RUN=1` |
 | numerical | `passed` | simulator execution matches the NumPy reference exactly, tail included |
-| target suite | `passed` (collection) | 891 cases collect against the published wheel; execution is `not-run` |
+| target suite (collection) | `passed` | 1155 cases across 24 modules collect against the published wheel |
+| target suite (compile) | `passed` | 23 of 24 modules compile-check in the pinned image; 1 `blocked`, 0 failed — see below |
+| simulator image | `passed` | pinned digest pulls anonymously and `asc.experimental.asctile.jit` imports |
 | hardware | `not-run` | no `/dev/davinci*` and no `npu-smi` on this host; simulator only |
 | performance | `not-run` | a simulator result is not a hardware measurement |
 
@@ -25,6 +27,44 @@ provider or device is an honest `blocked`, never a fabricated pass.
 generation gate is about an *agent* producing one from a plain-language
 request, and that is blocked. So `passed` there says the runtime and the
 documented API work — not that the agent workflow does.
+
+## The target-suite compile gate
+
+Every module under `reference/asctile/target/` is compile-checked inside the
+image pinned by [`../reference/images/ENV.json`](../reference/images/ENV.json).
+Full sweep on Linux aarch64, 39 GB RAM:
+
+```
+compile-checked 24 module(s); 0 failed; 1 blocked
+```
+
+Roughly 12 minutes end to end. The one blocked module is `test_kl_div.py`,
+and it is blocked on host memory, not on anything about the kernel: its
+largest case has shape `[1000, 997, 1000, 2, 1]`, which is 1.99e9 float32
+elements — **7.4 GiB for a single input tensor**, with several allocated per
+case. The process is killed with SIGKILL (exit 137) by the OOM killer even
+with 27 GB free.
+
+That is `blocked`, not `failed`, and the gate keeps the two apart: it fails
+the job on a compile error and only reports a resource blockage. Collapsing
+them would either turn the gate permanently red — at which point nobody reads
+it — or hide a real regression behind an expected failure.
+
+Two harness defects were found and fixed while establishing this, both of them
+cases where a module looked broken but nothing had actually been checked:
+
+- `run_target_test.py` built its `-k` selector as `<name>-<block_num>-`, which
+  only matches modules whose ids are generated from parameters. Modules using
+  an explicit `id=` on `pytest.param` — `test_gather.py` — matched nothing,
+  pytest exited 5 with "14 deselected", and the module was reported as failed
+  having run zero cases. It now probes candidate patterns and falls back.
+- Whole-module runs compiled every case in one interpreter, and memory
+  accumulates across compiles. `matmul_v3/test_matmul_v3_cube_only.py` (184
+  cases) was OOM-killed. Cases now run in batches of 24, each in a fresh
+  process, and it passes in 288 s with no loss of coverage.
+
+Note what this gate does **not** establish: it is compile-only. Numerical
+execution of the suite on the camodel remains `not-run`.
 
 ## What the numerical gate covered
 

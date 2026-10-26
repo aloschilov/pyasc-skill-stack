@@ -4,21 +4,35 @@
 
 | Component | Version | Notes |
 |-----------|---------|-------|
-| CANN Toolkit | >= 8.5.0 (community or standard) | Ascend computing backend |
-| Python | 3.10.x | pyasc and torch are installed here |
+| CANN Toolkit | 9.0.0 or 9.2.0 | Ascend computing backend; the two the upstream image matrix builds against |
+| Python | 3.10 - 3.12 | pyasc and torch are installed here |
 | pyasc | >= 1.1.1 | Python JIT for Ascend C |
 | pytest | >= 7.0 | Required for pyasc kernel integration tests |
 | numpy | < 2.0 | Required by pyasc |
-| torch | any | For tensor management and verification |
+| torch | any | For tensor management and verification; **not** a pyasc dependency |
+
+The simulator image this repository pins carries CANN 9.2.0 — see
+[`../reference/images/ENV.json`](../reference/images/ENV.json). If you only
+need the simulator, use that image instead of installing CANN by hand; this
+guide is for host installs and for hardware.
 
 ## Architecture support
 
-The stack is verified on Ubuntu 22.04 on both `x86_64` and `aarch64`. CANN
-ships a separate installer per architecture; pick the one matching
-`uname -m`:
+The stack is verified on Ubuntu 22.04 and 24.04, on both `x86_64` and
+`aarch64`. CANN ships a separate installer per architecture; pick the one
+matching `uname -m`:
 
 - `Ascend-cann-toolkit_<version>_linux-x86_64.run`
 - `Ascend-cann-toolkit_<version>_linux-aarch64.run`
+
+The upstream image matrix records the exact installer it used for each cell,
+including a sha256, which is the most reliable way to get a known-good pair of
+URL and checksum rather than guessing at a download page:
+
+```bash
+curl -fsSL https://github.com/compiler-team-ru/pyasc-images/releases/latest/download/matrix.json \
+  | jq -r '[.cells[].environment.cann_installer] | unique_by(.url)[] | "\(.sha256)  \(.url)"'
+```
 
 Both installers lay out the same directory tree under the install prefix,
 so every command in this guide is arch-agnostic once `CANN_HOME` is set.
@@ -43,8 +57,8 @@ CANN can be installed in several places depending on how you obtained it. This g
 
 - `$HOME/Ascend/cann` (default user install)
 - `$HOME/Ascend/ascend-toolkit/latest`
-- `$HOME/Ascend/cann-<version>` (e.g. `cann-9.0.0`)
-- `/usr/local/Ascend/ascend-toolkit/latest` (system-wide; also the location used inside the provided Docker image)
+- `$HOME/Ascend/cann-<version>` (e.g. `cann-9.0.0` or `cann-9.2.0`)
+- `/usr/local/Ascend/ascend-toolkit/latest` (system-wide; also the location used inside the pinned simulator image)
 
 Export it once per shell (replace the default if your install lives elsewhere):
 

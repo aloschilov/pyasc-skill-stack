@@ -1,5 +1,6 @@
 # arm64 runner(s) for the MacBook via Docker Desktop's Linux/arm64 VM.
-# Serves the arm64-only perf-gate (pulls + runs ghcr pyasc-sim-perf:py3.11-arm64)
+# Serves the arm64 CI gates. These pull the simulator image pinned by digest in
+# reference/images/ENV.json; the repo no longer builds its own images.
 # and every other CI job (label `arm64`).
 #
 # The image is prebuilt and `docker load`-ed onto the Mac (Docker Desktop's

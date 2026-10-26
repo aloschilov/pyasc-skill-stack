@@ -8,7 +8,7 @@
 
 import math
 
-import asctile
+from asc.experimental import asctile
 import pytest
 import torch
 
@@ -18,9 +18,10 @@ from .helpers import parametrize_is_static
 @asctile.jit(reuse_alloc=1)
 def gelu(input_ptr: asctile.GlobalAddress, output_ptr: asctile.GlobalAddress, input_length,
          tile_length: asctile.ConstExpr, TANH_APPROX_FACTOR: asctile.ConstExpr,
-         NEG_SQRT_EIGHT_OVER_PI: asctile.ConstExpr, unroll_factor: asctile.ConstExpr):
-    in_gm = asctile.global_tensor(input_ptr, [input_length])
-    out_gm = asctile.global_tensor(output_ptr, [input_length])
+         NEG_SQRT_EIGHT_OVER_PI: asctile.ConstExpr, unroll_factor: asctile.ConstExpr, l2_cache: asctile.ConstExpr):
+    l2_in, l2_out = l2_cache
+    in_gm = asctile.global_tensor(input_ptr, [input_length], l2_cache=l2_in)
+    out_gm = asctile.global_tensor(output_ptr, [input_length], l2_cache=l2_out)
 
     block_loop_num = asctile.ceildiv(asctile.ceildiv(input_length, asctile.block_num()), tile_length)
     block_length = tile_length * block_loop_num
@@ -53,7 +54,7 @@ def gelu_torch(x: torch.Tensor, TANH_APPROX_FACTOR, NEG_SQRT_EIGHT_OVER_PI):
 @parametrize_is_static()
 @pytest.mark.parametrize("test_name, block_num, input_shapes, input_dtypes, output_shapes, output_dtypes, compile_params, runtime_params, tiling_key, tiling_params", [
 # PYASC_TESTS_BEGIN
-    ("gelu_test_1", 72, ([32, 2048, 2304], ), (torch.float32, ), ([32, 2048, 2304], ), (torch.float32, ), None, (2, ), 7, (150994944, 72, 15872)),
+    ("gelu_test_1", 72, ([32, 2048, 2304], ), (torch.float32, ), ([32, 2048, 2304], ), (torch.float32, ), ((False, True), ), (2, ), 7, (150994944, 72, 15872)),
 # PYASC_TESTS_END
 ])
 # yapf: enable
@@ -63,6 +64,7 @@ def test_gelu(profiler, runs, is_static, test_name, block_num, input_shapes, inp
     dtype = input_dtypes[0]
     tile_length = tiling_params[2]
     unroll_factor = runtime_params[0]
+    l2_cache = compile_params[-1]
 
     TANH_APPROX_FACTOR = 1.0 / 0.044715
     NEG_SQRT_EIGHT_OVER_PI = -1.595769121 * 0.044715
@@ -76,7 +78,7 @@ def test_gelu(profiler, runs, is_static, test_name, block_num, input_shapes, inp
         params.append(asctile.ConstExpr(input_shape_1d[0]))
     else:
         params.append(input_shape_1d[0])
-    params.extend([tile_length, TANH_APPROX_FACTOR, NEG_SQRT_EIGHT_OVER_PI, unroll_factor])
+    params.extend([tile_length, TANH_APPROX_FACTOR, NEG_SQRT_EIGHT_OVER_PI, unroll_factor, l2_cache])
 
     with profiler.profile():
         for _ in range(runs):

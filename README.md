@@ -23,8 +23,8 @@ These must be available on the host before starting:
 - `opencode` CLI installed
 - CANN Toolkit installed somewhere on disk (see [docs/cann-setup.md](docs/cann-setup.md))
 - Simulator libraries for `Ascend950PR_9599` (shipped with CANN — the only platform the stack targets)
-- Linux on `x86_64` or `aarch64`, glibc 2.35 or newer (Ubuntu 22.04 and newer)
-- CPython 3.10 or 3.11, matching the support matrix below
+- Linux on `x86_64` or `aarch64`, glibc 2.28 or newer (the wheels are `manylinux_2_28`)
+- CPython 3.10, 3.11 or 3.12 — see the support matrix below
 
 > **Runtime contract.** The skills target the **`asctile` programming model inside PyAsc**, obtained from the published `pyasc-dev` wheel:
 >
@@ -37,17 +37,33 @@ These must be available on the host before starting:
 
 ### Support matrix
 
-`pyasc-dev` is a development release. Published wheels, each qualified by two clean installations plus a CANN compile and `Ascend950PR_9599` camodel execution:
+`pyasc-dev` is a development release, built and published upstream by
+[`compiler-team-ru/asctile`](https://github.com/compiler-team-ru/asctile) as a
+matrix of CPython version x architecture. Wheels are `manylinux_2_28`
+(glibc 2.28 or newer), so they are independent of the CANN version and run on
+Ubuntu 22.04 and 24.04 alike. No macOS, no Windows.
 
-| Platform | CPython | Minimum glibc | Latest published version |
-|---|---|---|---|
-| Linux `aarch64` | 3.10 | 2.35 | `1.1.1.dev20261021205441` |
-| Linux `x86_64` | 3.10 | 2.35 | `1.1.1.dev20261022133935` |
-| Linux `x86_64` | 3.11 | 2.35 | `1.1.1.dev20261022085448` |
+**This table is not maintained here, because it would be wrong within a day.**
+The matrix genuinely moves between publications: as of
+`1.1.1.dev20261023173239` the two CPython 3.9 cells were marked incompatible
+(upstream used `dataclass(slots=True)`, which needs 3.10), and one publication
+later, at `1.1.1.dev20261024081924`, all eight cells built. Read the live state
+from the `wheel-manifest.json` attached to the newest release:
 
-No `aarch64` CPython 3.11 wheel, no macOS, no Windows, and no other Python versions are published. `pip` resolves the newest version that has a wheel for your platform, so different hosts legitimately land on different versions.
+```bash
+curl -fsSL https://github.com/compiler-team-ru/asctile/releases/latest/download/wheel-manifest.json \
+  | jq '{version, source_sha, status, published: (.targets|keys), incompatible: (.incompatible_targets|keys)}'
+```
 
-The wheel supplies the compiler and runtime only. **CANN, its drivers, and any hardware are installed separately** and are not bundled.
+It records, per cell, the wheel's sha256, its dependency hashes, the pinned
+LLVM revision and the manylinux base-image digest it was built in.
+
+`pip` resolves the newest version that has a wheel for your platform, so
+different hosts legitimately land on different versions. When that matters,
+pin the exact version this repository is verified against — see
+[reference/images/ENV.json](reference/images/ENV.json).
+
+The wheel supplies the compiler and runtime only. **CANN, its drivers, and any hardware are installed separately** and are not bundled. It also does not depend on `torch`, which the target suite needs; install that yourself.
 
 ### Step 1. Clone the repository
 
@@ -105,25 +121,51 @@ Install `pyasc-dev` into a **dedicated virtual environment**. It provides the sa
 
 #### Option B — Docker (self-contained, for a clean machine)
 
-The default `docker/Dockerfile` builds the pinned pyasc revision from the verified Git bundle in `docker/`; no pyasc checkout or GitCode credential is required on the build host.
-
-This image is pinned to the historical `030e9b2c` revision and exists so that CI runs and older recorded evidence stay reproducible. For new work prefer Option A — the published wheel tracks current upstream, whereas this image does not.
+This repository no longer builds simulator images. It consumes one cell of the
+matrix published by
+[`compiler-team-ru/pyasc-images`](https://github.com/compiler-team-ru/pyasc-images),
+which builds Ubuntu x CANN x CPython x architecture, smoke-tests every cell and
+publishes the result as `matrix.json` next to the images. Pull by digest, never
+by tag — the exact digest this repo is verified against lives in
+[reference/images/ENV.json](reference/images/ENV.json):
 
 ```bash
-docker build -f docker/Dockerfile \
-  --build-arg PYASC_GIT_REV=030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d \
-  -t pyasc-sim:py3.11-pyasc-030e9b2c docker/
+IMAGE=$(jq -r .image.ref reference/images/ENV.json)
+docker pull "$IMAGE"
 docker run --rm -it \
   --ulimit nofile=1048576:1048576 \
   -v "$(pwd)":/workspace -w /workspace \
-  pyasc-sim:py3.11-pyasc-030e9b2c
+  "$IMAGE"
+```
+
+The images allow anonymous pulls. If you get `denied`, you are most likely
+logged in to `ghcr.io` as an account without access to the `compiler-team-ru`
+org — the daemon sends that credential instead of pulling anonymously. Pull
+with an empty config to work around it:
+
+```bash
+cfg=$(mktemp -d) && echo '{}' > "$cfg/config.json"
+DOCKER_CONFIG="$cfg" docker pull "$IMAGE"
 ```
 
 > The `--ulimit nofile=1048576` is required: the CANN simulator opens hundreds of dump files per core (16 cores × tens of files), and the default Docker `nofile` limit of 1024 causes runtime errors like `Failed opening file ... Too many open files`.
 
-All remaining steps (sourcing CANN, running `opencode`, running kernels) happen **inside the container**. Inside the container, `CANN_HOME` is preset (CANN 9.0.0-beta.2 lives under `/usr/local/Ascend/cann-9.0.0-beta.2`; the install also exposes `/usr/local/Ascend/ascend-toolkit/latest` as a symlink, and sourcing `set_env.sh` updates `$ASCEND_HOME_PATH` accordingly).
+All remaining steps (sourcing CANN, running `opencode`, running kernels) happen **inside the container**.
 
-To build and publish the native per-architecture runner images, use `docker/build-sim-image.sh`; the script derives the same versioned tag from `PYASC_GIT_REV`.
+Two things the image does **not** give you:
+
+- **`torch`.** The upstream target suite imports it, but neither the image nor
+  `pyasc-dev` depends on it. Install a CPU build yourself before running the
+  suite; CI does this in a separate step.
+- **Correctness qualification.** Each cell is verified only to the extent
+  recorded in `matrix.json`'s own `scope` field: *"Upstream vector-add compile
+  and simulator smoke, 128 float32 elements. No hardware or broad numerical
+  qualification."*
+
+To move onto a different cell or a newer publication, run
+`scripts/sync-image-pin.sh` rather than editing the digest by hand;
+`scripts/check-image-pin.sh` runs in `--fast` and fails if the pin, the CI
+workflow and the target-suite pin stop agreeing.
 
 #### Option C — Local build from `pyasc` source (for compiler developers)
 
@@ -248,13 +290,17 @@ pyasc-skill-stack/
 │   ├── pyasc-env-check/              # Environment verification
 │   └── pyasc-task-focus/             # Task tracking
 ├── reference/
-│   └── asctile/                      # THE correctness reference
-│       ├── target/                   # Huawei-authored suite, 18 modules / 891 cases
-│       ├── PIN.json                  # upstream, path, commit, per-file sha256
-│       └── conftest.py               # runtime resolution across both import layouts
+│   ├── asctile/                      # THE correctness reference
+│   │   ├── target/                   # Huawei-authored suite (incl. subpackages)
+│   │   ├── PIN.json                  # upstream, path, commit, per-file sha256
+│   │   └── conftest.py               # upstream's, plus the import-layout alias
+│   └── images/
+│       └── ENV.json                  # pinned simulator image digest + provenance
 ├── scripts/
 │   ├── sync-target-suite.sh          # re-vendor the suite (finds it by content)
-│   └── check-target-pin.sh           # offline drift check, runs in --fast
+│   ├── check-target-pin.sh           # offline drift check, runs in --fast
+│   ├── sync-image-pin.sh             # re-pin onto a cell of the upstream matrix
+│   └── check-image-pin.sh            # offline pin/workflow agreement, runs in --fast
 ├── integrations/cannbench/           # CANNBench tasks: 11 operators
 ├── tests/
 │   ├── run-tests.sh                  # Test runner

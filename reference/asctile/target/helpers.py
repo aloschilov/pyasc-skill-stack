@@ -19,6 +19,10 @@ def parametrize_is_static(param: str = "is_static"):
     return pytest.mark.parametrize(param, (True, False), ids=("static", "dynamic"))
 
 
+def xfail(reason: str, compile_ok: bool, when=None):
+    return pytest.mark.asctile_xfail(reason=reason, compile_ok=compile_ok, when=when)
+
+
 def ub_budget_bytes(default=192 * 1024):
     # Physical Unified Buffer of the target SoC, queried from the runtime so the
     # tiling tracks the part (e.g. 192 KB on Ascend910B*, 248 KB on Ascend950*)

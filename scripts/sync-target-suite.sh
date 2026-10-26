@@ -25,10 +25,13 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEST="${REPO_ROOT}/reference/asctile"
 PIN="${DEST}/PIN.json"
 
-# Upstream commit that renamed asc2 -> asctile. Anything older describes an API
-# no skill in this repository documents, so vendoring it would be a regression
-# dressed up as an update.
-RENAME_COMMIT="ba6bb847"
+# Refs predating the asc2 -> asctile rename describe an API no skill here
+# documents, so vendoring one would be a regression dressed up as an update.
+# That is enforced by content, not by a commit hash: upstream is mirrored
+# across hosts that do not share object ids, so a hardcoded "rename commit"
+# resolves on one and is simply unknown on the other. A pre-rename checkout
+# has no `asctile.jit` anywhere, so the content search below finds nothing and
+# the run stops there.
 
 REF=""
 SOURCE_DIR=""
@@ -96,7 +99,13 @@ fi
 
 # --- Obtain a checkout -------------------------------------------------------
 WORKDIR=""
-cleanup() { [[ -n "${WORKDIR}" && -d "${WORKDIR}" ]] && rm -rf "${WORKDIR}"; }
+# Must return 0: on a normal exit bash adopts the trap's last status as the
+# script's, so a short-circuited && here would fail an otherwise clean run
+# (notably --dry-run --source, where no temp dir is ever created).
+cleanup() {
+  if [[ -n "${WORKDIR}" && -d "${WORKDIR}" ]]; then rm -rf "${WORKDIR}"; fi
+  return 0
+}
 trap cleanup EXIT
 
 if [[ -n "${SOURCE_DIR}" ]]; then
@@ -113,13 +122,6 @@ else
     || git -C "${CHECKOUT}" fetch --quiet origin
   git -C "${CHECKOUT}" checkout --quiet "${REF}" \
     || die "cannot check out ${REF}"
-
-  # Refuse anything predating the asc2 -> asctile rename.
-  if git -C "${CHECKOUT}" merge-base --is-ancestor "${RENAME_COMMIT}" HEAD 2>/dev/null; then
-    :
-  else
-    die "${REF} predates the asc2->asctile rename (${RENAME_COMMIT}); it describes an API the skills do not document"
-  fi
 fi
 
 # --- Locate the suite by content --------------------------------------------
@@ -135,12 +137,29 @@ mapfile -t HITS < <(
   sed 's|^\./||' | sort
 )
 
-[[ ${#HITS[@]} -gt 0 ]] || die "no asctile test files found in ${CHECKOUT}"
+[[ ${#HITS[@]} -gt 0 ]] || die "no asctile test files found in ${CHECKOUT}.
+  If ${REF} predates the asc2->asctile rename this is expected: it describes an
+  API the skills do not document, and must not be vendored."
 
 # The suite directory is the one holding the most matches.
 SUITE_REL="$(printf '%s\n' "${HITS[@]}" | xargs -n1 dirname | sort | uniq -c | sort -rn | head -1 | awk '{print $2}')"
 SUITE_ABS="${CHECKOUT}/${SUITE_REL}"
-note "suite: ${SUITE_REL} ($(printf '%s\n' "${HITS[@]}" | grep -c "^${SUITE_REL}/") files)"
+note "suite: ${SUITE_REL} ($(printf '%s\n' "${HITS[@]}" | grep -c "^${SUITE_REL}/") files at the top level)"
+
+# Upstream groups some tests into subpackages (matmul_v3/, kimi_k3/), and moves
+# them in and out between versions -- test_matmul_v3.py was a top-level module
+# before it became matmul_v3/test_matmul_v3_*.py. So the suite is the whole
+# tree under SUITE_REL, not just its top level, and every path below is
+# suite-relative rather than a bare basename.
+suite_files() { ( cd "${SUITE_ABS}" && find . -name '*.py' -type f | sed 's|^\./||' | sort ); }
+dest_files()  { ( cd "${DEST}/target" 2>/dev/null && find . -name '*.py' -type f | sed 's|^\./||' | sort ); }
+
+# conftest.py and __init__.py are plumbing, not cases: they are vendored but
+# not pinned, matching what scripts/check-target-pin.sh verifies.
+pinnable() { local b; b="$(basename "$1")"; [[ "${b}" != "conftest.py" && "${b}" != "__init__.py" ]]; }
+
+nsub="$(suite_files | grep -c '/' || true)"
+[[ "${nsub}" -gt 0 ]] && note "suite includes ${nsub} file(s) in subpackages"
 
 # The suite needs whichever ancestor conftest.py defines require_c310.
 PARENT_CONFTEST=""
@@ -160,20 +179,20 @@ sha() { sha256sum "$1" | awk '{print $1}'; }
 echo
 echo "--- changes against the current pin ---"
 changed=0
-for f in "${SUITE_ABS}"/*.py; do
-  base="$(basename "$f")"
-  if [[ -f "${DEST}/target/${base}" ]]; then
-    if [[ "$(sha "$f")" != "$(sha "${DEST}/target/${base}")" ]]; then
-      echo "  modified  ${base}"; changed=$((changed+1))
+while IFS= read -r rel; do
+  [[ -n "${rel}" ]] || continue
+  if [[ -f "${DEST}/target/${rel}" ]]; then
+    if [[ "$(sha "${SUITE_ABS}/${rel}")" != "$(sha "${DEST}/target/${rel}")" ]]; then
+      echo "  modified  ${rel}"; changed=$((changed+1))
     fi
   else
-    echo "  added     ${base}"; changed=$((changed+1))
+    echo "  added     ${rel}"; changed=$((changed+1))
   fi
-done
-for f in "${DEST}"/target/*.py; do
-  base="$(basename "$f")"
-  [[ -f "${SUITE_ABS}/${base}" ]] || { echo "  removed   ${base}"; changed=$((changed+1)); }
-done
+done < <(suite_files)
+while IFS= read -r rel; do
+  [[ -n "${rel}" ]] || continue
+  [[ -f "${SUITE_ABS}/${rel}" ]] || { echo "  removed   ${rel}"; changed=$((changed+1)); }
+done < <(dest_files)
 [[ ${changed} -eq 0 ]] && echo "  (none)"
 echo
 
@@ -188,9 +207,15 @@ fi
 # upstream deletions actually take effect.
 note "writing ${DEST}/target/"
 mkdir -p "${DEST}/target"
-find "${DEST}/target" -maxdepth 1 -name '*.py' ! -name 'conftest.py' -delete
-cp "${SUITE_ABS}"/*.py "${DEST}/target/"
-[[ -f "${SUITE_ABS}/conftest.py" ]] && cp "${SUITE_ABS}/conftest.py" "${DEST}/target/conftest.py"
+# Replace wholesale so that upstream deletions actually take effect, then prune
+# subpackage directories upstream no longer has.
+find "${DEST}/target" -name '*.py' -type f -delete
+while IFS= read -r rel; do
+  [[ -n "${rel}" ]] || continue
+  mkdir -p "${DEST}/target/$(dirname "${rel}")"
+  cp "${SUITE_ABS}/${rel}" "${DEST}/target/${rel}"
+done < <(suite_files)
+find "${DEST}/target" -mindepth 1 -type d -empty -delete
 
 if [[ -n "${PARENT_CONFTEST}" ]]; then
   note "parent conftest available at ${PARENT_CONFTEST#${CHECKOUT}/}"
@@ -210,13 +235,13 @@ note "writing ${PIN}"
   echo "  \"synced_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\","
   echo '  "files": {'
   first=true
-  for f in $(ls "${DEST}/target"/*.py | sort); do
-    base="$(basename "$f")"
-    [[ "${base}" == "conftest.py" ]] && continue
+  while IFS= read -r rel; do
+    [[ -n "${rel}" ]] || continue
+    pinnable "${rel}" || continue
     ${first} || echo ','
     first=false
-    printf '    "%s": "%s"' "${base}" "$(sha "$f")"
-  done
+    printf '    "%s": "%s"' "${rel}" "$(sha "${DEST}/target/${rel}")"
+  done < <(dest_files)
   echo
   echo '  }'
   echo '}'

@@ -38,7 +38,12 @@ assert hasattr(asctile, "jit"), (
 
 # Auto-detect the correct Python: prefer whichever has pyasc installed
 if [ -z "${PYTHON:-}" ]; then
-    for candidate in python3.10 python3.11 python3.12 python3.9 python3; do
+    # 3.9 last and only as a fallback: it is the cell upstream most recently
+    # could not build. At 1.1.1.dev20261023173239 both cp39 wheels were marked
+    # incompatible (upstream used dataclass(slots=True), which needs 3.10), and
+    # they only reappeared one publication later. Prefer a version that has
+    # never dropped out of the matrix.
+    for candidate in python3.11 python3.10 python3.12 python3.9 python3; do
         if command -v "$candidate" >/dev/null 2>&1 \
            && "$candidate" -c "import asc; $ASCTILE_PROBE" 2>/dev/null; then
             PYTHON="$candidate"

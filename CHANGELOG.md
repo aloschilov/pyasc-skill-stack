@@ -4,6 +4,74 @@ Releases are git tags. Tagging `v*` builds the archives and publishes them —
 see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 `release/<date>/` directory; a dated copy of a tree drifts from the tree.
 
+## Unreleased
+
+Stop building a simulator image, and start consuming the one upstream already
+builds, tests and publishes.
+
+### Runtime is pinned by digest, from upstream
+
+- `reference/images/ENV.json` pins one cell of the matrix published by
+  `compiler-team-ru/pyasc-images`: CANN 9.2.0, Ubuntu 22.04, CPython 3.11,
+  recorded as a multi-arch **digest**, never a tag. `scripts/sync-image-pin.sh`
+  moves the pin; `scripts/check-image-pin.sh` runs in `--fast` and fails if the
+  pin, `PYASC_SIM_IMAGE` in CI, and `reference/asctile/PIN.json` stop agreeing.
+- Removed the repository's own image machinery: four Dockerfiles, two build
+  scripts, the `build-sim-image` workflow, and the 26-file `docker/pyasc-overlay/`
+  patched-source tree that predated the published wheel. All on
+  `archive/campaign-2026`. The upstream image is 7 GB against 24 GB.
+- CI no longer logs in to ghcr.io. The packages allow anonymous pulls, and
+  `GITHUB_TOKEN` cannot read another org's packages anyway — a stale credential
+  turns a public pull into `denied`, so the pull forces an empty docker config.
+- `tests/tools/verify_pyasc_image.sh` now asserts the pulled repo digest
+  against the pin and that `asc.experimental.asctile.jit` imports. It no longer
+  runs `git -C /opt/pyasc rev-parse`, which cannot work: the image installs the
+  published wheel and carries no source checkout.
+
+### The target-suite pin is resolved
+
+- `PIN.json` no longer says `"commit": "unresolved"`. It points at
+  `github.com/compiler-team-ru/pyasc` — reachable anonymously, unlike the
+  gitcode remote — at `d0f64a63`, the same commit the pinned image was built
+  from. 24 modules, 1155 cases, up from 18 and 891.
+- The suite now has subpackages (`matmul_v3/`, `kimi_k3/`), and
+  `test_matmul_v3*.py` moved into one of them while `test_add_inplace.py`
+  disappeared upstream — so the merge-gate's hardcoded skip for it is gone.
+  Sync, drift check and compile loop all recurse instead of globbing
+  `target/*.py`.
+- `sync-target-suite.sh` no longer gates on a hardcoded "rename commit": that
+  SHA exists only on gitcode, so against any other mirror it reported a valid
+  ref as predating the rename. The guard is now by content, which is how the
+  rest of the script already worked.
+- `conftest.py` was rebuilt from upstream's. The local copy had silently
+  dropped the `asctile_xfail` marker and its `apply_xfail` fixture — which
+  `test_rms_norm.py` needs for five UB-overflow cases — and had stopped
+  registering `--backend` and `--platform` on the theory that the runtime
+  provides them. It does not: `pyasc-dev` declares no entry points and ships
+  no pytest plugin.
+
+### Gates report `blocked` separately from `failed`
+
+23 of 24 modules compile-check against the pinned image; 0 fail. Two harness
+defects were fixed on the way, both of which made a module look broken when
+nothing had been checked at all: a `-k` selector that assumed one of the two
+upstream id conventions, and whole-module runs that OOMed because memory
+accumulates across compiles in one interpreter (now batched, 24 cases per
+process). The one remaining blocked module, `test_kl_div.py`, allocates a
+7.4 GiB input tensor; that is a property of the host, not of the kernel, and
+the gate says so rather than failing the job. See `docs/verification-status.md`.
+
+### Documentation corrected against reality
+
+- The README advertised three wheels and glibc 2.35. There are eight, and the
+  wheels are `manylinux_2_28` — glibc 2.28. The table is gone rather than
+  corrected: the matrix moved twice in three days, so the README now shows how
+  to read the live `wheel-manifest.json` instead.
+- Recorded that the image ships neither `torch` nor `pytest`, and that its own
+  verification scope is "vector-add compile and simulator smoke, 128 float32
+  elements" — not correctness qualification.
+- `docker/opencode-profiles/` moved to `integrations/opencode/profiles/`.
+
 ## v0.1.0
 
 First production release. The repository had become a record of a
@@ -33,8 +101,8 @@ Ten skills, installed by `install.sh`:
 - `install.sh --target DIR` installs into an explicit directory instead of the
   hardcoded `~/.cursor/skills` and `~/.config/opencode/skills`.
 - `reference/asctile/target/` — the Huawei-authored AscTile target suite,
-  vendored from upstream and pinned by `reference/asctile/PIN.json`. 18 modules,
-  891 parametrised cases. This is the correctness reference.
+  vendored from upstream and pinned by `reference/asctile/PIN.json`. 24 modules,
+  1155 parametrised cases. This is the correctness reference.
 - `scripts/sync-target-suite.sh` re-vendors the suite. Upstream moves it
   between versions (`python/test/asc2/target` → `python/test/asctile/target` →
   `experimental/asctile/python/test/target`), so it finds the suite by content

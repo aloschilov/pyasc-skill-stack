@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# Copyright (c) 2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@ import importlib
 import importlib.util
 import os
 import sys
+import types
 from unittest.mock import patch
 
 from asc.lib.profiling import Profiler, task_time_median
@@ -46,7 +47,7 @@ else:
 
 if _asctile is None or not hasattr(_asctile, "jit"):
     # Neither path produced a usable module. Say so here, once, instead of
-    # letting all 18 test modules die at import with
+    # letting all 24 test modules die at import with
     # `AttributeError: module 'asctile' has no attribute 'jit'`, which reads
     # like a broken suite rather than a broken environment.
     try:
@@ -91,40 +92,87 @@ class StubProfiler:
         pass
 
 
-# NOTE: --backend + --platform are provided by the image's pyasc pytest plugin.
-# We register ONLY the additional options the image's plugin does NOT provide.
 def pytest_addoption(parser: pytest.Parser):
-    for opt in ("--device", "--profile", "--profile-path", "--runs",
-                "--compile-only", "--torch-seed"):
+    # Local deviation: each option is registered defensively.
+    #
+    # The published pyasc-dev wheel declares no entry points, so it ships no
+    # pytest plugin and these options exist only because this file adds them.
+    # A previous revision of this conftest assumed the opposite -- that the
+    # runtime image provided --backend and --platform -- and skipped them. Against
+    # a wheel install that turns `pytest --backend Model` into "unrecognized
+    # arguments", and every fixture silently falls back to its default.
+    #
+    # Registering defensively is correct either way: it works now, and it keeps
+    # working if a future runtime does start shipping a plugin.
+    def add(*args, **kwargs):
         try:
-            if opt == "--device":
-                parser.addoption(opt, type=int, default=None, help="Device ID")
-            elif opt == "--profile":
-                parser.addoption(opt, action="store_true", default=False, help="Enable NPU profiling")
-            elif opt == "--profile-path":
-                parser.addoption(opt, default=None, help="Profiling output dir")
-            elif opt == "--runs":
-                parser.addoption(opt, type=int, default=1, help="Number of kernel launches")
-            elif opt == "--compile-only":
-                parser.addoption(opt, action="store_true", default=False, help="Compile only, no launch")
-            elif opt == "--torch-seed":
-                parser.addoption(opt, type=int, default=0, help="torch.manual_seed value")
+            parser.addoption(*args, **kwargs)
         except ValueError:
-            pass  # already registered by the image's plugin
+            pass  # already registered by a runtime-provided plugin
+
+    add("--backend", type=config.Backend, default=config.Backend.Model, help="Runtime backend")
+    add("--platform", type=config.Platform, default=config.Platform.Ascend950PR_9599,
+        help="Runtime platform")
+    add("--device", type=int, default=None, help="Device ID")
+    add("--profile", action="store_true", help="Enable NPU profiling (if available)")
+    add("--profile-path", type=str, default=None, help="Directory to save profiling results")
+    add("--runs", type=int, default=1, help="Number of kernel launches")
+    add("--compile-only", action="store_true", help="Stop after the kernel compilation (do not launch)")
+    add("--torch-seed", type=int, default=0, help="Define the seed value for torch.manual_seed(...)")
 
 
 def pytest_configure(config):
     config.profiling_results = []
+    config.addinivalue_line(
+        "markers",
+        "asctile_xfail(reason, compile_ok, when): expected failure; the apply_xfail fixture attaches xfail at run time",
+    )
+
+
+def pytest_make_parametrize_id(val):
+    if callable(val):
+        return val.__name__
+    return str(val)
+
+
+def pytest_terminal_summary(terminalreporter, config):
+    if not config.profiling_results:
+        return
+    terminalreporter.write_sep("=", "Profiling results")
+    for entry in config.profiling_results:
+        terminalreporter.write_line(f"{entry['test']}: {entry['duration']} μs")
+
+
+@pytest.fixture(autouse=True)
+def apply_xfail(request: pytest.FixtureRequest, compile_only):
+    mark = request.node.get_closest_marker("asctile_xfail")
+    if mark is None:
+        return
+    reason = mark.kwargs.get("reason", "")
+    compile_ok = mark.kwargs.get("compile_ok", False)
+    when = mark.kwargs.get("when")
+    if compile_ok and compile_only:
+        return
+    if when is not None:
+        callspec = getattr(request.node, "callspec", None)
+        ctx = types.SimpleNamespace(
+            params=callspec.params if callspec else {},
+            config=request.config,
+            node=request.node,
+        )
+        if not when(ctx):
+            return
+    request.node.add_marker(pytest.mark.xfail(reason=reason, strict=True))
 
 
 @pytest.fixture
 def backend(request: pytest.FixtureRequest):
-    return request.config.getoption("--backend", default=config.Backend.Model)
+    return request.config.getoption("--backend")
 
 
 @pytest.fixture
 def platform(request: pytest.FixtureRequest):
-    return request.config.getoption("--platform", default=config.Platform.Ascend950PR_9599)
+    return request.config.getoption("--platform")
 
 
 @pytest.fixture
@@ -151,10 +199,10 @@ def require_c310(platform: config.Platform):
 
 @pytest.fixture
 def profiler(request, tmp_path_factory, backend):
-    if backend != config.Backend.NPU or not request.config.getoption("--profile", default=False):
+    if backend != config.Backend.NPU or not request.config.getoption("--profile"):
         yield StubProfiler()
         return
-    profiling_path = request.config.getoption("--profile-path", default=None)
+    profiling_path = request.config.getoption("--profile-path")
     if profiling_path is not None:
         safe_name = request.node.nodeid.replace(":", "_").replace("/", "_").replace(" ", "")
         result_path = os.path.join(profiling_path, safe_name)
@@ -171,12 +219,12 @@ def profiler(request, tmp_path_factory, backend):
 
 @pytest.fixture
 def runs(request: pytest.FixtureRequest):
-    return request.config.getoption("--runs", default=1)
+    return request.config.getoption("--runs")
 
 
 @pytest.fixture(scope="session", autouse=True)
 def compile_only(request: pytest.FixtureRequest):
-    if not request.config.getoption("--compile-only", default=False):
+    if not request.config.getoption("--compile-only"):
         yield False
         return
     os.environ["PYASC_DRY_RUN"] = "1"
@@ -198,7 +246,7 @@ def compile_only(request: pytest.FixtureRequest):
 
 @pytest.fixture
 def torch_seed(request: pytest.FixtureRequest):
-    return request.config.getoption("--torch-seed", default=0)
+    return request.config.getoption("--torch-seed")
 
 
 @pytest.fixture(autouse=True)

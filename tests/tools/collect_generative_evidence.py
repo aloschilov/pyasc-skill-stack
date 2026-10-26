@@ -133,11 +133,24 @@ def derive_protocol(protocol_id: str) -> dict:
     """
     return dict(PROTOCOL_TABLE[protocol_id])
 
-DOCKER_IMAGE = os.environ.get(
-    "PYASC_SIM_IMAGE", "ghcr.io/aloschilov/pyasc-sim:py3.11"
-)
+def _pinned_sim_image() -> str:
+    """The simulator image this repo is pinned to, by digest.
 
-PROFILE_DIR = REPO_ROOT / "docker" / "opencode-profiles"
+    Read from reference/images/ENV.json rather than hardcoded: the upstream
+    matrix moves between versions, and a stale literal here would silently
+    record evidence against a runtime nobody else is using.
+    """
+    pin = REPO_ROOT / "reference" / "images" / "ENV.json"
+    try:
+        with open(pin, encoding="utf-8") as fh:
+            return json.load(fh)["image"]["ref"]
+    except (OSError, KeyError, ValueError):
+        return ""
+
+
+DOCKER_IMAGE = os.environ.get("PYASC_SIM_IMAGE") or _pinned_sim_image()
+
+PROFILE_DIR = REPO_ROOT / "integrations" / "opencode" / "profiles"
 KNOWN_PROFILES = {
     "cloud-default",
     "cloud-glm-5.1",
@@ -262,7 +275,7 @@ def resolve_opencode_config(
 
     Resolution order:
       1. If ``override_path`` is given, load that JSON template directly.
-      2. Otherwise, look up the profile in ``docker/opencode-profiles/<profile>.json``.
+      2. Otherwise, look up the profile in ``integrations/opencode/profiles/<profile>.json``.
       3. If neither exists, fall back to ``_MINIMAL_OPENCODE_JSON``.
 
     Template files may reference environment variables using ``${VAR}`` —
@@ -1627,7 +1640,7 @@ def main() -> None:
                              "(default: on when neither flag is given)")
     parser.add_argument("--model-profile", default="cloud-default",
                         help="Named opencode profile (default: cloud-default). "
-                             "Templates live in docker/opencode-profiles/")
+                             "Templates live in integrations/opencode/profiles/")
     parser.add_argument("--opencode-config", default=None,
                         help="Override the profile template with a JSON file at "
                              "this path (env vars are substituted)")
