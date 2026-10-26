@@ -31,8 +31,11 @@ documented API work — not that the agent workflow does.
 ## The target-suite compile gate
 
 Every module under `reference/asctile/target/` is compile-checked inside the
-image pinned by [`../reference/images/ENV.json`](../reference/images/ENV.json).
-Full sweep on Linux aarch64, 39 GB RAM:
+image pinned by [`../reference/images/ENV.json`](../reference/images/ENV.json),
+with `torch==2.7.1+cpu` and `pytest==8.4.2` mounted in from a read-only
+overlay — upstream's own qualified versions, see
+[`evidence-sources.md`](evidence-sources.md). Full sweep on Linux aarch64,
+39 GB RAM:
 
 ```
 compile-checked 24 module(s); 0 failed; 1 blocked

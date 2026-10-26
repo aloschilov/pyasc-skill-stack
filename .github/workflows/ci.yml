@@ -95,34 +95,57 @@ jobs:
       # neither. So build one overlay directory and mount it read-only into
       # each per-module container, instead of installing 24 times.
       #
-      # torch goes in with --no-deps plus exactly the packages the image lacks.
-      # A plain install would drag in newer sympy and setuptools which, on
-      # PYTHONPATH, shadow the versions the image was qualified with. numpy is
-      # never installed here at all: pyasc-dev needs numpy<2 and the image
-      # already carries 1.26.4.
+      # Everything is installed --no-deps against an explicit version list, so
+      # the overlay is the same set of files on every run. An unpinned install
+      # is not: resolving `torch` afresh each time means two runs a month apart
+      # compile against different stacks, and then a result recorded under one
+      # cannot be compared with a result recorded under the other.
+      #
+      # The versions are upstream's, not ours. compiler-team-ru/pyasc-images
+      # publishes ghcr.io/compiler-team-ru/pyasc-sim-dev, the same simulator
+      # image with exactly this set baked in, and dev-matrix.json records it as
+      # dependency-checked, import-checked and collection-checked. Matching it
+      # here means the day a dev overlay is published for the base we pin, the
+      # switch changes where the packages come from and nothing about which
+      # packages they are. See docs/upstream-image-requests.md for the ask.
+      #
+      # numpy, sympy, setuptools and typing_extensions are deliberately absent:
+      # the image already carries the versions it was qualified with (numpy
+      # 1.26.4, sympy 1.13.3), pyasc-dev needs numpy<2, and anything installed
+      # here would shadow them on PYTHONPATH.
       - name: Provision torch and pytest for the target suite
         run: |
           set -euo pipefail
           TORCH_SITE="${RUNNER_TEMP}/torch-site"
           echo "TORCH_SITE=$TORCH_SITE" >> "$GITHUB_ENV"
-          if [ -d "$TORCH_SITE/torch" ]; then
-            echo "reusing overlay at $TORCH_SITE"
+          # Reuse is keyed on the pin, not on the directory existing. This is a
+          # self-hosted runner, so an overlay built before a version bump would
+          # otherwise survive it and quietly keep serving the old torch.
+          PIN="torch==2.7.1+cpu pytest==8.4.2"
+          if [ -f "$TORCH_SITE/.pin" ] && [ "$(cat "$TORCH_SITE/.pin")" = "$PIN" ]; then
+            echo "reusing overlay at $TORCH_SITE ($PIN)"
             exit 0
           fi
+          rm -rf "$TORCH_SITE"
           mkdir -p "$TORCH_SITE"
           docker run --rm -v "$TORCH_SITE":/torch-site \
             "${{ env.PYASC_SIM_IMAGE }}" \
             python3.11 -m pip install --no-cache-dir --target /torch-site --no-deps \
               --index-url https://download.pytorch.org/whl/cpu \
               --extra-index-url https://pypi.org/simple \
-              torch filelock networkx jinja2 MarkupSafe fsspec
-          docker run --rm -v "$TORCH_SITE":/torch-site \
-            "${{ env.PYASC_SIM_IMAGE }}" \
-            python3.11 -m pip install --no-cache-dir --target /torch-site pytest
-          # Fail here, loudly, rather than 24 times inside the compile loop.
+              torch==2.7.1+cpu \
+              filelock==3.18.0 fsspec==2025.3.2 Jinja2==3.1.6 \
+              MarkupSafe==3.0.3 networkx==3.4.2 \
+              pytest==8.4.2 iniconfig==2.1.0 packaging==25.0 \
+              pluggy==1.6.0 Pygments==2.19.2 \
+              exceptiongroup==1.3.0 tomli==2.2.1
+          # Fail here, loudly, rather than 24 times inside the compile loop --
+          # and assert the versions, so the pin above is enforced rather than
+          # merely stated.
           docker run --rm -v "$TORCH_SITE":/torch-site:ro -e PYTHONPATH=/torch-site \
             "${{ env.PYASC_SIM_IMAGE }}" \
-            python3.11 -c 'import torch, pytest, numpy, sympy; print("overlay OK: torch", torch.__version__, "| numpy", numpy.__version__)'
+            python3.11 -c 'import torch, pytest, numpy, sympy; assert torch.__version__ == "2.7.1+cpu", "torch is " + torch.__version__; assert pytest.__version__ == "8.4.2", "pytest is " + pytest.__version__; print("overlay OK: torch", torch.__version__, "| pytest", pytest.__version__, "| numpy", numpy.__version__, "| sympy", sympy.__version__)'
+          echo "$PIN" > "$TORCH_SITE/.pin"
 
       - name: Compile-check the AscTile target suite
         run: |
@@ -142,10 +165,19 @@ jobs:
             rel="${t#reference/asctile/target/}"
             slug="$(echo "${rel%.py}" | tr '/' '-')"
             start=$(date +%s)
+            # HOME, cache and dump paths are upstream's documented run recipe
+            # for these images. They matter here because /workspace is mounted
+            # read-only: anything that defaults to writing beside the sources,
+            # or into a home directory the container does not have, fails in a
+            # way that looks like a compile error. PYTHONDONTWRITEBYTECODE
+            # stops __pycache__ from being attempted in the read-only mount.
             docker run --rm --name "${CTR_NAME}-${slug}" \
               --ulimit nofile=65536:65536 \
               -v "$PWD":/workspace:ro -w /workspace \
               -v "${TORCH_SITE}":/torch-site:ro -e PYTHONPATH=/torch-site \
+              -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
+              -e PYASC_CACHE_DIR=/tmp/pyasc-cache \
+              -e PYASC_DUMP_PATH=/tmp/pyasc-dumps \
               "$IMAGE" \
               python3.11 tests/tools/run_target_test.py "$t" \
                 --backend Model --platform "$PLATFORM"

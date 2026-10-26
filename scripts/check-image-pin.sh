@@ -5,7 +5,8 @@
 #
 #   1. reference/images/ENV.json is well formed and pins a digest, not a tag.
 #      A tag is mutable, so a tagged runtime silently invalidates every result
-#      recorded beneath it.
+#      recorded beneath it. Its matrix report URL names a specific release for
+#      the same reason: "latest" is a pointer, and pointers move.
 #   2. .github/workflows/ci.yml pulls exactly that digest. The workflow needs a
 #      literal because GitHub Actions cannot read a file into `env:`, so the
 #      value is duplicated -- and duplicated values drift.
@@ -67,6 +68,33 @@ if [[ "${ref}" != *"@${digest}" ]]; then
   echo "           ref    ${ref}" >&2
   echo "           digest ${digest}" >&2
   fail=1
+fi
+
+# The report URL must name the release it came from. GitHub's /releases/latest/
+# resolves to whichever release was published most recently, and upstream
+# publishes dev-overlay and dev-test releases into the same repository -- so a
+# "latest" URL silently stops pointing at a matrix report at all. It did:
+# releases/latest/download/matrix.json now 404s because the newest release is
+# a dev-tests-* one. Provenance that 404s is not provenance, and this is
+# checkable offline by requiring the tag to appear in the URL.
+report="$(jq -r '.matrix.report // empty' "${ENV_PIN}")"
+release_tag="$(jq -r '.matrix.release_tag // empty' "${ENV_PIN}")"
+if [[ -z "${report}" || -z "${release_tag}" ]]; then
+  echo "[image-pin] FAIL: .matrix.report and .matrix.release_tag are required" >&2
+  fail=1
+elif [[ "${report}" == *"/releases/latest/"* ]]; then
+  echo "[image-pin] FAIL: .matrix.report uses the mutable 'latest' pointer:" >&2
+  echo "           ${report}" >&2
+  echo "           Re-sync with scripts/sync-image-pin.sh to record the" >&2
+  echo "           per-release asset URL for ${release_tag}." >&2
+  fail=1
+elif [[ "${report}" != *"${release_tag}"* ]]; then
+  echo "[image-pin] FAIL: .matrix.report does not name .matrix.release_tag" >&2
+  echo "           report       ${report}" >&2
+  echo "           release_tag  ${release_tag}" >&2
+  fail=1
+else
+  say "report        pinned to ${release_tag}"
 fi
 
 # --- 2. The workflow pulls that digest ---------------------------------------

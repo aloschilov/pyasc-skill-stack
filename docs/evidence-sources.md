@@ -83,6 +83,47 @@ any report.
 
 The image also ships neither `torch` nor `pytest`, both of which the suite
 needs; CI installs them into a read-only overlay rather than into the image.
+That overlay is version-pinned to `torch==2.7.1+cpu` and `pytest==8.4.2` — see
+below for where those numbers come from.
+
+### The dev overlay line, and what "published" means there
+
+Upstream also publishes `ghcr.io/compiler-team-ru/pyasc-sim-dev`: the same
+simulator images with CPU Torch, pytest and their dependencies baked in. The
+versions CI pins are taken from there, so our results are comparable with
+upstream's rather than with whatever `pip install torch` resolved that morning.
+
+The thing to be careful about is what those images are certified for. Upstream
+is explicit, and the wording is worth keeping intact:
+
+> `published` means **environment-qualified**, not that the full suite passed.
+
+Publication requires dependency consistency, preserved base packages, native
+imports, CPU Torch operations, collection of every AscTile test, and the
+baseline compile/simulator check. **Execution of the suite is not among them.**
+At the time of writing, the dev report for the `u22.04-c9.2.0-p3.11` cell
+records `suite_status: pending` and `executed: 0` on both architectures, and
+full-suite qualification runs separately in `dev-qualification.yaml` with its
+results in a `qualification-<recipe>.json` asset that does not exist yet.
+
+In this repository's vocabulary that is `not-run`, not `passed`. A dev image
+being published is evidence that the environment is coherent — the right
+packages, importable, able to collect every test and compile the baseline. It
+is not evidence that any kernel produced a correct number. Citing it as if it
+were would be the same error as citing a model-written kernel as a reference:
+a real artefact, read as answering a question it was not asked.
+
+Two further gaps worth knowing before anyone wires this up:
+
+- The dev overlays are currently built on base `1.1.1.dev20261023173239`,
+  while [`../reference/images/ENV.json`](../reference/images/ENV.json) pins the
+  newer `1.1.1.dev20261024081924`. Adopting them today would mean running a
+  suite vendored from one upstream commit against a runtime built from
+  another, which is exactly what `scripts/check-image-pin.sh` exists to
+  prevent. The ask for a matching overlay is in
+  [`upstream-image-requests.md`](upstream-image-requests.md).
+- The dev images do not bundle upstream source. They expect a checkout to be
+  mounted, which is the shape CI already uses.
 
 ## Performance — CANNBench
 

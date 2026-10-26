@@ -72,6 +72,39 @@ the gate says so rather than failing the job. See `docs/verification-status.md`.
   elements" — not correctness qualification.
 - `docker/opencode-profiles/` moved to `integrations/opencode/profiles/`.
 
+### Pinned against two kinds of drift
+
+Upstream now publishes a development overlay line,
+`ghcr.io/compiler-team-ru/pyasc-sim-dev`, which bakes CPU Torch and pytest into
+the simulator image. It is not adopted here yet — the overlays are built on
+`1.1.1.dev20261023173239` while this repository pins the newer
+`1.1.1.dev20261024081924`, and running a suite from one commit against a
+runtime from another is precisely what `check-image-pin.sh` exists to stop. The
+ask for a matching overlay, and four other questions for the image-build side,
+are recorded in `docs/upstream-image-requests.md`.
+
+What changed in the meantime:
+
+- The CI torch/pytest overlay was installed unversioned, so every run resolved
+  whatever was newest and two runs a month apart compiled against different
+  stacks. It is now `--no-deps` against an explicit version list, keyed on a
+  stamp file so a cached overlay cannot outlive a version bump. The versions
+  are upstream's own qualified set — `torch==2.7.1+cpu`, `pytest==8.4.2` — so
+  adopting `pyasc-sim-dev` later changes where the packages come from and
+  nothing about which packages they are.
+- Compile-loop containers now use upstream's documented run environment
+  (`HOME`, `PYTHONDONTWRITEBYTECODE`, `PYASC_CACHE_DIR`, `PYASC_DUMP_PATH`),
+  which matters because `/workspace` is mounted read-only.
+- `sync-image-pin.sh` resolves the newest `matrix-*` release instead of
+  GitHub's `latest` pointer. The dev-overlay and dev-test releases share the
+  repository, so `releases/latest/download/matrix.json` now 404s; the pin
+  records a per-release asset URL, and `check-image-pin.sh` fails if it ever
+  points at `latest` again.
+- `docs/evidence-sources.md` records what the dev line certifies. Upstream's
+  own wording: `published` means environment-qualified, not that the full suite
+  passed. Suite status for the pinned cell is `pending`, `executed: 0` — which
+  in this repository's vocabulary is `not-run`.
+
 ## v0.1.0
 
 First production release. The repository had become a record of a

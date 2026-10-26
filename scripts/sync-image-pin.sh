@@ -8,7 +8,8 @@
 #   --ubuntu/--cann/--python  select one cell of the matrix. Defaults come from
 #                             the current pin, so a plain run just moves the
 #                             existing selection forward to the newest matrix.
-#   --release TAG             a specific pyasc-images release (default: latest).
+#   --release TAG             a specific pyasc-images release. Default: the
+#                             newest release tagged matrix-*.
 #   --matrix FILE             use a local matrix.json instead of downloading.
 #   --dry-run                 report what would change; write nothing.
 #
@@ -21,6 +22,13 @@
 # because upstream used dataclass(slots=True), which needs Python 3.10; on
 # 2026-10-24 that was gone and all 32 cells passed. Anything transcribed by
 # hand is wrong within a day.
+#
+# Note the release is resolved by tag prefix, not by GitHub's "latest" pointer.
+# That pointer belongs to whichever release was published last, and upstream
+# now publishes dev-overlay and dev-test releases into the same repository, so
+# releases/latest/download/matrix.json resolves to a release with no such
+# asset and 404s. Filtering on matrix-* is what keeps this pointing at a base
+# matrix report.
 
 set -euo pipefail
 
@@ -43,7 +51,7 @@ while [[ $# -gt 0 ]]; do
     --matrix)  MATRIX_FILE="${2:?--matrix requires a file}"; shift 2 ;;
     --matrix=*) MATRIX_FILE="${1#--matrix=}"; shift ;;
     --dry-run) DRY_RUN=true; shift ;;
-    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,31p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -52,6 +60,36 @@ die() { echo "error: $*" >&2; exit 1; }
 note() { echo "[image-pin] $*"; }
 
 command -v jq >/dev/null 2>&1 || die "jq is required"
+
+# The newest release whose tag starts with matrix-, newest first by publish
+# time. Deliberately not GitHub's /releases/latest: that is simply whatever was
+# published most recently, and the dev-overlay and dev-test releases upstream
+# now publishes share this repository, so the latest release is routinely one
+# that carries no matrix.json at all.
+#
+# dev-matrix-* is excluded for free -- it does not start with matrix-.
+# Drafts are skipped; prereleases are not, since a prerelease matrix report is
+# still a matrix report.
+newest_matrix_release() {
+  local auth=() token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+  # Spelled as an if, not `[[ ... ]] && ...`: that idiom returns the test's
+  # status, which under set -e has already cost this repository one green run
+  # reported as a failure.
+  if [[ -n "${token}" ]]; then
+    auth=(-H "Authorization: Bearer ${token}")
+  fi
+  curl -fsSL "${auth[@]}" \
+    -H "Accept: application/vnd.github+json" \
+    "https://api.github.com/repos/${MATRIX_REPO}/releases?per_page=100" \
+    | jq -r '
+        [ .[]
+          | select(.draft | not)
+          | select(.tag_name | startswith("matrix-"))
+        ]
+        | sort_by(.published_at // .created_at)
+        | reverse
+        | .[0].tag_name // empty'
+}
 
 # Defaults from the existing pin: a bare run refreshes the same selection.
 if [[ -f "${PIN}" ]]; then
@@ -79,11 +117,15 @@ if [[ -n "${MATRIX_FILE}" ]]; then
 else
   WORKDIR="$(mktemp -d)"
   MATRIX="${WORKDIR}/matrix.json"
-  if [[ -n "${RELEASE}" ]]; then
-    URL="https://github.com/${MATRIX_REPO}/releases/download/${RELEASE}/matrix.json"
-  else
-    URL="https://github.com/${MATRIX_REPO}/releases/latest/download/matrix.json"
+  if [[ -z "${RELEASE}" ]]; then
+    note "resolving the newest matrix-* release in ${MATRIX_REPO}"
+    RELEASE="$(newest_matrix_release)" \
+      || die "could not list releases of ${MATRIX_REPO}"
+    [[ -n "${RELEASE}" ]] \
+      || die "no release tagged matrix-* in ${MATRIX_REPO}; pass --release TAG"
+    note "resolved ${RELEASE}"
   fi
+  URL="https://github.com/${MATRIX_REPO}/releases/download/${RELEASE}/matrix.json"
   note "fetching ${URL}"
   curl -fsSL "${URL}" -o "${MATRIX}" || die "could not fetch the matrix report"
 fi
@@ -137,6 +179,14 @@ version = matrix["version"]
 if not release_tag:
     release_tag = "matrix-%s-%s" % (version, matrix["recipe"][:16])
 
+# Per-release asset URL, never releases/latest/download/. "latest" follows
+# whatever upstream published most recently -- today that is a dev-test
+# release with no matrix.json -- so a pin that recorded it would cite a 404
+# as its provenance. check-image-pin.sh enforces that this URL names the
+# release tag.
+report_url = "https://github.com/%s/releases/download/%s/matrix.json" % (
+    repo, release_tag)
+
 pin = {
     "schema_version": 1,
     "note": ("Pin for the upstream-built simulator image. This repository does "
@@ -146,7 +196,7 @@ pin = {
     "matrix": {
         "repository": repo,
         "release_tag": release_tag,
-        "report": "https://github.com/%s/releases/latest/download/matrix.json" % repo,
+        "report": report_url,
     },
     "version": version,
     "source_repository": "https://github.com/compiler-team-ru/pyasc.git",
