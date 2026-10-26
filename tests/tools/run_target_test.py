@@ -104,14 +104,15 @@ def report_failure(test_file: str, label: str, rc, out: str, err: str) -> int:
         print(f"[BLOCKED] {test_file}: no result in time ({label})")
         verdict = EXIT_BLOCKED
     elif rc in (-9, 137):
-        # SIGKILL, cause unknown. Memory pressure is the usual explanation and
-        # the largest cases do allocate multi-GiB host tensors, but exit 137
-        # does not prove it: a timeout, a container limit or an operator with
-        # a kill switch produce the same code. Report what was observed and
-        # leave the diagnosis to whoever reads the logs.
+        # SIGKILL. Host memory is the usual cause -- test_kl_div.py is killed
+        # on a 39 GB box and passes on a 128 GB one, same image and commit --
+        # but the exit code alone does not say so: a timeout or a container
+        # limit produces the same 137. Report the observation, name the likely
+        # cause, and do not assert it.
         print(f"[BLOCKED] {test_file}: killed with SIGKILL ({label}); "
-              "cause not established from the exit code alone -- check host "
-              "memory, container limits and the kernel log")
+              "usually host memory (the largest cases allocate multi-GiB "
+              "tensors), but 137 alone does not prove it -- check free memory, "
+              "container limits and the kernel log")
         verdict = EXIT_BLOCKED
     elif rc == 5:
         print(f"[FAIL] {test_file}: pytest selected no cases ({label})")

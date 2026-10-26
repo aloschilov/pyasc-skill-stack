@@ -18,9 +18,9 @@ provider or device is an honest `blocked`, never a fabricated pass.
 | compile | `passed` | codegen produced a kernel binary; output left untouched under `PYASC_DRY_RUN=1` |
 | numerical | `passed` | simulator execution matches the NumPy reference exactly, tail included |
 | target suite (collection) | `passed` | all cases across 24 modules collect against the published wheel (1155 at `d0f64a63`; re-derive, do not quote) |
-| target suite (compile) | `passed` | 23 of 24 modules compile-check in the pinned dev overlay; 1 `blocked`, 0 failed — see below |
+| target suite (compile) | `passed` | all 24 modules compile-check in the pinned dev overlay on the CI runner, 0 failed, 0 blocked; a 39 GB dev box blocks 1 on memory — see below |
 | simulator image | `passed` | pinned overlay digest pulls anonymously; `asc.experimental.asctile.jit` imports and torch/pytest match the pin |
-| CI execution | `passed` | `pr-gate` runs green on the self-hosted arm64 runner — see below |
+| CI execution | `passed` | `pr-gate` and `merge-gate` both green on the self-hosted arm64 runner — see below |
 | hardware | `not-run` | no `/dev/davinci*` and no `npu-smi` on this host; simulator only |
 | performance | `not-run` | a simulator result is not a hardware measurement |
 
@@ -42,22 +42,26 @@ see [`evidence-sources.md`](evidence-sources.md). Full sweep on Linux aarch64,
 compile-checked 24 module(s); 0 failed; 1 blocked
 ```
 
-That result is from the upstream overlay image, and it is identical to the one
-the repository used to get from an overlay it built itself — same 23 passes,
-same single blocked module, same per-module timings within noise. Adopting
-upstream's image changed nothing about the outcome, which is the evidence that
-it was a safe swap rather than a new environment with new behaviour.
+That is on a 39 GB development box, using the upstream overlay image. It is
+identical to what the repository used to get from an overlay it built itself —
+same 23 passes, same single blocked module, same per-module timings within
+noise. Adopting upstream's image changed nothing about the outcome, which is
+the evidence that it was a supply-chain change and not a behavioural one.
 
 Roughly 12 minutes end to end. The one blocked module is `test_kl_div.py`:
 the process is killed with SIGKILL (exit 137) even with 27 GB free.
 
-Memory pressure is the obvious reading — its largest case has shape
-`[1000, 997, 1000, 2, 1]`, which is 1.99e9 float32 elements, **7.4 GiB for a
-single input tensor**, with several allocated per case. But exit 137 does not
-prove OOM; a timeout, a container limit or anything else holding a kill switch
-produces the same code, and we have not gone to the kernel log to confirm.
-So the honest statement is: killed, cause consistent with memory exhaustion,
-not diagnosed. Either way it is not evidence about the kernel.
+On the CI runner, a Mac with 128 GB, the same module **passes** and the sweep
+returns `24 module(s); 0 failed; 0 blocked`. Same image digest, same pinned
+commit, same command — only more memory. That is what identifies the cause,
+and it is worth being precise about why: exit 137 on its own would not have.
+A timeout or a container limit produces the same code, so the exit status
+narrows nothing. The differential does. Its largest case has shape
+`[1000, 997, 1000, 2, 1]` — 1.99e9 float32 elements, **7.4 GiB for a single
+input tensor**, several per case — and it clears on a host with room for them.
+
+So: a host-capacity limit, demonstrated rather than inferred, and not a fact
+about the kernel. The 39 GB development box blocks it; CI does not.
 
 That is `blocked`, not `failed`, and the gate keeps the two apart: it fails
 the job on a compile error and only reports a resource blockage. Collapsing
@@ -93,7 +97,9 @@ indefinitely and the gate's green-ness was never tested — a workflow that
 cannot be scheduled looks the same as one that has not been triggered.
 
 An arm64 runner now serves it from a Mac via Docker Desktop
-(`infra/self-hosted-runner/`), and `pr-gate` reports green on it.
+(`infra/self-hosted-runner/`). Both gates report green on it: `pr-gate` in
+14 s, and `merge-gate` — which pulls the pinned overlay by digest and
+compile-checks all 24 target modules — in about 27 minutes.
 
 Bringing it up surfaced one failure mode worth knowing, because it does not
 look like what it is: the prebuilt runner image carried v2.335.1, which GitHub
