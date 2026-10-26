@@ -15,6 +15,31 @@ _PATH_KEY_HINTS = frozenset({
 })
 
 
+def external_root(env_var: str, what: str, *, hint: str = "") -> Path:
+    """Resolve a checkout living outside this repository, or fail readably.
+
+    These tools need trees this repository does not contain: the CANN operator
+    sources, the pyasc eval clone. There is no defensible default for where
+    they are, and the one that used to be baked in was a path in one
+    developer's home directory -- on any other machine that produced a
+    FileNotFoundError naming a stranger's account, which is a worse failure
+    than not starting at all. Say what is missing and what to set.
+    """
+    value = os.environ.get(env_var, "").strip()
+    if not value:
+        msg = f"{what} is required but not configured.\n  Set {env_var} to its path."
+        if hint:
+            msg += f"\n  {hint}"
+        raise SystemExit(msg)
+    path = Path(value).expanduser()
+    if not path.is_dir():
+        raise SystemExit(
+            f"{env_var} points at {path}, which is not a directory.\n"
+            f"  Expected {what}."
+        )
+    return path
+
+
 def repo_relative(path: Path | str, *, root: Path = REPO_ROOT) -> str:
     """Return a repo-relative POSIX path, or a portable placeholder when outside."""
     p = Path(path)

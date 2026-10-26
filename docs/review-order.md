@@ -109,7 +109,9 @@ cd ~/workspace/pyasc-skill-stack-review
 /tmp/target-suite-venv/bin/python -m pytest reference/asctile/target --collect-only -q | tail -1
 ```
 
-Ожидается 1155 тестов. Затем окружение CANN и запуск одного модуля:
+Ожидается столько тестов, сколько собирает закреплённая ревизия (1155 на
+`d0f64a63`); число меняется вместе с пином, сверяйтесь с деревом, а не с этой
+строкой. Затем окружение CANN и запуск одного модуля:
 
 ```bash
 source /usr/local/Ascend/cann-9.0.0/set_env.sh

@@ -12,6 +12,16 @@ request and its answers stay on the record rather than living in a chat.
 Everything below the rule is the prompt. It is written to be self-contained —
 the reader needs the `pyasc-images` repository, not this one.
 
+**Status: answered and acted on (2026-10-26).** All five requests were
+delivered: a dev overlay built on the pinned base, a stated rebuild cadence, a
+stable qualification-report URL, the restored `latest` pointer, and an answer
+on test scope. What the answers mean for this repository is recorded in
+[`evidence-sources.md`](evidence-sources.md), which is the document to read
+first; this one is kept as the record of what was asked. Case counts in the
+prompt below are attributed to `ea2dbf9d` and should not be read as current —
+upstream's own caution is to use each report's collected inventory rather than
+a fixed number.
+
 ---
 
 ## Context

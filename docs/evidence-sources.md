@@ -43,9 +43,21 @@ what it is called.
 
 ## Correctness — the AscTile target suite
 
-Huawei-authored, vendored from upstream `pyasc` and pinned. 24 test modules,
-1155 parametrised cases, each asserting numerical output against a reference
-the suite computes itself.
+Huawei-authored, vendored from upstream `pyasc` and pinned. 24 test modules.
+Each case asserts numerical output against a reference the suite computes
+itself — *when the suite is run normally*. Our `merge-gate` does not run it
+normally; see "What the compile gate does and does not establish" below.
+
+Case counts move with the pin, so this document does not carry one. Derive it
+from the tree you actually have:
+
+```bash
+pytest reference/asctile/target --collect-only -q | tail -1
+```
+
+At `source_sha` `d0f64a63` that reported 1155 (2026-10-26). Treat any number
+written down elsewhere as the count for *some* revision and re-derive it
+rather than repeating it.
 
 The suite needs a working AscTile runtime; `reference/asctile/conftest.py`
 resolves one and fails with a readable diagnostic if neither
@@ -81,19 +93,26 @@ Every correctness claim above rests on the target suite, not on the image
 having been "tested". The two are separate gates and should stay that way in
 any report.
 
-The image also ships neither `torch` nor `pytest`, both of which the suite
-needs; CI installs them into a read-only overlay rather than into the image.
-That overlay is version-pinned to `torch==2.7.1+cpu` and `pytest==8.4.2` — see
-below for where those numbers come from.
+The minimal image ships neither `torch` nor `pytest`, both of which the suite
+needs. CI therefore runs the *development overlay* instead.
 
 ### The dev overlay line, and what "published" means there
 
-Upstream also publishes `ghcr.io/compiler-team-ru/pyasc-sim-dev`: the same
-simulator images with CPU Torch, pytest and their dependencies baked in. The
-versions CI pins are taken from there, so our results are comparable with
-upstream's rather than with whatever `pip install torch` resolved that morning.
+`ghcr.io/compiler-team-ru/pyasc-sim-dev` is the same simulator image with CPU
+Torch, pytest and their dependencies baked in. It is what CI runs, pinned by
+`.dev_image.ref` in [`../reference/images/ENV.json`](../reference/images/ENV.json)
+alongside the exact `torch` and `pytest` versions it contains, which
+`tests/tools/verify_pyasc_image.sh` asserts. Taking the versions from upstream
+rather than from whatever `pip install torch` resolved that morning is the
+point: our results are then comparable with upstream's.
 
-The thing to be careful about is what those images are certified for. Upstream
+The overlay is published per base. `scripts/check-image-pin.sh` asserts that
+`.dev_image.base_report` equals `.matrix.release_tag`, so the suite, the wheel
+and the runtime always derive from one upstream commit. The overlay line
+follows new bases on a delay, so `scripts/sync-image-pin.sh` refuses to pin a
+base that has no overlay yet rather than pinning something CI cannot run.
+
+The thing to be careful about is what these images are certified for. Upstream
 is explicit, and the wording is worth keeping intact:
 
 > `published` means **environment-qualified**, not that the full suite passed.
@@ -101,29 +120,70 @@ is explicit, and the wording is worth keeping intact:
 Publication requires dependency consistency, preserved base packages, native
 imports, CPU Torch operations, collection of every AscTile test, and the
 baseline compile/simulator check. **Execution of the suite is not among them.**
-At the time of writing, the dev report for the `u22.04-c9.2.0-p3.11` cell
-records `suite_status: pending` and `executed: 0` on both architectures, and
-full-suite qualification runs separately in `dev-qualification.yaml` with its
-results in a `qualification-<recipe>.json` asset that does not exist yet.
 
-In this repository's vocabulary that is `not-run`, not `passed`. A dev image
-being published is evidence that the environment is coherent — the right
-packages, importable, able to collect every test and compile the baseline. It
-is not evidence that any kernel produced a correct number. Citing it as if it
-were would be the same error as citing a model-written kernel as a reference:
-a real artefact, read as answering a question it was not asked.
+In this repository's vocabulary a published overlay is `not-run`, not `passed`.
+It is evidence that the environment is coherent — the right packages,
+importable, able to collect every test and compile the baseline. It is not
+evidence that any kernel produced a correct number. Citing it as if it were
+would be the same error as citing a model-written kernel as a reference: a real
+artefact, read as answering a question it was not asked.
 
-Two further gaps worth knowing before anyone wires this up:
+### Reading the qualification report
 
-- The dev overlays are currently built on base `1.1.1.dev20261023173239`,
-  while [`../reference/images/ENV.json`](../reference/images/ENV.json) pins the
-  newer `1.1.1.dev20261024081924`. Adopting them today would mean running a
-  suite vendored from one upstream commit against a runtime built from
-  another, which is exactly what `scripts/check-image-pin.sh` exists to
-  prevent. The ask for a matching overlay is in
-  [`upstream-image-requests.md`](upstream-image-requests.md).
-- The dev images do not bundle upstream source. They expect a checkout to be
-  mounted, which is the shape CI already uses.
+Full-suite execution runs separately and lands in the
+`qualification_report` URL recorded in `ENV.json`. Its filename carries a hash
+of upstream's qualification code, so a report is tied to the logic that
+produced it; the pinned URL is the immutable per-release one.
+
+Upstream defines five states. The mapping into our vocabulary:
+
+| Upstream | Ours | Why |
+|---|---|---|
+| `pending` | `not-run` | Qualification has not reached this cell. Not a pass, not a failure. |
+| `complete` + `suite_status: passed` | `passed` | Read the skip and xfail counts too; a pass with everything skipped is not a pass. |
+| `complete` + `suite_status: failures` | `failed` | Real failures. |
+| `incomplete` or `blocked` | `blocked` | Interrupted. See below. |
+| `incompatible` | excluded | The cell cannot be built. **Never** a pass. |
+
+At the time of writing the `u22.04-c9.2.0-p3.11` overlay cell records
+`suite_status: pending` on both architectures — so, `not-run`.
+
+The interrupted case is the one that invites a wrong inference, and upstream's
+caution is worth quoting rather than paraphrasing:
+
+> OOM, timeout, or a killed runner may leave no evidence for the interrupted
+> module. A cell is then incomplete/blocked, not a failed kernel. The report
+> does not yet supply a reliable four-state per-case inventory for that
+> situation, **nor does exit 137 prove OOM**. Consumers must keep unresolved
+> modules `blocked`/unknown until logs and host evidence diagnose them; they
+> must not infer `failed` or `not-run` from absence alone.
+
+Upstream's runner limits are two CPUs and 12 GiB per container, up to three
+hours per module and six hours per matrix job — useful when judging whether a
+module plausibly ran out of room, but a plausible cause is not a diagnosis.
+
+A note on scope, since the subtree names suggest more than they deliver:
+`unit/` exercises the frontend and IR with the compiler and launcher mocked;
+`operations/` is the operation-level JIT path with reference checks, and is the
+real simulator numerical gate; `target/` and `kernels/` are larger kernels that
+require C310 hardware and are resource-heavy. `target/`, which is what this
+repository vendors, is a reasonable focused downstream gate — not the entire
+upstream correctness reference.
+
+The dev images do not bundle upstream source. They expect a checkout to be
+mounted, which is the shape CI already uses.
+
+### What the compile gate does and does not establish
+
+`merge-gate` runs the target suite through `tests/tools/run_target_test.py`,
+which defaults to `--compile-only`. That mode mocks kernel launch and the
+numerical assertions. It establishes that every kernel in the suite builds
+against the pinned runtime — a genuine and useful signal, and the one that
+catches API drift first. It establishes **nothing** about numerical
+correctness, and must never be reported as if it did. Upstream's own
+formulation: do not describe `--compile-only` as numerical qualification.
+
+Numerical execution on the camodel is a v0.2.0 gate.
 
 ## Performance — CANNBench
 
@@ -154,7 +214,8 @@ See [`../skills/pyasc-cannbench-kernel/references/ttk.md`](../skills/pyasc-cannb
 
 | Source | State |
 |---|---|
-| Target suite | Vendored and pinned; collects 1155 cases. Compile-checked in `merge-gate`. Full numerical execution on the camodel is a v0.2.0 gate. |
+| Target suite | Vendored and pinned; 24 modules. **Compile-checked only** in `merge-gate` — launch and numerical assertions are mocked. Full numerical execution on the camodel is a v0.2.0 gate. |
+| Upstream qualification | Published per overlay release; currently `pending` for the pinned cell, i.e. `not-run`. |
 | CANNBench | Task definitions tracked. The campaign-era runner and its results were archived; a scorer that produces ratios from a clean clone is v0.2.0. |
 | TTK | Column shape and role documented. The generator read an absolute path outside the repository, so the manifest is **not reproducible here yet** — v0.2.0. |
 

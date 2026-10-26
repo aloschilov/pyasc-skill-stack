@@ -2,10 +2,13 @@
 #
 # Base: myoung34/github-runner (multi-arch: linux/amd64 + linux/arm64). The base
 # already handles runner registration, ephemeral re-registration from a PAT, and
-# Docker-out-of-Docker (it ships the Docker CLI). It now serves only the arm64
-# MacBook runner (198.18.0.1) -- the sole self-hosted runner. The x86_64 RTX 4090
-# GPU pool has been retired from CI; pr-gate/merge-gate moved to GitHub-hosted
-# ubuntu-latest and nightly/cloud-dashscope to this arm64 Mac.
+# Docker-out-of-Docker (it ships the Docker CLI). It serves the arm64 MacBook
+# runner, which is the only runner there is: every job in ci.yml targets
+# `[self-hosted, arm64]`. The x86_64 RTX 4090 GPU pool was retired.
+#
+# Self-hosted is not a preference here. The gates run the pinned simulator image
+# as a sibling container with the workspace bind-mounted at its host path, which
+# needs a daemon and a work dir the job controls -- see compose.arm64.yml.
 #
 # IMPORTANT: pin to the ubuntu-jammy (22.04) tag, NOT :latest (= ubuntu-focal /
 # 20.04). actions/setup-python's python-versions has NO prebuilt Python 3.10 for

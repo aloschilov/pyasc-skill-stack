@@ -17,7 +17,7 @@ provider or device is an honest `blocked`, never a fabricated pass.
 | review | `not-run` | depends on generation |
 | compile | `passed` | codegen produced a kernel binary; output left untouched under `PYASC_DRY_RUN=1` |
 | numerical | `passed` | simulator execution matches the NumPy reference exactly, tail included |
-| target suite (collection) | `passed` | 1155 cases across 24 modules collect against the published wheel |
+| target suite (collection) | `passed` | all cases across 24 modules collect against the published wheel (1155 at `d0f64a63`; re-derive, do not quote) |
 | target suite (compile) | `passed` | 23 of 24 modules compile-check in the pinned image; 1 `blocked`, 0 failed — see below |
 | simulator image | `passed` | pinned digest pulls anonymously and `asc.experimental.asctile.jit` imports |
 | hardware | `not-run` | no `/dev/davinci*` and no `npu-smi` on this host; simulator only |
@@ -31,22 +31,26 @@ documented API work — not that the agent workflow does.
 ## The target-suite compile gate
 
 Every module under `reference/asctile/target/` is compile-checked inside the
-image pinned by [`../reference/images/ENV.json`](../reference/images/ENV.json),
-with `torch==2.7.1+cpu` and `pytest==8.4.2` mounted in from a read-only
-overlay — upstream's own qualified versions, see
-[`evidence-sources.md`](evidence-sources.md). Full sweep on Linux aarch64,
+development overlay image pinned as `.dev_image.ref` in
+[`../reference/images/ENV.json`](../reference/images/ENV.json), which ships
+`torch==2.7.1+cpu` and `pytest==8.4.2` — upstream's own qualified versions,
+see [`evidence-sources.md`](evidence-sources.md). Full sweep on Linux aarch64,
 39 GB RAM:
 
 ```
 compile-checked 24 module(s); 0 failed; 1 blocked
 ```
 
-Roughly 12 minutes end to end. The one blocked module is `test_kl_div.py`,
-and it is blocked on host memory, not on anything about the kernel: its
-largest case has shape `[1000, 997, 1000, 2, 1]`, which is 1.99e9 float32
-elements — **7.4 GiB for a single input tensor**, with several allocated per
-case. The process is killed with SIGKILL (exit 137) by the OOM killer even
-with 27 GB free.
+Roughly 12 minutes end to end. The one blocked module is `test_kl_div.py`:
+the process is killed with SIGKILL (exit 137) even with 27 GB free.
+
+Memory pressure is the obvious reading — its largest case has shape
+`[1000, 997, 1000, 2, 1]`, which is 1.99e9 float32 elements, **7.4 GiB for a
+single input tensor**, with several allocated per case. But exit 137 does not
+prove OOM; a timeout, a container limit or anything else holding a kill switch
+produces the same code, and we have not gone to the kernel log to confirm.
+So the honest statement is: killed, cause consistent with memory exhaustion,
+not diagnosed. Either way it is not evidence about the kernel.
 
 That is `blocked`, not `failed`, and the gate keeps the two apart: it fails
 the job on a compile error and only reports a resource blockage. Collapsing
@@ -63,11 +67,15 @@ cases where a module looked broken but nothing had actually been checked:
   having run zero cases. It now probes candidate patterns and falls back.
 - Whole-module runs compiled every case in one interpreter, and memory
   accumulates across compiles. `matmul_v3/test_matmul_v3_cube_only.py` (184
-  cases) was OOM-killed. Cases now run in batches of 24, each in a fresh
-  process, and it passes in 288 s with no loss of coverage.
+  cases) was killed at exit 137. Cases now run in batches of 24, each in a
+  fresh process, and it passes in 288 s with no loss of coverage — which is
+  the evidence that the problem was accumulation, whatever did the killing.
 
-Note what this gate does **not** establish: it is compile-only. Numerical
-execution of the suite on the camodel remains `not-run`.
+Note what this gate does **not** establish. It runs `--compile-only`, and in
+that mode upstream mocks kernel launch and the numerical assertions. A green
+sweep means 23 modules build against the pinned runtime. It says nothing about
+whether any of them computes the right answer. Numerical execution of the
+suite on the camodel remains `not-run`.
 
 ## What the numerical gate covered
 

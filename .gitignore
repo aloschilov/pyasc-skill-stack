@@ -66,3 +66,8 @@ infra/self-hosted-runner/.env
 
 # (The docker/ overlay and bundle entries that used to live here went away
 # with the self-built simulator images; see reference/images/ENV.json.)
+
+# Cursor plan files are per-session working notes, not project documentation.
+# Eleven campaign-era plans were tracked by accident; three embedded absolute
+# home paths. Durable decisions belong in docs/.
+.cursor/plans/

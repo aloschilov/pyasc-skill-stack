@@ -6,8 +6,9 @@ work is judged against, so nothing written by a model belongs here.
 ## `asctile/`
 
 A pinned snapshot of the PyAsc AscTile target test suite — 24 test modules,
-1155 collected cases, headed `Copyright (c) 2026 Huawei Technologies Co., Ltd.`
-under CANN Open Software License 2.0.
+headed `Copyright (c) 2026 Huawei Technologies Co., Ltd.` under CANN Open
+Software License 2.0. The collected case count moves with the pin; derive it
+with `--collect-only` rather than trusting a number written down here.
 
 The layout mirrors upstream exactly:
 
@@ -94,7 +95,7 @@ Needs `pytest` and `torch`, neither of which `pyasc-dev` depends on:
 
 ```bash
 pip install --pre pyasc-dev pytest torch
-pytest reference/asctile/target --collect-only -q    # 1155 tests, no CANN needed
+pytest reference/asctile/target --collect-only -q    # no CANN needed; 1155 at d0f64a63
 ```
 
 Executing rather than collecting additionally needs CANN and the simulator

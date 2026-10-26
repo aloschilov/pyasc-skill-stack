@@ -51,7 +51,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
-from repo_paths import portable_pyasc_revision, relativize_evidence  # noqa: E402
+from repo_paths import (  # noqa: E402
+    external_root, portable_pyasc_revision, relativize_evidence)
 
 EVIDENCE_DIR = REPO_ROOT / "evidence"
 VERIFY_SCRIPT = SCRIPT_DIR / "verify_kernel.py"
@@ -166,7 +167,6 @@ KNOWN_PROFILES = {
     "local-gpt-oss-120b",
 }
 SCHEMA_VERSION = "4"
-DEFAULT_PYASC_EVAL_ROOT = "/home/aloschilov/workspace/pyasc-v2-eval"
 
 
 def _run(cmd: list[str], timeout: int = 30) -> tuple[int, str, str]:
@@ -712,8 +712,8 @@ def host_pyasc_pin_error(
         return (
             "--runtime requires an importable pyasc; "
             "`import asc` did not resolve to a git checkout. "
-            "Install the editable from /home/aloschilov/workspace/pyasc-v2-eval "
-            "(see docs/cann-setup.md).",
+            f"Install the editable from your eval clone (`pip install -e {eval_root}`); "
+            "see docs/cann-setup.md.",
             None,
         )
     eval_basename = os.path.basename(eval_root.rstrip("/"))
@@ -1778,8 +1778,13 @@ def main() -> None:
         )
         pyasc_revision["backend"] = resolved_backend
         if resolved_backend == "host":
-            eval_root = os.environ.get(
-                "PYASC_EVAL_ROOT", DEFAULT_PYASC_EVAL_ROOT)
+            # Only the host backend needs it; the docker backend carries its
+            # own pinned pyasc, so do not demand the variable from CI runners
+            # that will never use it.
+            eval_root = str(external_root(
+                "PYASC_EVAL_ROOT", "the pyasc eval clone",
+                hint="Required by --runtime on the host backend; the docker "
+                     "backend does not need it. See docs/cann-setup.md."))
             error, warning = host_pyasc_pin_error(
                 pyasc_revision,
                 eval_root=eval_root,

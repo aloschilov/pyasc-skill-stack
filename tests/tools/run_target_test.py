@@ -6,6 +6,12 @@ simulator is infeasible for the merge-gate. This parses the declarative
 # PYASC_TESTS_BEGIN block, selects the case with the smallest block_num
 (fastest on the single-threaded simulator), and runs it via pytest.
 
+Note what the default mode proves. `--compile-only` is on by default, and in
+that mode upstream mocks kernel launch and the numerical assertions: a pass
+means the kernel built against the pinned runtime, not that it computed
+anything correctly. Pass `--run` for numerical execution. Never report a
+compile-only sweep as numerical qualification.
+
 Usage:
     python3.11 tests/tools/run_target_test.py reference/asctile/target/test_vadd.py
     python3.11 tests/tools/run_target_test.py reference/asctile/target/test_vadd.py --full
@@ -98,8 +104,14 @@ def report_failure(test_file: str, label: str, rc, out: str, err: str) -> int:
         print(f"[BLOCKED] {test_file}: no result in time ({label})")
         verdict = EXIT_BLOCKED
     elif rc in (-9, 137):
-        print(f"[BLOCKED] {test_file}: killed by the OOM killer ({label}); "
-              "the largest cases allocate multi-GiB host tensors")
+        # SIGKILL, cause unknown. Memory pressure is the usual explanation and
+        # the largest cases do allocate multi-GiB host tensors, but exit 137
+        # does not prove it: a timeout, a container limit or an operator with
+        # a kill switch produce the same code. Report what was observed and
+        # leave the diagnosis to whoever reads the logs.
+        print(f"[BLOCKED] {test_file}: killed with SIGKILL ({label}); "
+              "cause not established from the exit code alone -- check host "
+              "memory, container limits and the kernel log")
         verdict = EXIT_BLOCKED
     elif rc == 5:
         print(f"[FAIL] {test_file}: pytest selected no cases ({label})")
@@ -126,8 +138,11 @@ def main() -> None:
     ap.add_argument("--timeout", type=int,
                     default=int(os.environ.get("PYASC_TARGET_TIMEOUT", "900")),
                     help="Per-module timeout (s)")
-    ap.add_argument("--compile-only", action="store_true", default=True, help="Compile-only check (default; fast)")
-    ap.add_argument("--run", action="store_true", help="Run the kernel (slow on simulator)")
+    ap.add_argument("--compile-only", action="store_true", default=True,
+                    help="Build only; launch and numerical asserts are mocked "
+                         "(default). NOT numerical qualification.")
+    ap.add_argument("--run", action="store_true",
+                    help="Execute the kernel and check numbers (slow on simulator)")
     ap.add_argument("--full", action="store_true", help="Run ALL cases (for nightly)")
     ap.add_argument("--batch", type=int,
                     default=int(os.environ.get("PYASC_TARGET_BATCH", "24")),
@@ -168,11 +183,13 @@ def main() -> None:
 
     # Whole-module runs go in batches, each in its own pytest process.
     #
-    # Compiling many kernels inside one interpreter accumulates memory until
-    # the OOM killer steps in: matmul_v3/test_matmul_v3_cube_only.py (184
-    # cases) and test_kl_div.py both died at exit 137 on a box with 27 GB free.
-    # Batching caps the peak without giving up any coverage, because the
-    # allocator starts clean on every batch.
+    # Compiling many kernels inside one interpreter accumulates memory, and
+    # long single processes are the ones that get killed: both
+    # matmul_v3/test_matmul_v3_cube_only.py (184 cases) and test_kl_div.py
+    # died at exit 137 on a box with 27 GB free. Exit 137 alone does not
+    # identify the killer, but batching fixed it, which is the evidence that
+    # matters here: capping the peak costs no coverage, because the allocator
+    # starts clean on every batch.
     if k_pattern is None and args.batch > 0:
         ids = collect_ids(args)
         if len(ids) > args.batch:

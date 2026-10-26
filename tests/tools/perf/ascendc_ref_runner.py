@@ -52,14 +52,10 @@ _TOOLS_DIR = Path(__file__).resolve().parents[1]
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 from load_capability_cells import load_capabilities_yaml, load_cell_to_op_dtype  # noqa: E402
-from repo_paths import repo_relative  # noqa: E402
+from repo_paths import external_root, repo_relative  # noqa: E402
 
-DEFAULT_OPS_MATH = Path(
-    os.environ.get("OPS_MATH_HOME", "/home/aloschilov/workspace/ops-math")
-)
-DEFAULT_OPS_NN = Path(
-    os.environ.get("OPS_NN_HOME", "/home/aloschilov/workspace/ops-nn")
-)
+OPS_MATH_HINT = "The CANN ops-math checkout, e.g. a clone of gitee.com/ascend/ops-math."
+OPS_NN_HINT = "The CANN ops-nn checkout, e.g. a clone of gitee.com/ascend/ops-nn."
 DEFAULT_ASCEND = Path(
     os.environ.get("ASCEND_HOME_PATH", "/usr/local/Ascend/cann-9.0.0")
 )
@@ -1003,7 +999,12 @@ def measure(op: str, dtype: str, shape: list[int], *, ascend: Path,
     if spec is None:
         raise RefError(f"no driver registered for op '{op}' (add it to OP_SPECS)")
     if repos is None:
-        repos = _make_repos(ops_math or DEFAULT_OPS_MATH, ops_nn or DEFAULT_OPS_NN)
+        repos = _make_repos(
+            ops_math or external_root("OPS_MATH_HOME", "the AscendC ops-math sources",
+                                      hint=OPS_MATH_HINT),
+            ops_nn or external_root("OPS_NN_HOME", "the AscendC ops-nn sources",
+                                    hint=OPS_NN_HINT),
+        )
     repo = repos[spec["repo"]]
     build_op = spec.get("build_op", op)
 
@@ -1046,8 +1047,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dtype", choices=sorted(DTYPES))
     ap.add_argument("--shape", default="32x4096", help="e.g. 32x4096 or 8x256")
     ap.add_argument("--runs", type=int, default=3)
-    ap.add_argument("--ops-math-root", default=str(DEFAULT_OPS_MATH))
-    ap.add_argument("--ops-nn-root", default=str(DEFAULT_OPS_NN))
+    # No defaults: these live outside the repository and differ per machine.
+    # Unset falls through to external_root(), which says so.
+    ap.add_argument("--ops-math-root", help=f"default: $OPS_MATH_HOME. {OPS_MATH_HINT}")
+    ap.add_argument("--ops-nn-root", help=f"default: $OPS_NN_HOME. {OPS_NN_HINT}")
     ap.add_argument("--ascend-home", default=str(DEFAULT_ASCEND))
     ap.add_argument("--out", help="evidence JSON path (default: evidence/perf/ascendc-ref/...)")
     ap.add_argument("--json", action="store_true", help="print result JSON to stdout")
@@ -1067,7 +1070,14 @@ def main(argv: list[str] | None = None) -> int:
 
     shape = _parse_shape(args.shape)
     ascend = Path(args.ascend_home)
-    repos = _make_repos(Path(args.ops_math_root), Path(args.ops_nn_root))
+    repos = _make_repos(
+        Path(args.ops_math_root) if args.ops_math_root
+        else external_root("OPS_MATH_HOME", "the AscendC ops-math sources",
+                           hint=OPS_MATH_HINT),
+        Path(args.ops_nn_root) if args.ops_nn_root
+        else external_root("OPS_NN_HOME", "the AscendC ops-nn sources",
+                           hint=OPS_NN_HINT),
+    )
     verbose = not args.quiet
 
     try:

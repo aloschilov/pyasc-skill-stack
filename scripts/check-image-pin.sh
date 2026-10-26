@@ -7,9 +7,13 @@
 #      A tag is mutable, so a tagged runtime silently invalidates every result
 #      recorded beneath it. Its matrix report URL names a specific release for
 #      the same reason: "latest" is a pointer, and pointers move.
-#   2. .github/workflows/ci.yml pulls exactly that digest. The workflow needs a
-#      literal because GitHub Actions cannot read a file into `env:`, so the
-#      value is duplicated -- and duplicated values drift.
+#   2. .github/workflows/ci.yml pulls exactly the digest CI is supposed to run,
+#      which is the development overlay when one is pinned. The workflow needs
+#      a literal because GitHub Actions cannot read a file into `env:`, so the
+#      value is duplicated -- and duplicated values drift. The overlay must
+#      also declare the base it was built on, since an overlay from a
+#      different base would pair this suite with a runtime built from another
+#      upstream commit.
 #   3. ENV.json.source_sha equals reference/asctile/PIN.json.commit. The image,
 #      the wheel inside it and the vendored target suite all derive from one
 #      upstream commit. If they diverge, the suite is being compile-checked
@@ -43,10 +47,27 @@ digest="$(jq -r '.image.digest' "${ENV_PIN}")"
 ref="$(jq -r '.image.ref' "${ENV_PIN}")"
 cell="$(jq -r '.image.cell' "${ENV_PIN}")"
 
+# CI runs the overlay when there is one; the minimal image stays recorded as
+# the base of record.
+has_dev="$(jq -r 'has("dev_image")' "${ENV_PIN}")"
+if [[ "${has_dev}" == "true" ]]; then
+  run_ref="$(jq -r '.dev_image.ref' "${ENV_PIN}")"
+  run_digest="$(jq -r '.dev_image.digest' "${ENV_PIN}")"
+  run_label="dev_image"
+else
+  run_ref="${ref}"
+  run_digest="${digest}"
+  run_label="image"
+fi
+
 say "version       ${version}"
 say "cell          ${cell}"
 say "source_sha    ${env_sha}"
-say "digest        ${digest}"
+say "base digest   ${digest}"
+if [[ "${has_dev}" == "true" ]]; then
+  say "dev digest    ${run_digest}"
+  say "dev torch     $(jq -r '.dev_image.torch' "${ENV_PIN}") | pytest $(jq -r '.dev_image.pytest' "${ENV_PIN}")"
+fi
 
 # --- 1. Shape ----------------------------------------------------------------
 for field in .version .source_sha .recipe .scope .image.digest .image.ref \
@@ -68,6 +89,44 @@ if [[ "${ref}" != *"@${digest}" ]]; then
   echo "           ref    ${ref}" >&2
   echo "           digest ${digest}" >&2
   fail=1
+fi
+
+# --- 1b. The overlay, when pinned --------------------------------------------
+if [[ "${has_dev}" == "true" ]]; then
+  for field in .dev_image.digest .dev_image.ref .dev_image.base_report \
+               .dev_image.torch .dev_image.pytest \
+               .dev_image.children.amd64 .dev_image.children.arm64; do
+    v="$(jq -r "${field} // empty" "${ENV_PIN}")"
+    if [[ -z "${v}" || "${v}" == "null" ]]; then
+      echo "[image-pin] FAIL: ${field} is missing from ${ENV_PIN}" >&2
+      fail=1
+    fi
+  done
+
+  if [[ ! "${run_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+    echo "[image-pin] FAIL: .dev_image.digest is not a sha256 digest: ${run_digest}" >&2
+    fail=1
+  fi
+
+  if [[ "${run_ref}" != *"@${run_digest}" ]]; then
+    echo "[image-pin] FAIL: .dev_image.ref does not end in @.dev_image.digest" >&2
+    fail=1
+  fi
+
+  # The overlay is the base plus two packages. If it was built on a different
+  # base, the wheel inside it comes from a different upstream commit than the
+  # vendored suite, and a green gate would mean nothing.
+  dev_base="$(jq -r '.dev_image.base_report' "${ENV_PIN}")"
+  pin_base="$(jq -r '.matrix.release_tag' "${ENV_PIN}")"
+  if [[ "${dev_base}" != "${pin_base}" ]]; then
+    echo "[image-pin] FAIL: the overlay was built on a different base" >&2
+    echo "           overlay base  ${dev_base}" >&2
+    echo "           pinned base   ${pin_base}" >&2
+    echo "           Re-sync with scripts/sync-image-pin.sh --release ${pin_base}" >&2
+    fail=1
+  else
+    say "overlay base  ${dev_base} (matches)"
+  fi
 fi
 
 # The report URL must name the release it came from. GitHub's /releases/latest/
@@ -107,14 +166,14 @@ if [[ -f "${WORKFLOW}" ]]; then
     echo "[image-pin] FAIL: PYASC_SIM_IMAGE is pinned by tag, not digest:" >&2
     echo "           ${wf_ref}" >&2
     fail=1
-  elif [[ "${wf_ref}" != "${ref}" ]]; then
+  elif [[ "${wf_ref}" != "${run_ref}" ]]; then
     echo "[image-pin] FAIL: ${WORKFLOW#${REPO_ROOT}/} and the pin disagree" >&2
     echo "           workflow ${wf_ref}" >&2
-    echo "           pin      ${ref}" >&2
-    echo "           Re-pin with scripts/sync-image-pin.sh, then copy .image.ref" >&2
+    echo "           pin      ${run_ref}" >&2
+    echo "           Re-pin with scripts/sync-image-pin.sh, then copy .${run_label}.ref" >&2
     fail=1
   else
-    say "workflow      agrees"
+    say "workflow      agrees (.${run_label}.ref)"
   fi
 fi
 

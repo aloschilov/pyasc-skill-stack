@@ -21,8 +21,11 @@ orchestrator manages:
 
 It assumes:
   * The CANN simulator env vars are already exported in the shell.
-  * ``pip install -e /home/aloschilov/workspace/pyasc-v2-eval`` has
-    been run; ``python -c "import asc"`` lands there.
+  * ``PYASC_EVAL_ROOT`` points at the pyasc eval clone, and
+    ``pip install -e "$PYASC_EVAL_ROOT"`` has been run, so that
+    ``python -c "import asc"`` lands there.
+  * ``PYASC_PYTHON`` names the interpreter that install went into,
+    unless the one running this script is already it.
   * ``opencode`` CLI is on PATH.
 
 Output: writes a CSV log of (stage, op, dtype, protocol, trial,
@@ -35,6 +38,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import csv
+import functools
 import os
 import shutil
 import subprocess
@@ -46,19 +50,31 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 COLLECT = REPO_ROOT / "tests" / "tools" / "collect_generative_evidence.py"
 LOG_DIR = REPO_ROOT
-PYTHON = os.environ.get(
-    "PYASC_PYTHON",
-    "/home/aloschilov/.pyenv/versions/3.11.10/bin/python3",
-)
-# Hard-pin asc/asc2 imports to the eval clone so an opencode skill
-# step inside one of the cells cannot re-install editable from a
-# dev tree (observed once on 2026-05-27: pyasc-fork was silently
-# substituted partway through Stage C, causing 18 trials to abort).
-PYASC_EVAL_ROOT = os.environ.get(
-    "PYASC_EVAL_ROOT",
-    "/home/aloschilov/workspace/pyasc-v2-eval",
-)
-PYASC_EVAL_PYTHON_PATH = str(Path(PYASC_EVAL_ROOT) / "python")
+# Defaults to the interpreter running this script, which is right whenever
+# the eval editable was installed into it. Set PYASC_PYTHON when it was not --
+# naming one developer's pyenv build here, as this used to, is wrong on every
+# other machine.
+PYTHON = os.environ.get("PYASC_PYTHON") or sys.executable
+
+sys.path.insert(0, str(REPO_ROOT / "tests" / "tools"))
+from repo_paths import external_root  # noqa: E402
+
+
+@functools.lru_cache(maxsize=1)
+def eval_root() -> Path:
+    """The eval clone, resolved on first real run.
+
+    Hard-pinning asc/asc2 imports to it stops an opencode skill step inside a
+    cell from re-installing editable out of a dev tree -- observed once on
+    2026-05-27, when pyasc-fork was silently substituted partway through
+    Stage C and aborted 18 trials.
+
+    Resolved lazily so that --dry-run and --help work on a machine that has no
+    eval clone at all.
+    """
+    return external_root(
+        "PYASC_EVAL_ROOT", "the pyasc eval clone",
+        hint="The tree `pip install -e` was run against; see docs/cann-setup.md.")
 
 # 12 cells (op, dtype) from capabilities.yaml, in declared order.
 STAGE_B_CELLS: list[tuple[str, str]] = [
@@ -123,12 +139,13 @@ def run_one(
     status = "unknown"
     last_lines = ""
     if not dry_run:
+        root = eval_root()
         env = os.environ.copy()
         existing = env.get("PYTHONPATH", "")
         env["PYTHONPATH"] = (
-            PYASC_EVAL_PYTHON_PATH + (os.pathsep + existing if existing else "")
+            str(root / "python") + (os.pathsep + existing if existing else "")
         )
-        env["PYASC_EVAL_ROOT"] = PYASC_EVAL_ROOT
+        env["PYASC_EVAL_ROOT"] = str(root)
         proc = subprocess.run(
             cmd,
             capture_output=True, text=True,

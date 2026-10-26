@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REMOTE_HOME="${REMOTE_HOME:-/home/l00958488}"
+# Runs on the remote box, so the operator's own home is the right default.
+# It used to name one specific account, which was wrong for anyone else.
+REMOTE_HOME="${REMOTE_HOME:-$HOME}"
 PYTHON_VERSION="3.12.13"
 PYTHON_SHA256="c08bc65a81971c1dd5783182826503369466c7e67374d1646519adf05207b684"
 PYTHON_PREFIX="${REMOTE_HOME}/python312-cannbench"

@@ -12,12 +12,23 @@ permissions:
 
 env:
   # Pinned by digest, not by tag: a moving runtime silently invalidates every
-  # result below it. Built, smoke-tested and published upstream by
+  # result below it. Built and published upstream by
   # compiler-team-ru/pyasc-images; this is the cann9.2.0-u22.04-py3.11
   # multi-arch manifest, so the same ref resolves on amd64 and arm64 runners.
+  #
+  # This is pyasc-sim-DEV, the development overlay: the same simulator image
+  # with CPU torch 2.7.1 and pytest 8.4.2 already installed. The target suite
+  # needs both and the minimal image ships neither, so CI used to build that
+  # overlay itself on every runner. Upstream now publishes one built on the
+  # exact base this repository pins, which is why that step is gone.
+  #
+  # `published` means environment-qualified -- dependencies, imports, full
+  # collection and a baseline compile/simulator check. It does NOT mean the
+  # upstream suite passed; see docs/evidence-sources.md.
+  #
   # The authoritative copy of this value is reference/images/ENV.json --
   # scripts/check-image-pin.sh fails the PR gate if the two disagree.
-  PYASC_SIM_IMAGE: ghcr.io/compiler-team-ru/pyasc-sim@sha256:6256a47b167ba05b2b7b2280ab0460e1da42a188bcec2c643f6a985718fd4b67
+  PYASC_SIM_IMAGE: ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:eb3b5684ddd5569cb6df1acea8980e649f07bf2f0782622cd55b30b9a504f065
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
@@ -88,65 +99,6 @@ jobs:
           DOCKER_CONFIG="$anon" docker pull "${{ env.PYASC_SIM_IMAGE }}"
           tests/tools/verify_pyasc_image.sh "${{ env.PYASC_SIM_IMAGE }}"
 
-      # The upstream image ships neither torch nor pytest, and the target suite
-      # needs both: every module imports torch at scope, and the suite is run
-      # through pytest. That is by design -- matrix.json lists the image's full
-      # dependency set and neither is in it, and pyasc-dev itself depends on
-      # neither. So build one overlay directory and mount it read-only into
-      # each per-module container, instead of installing 24 times.
-      #
-      # Everything is installed --no-deps against an explicit version list, so
-      # the overlay is the same set of files on every run. An unpinned install
-      # is not: resolving `torch` afresh each time means two runs a month apart
-      # compile against different stacks, and then a result recorded under one
-      # cannot be compared with a result recorded under the other.
-      #
-      # The versions are upstream's, not ours. compiler-team-ru/pyasc-images
-      # publishes ghcr.io/compiler-team-ru/pyasc-sim-dev, the same simulator
-      # image with exactly this set baked in, and dev-matrix.json records it as
-      # dependency-checked, import-checked and collection-checked. Matching it
-      # here means the day a dev overlay is published for the base we pin, the
-      # switch changes where the packages come from and nothing about which
-      # packages they are. See docs/upstream-image-requests.md for the ask.
-      #
-      # numpy, sympy, setuptools and typing_extensions are deliberately absent:
-      # the image already carries the versions it was qualified with (numpy
-      # 1.26.4, sympy 1.13.3), pyasc-dev needs numpy<2, and anything installed
-      # here would shadow them on PYTHONPATH.
-      - name: Provision torch and pytest for the target suite
-        run: |
-          set -euo pipefail
-          TORCH_SITE="${RUNNER_TEMP}/torch-site"
-          echo "TORCH_SITE=$TORCH_SITE" >> "$GITHUB_ENV"
-          # Reuse is keyed on the pin, not on the directory existing. This is a
-          # self-hosted runner, so an overlay built before a version bump would
-          # otherwise survive it and quietly keep serving the old torch.
-          PIN="torch==2.7.1+cpu pytest==8.4.2"
-          if [ -f "$TORCH_SITE/.pin" ] && [ "$(cat "$TORCH_SITE/.pin")" = "$PIN" ]; then
-            echo "reusing overlay at $TORCH_SITE ($PIN)"
-            exit 0
-          fi
-          rm -rf "$TORCH_SITE"
-          mkdir -p "$TORCH_SITE"
-          docker run --rm -v "$TORCH_SITE":/torch-site \
-            "${{ env.PYASC_SIM_IMAGE }}" \
-            python3.11 -m pip install --no-cache-dir --target /torch-site --no-deps \
-              --index-url https://download.pytorch.org/whl/cpu \
-              --extra-index-url https://pypi.org/simple \
-              torch==2.7.1+cpu \
-              filelock==3.18.0 fsspec==2025.3.2 Jinja2==3.1.6 \
-              MarkupSafe==3.0.3 networkx==3.4.2 \
-              pytest==8.4.2 iniconfig==2.1.0 packaging==25.0 \
-              pluggy==1.6.0 Pygments==2.19.2 \
-              exceptiongroup==1.3.0 tomli==2.2.1
-          # Fail here, loudly, rather than 24 times inside the compile loop --
-          # and assert the versions, so the pin above is enforced rather than
-          # merely stated.
-          docker run --rm -v "$TORCH_SITE":/torch-site:ro -e PYTHONPATH=/torch-site \
-            "${{ env.PYASC_SIM_IMAGE }}" \
-            python3.11 -c 'import torch, pytest, numpy, sympy; assert torch.__version__ == "2.7.1+cpu", "torch is " + torch.__version__; assert pytest.__version__ == "8.4.2", "pytest is " + pytest.__version__; print("overlay OK: torch", torch.__version__, "| pytest", pytest.__version__, "| numpy", numpy.__version__, "| sympy", sympy.__version__)'
-          echo "$PIN" > "$TORCH_SITE/.pin"
-
       - name: Compile-check the AscTile target suite
         run: |
           set -uo pipefail
@@ -174,7 +126,6 @@ jobs:
             docker run --rm --name "${CTR_NAME}-${slug}" \
               --ulimit nofile=65536:65536 \
               -v "$PWD":/workspace:ro -w /workspace \
-              -v "${TORCH_SITE}":/torch-site:ro -e PYTHONPATH=/torch-site \
               -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
               -e PYASC_CACHE_DIR=/tmp/pyasc-cache \
               -e PYASC_DUMP_PATH=/tmp/pyasc-dumps \

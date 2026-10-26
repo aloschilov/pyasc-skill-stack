@@ -11,6 +11,12 @@
 #      digest can be right while the runtime inside is unusable, and an empty
 #      namespace package imports perfectly happily without having `jit`.
 #
+# When ENV.json carries a dev_image, that is what CI runs and what is checked
+# here, and usability additionally means torch and pytest at the recorded
+# versions. The repository no longer installs either: it relies on the overlay
+# image shipping them, so "the image has them" is now load-bearing and belongs
+# in the gate rather than in a comment.
+#
 # Deliberately NOT a `git -C /opt/pyasc rev-parse` check: the upstream images
 # install the published wheel, so they carry no source checkout.
 
@@ -27,8 +33,19 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
-want_manifest="$(jq -r '.image.digest' "$ENV_PIN")"
-want_children="$(jq -r '.image.children | to_entries[] | .value' "$ENV_PIN")"
+# The overlay is what CI runs when it exists; fall back to the minimal image.
+if [ "$(jq -r 'has("dev_image")' "$ENV_PIN")" = "true" ]; then
+    sel=".dev_image"
+    want_torch="$(jq -r '.dev_image.torch' "$ENV_PIN")"
+    want_pytest="$(jq -r '.dev_image.pytest' "$ENV_PIN")"
+else
+    sel=".image"
+    want_torch=""
+    want_pytest=""
+fi
+
+want_manifest="$(jq -r "${sel}.digest" "$ENV_PIN")"
+want_children="$(jq -r "${sel}.children | to_entries[] | .value" "$ENV_PIN")"
 python_bin="$(jq -r '.image.python_bin' "$ENV_PIN")"
 
 # RepoDigests is what the registry served, independent of any local tag.
@@ -59,12 +76,23 @@ if [ "$matched" -ne 1 ]; then
     exit 1
 fi
 
-docker run --rm --entrypoint "$python_bin" "$IMAGE" -c '
-import sys
+docker run --rm --entrypoint "$python_bin" \
+    -e WANT_TORCH="$want_torch" -e WANT_PYTEST="$want_pytest" "$IMAGE" -c '
+import os, sys
 from asc.experimental import asctile
 assert hasattr(asctile, "jit"), (
     "asc.experimental.asctile has no jit (%r)" % (getattr(asctile, "__file__", None),))
 print("pyasc runtime OK: asc.experimental.asctile on %s" % sys.version.split()[0])
+
+want_torch = os.environ.get("WANT_TORCH") or ""
+want_pytest = os.environ.get("WANT_PYTEST") or ""
+if want_torch or want_pytest:
+    import torch, pytest
+    if want_torch and torch.__version__ != want_torch:
+        sys.exit("torch is %s, pin says %s" % (torch.__version__, want_torch))
+    if want_pytest and pytest.__version__ != want_pytest:
+        sys.exit("pytest is %s, pin says %s" % (pytest.__version__, want_pytest))
+    print("overlay OK: torch %s | pytest %s" % (torch.__version__, pytest.__version__))
 '
 
 echo "Image pin verified: $IMAGE"

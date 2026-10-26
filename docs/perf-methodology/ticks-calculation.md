@@ -369,7 +369,8 @@ Or, more reliably, parse with the Python regex shown in section 3.
 ## 8. Cross-implementation comparison (pyasc vs hand-written AscendC)
 
 Phase 11 compares a skill-stack-generated `pyasc` kernel against the
-hand-written AscendC C++ reference in [`ops-math/math/`](/home/aloschilov/workspace/ops-math/math/)
+hand-written AscendC C++ reference in `math/` of the ops-math checkout
+(`$OPS_MATH_HOME`, see `tests/tools/perf/ascendc_ref_runner.py`)
 for the *same op, dtype, and shape*, on the *same* camodel
 (`Ascend950PR_9599`). The headline metric is
 
