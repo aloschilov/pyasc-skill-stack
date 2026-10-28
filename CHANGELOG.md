@@ -4,6 +4,123 @@ Releases are git tags. Tagging `v*` builds the archives and publishes them —
 see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 `release/<date>/` directory; a dated copy of a tree drifts from the tree.
 
+## Unreleased
+
+### The generation gate runs
+
+v0.1.0 shipped with the agent-generation path recorded as `blocked` and
+therefore untested. It has now been run, and the numbers are in
+[`docs/verification-status.md`](docs/verification-status.md) with the
+artifacts in `docs/evidence/generation-gate-20261028/`: three runs, a kernel
+and a design document every time, 7/7 static checks every time, scores of
+12, 12 and 11 against a threshold of 12.
+
+Reported as `passed`, *marginally*. Two of three cleared the bar by exactly
+zero margin, and the only dimension separating a pass from a failure was
+whether the agent happened to verify one tensor shape or two. No generated
+kernel has been **executed** — `asctile` is not importable on the host and
+`run_and_verify.py` has no docker path — so this is a statement about the
+source the agent writes and nothing further.
+
+Running the gate for the first time found two defects that only running it
+could find:
+
+- `verify_kernel.py` recognized `@asc.jit` and `@asc2.jit` but not
+  `@asctile.jit`, the spelling the skills and the prompt both mandate. Every
+  correctly written kernel failed `jit_decorator` and cascaded into three
+  further "skipped (no JIT function)" failures. It now accepts all three plus
+  dotted forms such as `@asc.experimental.asctile.jit`.
+- The prompt opened by asking the agent to check its environment. Finding no
+  importable `asctile`, it spent 22 steps and 26 tool calls excavating
+  unrelated checkouts under `/home` and `/tmp`, wrote nothing, and exhausted
+  900 s. The prompt now states the environment as fact; the same run then
+  completed in 129 s.
+
+The 8192-token output ceiling diagnosed in v0.1.0 was real but was neither
+the only obstacle nor the first one encountered.
+
+### What `generation (executed)` is actually waiting on
+
+`not-run` previously read as though executing a generated kernel needed
+machinery nobody had built. It does not. `run_docker_verify()` already runs
+`run_and_verify.py --mode simulator` inside the pinned image; the integration
+test just does not call it.
+
+Run by hand against the pinned dev overlay, the gap turns out to be four
+lines. As generated, every kernel omits `config.set_platform()`, so it asks
+for a real device and dies on `SetDeviceWrapper returned 107001` — with or
+without the `-r`/`-v` arguments the harness passes, which none of them parse,
+so the failure is byte-identical either way. Add the launch contract and
+nothing else, and the agent's own vector add **executes on the simulator and
+matches `torch`**.
+
+The kernel logic was never the problem. `docs/verification-status.md` carries
+the three-row comparison.
+
+This also turned up a defect in the stack itself:
+`skills/pyasc-codegen-workflow/templates/kernel-template.py` — the file that
+teaches the launch contract, and which the agent demonstrably reads — does
+not compile against the pinned runtime. Codegen rejects the
+`if valid > tile_size:` guard inside its `asctile.range` loop with
+`UnsupportedSyntaxError`. The generated kernels sidestep it with
+`min(size - offset, tile_size)`. Nothing in the test suite compiles the
+template, which is why this went unseen. Recorded, not fixed.
+
+### One source of truth for opencode profiles
+
+`tests/tools/opencode_profile.py` is new, and both generation entry points go
+through it. `tests/integration/test-kernel-generation.sh` previously wrote no
+`opencode.json` at all and silently inherited the host's global config —
+including the 8192 cap that the same repository documented as the blocker. A
+harness that inherits an unknown ceiling is not measuring what it claims to.
+
+- The collector's default profile moved from `cloud-default` to
+  `cloud-glm-5.3`. The old default named a DashScope model behind a key no
+  runner here holds, so as a default it could not complete a run.
+- A missing credential now fails up front and names the variable, instead of
+  surfacing minutes later as a provider-side 401.
+- `--model-profile` is validated against the profiles on disk. A typo used to
+  fall back to a config naming no model, which completed and attributed the
+  evidence to whatever the host's default was.
+- The repo root is granted `external_directory` access at render time,
+  replacing a hardcoded `~/workspace/pyasc-skill-stack/*` that granted
+  nothing on any other machine. Without it a deny-by-default profile also
+  denies the symlinked skill stack, and the agent runs with no skills while
+  the harness reports `skills_mode=on`.
+- `collect_generative_evidence.py` resolves the **dev overlay** image, as CI
+  and `verify_pyasc_image.sh` already did. It was the last caller still
+  falling back to the minimal image, which has no torch, so runtime
+  verification died on `import torch` and reported it as a kernel defect.
+
+### `blocked` is no longer spelled `skipped`
+
+`tests/run-tests.sh` recorded a timed-out test as a skip. "Skipped" means we
+chose not to run it; a timeout means it ran and we learned nothing. There is
+now a `blocked` bucket, reported separately, emitted as `"status": "blocked"`
+in `--output json`, and exiting 2 — distinct from 1 for a real failure.
+
+The timeout that triggered this was itself a collision: the per-file budget
+and the agent timeout inside the generation test were both 300 s, and the
+outer timer starts first, so the agent's own timeout handling and every
+verification phase after it were unreachable. Integration tests now get their
+own budget (`PYASC_INTEGRATION_TIMEOUT`, default 1800 s) above the agent's
+(`PYASC_AGENT_TIMEOUT`, default 900 s).
+
+### Smaller corrections
+
+- The generation test reported scores as `/ 10` against a threshold of `8.5`
+  while `score_kernel.py` used 16 and 12. It now reads both from the scorer's
+  own JSON, and distinguishes a hard-gate rejection from a low score.
+- `$PYTHON run_and_verify.py ... || true` set `$?` to 0 unconditionally, so
+  every run — including a crash — reported "Runtime verification passed".
+- An absent `opencode` CLI exited 1, reporting a missing optional dependency
+  as a product defect. It now skips.
+- The "no prompt" error named `capabilities.yaml`, a file pruned at v0.1.0
+  and listed in `.gitignore`. It now says so and gives the restore command.
+- `PYASC_KEEP_PROJECT=1` retains the generated tree. A generation is not
+  reproducible, so an artifact discarded on exit cannot be recovered by
+  re-running.
+
 ## v0.1.0
 
 First production release. The repository had become a record of a

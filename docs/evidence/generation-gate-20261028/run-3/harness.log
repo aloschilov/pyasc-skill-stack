@@ -1,0 +1,154 @@
+========================================
+ L3 Integration: Kernel Generation E2E
+========================================
+
+Tests full agent-driven pyasc kernel generation.
+Estimated time: 5-15 minutes
+Requires: opencode CLI, python3.10
+
+  Wrote <project>/opencode.json from <repo>/integrations/opencode/profiles/cloud-glm-5.3.json
+Test project: <project>
+Model profile: cloud-glm-5.3
+
+
+=== Phase: Agent Execution ===
+
+Running OpenCode...
+  Timeout: 900s
+  Model:   gateway/glm-5.3
+
+  Agent completed successfully.
+
+
+=== Phase: Artifact Verification ===
+
+  [PASS] kernel.py found: <project>/kernels/add/kernel.py
+  [PASS] design.md found: <project>/kernels/add/docs/design.md
+
+
+=== Phase: Static Verification ===
+
+Running verify_kernel.py...
+  [PASS] jit_decorator: Found 1 @asctile.jit/@asc.jit/@asc2.jit function(s)
+  [PASS] no_return_value: OK
+  [PASS] no_banned_constructs: OK
+  [PASS] loop_forms: OK
+  [PASS] asc2_load_store: asc2 load+store (or copy_in+copy_out) present
+  [PASS] asc2_tensor: asc2.tensor (or global_tensor) present
+  [PASS] verification: verification present
+
+All static checks passed.
+  [PASS] Static verification passed
+
+
+=== Phase: Automated Scoring ===
+
+Running score_kernel.py...
+{
+    "file": "<project>/kernels/add/kernel.py",
+    "score": 11.0,
+    "max_score": 16,
+    "threshold": 12.0,
+    "accepted": false,
+    "failure_category": null,
+    "gating_detail": {
+        "legacy_api_findings": [],
+        "missing_asc2_import": false,
+        "allow_legacy_apis": false
+    },
+    "checks": {
+        "jit_decorator": {
+            "passed": false,
+            "detail": "missing"
+        },
+        "no_return_value": {
+            "passed": true,
+            "detail": "OK"
+        },
+        "no_banned_constructs": {
+            "passed": true,
+            "detail": "OK"
+        },
+        "asc2_load_store": {
+            "passed": false,
+            "detail": "missing asc2.load/asc2.store"
+        },
+        "asc2_tensor": {
+            "passed": false,
+            "detail": "missing asc2.tensor"
+        },
+        "loop_range": {
+            "passed": false,
+            "detail": "no range call in kernel"
+        },
+        "verification": {
+            "passed": true,
+            "detail": "verification call present"
+        },
+        "launch_pattern": {
+            "passed": true,
+            "detail": "kernel launch found"
+        },
+        "global_address": {
+            "passed": true,
+            "detail": "GlobalAddress found"
+        },
+        "valid_python": {
+            "passed": true,
+            "detail": "parsed without errors"
+        },
+        "input_arity": {
+            "passed": true,
+            "detail": "skipped (no --op or op not in arity table)"
+        },
+        "output_dtype": {
+            "passed": true,
+            "detail": "skipped (no --dtype)"
+        },
+        "tiling_consistency": {
+            "passed": true,
+            "detail": "tiling logic found"
+        },
+        "multi_shape_verification": {
+            "passed": false,
+            "detail": "single verify call, no shape loop"
+        },
+        "no_hardcoded_shapes": {
+            "passed": true,
+            "detail": "shapes parameterized"
+        },
+        "semantic_api_usage": {
+            "passed": true,
+            "detail": "skipped (no --op or op not in semantic table)"
+        }
+    }
+}
+
+  Score: 11.0 / 16  (threshold: 12.0)
+  [FAIL] Score 11.0 is below the acceptance threshold 12.0
+
+
+=== Phase: Runtime Verification ===
+
+Running run_and_verify.py...
+{
+  "file": "<project>/kernels/add/kernel.py",
+  "status": "SKIP",
+  "detail": "pyasc (asc) not importable",
+  "mode": "auto",
+  "shapes_verified": []
+}
+  [SKIP] Runtime unavailable (CANN simulator not present)
+
+========================================
+ Kernel Generation E2E Results
+========================================
+
+  Test project: <project>
+  Kernel file:  <project>/kernels/add/kernel.py
+  Design doc:   <project>/kernels/add/docs/design.md
+
+  Critical failures: 1
+STATUS: FAILED
+
+Project retained at: <project>

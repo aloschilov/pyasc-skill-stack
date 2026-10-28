@@ -25,8 +25,12 @@ echo "Requires: opencode CLI, python3.10"
 echo ""
 
 if ! check_opencode; then
-    echo -e "${RED}[ERROR]${NC} opencode CLI not found on PATH"
-    exit 1
+    # Skip, not fail. This test needs a CLI and a funded API key that the
+    # fast suite deliberately does not require, so an absent opencode means
+    # "not exercised here", which run-tests.sh records as a skip. Exiting 1
+    # would report a missing optional dependency as a product defect.
+    print_skip "opencode CLI not found on PATH; generation not exercised"
+    exit 0
 fi
 
 # ============================================
@@ -37,9 +41,34 @@ TEST_PROJECT=$(create_test_project "kernel-gen")
 KERNEL_DIR="$TEST_PROJECT/kernels/add"
 mkdir -p "$KERNEL_DIR/docs"
 
-trap "cleanup_test_project '$TEST_PROJECT'" EXIT
+# Set PYASC_KEEP_PROJECT=1 to retain the generated tree. Without it the only
+# record of a run is the summary text, which is enough to see that something
+# failed and never enough to see why -- and a generation is not reproducible,
+# so the artifact cannot be recovered by re-running.
+if [ "${PYASC_KEEP_PROJECT:-0}" = "1" ]; then
+    trap "echo ''; echo \"Project retained at: $TEST_PROJECT\"" EXIT
+else
+    trap "cleanup_test_project '$TEST_PROJECT'" EXIT
+fi
+
+# Render a tracked profile into the project rather than letting opencode fall
+# back to the user's ~/.config/opencode/opencode.json. That global config is
+# unknown to this repository and, on at least one machine, caps
+# gateway/glm-5.3 at output=8192 with reasoning enabled -- the documented
+# cause of the truncated generations in docs/verification-status.md. A
+# harness that inherits an unknown ceiling is not testing what it claims to.
+MODEL_PROFILE="${PYASC_MODEL_PROFILE:-cloud-glm-5.3}"
+if ! $PYTHON "$TOOLS_DIR/opencode_profile.py" \
+        --profile "$MODEL_PROFILE" \
+        --skills on \
+        --require-credentials \
+        --out "$TEST_PROJECT/opencode.json"; then
+    print_skip "profile '$MODEL_PROFILE' has no usable credentials; generation not exercised"
+    exit 0
+fi
 
 echo "Test project: $TEST_PROJECT"
+echo "Model profile: $MODEL_PROFILE"
 echo ""
 
 # ============================================
@@ -48,37 +77,77 @@ echo ""
 
 print_section_header "Phase: Agent Execution"
 
+# The environment paragraph is load-bearing, not politeness. Without it the
+# agent opens with the workflow's "check environment" phase, finds no
+# importable asctile on the host -- it lives in the pinned simulator image,
+# not here -- and spends the entire budget excavating unrelated checkouts
+# under /home and /tmp looking for one. Observed directly: 22 steps, 26 tool
+# calls, zero files written, 900s exhausted. Telling it the truth up front
+# is what makes this test measure authoring quality instead of filesystem
+# archaeology.
 PROMPT="You are a pyasc kernel development engineer.
 
-Implement a simple vector add kernel for two float32 tensors of size 1024.
-Follow the pyasc-codegen-workflow phases:
-1. Check environment
-2. Create a design document in docs/design.md
-3. Implement the kernel in kernel.py using @asctile.jit with asctile.copy_in/asctile.copy_out for data movement
-4. Include verification using torch.allclose
+ENVIRONMENT — read this first and do not try to verify it:
+- asctile is NOT importable on this machine. It is compiled into the pinned
+  simulator image, which is not running here. Do not search the filesystem
+  for it, do not try to import it, and do not try to execute the kernel.
+- Other asctile or pyasc checkouts may exist elsewhere on this host. They are
+  stale and are not the reference. Ignore them.
+- Your work is evaluated statically, from the source you write. Write the
+  kernel as if it will run; it will be executed elsewhere.
+- The skills under ./skills are the authority for API and syntax. Read them
+  rather than inferring the API from any installed package.
+
+TASK:
+Implement a vector add kernel for two float32 tensors of size 1024, under
+kernels/add/:
+1. A design document at kernels/add/docs/design.md
+2. The kernel at kernels/add/kernel.py, using @asctile.jit with
+   asctile.copy_in / asctile.copy_out for data movement
+3. A torch.allclose verification in that file, guarded so that importing the
+   module does not execute it
 
 Requirements:
-- Use asctile.global_tensor, asctile.copy_in, asctile.copy_out, and asctile.range as needed
+- Use asctile.global_tensor, asctile.copy_in, asctile.copy_out, and
+  asctile.range as needed
 - Use kernel[CORE_NUM](...) launch syntax (no stream argument)
-- Use only supported pyasc syntax (no print/break/continue/lambda inside @asctile.jit)
-- Create files under kernels/add/
+- Use only supported pyasc syntax (no print/break/continue/lambda inside
+  @asctile.jit)
 
-Use only supported pyasc syntax and documented APIs."
+Write the files, then stop. Do not run them."
 
 OUTPUT_FILE="$TEST_PROJECT/agent-output.txt"
 
+# Must stay below run-tests.sh's INTEGRATION_TIMEOUT (1800s), which bounds
+# this whole file. When the two were both 300s the outer timer -- started
+# earlier, and counting project setup -- always won, so the branches below
+# and every verification phase after them were dead code.
+AGENT_TIMEOUT="${PYASC_AGENT_TIMEOUT:-900}"
+
+# -m is not optional. Without it opencode resolves the model from the config
+# `model` key, and if that config came from the host's global file rather
+# than the profile rendered above, the run silently adopts the host's limits.
+# Naming the model makes the generation attributable to a specific one.
+AGENT_MODEL="$($PYTHON -c 'import json,sys; print(json.load(open(sys.argv[1])).get("model",""))' "$TEST_PROJECT/opencode.json")"
+
 echo "Running OpenCode..."
-echo "  Timeout: 300s"
+echo "  Timeout: ${AGENT_TIMEOUT}s"
+echo "  Model:   ${AGENT_MODEL:-<from config>}"
 echo ""
 
-if timeout 300 opencode run "$PROMPT" \
-    --format json \
-    --dir "$TEST_PROJECT" > "$OUTPUT_FILE" 2>&1; then
+AGENT_ARGS=(run "$PROMPT" --format json --dir "$TEST_PROJECT")
+if [ -n "$AGENT_MODEL" ]; then
+    AGENT_ARGS+=(-m "$AGENT_MODEL")
+fi
+
+AGENT_TIMED_OUT=false
+if timeout "$AGENT_TIMEOUT" opencode "${AGENT_ARGS[@]}" > "$OUTPUT_FILE" 2>&1; then
     echo "  Agent completed successfully."
 else
     ec=$?
     if [ "$ec" -eq 124 ]; then
-        print_warn "Agent timed out after 300s"
+        AGENT_TIMED_OUT=true
+        print_warn "Agent timed out after ${AGENT_TIMEOUT}s"
     else
         print_info "Agent exited with code $ec"
     fi
@@ -164,15 +233,37 @@ if [ -n "$KERNEL_PY" ]; then
     SCORE_OUTPUT=$($PYTHON "$TOOLS_DIR/score_kernel.py" "$KERNEL_PY" --json 2>&1) || true
     echo "$SCORE_OUTPUT" | $PYTHON -m json.tool 2>/dev/null || echo "$SCORE_OUTPUT"
 
-    score_val=$(echo "$SCORE_OUTPUT" | $PYTHON -c "import json,sys; print(json.load(sys.stdin).get('score',0))" 2>/dev/null || echo "0")
-    accepted=$(echo "$SCORE_OUTPUT" | $PYTHON -c "import json,sys; print(json.load(sys.stdin).get('accepted',False))" 2>/dev/null || echo "False")
+    # Read the scale and the bar from the scorer's own JSON. They were
+    # hardcoded here as "/ 10" and ">= 8.5" while score_kernel.py used
+    # MAX_SCORE = 16 and THRESHOLD = 12, so every reported score was
+    # printed against a denominator that did not exist and judged against a
+    # threshold that was never applied.
+    read -r score_val max_val thresh_val accepted gate_reason <<<"$(
+        echo "$SCORE_OUTPUT" | $PYTHON -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    d = {}
+print(d.get("score", 0),
+      d.get("max_score", "?"),
+      d.get("threshold", "?"),
+      d.get("accepted", False),
+      (d.get("failure_category") or "-"))
+' 2>/dev/null || echo "0 ? ? False -")"
 
     echo ""
-    echo "  Score: $score_val / 10"
+    echo "  Score: $score_val / $max_val  (threshold: $thresh_val)"
     if [ "$accepted" = "True" ]; then
-        print_pass "Score meets acceptance threshold (>= 8.5)"
+        print_pass "Score meets the acceptance threshold (>= $thresh_val)"
+    elif [ "$gate_reason" != "-" ]; then
+        # A hard gate overrides the total: the kernel can score above the
+        # threshold and still be rejected. Saying "below threshold" here
+        # would misreport why.
+        print_fail "Rejected by gate: $gate_reason"
+        FAILED=$((FAILED + 1))
     else
-        print_fail "Score below acceptance threshold"
+        print_fail "Score $score_val is below the acceptance threshold $thresh_val"
         FAILED=$((FAILED + 1))
     fi
 else
@@ -190,8 +281,11 @@ print_section_header "Phase: Runtime Verification"
 
 if [ -n "$KERNEL_PY" ]; then
     echo "Running run_and_verify.py..."
-    $PYTHON "$TOOLS_DIR/run_and_verify.py" "$KERNEL_PY" --json 2>&1 || true
-    runtime_exit=$?
+    # `|| true` here would set $? to 0 unconditionally, so every run -- even
+    # a crash -- reported "Runtime verification passed". Capture the real
+    # status instead; `set -e` is held off by the if-less assignment idiom.
+    runtime_exit=0
+    $PYTHON "$TOOLS_DIR/run_and_verify.py" "$KERNEL_PY" --json 2>&1 || runtime_exit=$?
 
     if [ "$runtime_exit" -eq 0 ]; then
         print_pass "Runtime verification passed"
@@ -219,7 +313,15 @@ echo "  Kernel file:  ${KERNEL_PY:-not found}"
 echo "  Design doc:   ${DESIGN_MD:-not found}"
 echo ""
 
-if [ "$FAILED" -gt 0 ]; then
+if [ "$FAILED" -gt 0 ] && [ "$AGENT_TIMED_OUT" = true ] && [ -z "$KERNEL_PY" ]; then
+    # The agent ran out of time before writing anything. Nothing about the
+    # skill stack was measured, so this is `blocked`, not `failed`. Exit 124
+    # so run-tests.sh records it as such rather than as a product defect.
+    echo "  Agent timed out after ${AGENT_TIMEOUT}s and produced no kernel."
+    echo "  Raise PYASC_AGENT_TIMEOUT (and PYASC_INTEGRATION_TIMEOUT above it) to retry."
+    print_warn "BLOCKED: no generation to evaluate"
+    exit 124
+elif [ "$FAILED" -gt 0 ]; then
     echo "  Critical failures: $FAILED"
     print_status_failed
     exit 1

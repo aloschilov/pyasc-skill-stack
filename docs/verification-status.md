@@ -13,8 +13,9 @@ provider or device is an honest `blocked`, never a fabricated pass.
 |---|---|---|
 | install | `passed` | `pip install --pre pyasc-dev` into a clean venv, in an external project whose path contains spaces |
 | skill discovery | `passed` | `opencode debug skill --pure` resolves the skill from the project |
-| generation | `blocked` | provider output ceiling — see below |
-| review | `not-run` | depends on generation |
+| generation (static) | `passed`, marginally | 3 runs on 2026-10-28; kernel + design written every time, 7/7 static checks every time, scores 12/12/11 against a threshold of 12 — see below |
+| generation (executed) | `not-run` | no *as-generated* kernel runs: all three omit `config.set_platform()`, so they request a real device and die on `SetDeviceWrapper 107001`. Add that one call and the same kernel passes on the simulator — see below |
+| review | `not-run` | depends on executed generation |
 | compile | `passed` | codegen produced a kernel binary; output left untouched under `PYASC_DRY_RUN=1` |
 | numerical | `passed` | simulator execution matches the NumPy reference exactly, tail included |
 | target suite (collection) | `passed` | all cases across 24 modules collect against the published wheel (1155 at `d0f64a63`; re-derive, do not quote) |
@@ -26,8 +27,117 @@ provider or device is an honest `blocked`, never a fabricated pass.
 
 **The kernel in the compile and numerical gates was written by hand.** The
 generation gate is about an *agent* producing one from a plain-language
-request, and that is blocked. So `passed` there says the runtime and the
-documented API work — not that the agent workflow does.
+request. Those are different claims, and the compile and numerical `passed`
+entries speak only to the first: they say the runtime and the documented API
+work, not that the agent workflow does.
+
+## The generation gate, now that it has been run
+
+Until 2026-10-28 this gate had never executed. It was recorded as `blocked`
+on a provider output ceiling, and everything written about it — including
+the ceiling — was diagnosis rather than observation. It has now been run.
+
+Three runs, same task (float32 vector add, size 1024), same profile
+(`cloud-glm-5.3`: `gateway/glm-5.3`, `output: 32768`, reasoning low):
+
+| Run | Elapsed | Static checks | Score | Runtime | Result |
+|---|---|---|---|---|---|
+| 1 | 129 s | 7/7 | 12.0 / 16 | `SKIP` | pass |
+| 2 | 145 s | 7/7 | 12.0 / 16 | `SKIP` | pass |
+| 3 | 51 s | 7/7 | 11.0 / 16 | `SKIP` | fail |
+
+Artifacts, scores and logs:
+[`evidence/generation-gate-20261028/`](evidence/generation-gate-20261028/).
+
+Two of three cleared the threshold of 12, both by exactly zero margin. Every
+run wrote a kernel and a design document, and every run passed all seven
+static checks. The sole dimension that separated pass from fail was
+`multi_shape_verification` — whether the agent happened to verify one shape
+or two. That is why the table above says `passed`, *marginally*, rather than
+`passed`: a one-point rubric item the agent is not reliably instructed to
+satisfy currently decides the gate.
+
+**No generated kernel has been executed.** `run_and_verify.py` returned
+`SKIP — pyasc (asc) not importable` in all three runs: `asctile` lives in the
+pinned simulator image, and that script has no docker backend of its own. The
+static result is a statement about the source the agent wrote, nothing more.
+
+### Why, precisely — and how close it is
+
+That `SKIP` says only that the host cannot run it. It does not say the kernels
+would fail, and it is worth not leaving the question there, because the
+machinery to answer it already exists: `run_docker_verify()` in
+`tests/tools/collect_generative_evidence.py` bind-mounts the repo at `/repo`
+and the project at `/workspace` and runs `run_and_verify.py --mode simulator`
+inside the pinned image. The integration test simply does not call it. So the
+gap is wiring, not new machinery.
+
+Run by hand against the pinned dev overlay on 2026-10-28, the answer is
+narrow and specific:
+
+| What was run | Result |
+|---|---|
+| `run-1/kernel.py` as generated, with `-r Model -v Ascend950PR_9599` | `FAIL` — `SetDeviceWrapper returned 107001` |
+| `run-1/kernel.py` as generated, no arguments | `FAIL` — identical error |
+| `run-1/kernel.py` plus `config.set_platform()` and `-r`/`-v` parsing | **`PASS`** — executed on `Model/Ascend950PR_9599`, `torch.allclose` verified |
+
+Two things follow. First, the `-r`/`-v` arguments the harness passes are
+**silently ignored** — the failure is byte-identical with and without them,
+because none of the generated kernels parse arguments. Second, and more
+usefully: the kernel *logic* is correct. The only thing missing is the launch
+contract — parse `-r`/`-v`, then call `config.set_platform(backend, platform)`
+before launching. Add that and nothing else, and the agent's own vector add
+runs on the simulator and matches `torch`.
+
+So `generation (executed)` is `not-run` because of a missing four-line
+preamble, not because the agent writes kernels that do not work.
+
+### A defect this turned up in the skill stack itself
+
+`skills/pyasc-codegen-workflow/templates/kernel-template.py` is where that
+contract is taught — it parses `-r`/`-v` and calls `config.set_platform()` at
+lines 85-101. The agent reads this file (it is the fifth tool call in the
+traced run) and did not copy the pattern.
+
+The template also does not compile against the pinned runtime. Run it
+directly and codegen rejects it:
+
+```
+asc.codegen.errors.UnsupportedSyntaxError: at <source>:14:8
+```
+
+— the `if valid > tile_size:` guard inside the `asctile.range` loop. The
+generated kernels sidestep it with `valid = min(size - offset, tile_size)`,
+which does compile. The template the stack ships as its worked example is
+therefore both the authority on the launch contract and broken, and nothing
+in the test suite compiles it. Neither fix is made here; both are recorded so
+the next change starts from evidence.
+
+**Nothing re-checks this automatically.** `tests/ci-gate.sh` supports only
+`--tier pr`, which runs `run-tests.sh --fast` — the unit category. No
+workflow runs the integration category, so the generation test executes only
+when somebody runs it by hand. Unlike every other `passed` row in the table
+above, this one is a dated observation rather than a standing guarantee, and
+it will not notice if a future change breaks it. Re-derive before citing it.
+
+### What running it exposed
+
+Two defects that only running it could find, both fixed in the same change:
+
+- **`verify_kernel.py` did not recognize `@asctile.jit`**, accepting only
+  `asc` and `asc2`. The skills and the prompt both mandate `asctile`, so
+  every correctly written kernel failed `jit_decorator` and cascaded into
+  three further "skipped (no JIT function)" failures. A gate that has never
+  run cannot report that its own checker rejects the thing it asks for.
+- **The prompt sent the agent on an environment hunt it could not win.** Told
+  to "check environment" first, it found no importable `asctile`, then spent
+  22 steps and 26 tool calls excavating unrelated checkouts under `/home` and
+  `/tmp`, wrote nothing, and exhausted 900 s. Stating the environment as fact
+  in the prompt took the run from a 900 s timeout to a 129 s success.
+
+Neither was the output ceiling. The ceiling was real — it is documented below
+and the profile now raises it to 32768 with reasoning turned down — but it
+was not the only obstacle, and it was not the first one to hit.
 
 ## The target-suite compile gate
 
@@ -152,9 +262,26 @@ Recorded rather than explained. One unreproducible segfault is not enough to
 call the numerical gate flaky, but it is not something to leave undocumented
 either.
 
-## The open blocker: an 8192-token output ceiling
+## The former blocker: an 8192-token output ceiling
 
-Diagnosis only. No provider call was made to produce this section.
+Diagnosis only. No provider call was made to produce this section, and it is
+kept as written so the reasoning can be checked against what followed.
+
+**Resolved.** The tracked `cloud-glm-5.3` profile declares `output: 32768`
+with reasoning turned down, and both generation entry points now render that
+profile into the project instead of inheriting the host's global config —
+which is where the 8192 cap lived. Under it, the gate completed in 51–145 s
+and produced an artifact every time; see
+[the generation gate section](#the-generation-gate-now-that-it-has-been-run)
+above.
+
+One correction the runs supplied. Option 1 below recommends `output: 131072`
+and cautions that 8192 "should be confirmed, not assumed". A direct call to
+the gateway confirms it was never a provider limit — it answers in about two
+seconds, and `reasoning_effort: low` returns zero reasoning tokens where
+`thinking: {"type": "disabled"}` still burned 40. The profile therefore
+carries both keys, and 32768 (option 2) proved sufficient: no run since has
+terminated on length.
 
 Eight `gateway/glm-5.3` calls failed to produce their artifact, reported as
 `incomplete-length`. Every length-terminated step reports `reasoning` and
@@ -238,11 +365,25 @@ does not name a model inherits both the model and its 8192 cap. That is why
 the blocker generalises — not because all three share an invocation, but
 because they share a default.
 
+That shared default is now closed off. Both test entry points render a
+tracked profile into the project through `tests/tools/opencode_profile.py`,
+and `test-kernel-generation.sh` passes `-m` with the model named in it, so
+neither inherits the host's global config. The CANNBench driver already
+named its model explicitly and was never exposed by this route.
+
 ## What none of this establishes
 
 One operator, one dtype, one shape, one block count, on a simulator. Not a
-numerical suite, not hardware qualification, not a performance result. The
-agent-generation path is untested because it is blocked upstream.
+numerical suite, not hardware qualification, not a performance result.
+
+The agent-generation path is no longer untested, but what it has been tested
+*for* is narrow and worth stating plainly. Three runs of one operator show
+that an agent with these skills writes source that passes the static checks,
+and that it does so with no margin against the acceptance threshold. Nothing
+here shows that a generated kernel compiles, runs, or is numerically correct:
+none has been executed. Three samples of one operator is also not a measure
+of reliability — it is enough to know the gate works and roughly where it
+sits, and not enough to quote a pass rate.
 
 For what *would* constitute evidence, see
 [`evidence-sources.md`](evidence-sources.md).
