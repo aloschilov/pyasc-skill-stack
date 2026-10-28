@@ -6,7 +6,7 @@ Tests full agent-driven pyasc kernel generation.
 Estimated time: 5-15 minutes
 Requires: opencode CLI, python3.10
 
-  Wrote <project>/opencode.json from /home/aloschilov/workspace/pyasc-skill-stack/integrations/opencode/profiles/cloud-glm-5.3.json
+  Wrote <project>/opencode.json from <repo>/integrations/opencode/profiles/cloud-glm-5.3.json
 Test project: <project>
 Model profile: cloud-glm-5.3
 
