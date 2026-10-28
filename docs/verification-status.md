@@ -62,6 +62,13 @@ satisfy currently decides the gate.
 pinned simulator image and that script has no docker path. The static result
 is a statement about the source the agent wrote, nothing more.
 
+**Nothing re-checks this automatically.** `tests/ci-gate.sh` supports only
+`--tier pr`, which runs `run-tests.sh --fast` — the unit category. No
+workflow runs the integration category, so the generation test executes only
+when somebody runs it by hand. Unlike every other `passed` row in the table
+above, this one is a dated observation rather than a standing guarantee, and
+it will not notice if a future change breaks it. Re-derive before citing it.
+
 ### What running it exposed
 
 Two defects that only running it could find, both fixed in the same change:

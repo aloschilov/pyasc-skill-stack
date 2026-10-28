@@ -45,6 +45,13 @@ overstate it: a one-point rubric item it is not reliably instructed to
 satisfy sits exactly on the acceptance boundary. The honest reading is that
 the gate now *runs*, and that it is marginal.
 
+### Nothing re-checks this automatically
+
+`tests/ci-gate.sh` supports only `--tier pr`, which runs the unit category.
+No workflow runs the integration category, so this gate executes only when
+somebody runs it by hand. These numbers are a dated observation, not a
+standing guarantee.
+
 ### Runtime is not covered
 
 `run_and_verify.py` reported `SKIP — pyasc (asc) not importable` in all three
