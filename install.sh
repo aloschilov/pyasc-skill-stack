@@ -5,6 +5,7 @@
 #   ./install.sh              # Cursor + opencode (default)
 #   ./install.sh --claude     # also link ~/.claude/skills/<skill>
 #   ./install.sh --agents     # also link ~/.agents/skills/<skill>
+#   ./install.sh --target DIR # link into DIR only, leaving the defaults alone
 #
 # Each skill folder stays in this repository; symlinks point at it.
 # Re-run after moving the clone to refresh links.
@@ -16,20 +17,35 @@ SKILLS_DIR="${REPO_ROOT}/skills"
 
 LINK_CLAUDE=false
 LINK_AGENTS=false
-for arg in "$@"; do
-  case "$arg" in
-    --claude) LINK_CLAUDE=true ;;
-    --agents) LINK_AGENTS=true ;;
+# An explicit --target replaces the default destinations rather than adding to
+# them, so a test run cannot disturb the user's real Cursor/opencode setup.
+TARGET_DIR=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --claude) LINK_CLAUDE=true; shift ;;
+    --agents) LINK_AGENTS=true; shift ;;
+    --target)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        echo "error: --target requires a directory" >&2
+        exit 1
+      fi
+      TARGET_DIR="$2"; shift 2 ;;
+    --target=*) TARGET_DIR="${1#--target=}"; shift ;;
     -h|--help)
-      sed -n '2,12p' "$0"
+      sed -n '2,11p' "$0"
       exit 0
       ;;
     *)
-      echo "unknown option: $arg" >&2
+      echo "unknown option: $1" >&2
       exit 1
       ;;
   esac
 done
+
+if [[ -n "${TARGET_DIR}" ]]; then
+  mkdir -p "${TARGET_DIR}"
+  TARGET_DIR="$(cd "${TARGET_DIR}" && pwd)"
+fi
 
 if [[ ! -d "${SKILLS_DIR}" ]]; then
   echo "error: skills directory not found at ${SKILLS_DIR}" >&2
@@ -86,15 +102,19 @@ for skill_src in "${SKILLS_DIR}"/*/; do
     continue
   fi
 
-  link_skill "${HOME}/.cursor/skills" "${skill_src}" "${skill_name}"
-  link_skill "${HOME}/.config/opencode/skills" "${skill_src}" "${skill_name}"
+  if [[ -n "${TARGET_DIR}" ]]; then
+    link_skill "${TARGET_DIR}" "${skill_src}" "${skill_name}"
+  else
+    link_skill "${HOME}/.cursor/skills" "${skill_src}" "${skill_name}"
+    link_skill "${HOME}/.config/opencode/skills" "${skill_src}" "${skill_name}"
 
-  if [[ "${LINK_CLAUDE}" == true ]]; then
-    link_skill "${HOME}/.claude/skills" "${skill_src}" "${skill_name}"
-  fi
+    if [[ "${LINK_CLAUDE}" == true ]]; then
+      link_skill "${HOME}/.claude/skills" "${skill_src}" "${skill_name}"
+    fi
 
-  if [[ "${LINK_AGENTS}" == true ]]; then
-    link_skill "${HOME}/.agents/skills" "${skill_src}" "${skill_name}"
+    if [[ "${LINK_AGENTS}" == true ]]; then
+      link_skill "${HOME}/.agents/skills" "${skill_src}" "${skill_name}"
+    fi
   fi
 
   if command -v skills-ref >/dev/null 2>&1; then
@@ -104,13 +124,17 @@ for skill_src in "${SKILLS_DIR}"/*/; do
   linked=$((linked + 1))
 done
 
-prune_stale "${HOME}/.cursor/skills"
-prune_stale "${HOME}/.config/opencode/skills"
-if [[ "${LINK_CLAUDE}" == true ]]; then
-  prune_stale "${HOME}/.claude/skills"
-fi
-if [[ "${LINK_AGENTS}" == true ]]; then
-  prune_stale "${HOME}/.agents/skills"
+if [[ -n "${TARGET_DIR}" ]]; then
+  prune_stale "${TARGET_DIR}"
+else
+  prune_stale "${HOME}/.cursor/skills"
+  prune_stale "${HOME}/.config/opencode/skills"
+  if [[ "${LINK_CLAUDE}" == true ]]; then
+    prune_stale "${HOME}/.claude/skills"
+  fi
+  if [[ "${LINK_AGENTS}" == true ]]; then
+    prune_stale "${HOME}/.agents/skills"
+  fi
 fi
 
 if command -v skills-ref >/dev/null 2>&1; then

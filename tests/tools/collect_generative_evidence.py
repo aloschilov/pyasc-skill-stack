@@ -51,7 +51,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
-from repo_paths import portable_pyasc_revision, relativize_evidence  # noqa: E402
+from repo_paths import (  # noqa: E402
+    external_root, portable_pyasc_revision, relativize_evidence)
 
 EVIDENCE_DIR = REPO_ROOT / "evidence"
 VERIFY_SCRIPT = SCRIPT_DIR / "verify_kernel.py"
@@ -133,11 +134,24 @@ def derive_protocol(protocol_id: str) -> dict:
     """
     return dict(PROTOCOL_TABLE[protocol_id])
 
-DOCKER_IMAGE = os.environ.get(
-    "PYASC_SIM_IMAGE", "ghcr.io/aloschilov/pyasc-sim:py3.11"
-)
+def _pinned_sim_image() -> str:
+    """The simulator image this repo is pinned to, by digest.
 
-PROFILE_DIR = REPO_ROOT / "docker" / "opencode-profiles"
+    Read from reference/images/ENV.json rather than hardcoded: the upstream
+    matrix moves between versions, and a stale literal here would silently
+    record evidence against a runtime nobody else is using.
+    """
+    pin = REPO_ROOT / "reference" / "images" / "ENV.json"
+    try:
+        with open(pin, encoding="utf-8") as fh:
+            return json.load(fh)["image"]["ref"]
+    except (OSError, KeyError, ValueError):
+        return ""
+
+
+DOCKER_IMAGE = os.environ.get("PYASC_SIM_IMAGE") or _pinned_sim_image()
+
+PROFILE_DIR = REPO_ROOT / "integrations" / "opencode" / "profiles"
 KNOWN_PROFILES = {
     "cloud-default",
     "cloud-glm-5.1",
@@ -153,7 +167,6 @@ KNOWN_PROFILES = {
     "local-gpt-oss-120b",
 }
 SCHEMA_VERSION = "4"
-DEFAULT_PYASC_EVAL_ROOT = "/home/aloschilov/workspace/pyasc-v2-eval"
 
 
 def _run(cmd: list[str], timeout: int = 30) -> tuple[int, str, str]:
@@ -262,7 +275,7 @@ def resolve_opencode_config(
 
     Resolution order:
       1. If ``override_path`` is given, load that JSON template directly.
-      2. Otherwise, look up the profile in ``docker/opencode-profiles/<profile>.json``.
+      2. Otherwise, look up the profile in ``integrations/opencode/profiles/<profile>.json``.
       3. If neither exists, fall back to ``_MINIMAL_OPENCODE_JSON``.
 
     Template files may reference environment variables using ``${VAR}`` —
@@ -699,8 +712,8 @@ def host_pyasc_pin_error(
         return (
             "--runtime requires an importable pyasc; "
             "`import asc` did not resolve to a git checkout. "
-            "Install the editable from /home/aloschilov/workspace/pyasc-v2-eval "
-            "(see docs/cann-setup.md).",
+            f"Install the editable from your eval clone (`pip install -e {eval_root}`); "
+            "see docs/cann-setup.md.",
             None,
         )
     eval_basename = os.path.basename(eval_root.rstrip("/"))
@@ -1627,7 +1640,7 @@ def main() -> None:
                              "(default: on when neither flag is given)")
     parser.add_argument("--model-profile", default="cloud-default",
                         help="Named opencode profile (default: cloud-default). "
-                             "Templates live in docker/opencode-profiles/")
+                             "Templates live in integrations/opencode/profiles/")
     parser.add_argument("--opencode-config", default=None,
                         help="Override the profile template with a JSON file at "
                              "this path (env vars are substituted)")
@@ -1765,8 +1778,13 @@ def main() -> None:
         )
         pyasc_revision["backend"] = resolved_backend
         if resolved_backend == "host":
-            eval_root = os.environ.get(
-                "PYASC_EVAL_ROOT", DEFAULT_PYASC_EVAL_ROOT)
+            # Only the host backend needs it; the docker backend carries its
+            # own pinned pyasc, so do not demand the variable from CI runners
+            # that will never use it.
+            eval_root = str(external_root(
+                "PYASC_EVAL_ROOT", "the pyasc eval clone",
+                hint="Required by --runtime on the host backend; the docker "
+                     "backend does not need it. See docs/cann-setup.md."))
             error, warning = host_pyasc_pin_error(
                 pyasc_revision,
                 eval_root=eval_root,

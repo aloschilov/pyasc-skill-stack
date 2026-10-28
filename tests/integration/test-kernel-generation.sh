@@ -54,13 +54,13 @@ Implement a simple vector add kernel for two float32 tensors of size 1024.
 Follow the pyasc-codegen-workflow phases:
 1. Check environment
 2. Create a design document in docs/design.md
-3. Implement the kernel in kernel.py using @asc2.jit with asc2.load/asc2.store for data movement
+3. Implement the kernel in kernel.py using @asctile.jit with asctile.copy_in/asctile.copy_out for data movement
 4. Include verification using torch.allclose
 
 Requirements:
-- Use asc2.tensor, asc2.load, asc2.store, and asc2.range as needed
+- Use asctile.global_tensor, asctile.copy_in, asctile.copy_out, and asctile.range as needed
 - Use kernel[CORE_NUM](...) launch syntax (no stream argument)
-- Use only supported pyasc syntax (no print/break/continue/lambda inside @asc2.jit)
+- Use only supported pyasc syntax (no print/break/continue/lambda inside @asctile.jit)
 - Create files under kernels/add/
 
 Use only supported pyasc syntax and documented APIs."

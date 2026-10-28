@@ -1,15 +1,15 @@
 # CANNBench evaluation reports
 
-## GeLU adaptive runner campaign — intermediate report (2026-09-11)
-
-- [Unified intermediate report: all jobs,20 shapes,tiling,JIT,UB and local results](../reports/gelu-adaptive-intermediate-20260911/README.md)
-- [Sanitized evidence and source hashes](../reports/gelu-adaptive-intermediate-20260911/evidence.json)
-
-Stopped at the user's request; the heartbeat was deleted. Seven hardware jobs
-were created in eight counted attempts. Both adaptive T runs passed20/20 with
-GM0.429502× and0.447789×; the >1× goal remains unmet. The25 local JIT
-representatives comprise15 qualified,6 timed out and4 unstarted configurations.
-Local improvements are not new hardware results. No finalist was submitted.
+> **The linked report files are not in this repository.** They live under
+> `integrations/cannbench/comparisons/`, which is gitignored: these are bulky
+> generated run artefacts, and they were never committed, so they are not on
+> the `archive/campaign-2026` branch either. The links below resolve only on a
+> machine that still holds the original run output.
+>
+> What is durable is the prose on this page — the numbers, job ids and
+> conclusions are quoted inline precisely so the finding survives the
+> artefacts. Treat a link here as a pointer to provenance, not as something
+> you can click.
 
 ## GeLU tiling / reuse-allocation follow-up (2026-09-08)
 
@@ -31,26 +31,43 @@ This index collects the CANNBench evaluation reports and their corresponding
 remote runs. CANNBench job pages may require the account used for the private
 submissions.
 
-## Corrected high-level AscTile GeLU (2026-09-07)
+## GeLU upstream diagnostics — 2026-09-07
 
-- [Report and implementation](../integrations/cannbench/comparisons/gelu-target-corrected-20260907/README.md)
-- [All 20 shapes/dtypes/modes and hardware timings](../integrations/cannbench/comparisons/gelu-target-corrected-20260907/RESULTS.md)
-- [Comparison CSV](../integrations/cannbench/comparisons/gelu-target-corrected-20260907/case-results.csv)
-- [CANNBench job `job_6589259af036`](https://cannbench.com/workspace/jobs/job_6589259af036)
-- [Erf algorithm-selection API request, with Russian comment](https://gitcode.com/compiler-team/pyasc/issues/8)
+- [Fresh local checks, OpenCode review and diagnostic submission](../integrations/cannbench/comparisons/gelu-upstream-diagnostics-20260907/README.md)
+- Confirmed [JIT option-discovery bug](https://gitcode.com/compiler-team/pyasc/issues/4)
+  and [VF dead-store optimization issue](https://gitcode.com/compiler-team/pyasc/issues/5).
+- [Exact-GeLU accuracy/API question](https://gitcode.com/compiler-team/pyasc/issues/6),
+  with a standalone executed reproducer and verified FP32 bit-distance evidence.
+- Serial one/eight-core repeat controls pass; earlier timeouts do not establish a deadlock.
+- High-level diagnostic [job_cdee9a024da2](https://cannbench.com/workspace/jobs/job_cdee9a024da2)
+  completed: **18/20 correct**, exact-FP32 cases11/20 fail cancellation checks;
+  no compile/runtime or anti-cheat failures. Passing-case geometric mean
+  **0.16106×**; API-labelled aggregate **0.17034×** is their arithmetic mean.
+  One credit spent, four remain. Full case navigation and evidence are in the report.
 
-Pinned pyasc v2 `adadd7d66ed0ee16d33d79487bf584899a26ef1e`; public AscTile,
-no authored inline/register code. **20/20 correct**, zero anti-cheat failures.
-Large FP32 tanh reaches **1.1411×** reference. Fourteen of eighteen common
-passing cases improve versus the earlier high-level diagnostic; exact FP32
-accuracy is fixed, but it remains slow. Independent geometric mean over all
-20 reference/candidate ratios is **0.3533×** (API arithmetic-equivalent field:
-0.4636×). The historical low-level iteration04 remains faster overall.
+## GeLU from supplied reference archive — 2026-09-07
+
+- [Candidate, archive provenance and local comparisons](../integrations/cannbench/comparisons/gelu-reference-20260907/README.md)
+- 20/20 dispatches compile. Reduced/dense numerical checks pass FP16/BF16
+  routes but fail FP32 exact and literal tanh. The prior stable tanh-exp
+  control passes the dense FP32 check. No submission or credit spent.
+
+## High-level AscTile GeLU and JIT flags — 2026-09-07
+
+- [Report and case navigation](../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/README.md)
+- [Lowering diagnosis](../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/LOWERING.md)
+- Pin: `adadd7d66ed0ee16d33d79487bf584899a26ef1e`.
+- Native and CPython 3.12/x86_64 runtimes are built and verified at the pin.
+  20/20 official dispatches compile on each; all 108 dtype/mode/JIT configurations
+  compile with synchronization verification. Dense FP32 exact negative-tail
+  checks fail for all 18 JIT settings. No submission or credit spent.
+- Historical [i03](https://cannbench.com/workspace/jobs/job_a375a6e244ca) and
+  [i04](https://cannbench.com/workspace/jobs/job_7b4caccdc21f) are lower-level
+  comparisons, not results for the new high-level candidate.
 
 ## Full pilot run
 
-- [HTML report](cannbench-pyasc-skill-stack-report-2026-09-02.html)
-- [PDF report](cannbench-pyasc-skill-stack-report-2026-09-02.pdf)
+- HTML and PDF reports: archived. `git checkout archive/campaign-2026 -- docs/cannbench-pyasc-skill-stack-report-2026-09-02.html docs/cannbench-pyasc-skill-stack-report-2026-09-02.pdf`
 - [Main 9-operator run `job_cd51d6c2ca67`](https://cannbench.com/workspace/jobs/job_cd51d6c2ca67)
 - [SwiGLU fallback run `job_0f5fdee4443a`](https://cannbench.com/workspace/jobs/job_0f5fdee4443a)
 
@@ -77,18 +94,11 @@ generator adds direct run links automatically as each `job_id` is recorded.
 
 ## Handwritten GeLU deep dive
 
-- [Performance tuning report with shapes, dtypes and implementation navigation](../integrations/cannbench/comparisons/gelu-perf-20260907/README.md)
-- [Per-case hardware comparison CSV](../integrations/cannbench/comparisons/gelu-perf-20260907/hardware-comparison.csv)
 - [Live deep-dive report](../integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/REPORT.md)
 - [Iteration 01 — `job_24726123eebe`](https://cannbench.com/workspace/jobs/job_24726123eebe)
 - [Iteration 02 — `job_bcf486ff6371`](https://cannbench.com/workspace/jobs/job_bcf486ff6371)
-- [Iteration 03 — `job_a375a6e244ca`](https://cannbench.com/workspace/jobs/job_a375a6e244ca)
-- [Iteration 04 — `job_7b4caccdc21f`](https://cannbench.com/workspace/jobs/job_7b4caccdc21f)
 
 Iteration 02 repaired the low-level C310 launch ABI and proved exact cases
 1–3 correct on 950PR. Its large VF/reuse tanh route then hit vector-core
-timeout 507034. Iterations 03 and 04 subsequently passed all 20 cases.
-Iteration 04 improved the official aggregate speedup from 0.474825× to 0.582646×,
-with no anti-cheat failures; its large FP32 tanh case reached 1.103256×.
-The report distinguishes measured implementations from the locally validated,
-unsubmitted FP16-exact hybrid follow-up.
+timeout 507034. A safe low-level tanh iteration is prepared for the next credit
+reset and remains ahead of the other operator submissions.

@@ -63,18 +63,21 @@ The original pilot used a PR-comment tunnel to a 950PR box. That transport is
 retired and must not be used. The paths below are retained only as historical
 reproduction metadata:
 
-- cann-bench clone: `/home/l00958488/cann-bench` (950PR baselines shipped in
+All paths below sat under one operator account on that box; `$REMOTE_HOME`
+stands in for it, as it does in `build-pyasc-cp312-remote.sh`.
+
+- cann-bench clone: `$REMOTE_HOME/cann-bench` (950PR baselines shipped in
   `tasks/metadata/950pr.json`)
-- eval venv: `/home/l00958488/cbvenv` (torch + torch_npu 2.10.0)
-- pyasc: `/home/l00958488/pyasc-fork1` (built cp310 `libpyasc`)
-- env wrapper: `/home/l00958488/cbenv.sh` (CANN 9.1.0 + venv + PYTHONPATH)
+- eval venv: `$REMOTE_HOME/cbvenv` (torch + torch_npu 2.10.0)
+- pyasc: `$REMOTE_HOME/pyasc-fork1` (built cp310 `libpyasc`)
+- env wrapper: `$REMOTE_HOME/cbenv.sh` (CANN 9.1.0 + venv + PYTHONPATH)
 
 ```bash
 # on the remote box
-bash cbenv.sh bash /home/l00958488/submission/build.sh
-cd /home/l00958488/cann-bench
-bash /home/l00958488/cbenv.sh ./scripts/run_evaluation.sh \
-    --source-dir /home/l00958488/submission \
+bash cbenv.sh bash "$REMOTE_HOME/submission/build.sh"
+cd "$REMOTE_HOME/cann-bench"
+bash "$REMOTE_HOME/cbenv.sh" ./scripts/run_evaluation.sh \
+    --source-dir "$REMOTE_HOME/submission" \
     --task-dir tasks/level1/sigmoid --operator Sigmoid \
     --device-id 0 --no-perf     # correctness first, then drop --no-perf
 ```
@@ -166,12 +169,18 @@ remain for another official run in the current quota window.
 
 ## CANNBench site MCP
 
-The project-level `opencode.json` registers `cann-bench-site`. Local setup:
+The project-level `opencode.json` registers `cann-bench-site` with
+`"enabled": false`. It launches `./integrations/cannbench/site-mcp.sh`, which
+requires `.secrets/cannbench.env` — gitignored, so a fresh clone does not have
+it and the server cannot start. Shipping it enabled means every new clone
+fails on startup, so it is opt-in.
+
+Local setup:
 
 ```bash
 bash integrations/cannbench/setup-site-mcp.sh
 # Create .secrets/cannbench.env (mode 0600) with BENCHSITE_API_TOKEN,
-# then verify:
+# flip "enabled": true for cann-bench-site in opencode.json, then verify:
 opencode mcp list
 ```
 
@@ -185,9 +194,9 @@ installs the Docker `amd64` binfmt handler, builds under CPython 3.12 through
 Buildx/QEMU, verifies the wheel, and refreshes its local SHA-256 manifest.
 The build is pinned to the exact LLVM 20 snapshot used by pyasc v2:
 `86b69c31642e98f8357df62c09d118ad1da4e16a`
-(`llvm-86b69c31-ubuntu-x64.tar.gz`). Its local ARM reference installation is
-`/home/aloschilov/workspace/llvm`; QEMU consumes the matching x86_64 artifact,
-not a Debian MLIR package. Four compile jobs are used deliberately so emulated
+(`llvm-86b69c31-ubuntu-x64.tar.gz`). Wherever the ARM reference installation
+of that snapshot lives on the host, QEMU consumes the matching x86_64
+artifact, not a Debian MLIR package. Four compile jobs are used deliberately so emulated
 compilation does not starve site uploads.
 
 The internal runtime wheel is stripped and ZIP-LZMA-compressed for transport;

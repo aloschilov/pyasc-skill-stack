@@ -1,23 +1,51 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-KERNEL_NAME="${1:?Usage: $0 <kernel_name>}"
+KERNEL_NAME="${1:?Usage: $0 <kernel_name> [base_dir]}"
 
-TEAM_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)/teams/pyasc-kernel-dev-team"
-KERNEL_DIR="$TEAM_DIR/kernels/$KERNEL_NAME"
+# Must match init_kernel_project.sh: the caller's working directory by
+# default, not a path relative to this script inside the skill stack.
+BASE_DIR="${2:-$PWD}"
+KERNEL_DIR="$BASE_DIR/$KERNEL_NAME"
 ENV_FILE="$KERNEL_DIR/docs/environment.json"
 
 if [ ! -d "$KERNEL_DIR" ]; then
     echo "[ERROR] Kernel directory not found: $KERNEL_DIR"
-    echo "[INFO] Run init_kernel_project.sh first."
+    echo "[INFO] Run init_kernel_project.sh '$KERNEL_NAME' first (from the same"
+    echo "       directory, or pass the same base_dir to both)."
     exit 1
 fi
 
+# asctile lives at asc.experimental.asctile in the published pyasc-dev wheel,
+# but older source builds expose it as a top-level module. Probe both.
+#
+# The hasattr(asctile, "jit") check is load-bearing, not defensive. A stale
+# editable checkout can leave an `asctile/` directory with no __init__.py on
+# sys.path, which Python imports as an empty namespace package: the import
+# succeeds, asctile.__file__ is None, and nothing in it works. Without this
+# check the probe reports "Environment looks good" on an environment that
+# cannot compile a single kernel.
+ASCTILE_PROBE='
+try:
+    from asc.experimental import asctile
+except ImportError:
+    import asctile
+assert hasattr(asctile, "jit"), (
+    "imported asctile has no jit (%r) - probably a stale checkout on sys.path"
+    % (getattr(asctile, "__file__", None),)
+)
+'
+
 # Auto-detect the correct Python: prefer whichever has pyasc installed
 if [ -z "${PYTHON:-}" ]; then
-    for candidate in python3.10 python3.11 python3.12 python3.9 python3; do
-        if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import asc, asctile" 2>/dev/null; then
+    # 3.9 last and only as a fallback: it is the cell upstream most recently
+    # could not build. At 1.1.1.dev20261023173239 both cp39 wheels were marked
+    # incompatible (upstream used dataclass(slots=True), which needs 3.10), and
+    # they only reappeared one publication later. Prefer a version that has
+    # never dropped out of the matrix.
+    for candidate in python3.11 python3.10 python3.12 python3.9 python3; do
+        if command -v "$candidate" >/dev/null 2>&1 \
+           && "$candidate" -c "import asc; $ASCTILE_PROBE" 2>/dev/null; then
             PYTHON="$candidate"
             break
         fi
@@ -30,7 +58,11 @@ echo "[INFO] Using Python: $PYTHON ($(command -v "$PYTHON" 2>/dev/null || echo '
 
 PYTHON_VERSION=$($PYTHON --version 2>&1 | awk '{print $2}' || echo "not found")
 
-PYASC_VERSION=$($PYTHON -c "import asc, asctile; print(getattr(asc, '__version__', 'installed'), asctile.__file__)" 2>/dev/null || echo "not installed")
+PYASC_VERSION=$($PYTHON -c "
+import asc
+$ASCTILE_PROBE
+print(getattr(asc, '__version__', 'installed'), asctile.__file__)
+" 2>/dev/null || echo "not installed")
 
 NUMPY_VERSION=$($PYTHON -c "import numpy; print(numpy.__version__)" 2>/dev/null || echo "not installed")
 

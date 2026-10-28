@@ -7,10 +7,25 @@ echo ""
 ERRORS=0
 WARNINGS=0
 
+# asctile lives at asc.experimental.asctile in the published pyasc-dev wheel,
+# but older source builds expose it as a top-level module. Probe both.
+ASCTILE_PROBE='
+try:
+    from asc.experimental import asctile
+except ImportError:
+    import asctile
+'
+
 # Auto-detect the correct Python: prefer whichever has pyasc installed
 if [ -z "${PYTHON:-}" ]; then
-    for candidate in python3.10 python3.11 python3.12 python3.9 python3; do
-        if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import asc, asctile" 2>/dev/null; then
+    # 3.9 last and only as a fallback: it is the cell upstream most recently
+    # could not build. At 1.1.1.dev20261023173239 both cp39 wheels were marked
+    # incompatible (upstream used dataclass(slots=True), which needs 3.10), and
+    # they only reappeared one publication later. Prefer a version that has
+    # never dropped out of the matrix.
+    for candidate in python3.11 python3.10 python3.12 python3.9 python3; do
+        if command -v "$candidate" >/dev/null 2>&1 \
+           && "$candidate" -c "import asc; $ASCTILE_PROBE" 2>/dev/null; then
             PYTHON="$candidate"
             break
         fi
@@ -28,20 +43,52 @@ PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
 if [ "$PYTHON_VERSION" = "not found" ]; then
     echo "[FAIL] Python3 not found"
     ERRORS=$((ERRORS + 1))
-elif [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -ge 9 ] && [ "$PYTHON_MINOR" -le 12 ]; then
+elif [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -ge 10 ] && [ "$PYTHON_MINOR" -le 12 ]; then
     echo "[PASS] Python: $PYTHON_VERSION"
+elif [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -eq 9 ]; then
+    # Supported only intermittently upstream: the cp39 wheels were published,
+    # then marked incompatible, then published again within two days. Usable,
+    # but not something to rely on.
+    echo "[WARN] Python: $PYTHON_VERSION (3.9 wheels come and go upstream; prefer 3.10-3.12)"
+    WARNINGS=$((WARNINGS + 1))
 else
-    echo "[WARN] Python: $PYTHON_VERSION (recommended: 3.9-3.12)"
+    echo "[WARN] Python: $PYTHON_VERSION (supported: 3.10-3.12)"
     WARNINGS=$((WARNINGS + 1))
 fi
 
-# pyasc
-PYASC_VERSION=$($PYTHON -c "import asc, asctile; print(getattr(asc, '__version__', 'installed'), asctile.__file__)" 2>/dev/null || echo "not installed")
+# pyasc + asctile
+PYASC_VERSION=$($PYTHON -c "
+import asc
+$ASCTILE_PROBE
+print(getattr(asc, '__version__', 'installed'), asctile.__file__)
+" 2>/dev/null || echo "not installed")
 if [ "$PYASC_VERSION" = "not installed" ]; then
-    echo "[FAIL] matching pyasc v2 runtime not installed (build/install the selected source commit)"
+    echo "[FAIL] no pyasc runtime with asctile (pip install --pre pyasc-dev)"
     ERRORS=$((ERRORS + 1))
 else
     echo "[PASS] pyasc: $PYASC_VERSION"
+fi
+
+# Which distribution and upstream commit is this?
+PYASC_DIST=$($PYTHON -c "
+import importlib.metadata as m, re
+v = m.version('pyasc-dev')
+try:
+    d = m.metadata('pyasc-dev')['Description']
+    sha = re.search(r'Source: .([0-9a-f]{40}).', d).group(1)[:8]
+except Exception:
+    sha = 'unknown'
+print(f'pyasc-dev {v} (source {sha})')
+" 2>/dev/null || echo "")
+if [ -n "$PYASC_DIST" ]; then
+    echo "[INFO] $PYASC_DIST"
+fi
+
+# pyasc and pyasc-dev both provide the 'asc' package and must not coexist.
+if $PYTHON -c "import importlib.metadata as m; m.distribution('pyasc'); m.distribution('pyasc-dev')" 2>/dev/null; then
+    echo "[FAIL] both 'pyasc' and 'pyasc-dev' are installed; they provide the same"
+    echo "       'asc' package. Use a clean virtualenv with only one of them."
+    ERRORS=$((ERRORS + 1))
 fi
 
 # numpy

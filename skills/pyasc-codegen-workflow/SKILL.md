@@ -40,8 +40,10 @@ not present in the pinned source.
 ## Phase 2 — implementation
 
 Start from `templates/kernel-template.py` or the nearest current target test.
-Use `import asc` for shared types/runtime configuration and `import asctile`
-for the tile API. The standard data path is:
+Use `import asc` for shared types/runtime configuration and
+`from asc.experimental import asctile` for the tile API (legacy source builds
+expose it as a top-level `import asctile`; the template handles both). The
+standard data path is:
 
 ```text
 global_tensor -> copy_in -> asctile compute -> copy_out
@@ -94,6 +96,7 @@ measurement beyond noise.
 
 ## Resources
 
+- [Request workflow and gate taxonomy](references/workflow.md)
 - [Phase 0](references/phase0-environment.md)
 - [Phase 1](references/phase1-design.md)
 - [Phase 2](references/phase2-implementation.md)

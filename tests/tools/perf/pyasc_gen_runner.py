@@ -36,11 +36,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 _TOOLS_DIR = Path(__file__).resolve().parents[1]
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
-from repo_paths import repo_relative  # noqa: E402
+from repo_paths import external_root, repo_relative  # noqa: E402
 
-DEFAULT_EVAL_ROOT = Path(
-    os.environ.get("PYASC_EVAL_ROOT", "/home/aloschilov/workspace/pyasc-v2-eval")
-)
+EVAL_ROOT_HINT = "The pyasc eval clone -- the tree `pip install -e` was run against."
 DEFAULT_ASCEND = Path(
     os.environ.get("ASCEND_HOME_PATH", "/usr/local/Ascend/cann-9.0.0")
 )
@@ -446,7 +444,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dtype", choices=["float16", "float32"], help="required with --kernel")
     ap.add_argument("--shape", default="32x4096")
     ap.add_argument("--runs", type=int, default=3)
-    ap.add_argument("--eval-root", default=str(DEFAULT_EVAL_ROOT))
+    # Lives outside the repository, so there is no default worth baking in.
+    ap.add_argument("--eval-root", help=f"default: $PYASC_EVAL_ROOT. {EVAL_ROOT_HINT}")
     ap.add_argument("--ascend-home", default=str(DEFAULT_ASCEND))
     ap.add_argument("--python", default="python3.11")
     ap.add_argument("--vf-fusion", choices=["true", "false"],
@@ -482,7 +481,10 @@ def main(argv: list[str] | None = None) -> int:
     shape = _parse_shape(args.shape)
     verbose = not args.quiet
     try:
-        result = measure(kernel_path, shape, dtype, eval_root=Path(args.eval_root),
+        eval_root = (Path(args.eval_root) if args.eval_root
+                     else external_root("PYASC_EVAL_ROOT", "the pyasc eval clone",
+                                        hint=EVAL_ROOT_HINT))
+        result = measure(kernel_path, shape, dtype, eval_root=eval_root,
                          ascend=Path(args.ascend_home), runs=args.runs,
                          python=args.python, verbose=verbose, arg_specs=arg_specs,
                          op_name=op_name, vf_fusion=args.vf_fusion)

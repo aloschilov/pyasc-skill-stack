@@ -4,21 +4,35 @@
 
 | Component | Version | Notes |
 |-----------|---------|-------|
-| CANN Toolkit | >= 8.5.0 (community or standard) | Ascend computing backend |
-| Python | 3.10.x | pyasc and torch are installed here |
+| CANN Toolkit | 9.0.0 or 9.2.0 | Ascend computing backend; the two the upstream image matrix builds against |
+| Python | 3.10 - 3.12 | pyasc and torch are installed here |
 | pyasc | >= 1.1.1 | Python JIT for Ascend C |
 | pytest | >= 7.0 | Required for pyasc kernel integration tests |
 | numpy | < 2.0 | Required by pyasc |
-| torch | any | For tensor management and verification |
+| torch | any | For tensor management and verification; **not** a pyasc dependency |
+
+The simulator image this repository pins carries CANN 9.2.0 — see
+[`../reference/images/ENV.json`](../reference/images/ENV.json). If you only
+need the simulator, use that image instead of installing CANN by hand; this
+guide is for host installs and for hardware.
 
 ## Architecture support
 
-The stack is verified on Ubuntu 22.04 on both `x86_64` and `aarch64`. CANN
-ships a separate installer per architecture; pick the one matching
-`uname -m`:
+The stack is verified on Ubuntu 22.04 and 24.04, on both `x86_64` and
+`aarch64`. CANN ships a separate installer per architecture; pick the one
+matching `uname -m`:
 
 - `Ascend-cann-toolkit_<version>_linux-x86_64.run`
 - `Ascend-cann-toolkit_<version>_linux-aarch64.run`
+
+The upstream image matrix records the exact installer it used for each cell,
+including a sha256, which is the most reliable way to get a known-good pair of
+URL and checksum rather than guessing at a download page:
+
+```bash
+curl -fsSL https://github.com/compiler-team-ru/pyasc-images/releases/latest/download/matrix.json \
+  | jq -r '[.cells[].environment.cann_installer] | unique_by(.url)[] | "\(.sha256)  \(.url)"'
+```
 
 Both installers lay out the same directory tree under the install prefix,
 so every command in this guide is arch-agnostic once `CANN_HOME` is set.
@@ -43,8 +57,8 @@ CANN can be installed in several places depending on how you obtained it. This g
 
 - `$HOME/Ascend/cann` (default user install)
 - `$HOME/Ascend/ascend-toolkit/latest`
-- `$HOME/Ascend/cann-<version>` (e.g. `cann-9.0.0`)
-- `/usr/local/Ascend/ascend-toolkit/latest` (system-wide; also the location used inside the provided Docker image)
+- `$HOME/Ascend/cann-<version>` (e.g. `cann-9.0.0` or `cann-9.2.0`)
+- `/usr/local/Ascend/ascend-toolkit/latest` (system-wide; also the location used inside the pinned simulator image)
 
 Export it once per shell (replace the default if your install lives elsewhere):
 
@@ -87,44 +101,40 @@ ls "$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib/"
 
 # Run a pyasc tutorial to verify end-to-end
 cd "$PYASC_SRC"
-python3.10 python/tutorials/01_add/add.py -r Model -v Ascend950PR_9599
+python3.10 python/tutorials/asctile/01-vector-add.py
 ```
 
 Success criteria: The tutorial prints "Sample add run success." with no ISA errors.
 
-## Evaluation pyasc clone (`pyasc-v2-eval`)
+## Getting the pyasc runtime
 
-The skill-stack harness imports `asc` / `asc2` from a dedicated, read-only
-checkout at `/home/aloschilov/workspace/pyasc-v2-eval`. This clone exists
-purely so every simulator-verified evidence file pins to a specific SHA on
-`compiler-team/pyasc#v2`. Treat the directory as read-only:
-
-- Active pyasc development belongs in `/home/aloschilov/workspace/pyasc-fork`
-  (or wherever your team-side clone lives), never here.
-- The tree is kept at a detached `HEAD` so `git status` flags any accidental
-  branch checkout.
-- A `.git/hooks/pre-commit` refuses every commit with a pointer back to
-  `pyasc-fork`.
-- `EVAL-ONLY.README.md` is excluded via `.git/info/exclude` so it does not
-  flip the `pyasc_revision.dirty` bit recorded in evidence files.
-
-Bumping the pinned SHA (only by the evaluation owner):
+Install the published wheel into a clean virtualenv:
 
 ```bash
-cd /home/aloschilov/workspace/pyasc-v2-eval
-git fetch origin
-git checkout <new-sha-on-origin/v2>
-
-# Re-link the editable so the harness picks the new revision up.
-cd /home/aloschilov/workspace/pyasc-skill-stack
-pip install -e /home/aloschilov/workspace/pyasc-v2-eval
-
-# Then re-run the matrix and refresh docs/skill-value-q1-findings.md.
+python3 -m venv .venv
+.venv/bin/pip install --pre pyasc-dev
 ```
 
-The CI workflow exports `PYASC_EVAL_ROOT=/home/aloschilov/workspace/pyasc-v2-eval`
-so a runner that imports `asc` from any other tree gets a loud warning in
-the evidence record.
+`asctile` is compiled into the wheel. Verify you got a usable one:
+
+```bash
+.venv/bin/python -c "from asc.experimental import asctile; print(asctile.__file__)"
+```
+
+A legacy source build exposes the module top-level as `import asctile`
+instead; both layouts are handled by the skills and by
+`reference/asctile/conftest.py`.
+
+> **Watch for shadowing.** A stale editable checkout can leave an `asctile/`
+> directory with no `__init__.py` on `sys.path`. Python imports that as an
+> empty namespace package, so `import asctile` *succeeds* with
+> `__file__ is None` and nothing in it works. If you see
+> `module 'asctile' has no attribute 'jit'`, this is why — use a clean venv.
+
+Each published wheel records its own source commit in its PyPI metadata,
+because the build tracks the upstream default branch. Read that rather than
+assuming a fixed revision; `scripts/sync-target-suite.sh` uses it as the
+default ref when re-vendoring the target suite.
 
 ## Running pyasc Kernels
 

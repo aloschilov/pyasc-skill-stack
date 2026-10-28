@@ -11,7 +11,7 @@
         "-c",
         "exec ./integrations/cannbench/site-mcp.sh"
       ],
-      "enabled": true,
+      "enabled": false,
       "timeout": 120000
     }
   },

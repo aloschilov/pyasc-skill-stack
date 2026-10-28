@@ -17,7 +17,7 @@ older snapshots and must not appear in new kernels.
 ## Surface to use
 
 ```python
-import asctile
+from asc.experimental import asctile   # legacy source builds: import asctile
 
 @asctile.jit
 def kernel(x_ptr: asctile.GlobalAddress, out_ptr: asctile.GlobalAddress,

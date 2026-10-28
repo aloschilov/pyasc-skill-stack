@@ -35,12 +35,30 @@ packages or start source builds unless asked.
 
 ## Source layout and reference selection
 
-- New test: `python/test/asctile/target/test_<op>.py`.
-- Shared fixtures: `python/test/asctile/conftest.py` and
-  `python/test/asctile/target/conftest.py`.
+New work is authored in a pyasc checkout. **Confirm the current path before
+assuming one** — upstream has carried this suite at `python/test/asc2/target/`,
+then `python/test/asctile/target/`, and relocated it under `experimental/`
+when AscTile was localised there. Locate it by content rather than memory:
+
+```bash
+grep -rl --include='test_*.py' 'asctile\.jit' . | xargs grep -l 'asctile\.global_tensor'
+```
+
+- New test: `<suite>/test_<op>.py`, at whatever path the command above reports.
+- Shared fixtures: the suite's own `conftest.py` plus the ancestor one that
+  defines `require_c310`.
 - Start from the closest current sibling: `test_vadd.py` for elementwise,
   `test_reduce_sum.py`/`test_reduce_max.py` for reductions,
   `test_softmax.py` for normalization, and `test_transpose.py` for movement.
+
+### Reading siblings without a checkout
+
+This repository vendors a pinned copy of the suite at
+[`reference/asctile/target/`](../../reference/asctile/target/), which is enough
+to read the canonical patterns. It is a **snapshot, not the upstream tree**:
+check [`reference/asctile/PIN.json`](../../reference/asctile/PIN.json) for which
+version it is, and never author a new test there. Refresh it with
+`scripts/sync-target-suite.sh`; verify it with `scripts/check-target-pin.sh`.
 - Use the matching `gitcode.com/cann/ops-*` implementation as semantic and
   tiling reference. Do not copy its C++ as the pyasc implementation.
 

@@ -17,6 +17,16 @@ single-kernel benchmark by hand. All numbers in this doc come from the
 targets ([CI dispatch](../../.github/workflows/ci.yml),
 [migration commit](https://github.com/aloschilov/pyasc-skill-stack/commit/d7dfbcb)).
 
+> **Which image these numbers came from.** That `pyasc-sim:py3.11` tag was the
+> repo's own locally built image, retired along with the rest of the self-build
+> machinery (see `archive/campaign-2026`). The figures below are left exactly as
+> measured rather than restated against the current runtime, because a recorded
+> measurement that gets quietly re-attributed to a different runtime is worse
+> than no measurement. The mechanism described here — what `Total tick:` counts
+> and what it ignores — is unchanged. For a *new* measurement use the image
+> pinned by digest in [reference/images/ENV.json](../../reference/images/ENV.json),
+> which ships CANN 9.2.0, and record its digest alongside the result.
+
 ## TL;DR
 
 - **`Total tick: N`** is the camodel's internal `tm_engine::tm_time()` cycle
@@ -45,7 +55,7 @@ exposes a tick-model engine in C++. The relevant symbols, found via
 
 | Symbol / library | Meaning |
 |---|---|
-| `tm_engine::tm_time()` in `libpem_davinci.so` | Reads the camodel's monotonic cycle counter. The Python overlay binds this in [docker/pyasc-overlay/asc_changed/lib/runtime/interface.py](../../docker/pyasc-overlay/asc_changed/lib/runtime/interface.py) line 411 (`current_tick()`). |
+| `tm_engine::tm_time()` in `libpem_davinci.so` | Reads the camodel's monotonic cycle counter. The Python overlay bound this in [`docker/pyasc-overlay/asc_changed/lib/runtime/interface.py`](https://github.com/aloschilov/pyasc-skill-stack/blob/archive/campaign-2026/docker/pyasc-overlay/asc_changed/lib/runtime/interface.py) line 411 (`current_tick()`), on the `archive/campaign-2026` branch. |
 | `[%s] Total tick: %lu` in `libmodel_top.so` | Format string that prints the final value of `tm_time()` to stdout when the camodel shuts down. |
 | `Model RUN TIME: ` in `libmodel_top.so` | Adjacent print that records host wall clock spent in the simulator. |
 | `stars_top::tick()`, `reg_ffts_plus_mcu_tick_cb` in `libmodel_top.so` | Per-cycle hooks for the FFTS+MCU control plane (the cross-core scheduler). |
@@ -53,15 +63,15 @@ exposes a tick-model engine in C++. The relevant symbols, found via
 
 The "tick" is **simulated AI core cycles**, not host CPU cycles. At the
 camodel's wall-clock fixed-point of 50 MHz (per the upstream API spec at
-[golden/docs/python-api/language/generated/asc.language.basic.get_system_cycle.md](../../golden/docs/python-api/language/generated/asc.language.basic.get_system_cycle.md)),
+`golden/docs/python-api/language/generated/asc.language.basic.get_system_cycle.md` on `archive/campaign-2026`),
 1 tick ≈ 20 ns of "device time". The same counter is reachable from inside
 a kernel via `asc.get_system_cycle()` and from Python via
 `asc.runtime.lib.runtime.current_tick()`.
 
 ## 2. Verification: JIT compile time is **not** counted in ticks
 
-Earlier perf docs ([pr190-asc2-range-defaults-impact.md](../pr190-asc2-range-defaults-impact.md),
-[pr190-asc2-range-c310-sweep.md](../pr190-asc2-range-c310-sweep.md))
+Earlier perf docs ([pr190-asc2-range-defaults-impact.md](#archived),
+[pr190-asc2-range-c310-sweep.md](#archived))
 captured `Total tick:` as the headline metric. There was a recurring concern
 that for goldens decorated `@asc2.jit(always_compile=True)` (which forces a
 full bisheng compile on every process launch), the printed tick might
@@ -114,7 +124,7 @@ both `_full_row_launch` and `_split_d_launch`; `matmul_f16.py` has two
 test_cases) **the headline number is the running sum**, not the per-launch
 cost.
 
-The prior C310 sweep ([pr190-asc2-range-c310-sweep.md](../pr190-asc2-range-c310-sweep.md))
+The prior C310 sweep ([pr190-asc2-range-c310-sweep.md](#archived))
 captured `Total tick:` as a single number per Docker run for this reason
 — each cell ran the same `run_kernel` body, so the comparison was
 internally consistent (apples-to-apples), but absolute numbers blend
@@ -216,10 +226,21 @@ Recipe for reproducing a single-kernel tick measurement on
 
 ### 6.1. Prerequisites
 
-- Docker, with permission to pull from `ghcr.io/aloschilov/pyasc-sim:py3.11`.
+- Docker. The commands below quote the retired `ghcr.io/aloschilov/pyasc-sim:py3.11`
+  tag because that is what produced the numbers above; to run them today,
+  substitute `.image.ref` from
+  [reference/images/ENV.json](../../reference/images/ENV.json) and the
+  `python3.11` path it records.
 - A clone of this repo. The recipe assumes `$REPO=/path/to/pyasc-skill-stack`.
 
 ### 6.2. Run the existing golden as-is
+
+The `golden/` tree this subsection drives was removed with the campaign
+evidence and now lives on `archive/campaign-2026`; the model-written kernels in
+it are not a reference for anything (see
+[evidence-sources.md](../evidence-sources.md)). The steps are kept because the
+measurement procedure they illustrate still applies — point them at a module
+from `reference/asctile/target/` instead.
 
 For any of the 10 goldens:
 
@@ -337,7 +358,7 @@ Or, more reliably, parse with the Python regex shown in section 3.
   drop `always_compile=True` and use a warm-up launch (section 6.3) so
   the cache is populated before you read `current_tick()`.
 - **Don't read `current_tick()` on NPU.** It returns `None` for non-Model
-  backends ([interface.py:411](../../docker/pyasc-overlay/asc_changed/lib/runtime/interface.py)).
+  backends ([interface.py:411](https://github.com/aloschilov/pyasc-skill-stack/blob/archive/campaign-2026/docker/pyasc-overlay/asc_changed/lib/runtime/interface.py)).
   Use `asc.get_system_cycle()` from inside a kernel for in-kernel cycle
   reads on real hardware.
 - **Print order on shutdown.** The camodel emits `Model RUN TIME:` first
@@ -348,7 +369,8 @@ Or, more reliably, parse with the Python regex shown in section 3.
 ## 8. Cross-implementation comparison (pyasc vs hand-written AscendC)
 
 Phase 11 compares a skill-stack-generated `pyasc` kernel against the
-hand-written AscendC C++ reference in [`ops-math/math/`](/home/aloschilov/workspace/ops-math/math/)
+hand-written AscendC C++ reference in `math/` of the ops-math checkout
+(`$OPS_MATH_HOME`, see `tests/tools/perf/ascendc_ref_runner.py`)
 for the *same op, dtype, and shape*, on the *same* camodel
 (`Ascend950PR_9599`). The headline metric is
 
@@ -382,6 +404,18 @@ be measured identically:
 Runners: [`tests/tools/perf/ascendc_ref_runner.py`](../../tests/tools/perf/ascendc_ref_runner.py)
 (reference) and [`tests/tools/perf/pyasc_gen_runner.py`](../../tests/tools/perf/pyasc_gen_runner.py)
 (generated); orchestrated by [`tests/tools/demo_vector_ops.py`](../../tests/tools/demo_vector_ops.py).
-See [`docs/perf-vs-ascendc-demo.md`](../perf-vs-ascendc-demo.md) for the gate,
+See [`docs/perf-vs-ascendc-demo.md`](#archived) for the gate,
 caveats, and the current cell status (including the generated-side codegen
 blocker for multi-input/reduction kernels).
+
+## Archived references
+
+Links above marked `#archived` pointed at campaign-era documents removed from
+`main`. Recover them with:
+
+```bash
+git checkout archive/campaign-2026 -- \
+  docs/pr190-asc2-range-defaults-impact.md \
+  docs/pr190-asc2-range-c310-sweep.md \
+  docs/perf-vs-ascendc-demo.md
+```

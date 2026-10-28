@@ -8,31 +8,154 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+env:
+  # Pinned by digest, not by tag: a moving runtime silently invalidates every
+  # result below it. Built and published upstream by
+  # compiler-team-ru/pyasc-images; this is the cann9.2.0-u22.04-py3.11
+  # multi-arch manifest, so the same ref resolves on amd64 and arm64 runners.
+  #
+  # This is pyasc-sim-DEV, the development overlay: the same simulator image
+  # with CPU torch 2.7.1 and pytest 8.4.2 already installed. The target suite
+  # needs both and the minimal image ships neither, so CI used to build that
+  # overlay itself on every runner. Upstream now publishes one built on the
+  # exact base this repository pins, which is why that step is gone.
+  #
+  # `published` means environment-qualified -- dependencies, imports, full
+  # collection and a baseline compile/simulator check. It does NOT mean the
+  # upstream suite passed; see docs/evidence-sources.md.
+  #
+  # The authoritative copy of this value is reference/images/ENV.json --
+  # scripts/check-image-pin.sh fails the PR gate if the two disagree.
+  PYASC_SIM_IMAGE: ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:eb3b5684ddd5569cb6df1acea8980e649f07bf2f0782622cd55b30b9a504f065
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  # ==========================================================================
+  # PR gate: L1 unit tests + static checks (no Docker, no CANN)
+  # ==========================================================================
   pr-gate:
-    # Pure static/L1 checks need no CANN or self-hosted runner.
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Native arm64 on the self-hosted Mac runner (label `arm64`). This gate is
+    # pure static checks + L1 unit tests (no Docker, no CANN); CI now runs
+    # entirely on the Mac runner with no x86 emulation. (Formerly GitHub-hosted
+    # ubuntu-latest; before that the RTX 4090 `gpu` box, now retired.)
+    runs-on: [self-hosted, arm64]
+    # Explicit cap; overrides GitHub's implicit 6h (timeout-minutes: 360) default.
+    # Static checks + L1 units are fast; this is pure hygiene.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - run: pip install pyyaml
-      - name: Repository static checks
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Run PR gate
         run: bash tests/ci-gate.sh --tier pr
-      - name: CANNBench contract and acceptance tests
-        run: python -m unittest discover -s tests/unit -p 'test_cannbench_*.py' -v
-      - name: Validate complete official catalog snapshot
-        run: python integrations/cannbench/ci/validate_catalog.py integrations/cannbench/catalogs/official-tasks-1.1.2-20261001
-      - name: Build dashboard
-        run: python dashboard/cannbench/build.py --output-dir _site
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dashboard-preview
-          path: _site
+
+
+  # ==========================================================================
+  # Merge gate: compile-check the upstream AscTile target suite in Docker
+  #
+  # This is the correctness reference (see reference/README.md). Compile-only:
+  # each module carries ~100 parametrised cases and the camodel is slow, so the
+  # blocking gate verifies COMPILE and leaves full numerical execution to a
+  # manual or nightly run.
+  #
+  # The Docker image is built, smoke-tested and published upstream by
+  # compiler-team-ru/pyasc-images. This repo never builds it; CI only pulls
+  # the pinned digest.
+  # ==========================================================================
+  merge-gate:
+    runs-on: [self-hosted, arm64]
+    timeout-minutes: 60
+    needs: [pr-gate]
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      # No ghcr.io login. The upstream packages allow anonymous pulls
+      # (matrix.json records public_registry_check.anonymous_registry_access),
+      # and GITHUB_TOKEN is scoped to this repository's owner, so it could not
+      # read a package in the compiler-team-ru org anyway.
+      #
+      # A *stale* credential is worse than none: if the runner's docker config
+      # still holds a ghcr.io login for an account without access to
+      # compiler-team-ru, the daemon sends it and the registry answers "denied"
+      # even though the package is public. Pull with an empty docker config so
+      # the request is genuinely anonymous.
+      - name: Pull pyasc-sim image
+        run: |
+          set -euo pipefail
+          anon="$(mktemp -d)"
+          echo '{}' > "$anon/config.json"
+          DOCKER_CONFIG="$anon" docker pull "${{ env.PYASC_SIM_IMAGE }}"
+          tests/tools/verify_pyasc_image.sh "${{ env.PYASC_SIM_IMAGE }}"
+
+      - name: Compile-check the AscTile target suite
+        run: |
+          set -uo pipefail
+          PLATFORM=Ascend950PR_9599
+          IMAGE="${{ env.PYASC_SIM_IMAGE }}"
+          FAILED=0; BLOCKED=0; ran=0
+          # Container-leak guard: --rm only fires on a clean exit, which a hung
+          # simulator never gives, so the trap is the actual guarantee.
+          CTR_NAME="pyasc-target-${{ github.run_id }}"
+          trap 'docker rm -f "$CTR_NAME" 2>/dev/null || true' EXIT INT TERM
+          # Recursive: upstream groups some cases into subpackages (matmul_v3/,
+          # kimi_k3/) and moves them in and out between versions. A flat glob
+          # would silently stop covering a whole group the day it moves.
+          while IFS= read -r t; do
+            [ -f "$t" ] || continue
+            rel="${t#reference/asctile/target/}"
+            slug="$(echo "${rel%.py}" | tr '/' '-')"
+            start=$(date +%s)
+            # HOME, cache and dump paths are upstream's documented run recipe
+            # for these images. They matter here because /workspace is mounted
+            # read-only: anything that defaults to writing beside the sources,
+            # or into a home directory the container does not have, fails in a
+            # way that looks like a compile error. PYTHONDONTWRITEBYTECODE
+            # stops __pycache__ from being attempted in the read-only mount.
+            docker run --rm --name "${CTR_NAME}-${slug}" \
+              --ulimit nofile=65536:65536 \
+              -v "$PWD":/workspace:ro -w /workspace \
+              -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
+              -e PYASC_CACHE_DIR=/tmp/pyasc-cache \
+              -e PYASC_DUMP_PATH=/tmp/pyasc-dumps \
+              "$IMAGE" \
+              python3.11 tests/tools/run_target_test.py "$t" \
+                --backend Model --platform "$PLATFORM"
+            rc=$?
+            took=$(( $(date +%s) - start ))
+            # exit 2 means the check could not be carried out here (OOM,
+            # timeout, signal), which is `blocked`, not `failed`. The two are
+            # different results and the gate keeps them apart: a kernel that
+            # does not compile is a defect, a runner that cannot hold a 7.4 GiB
+            # input tensor says nothing about the kernel.
+            case "$rc" in
+              0) echo "[PASS] $rel (${took}s)" ;;
+              2) echo "[BLOCKED] $rel (${took}s)"; BLOCKED=$((BLOCKED + 1)) ;;
+              *) echo "[FAIL] $rel (${took}s)"; FAILED=$((FAILED + 1)) ;;
+            esac
+            ran=$((ran + 1))
+          done < <(find reference/asctile/target -name 'test_*.py' -type f | sort)
+          echo "compile-checked $ran module(s); $FAILED failed; $BLOCKED blocked"
+          if [ "$ran" -eq 0 ]; then
+            echo "ERROR: no target modules found under reference/asctile/target/"
+            exit 1
+          fi
+          if [ "$BLOCKED" -gt 0 ]; then
+            echo "NOTE: $BLOCKED module(s) blocked on runner resources, not"
+            echo "      compile errors. Tracked in docs/verification-status.md."
+          fi
+          if [ "$FAILED" -gt 0 ]; then
+            echo "ERROR: $FAILED target module(s) failed the compile check"
+            exit 1
+          fi

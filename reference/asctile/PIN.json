@@ -1,0 +1,33 @@
+{
+  "upstream": "https://github.com/compiler-team-ru/pyasc.git",
+  "commit": "d0f64a63c432761aa57648e67be7582780a17561",
+  "resolved_path": "experimental/asctile/python/test/target",
+  "synced_at": "2026-10-26T09:31:06Z",
+  "files": {
+    "helpers.py": "d2dcee76c783944f7872901d9b6291a8743009ea098341a418888464b0e04952",
+    "kimi_k3/test_attn_residual.py": "ac2ccddbd58adad195474029c5fb732ffcfd7a809b07b0c5eb5ad4454a1e9603",
+    "kimi_k3/test_kda_chunk_delta_h.py": "d68d25bd5b31fb11d601d44c01b54ef358ad20c665320e16f23cdd365bf9f587",
+    "matmul_v3/test_matmul_v3_cube_only.py": "a1d5d0a11f9a639f39b03e24215e7291236da9f7060979158e7e5023da3c7bef",
+    "matmul_v3/test_matmul_v3_fixpipe_opti.py": "af87d785afa26a3d6d1f144331a9523fe8c3cdfcb5940398598db15b54063fec",
+    "matmul_v3/test_matmul_v3_stream_k.py": "9178d5e9b2a9140cd929c291fdd66e07f210298d2b4add804764c197a210c972",
+    "test_addcdiv.py": "2b79a406e8540dcab1b0be67663843f06502651618814e983601a37881c66d51",
+    "test_broadcast.py": "665898af02f0b3c11e3972b199293adbf467a22fa3200d4883a37911dac93a20",
+    "test_cast.py": "5d15b486ba2838a55271186d0e7d99b5d51cda3483f4d5cbb2b4ae84971b511c",
+    "test_fused_infer_attention_score.py": "e6cad95b4ce21c59f90b0eec110d8da4babceb2b24ffbfd8d05f402d25c58b82",
+    "test_gather.py": "6b30cd6010ed66eb9a37832c188994aa4be0c64b04927f60c80bb8c6be102df1",
+    "test_gelu.py": "3add918ba96f73ee236b009536695e6e6fb81f31a8cd8eac4b696b81efd2fec8",
+    "test_kl_div.py": "c44c6955833b535be687941b82ca50361d97647c5a700f60cb83401398123e32",
+    "test_layer_norm.py": "13d23e80eca3a2936ac01e8169e79a76044d0ccc713cd8a0e4b82955e5b1f631",
+    "test_one_hot.py": "c56cf21074b2eae9ffd98ca6481a8bafe7ab5b882676053d422384043a11a9a7",
+    "test_reciprocal.py": "46270ef4ec6b63f7e9cb3efb87058ebebf8a95de86d4d7593d62663832d912c5",
+    "test_reduce_max.py": "e920527e7422570a31347905375d54ab078f18544b2abf93b8430842fee28e7b",
+    "test_reduce_sum.py": "2924b7ec6f9c6e3a9961938fb15d15400601b6d85bb9eccb9d36ce6c88fee24a",
+    "test_rms_norm_fused.py": "ec0a702f2bc27c5741bc28f969e2999cbd37d8b3b091abaeedf529b53d44a387",
+    "test_rms_norm.py": "12908d4ab821cdc8689f3e1a000281cdf39e0f53d3ca13a2d4a3688f65a3d094",
+    "test_select.py": "4bdefa8864f755e05ccc519e129fcf5c31e383541b9679ae7ef72ca4cc5c9b14",
+    "test_softmax.py": "339181518ab24b51615594f668959e505a8df05a949888d55566d93ebf74c8f3",
+    "test_split_v.py": "4b706010122cf74914b01327346254fde336d9ff861f0b547e45a7fbc5c785ff",
+    "test_transpose.py": "929df76bcdd1386bcf79ced137164aa54dd36060069756c635d1c46a2414b391",
+    "test_vadd.py": "c233a1ac136c2f3b7b2f2450771907545aa46a3c66f48ceaef732a8ebabeddfc"
+  }
+}

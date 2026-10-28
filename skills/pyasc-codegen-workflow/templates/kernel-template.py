@@ -15,7 +15,13 @@ import numpy as np
 
 import asc
 import asc.runtime.config as config
-import asctile
+
+# The published pyasc-dev wheel exposes asctile as asc.experimental.asctile;
+# older source builds expose it as a top-level module.
+try:
+    from asc.experimental import asctile
+except ImportError:  # pragma: no cover - legacy source build
+    import asctile
 
 TILE_SIZE = 128
 CORE_NUM = 72  # Ascend950PR_9599; derive from target metadata in reusable code.

@@ -1,28 +1,34 @@
-# arm64 runner(s) for the MacBook via Docker Desktop's Linux/arm64 VM.
-# Serves the arm64-only perf-gate (pulls + runs ghcr pyasc-sim-perf:py3.11-arm64)
-# and every other CI job (label `arm64`).
+# arm64 runner for the MacBook via Docker Desktop's Linux/arm64 VM.
+#
+# Serves every CI job, which all target `[self-hosted, arm64]`. The jobs pull
+# the simulator image pinned by digest in reference/images/ENV.json; nothing
+# here builds images.
+#
+# ONE runner. The three-runner fan-out came from the nightly generative matrix,
+# whose eight jobs serialized ~18h two-deep; that campaign is over and its
+# workflows are archived. The current gates are a PR gate and a merge gate that
+# run one at a time, so the extra runners would idle while still competing for
+# the same Docker daemon and disk. Add runner2/runner3 back (own AR_BASE2,
+# AR_BASE3) if a fan-out workload returns.
 #
 # The image is prebuilt and `docker load`-ed onto the Mac (Docker Desktop's
 # keychain credstore blocks host-side pulls/builds over SSH), so compose only
-# runs the container. Bring up (from this dir, .env present):
+# runs the container. Bring up, from this directory with .env present:
 #   docker compose -f compose.arm64.yml up -d
 #
-# THREE runners so the nightly matrix legs fan out 3-deep in parallel (keeps a
-# complete nightly well under GitHub's 24h queued-job limit; the 3rd was added
-# 2026-08 after the 2-runner nightly ran ~18h with the 2 slowest cloud legs
-# blocking the fast legs).
-# Each runner gets its OWN isolated, path-aligned work dir under a macOS-shared
-# path (${AR_BASE}/work and ${AR_BASE2}/work), bind-mounted at the SAME path so
-# the Docker Desktop VM sees it and the perf/gen harness sibling
-# `docker run -v "$(pwd)":/workspace` mounts resolve. Distinct work dirs avoid
-# collision between concurrent jobs (sim container names are uuid-suffixed, so
-# they never clash). Both share the Desktop docker socket. A Docker named
-# volume would NOT align.
+# The work dir is bind-mounted at the IDENTICAL host path. That alignment is
+# load-bearing, not cosmetic: CI runs sibling containers via the shared Docker
+# socket with `docker run -v "$PWD":/workspace`, and the daemon resolves that
+# path on the VM, not inside the runner. A mismatched path mounts an empty
+# directory and the job fails with files that plainly exist. A Docker named
+# volume would NOT align. ${AR_BASE} must therefore be a real, writable host
+# directory under a Docker-Desktop file-shared root.
+#
+# CONFIGURED_ACTIONS_RUNNER_FILES_DIR and DISABLE_AUTOMATIC_DEREGISTRATION are
+# deliberately absent: with EPHEMERAL=true the persist dir is not volume-mounted,
+# so they leave stale credentials behind and the container crash-loops. Each
+# restart re-registers from scratch using the ACCESS_TOKEN PAT.
 services:
-  # NOTE: CONFIGURED_ACTIONS_RUNNER_FILES_DIR + DISABLE_AUTOMATIC_DEREGISTRATION
-  # were removed — they're counterproductive for EPHEMERAL=true runners (the
-  # persist dir isn't volume-mounted → stale creds → crash loop). Each restart
-  # re-registers fresh via the ACCESS_TOKEN PAT (proven by runner3).
   runner:
     image: pyasc-ci-runner:latest
     env_file: .env
@@ -35,34 +41,4 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${AR_BASE}/work:${AR_BASE}/work
-    restart: always
-  runner2:
-    image: pyasc-ci-runner:latest
-    env_file: .env
-    environment:
-      RUNNER_SCOPE: repo
-      LABELS: arm64
-      DISABLE_AUTO_UPDATE: "true"
-      START_DOCKER_SERVICE: "false"
-      RUNNER_WORKDIR: ${AR_BASE2}/work
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${AR_BASE2}/work:${AR_BASE2}/work
-    restart: always
-  # THIRD runner (2026-08): the nightly's 8 generative jobs serialize 2-deep on
-  # 2 runners (~18h wall, cloud legs block the fast legs). A 3rd runner fans them
-  # 3-deep (~12h) with NO change to the gate `needs` graph (failure semantics
-  # preserved). Same image/.env (ACCESS_TOKEN PAT auto-registers); own work dir.
-  runner3:
-    image: pyasc-ci-runner:latest
-    env_file: .env
-    environment:
-      RUNNER_SCOPE: repo
-      LABELS: arm64
-      DISABLE_AUTO_UPDATE: "true"
-      START_DOCKER_SERVICE: "false"
-      RUNNER_WORKDIR: ${AR_BASE3}/work
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${AR_BASE3}/work:${AR_BASE3}/work
     restart: always

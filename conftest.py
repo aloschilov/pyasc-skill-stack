@@ -1,7 +1,11 @@
 """Shared pytest fixtures for pyasc kernel tests.
 
+Supplies the --backend/--platform options that the upstream AscTile target
+suite expects. See reference/README.md for the suite itself.
+
 Usage:
-    pytest golden/kernels/abs_f16.py --backend Model --platform Ascend950PR_9599
+    pytest reference/asctile/target/test_add.py \\
+        --backend Model --platform Ascend950PR_9599
 """
 
 import asc.runtime.config as config

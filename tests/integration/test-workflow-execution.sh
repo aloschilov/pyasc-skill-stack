@@ -61,7 +61,7 @@ Phase 0 - Environment: Check that pyasc is available.
 Phase 1 - Design: Create a design document at kernels/test_vadd/docs/design.md
   describing the API selection, buffer strategy, sync strategy, and verification plan.
 Phase 2 - Implementation: Write the kernel at kernels/test_vadd/kernel.py using
-  @asc2.jit, asc2.tensor, asc2.load, asc2.store, asc2.range, and kernel[cores](...) launch.
+  @asctile.jit, asctile.global_tensor, asctile.copy_in, asctile.copy_out, asctile.range, and kernel[cores](...) launch.
   Run a self-review against the pyasc code review checklist.
 Phase 3 - Verification: Verify the kernel produces z = x + y using torch.allclose.
 

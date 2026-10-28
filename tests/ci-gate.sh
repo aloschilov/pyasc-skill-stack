@@ -2,165 +2,55 @@
 # =============================================================================
 # CI Gate Runner
 # =============================================================================
-# Single entry point for CI pipelines. Selects checks based on --tier.
+# Single entry point for the PR gate: static checks + L1 unit tests, no Docker
+# and no CANN. Finishes in seconds.
 #
-# Usage:
-#   bash tests/ci-gate.sh --tier pr       # PR checks (< 30s)
-#   bash tests/ci-gate.sh --tier merge    # Merge checks (< 5min)
-#   bash tests/ci-gate.sh --tier nightly  # Nightly checks (15-30min)
+#   bash tests/ci-gate.sh --tier pr
+#
+# There is no merge or nightly tier here any more. Simulator verification of
+# the upstream AscTile target suite runs inline in .github/workflows/ci.yml
+# (job `merge-gate`), because it needs the pyasc-sim container rather than a
+# bare shell. The campaign-era perf, nightly, stability and skills-value tiers
+# were retired along with their evidence tree; they remain reachable from the
+# `archive/campaign-2026` branch.
 # =============================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib/test-helpers.sh"
 
-TIER=""
+TIER="pr"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --tier) TIER="$2"; shift 2 ;;
         --help|-h)
-            echo "Usage: $0 --tier pr|merge|nightly"
+            echo "Usage: $0 [--tier pr]"
             exit 0
             ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
 done
 
-if [ -z "$TIER" ]; then
-    echo "Usage: $0 --tier pr|merge|nightly"
+if [ "$TIER" != "pr" ]; then
+    echo "Unknown tier: $TIER (only 'pr' is supported; see the comment at the"
+    echo "top of this file for where the other tiers went)"
     exit 1
 fi
-
-FAILED=0
 
 echo "========================================"
 echo " CI Gate: $TIER"
 echo "========================================"
 echo ""
 
-# ============================================
-# PR tier: L1 + JIT
-# ============================================
+FAILED=0
 
-run_pr_gate() {
-    echo "--- L1 Unit Tests ---"
-    if bash "$SCRIPT_DIR/run-tests.sh" --fast; then
-        echo ""
-    else
-        FAILED=$((FAILED + 1))
-    fi
-
+echo "--- L1 Unit Tests ---"
+if bash "$SCRIPT_DIR/run-tests.sh" --fast; then
     echo ""
-    echo "--- JIT Verification (golden kernels) ---"
-    for kernel in "$SKILLS_DIR"/golden/kernels/*.py; do
-        if [ -f "$kernel" ]; then
-            base=$(basename "$kernel")
-            jit_exit=0
-            $PYTHON "$TOOLS_DIR/pytest_verify_kernel.py" "$kernel" 2>&1 || jit_exit=$?
-            if [ "$jit_exit" -eq 0 ]; then
-                echo "  [PASS] JIT: $base"
-            elif [ "$jit_exit" -eq 2 ]; then
-                echo "  [SKIP] JIT: $base (pyasc not available)"
-            else
-                echo "  [FAIL] JIT: $base"
-                FAILED=$((FAILED + 1))
-            fi
-        fi
-    done
-
-    echo ""
-    echo "--- Evidence path hygiene (no /home or /Users paths) ---"
-    if $PYTHON "$TOOLS_DIR/check_evidence_paths.py"; then
-        echo ""
-    else
-        FAILED=$((FAILED + 1))
-    fi
-}
-
-# ============================================
-# Merge tier: PR + simulator
-# ============================================
-
-run_merge_gate() {
-    run_pr_gate
-
-    echo ""
-    echo "--- Simulator Verification (golden kernels) ---"
-
-    if [ -z "${ASCEND_HOME_PATH:-}" ]; then
-        echo "  [SKIP] ASCEND_HOME_PATH not set (source set_env.sh first)"
-        echo "  Merge gate requires CANN simulator. See docs/cann-setup.md."
-        exit 2
-    fi
-
-    for kernel in "$SKILLS_DIR"/golden/kernels/*.py; do
-        if [ -f "$kernel" ]; then
-            base=$(basename "$kernel")
-            sim_exit=0
-            $PYTHON "$TOOLS_DIR/run_and_verify.py" "$kernel" --mode simulator 2>&1 || sim_exit=$?
-            if [ "$sim_exit" -eq 0 ]; then
-                echo "  [PASS] Simulator: $base"
-            elif [ "$sim_exit" -eq 2 ]; then
-                echo "  [SKIP] Simulator: $base (env not available)"
-            else
-                echo "  [FAIL] Simulator: $base"
-                FAILED=$((FAILED + 1))
-            fi
-        fi
-    done
-}
-
-# ============================================
-# Nightly tier: merge + L2/L3
-# ============================================
-
-run_nightly_gate() {
-    run_merge_gate
-
-    echo ""
-    echo "--- Full Test Suite (L1 + L2 + L3) ---"
-    if bash "$SCRIPT_DIR/run-tests.sh" --all; then
-        echo ""
-    else
-        FAILED=$((FAILED + 1))
-    fi
-
-    echo ""
-    echo "--- Generative Evidence Collection ---"
-    COLLECT_TOOL="$TOOLS_DIR/collect_generative_evidence.py"
-    if [ -f "$COLLECT_TOOL" ] && command -v opencode >/dev/null 2>&1; then
-        $PYTHON "$COLLECT_TOOL" \
-            --op abs --dtype float16 \
-            --runtime --timeout 600 \
-            --notes "Nightly CI gate run" 2>&1 || {
-            ec=$?
-            if [ "$ec" -eq 2 ]; then
-                echo "  [SKIP] opencode not available"
-            else
-                echo "  [FAIL] Generative evidence: abs/float16"
-                FAILED=$((FAILED + 1))
-            fi
-        }
-    else
-        echo "  [SKIP] collect_generative_evidence.py or opencode not available"
-    fi
-}
-
-# ============================================
-# Dispatch
-# ============================================
-
-case "$TIER" in
-    pr)      run_pr_gate ;;
-    merge)   run_merge_gate ;;
-    nightly) run_nightly_gate ;;
-    *)
-        echo "Unknown tier: $TIER (use: pr, merge, nightly)"
-        exit 1
-        ;;
-esac
+else
+    FAILED=$((FAILED + 1))
+fi
 
 echo ""
 echo "========================================"
