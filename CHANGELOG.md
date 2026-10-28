@@ -4,7 +4,9 @@ Releases are git tags. Tagging `v*` builds the archives and publishes them —
 see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 `release/<date>/` directory; a dated copy of a tree drifts from the tree.
 
-## Unreleased
+## v0.2.0
+
+The release that ran the gate the first release only described.
 
 ### The generation gate runs
 
