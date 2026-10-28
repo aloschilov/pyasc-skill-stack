@@ -145,8 +145,27 @@ Upstream defines five states. The mapping into our vocabulary:
 | `incomplete` or `blocked` | `blocked` | Interrupted. See below. |
 | `incompatible` | excluded | The cell cannot be built. **Never** a pass. |
 
-At the time of writing the `u22.04-c9.2.0-p3.11` overlay cell records
-`suite_status: pending` on both architectures — so, `not-run`.
+#### The current snapshot, and why you should re-derive it
+
+This moves. It was `pending` on 2026-10-26 and `incomplete` two days later, so
+treat any state written here as stale and read the report yourself:
+
+```bash
+curl -fsSL "$(jq -r .dev_image.qualification_report reference/images/ENV.json)" \
+  | jq '.cells[] | select(.key=="u22.04-c9.2.0-p3.11-arm64")
+        | {status, suite: {collected: .suite.collected, executed: .suite.executed,
+                           counts: .suite.counts, suite_status: .suite.suite_status}}'
+```
+
+As of 2026-10-28, for the pinned `u22.04-c9.2.0-p3.11` cell on both
+architectures: `status: incomplete` — so, **`blocked`**, not `not-run`.
+4293 collected, 2903 executed, 2824 passed, 79 skipped, **zero failures**.
+
+That last number is tempting and must not be over-read. Of the 70 modules,
+31 are `complete`, 38 are `not-run` and 1 is `blocked` — and **all 24 modules
+under `target/`, the subtree this repository vendors and gates on, are
+`not-run`.** The passes come from `unit/` and `operations/`. So there is now
+real numerical evidence upstream, and none of it covers our gate.
 
 The interrupted case is the one that invites a wrong inference, and upstream's
 caution is worth quoting rather than paraphrasing:
@@ -157,6 +176,12 @@ caution is worth quoting rather than paraphrasing:
 > situation, **nor does exit 137 prove OOM**. Consumers must keep unresolved
 > modules `blocked`/unknown until logs and host evidence diagnose them; they
 > must not infer `failed` or `not-run` from absence alone.
+
+One part of that has since been overtaken: the report now *does* carry a
+four-state per-module inventory (`complete | not-run | blocked | incompatible`)
+under `suite.modules`, which is what the paragraph above is counted from. The
+caution still holds, because per-*module* is not per-*case*, and a `blocked`
+module still carries no diagnosis of why.
 
 Upstream's runner limits are two CPUs and 12 GiB per container, up to three
 hours per module and six hours per matrix job — useful when judging whether a
@@ -215,7 +240,7 @@ See [`../skills/pyasc-cannbench-kernel/references/ttk.md`](../skills/pyasc-cannb
 | Source | State |
 |---|---|
 | Target suite | Vendored and pinned; 24 modules. **Compile-checked only** in `merge-gate` — launch and numerical assertions are mocked. Full numerical execution on the camodel is a v0.2.0 gate. |
-| Upstream qualification | Published per overlay release; currently `pending` for the pinned cell, i.e. `not-run`. |
+| Upstream qualification | Published per overlay release. `incomplete` for the pinned cell as of 2026-10-28, i.e. `blocked` — 2824 passed, 0 failed, but every `target/` module still `not-run`. Re-derive before citing. |
 | CANNBench | Task definitions tracked. The campaign-era runner and its results were archived; a scorer that produces ratios from a clean clone is v0.2.0. |
 | TTK | Column shape and role documented. The generator read an absolute path outside the repository, so the manifest is **not reproducible here yet** — v0.2.0. |
 

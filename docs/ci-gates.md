@@ -57,8 +57,15 @@ The campaign-era `perf-gate`, `nightly-gate`, `local-stability-gate`,
 `cloud-dashscope-gate` and `skills-value-report` jobs read from `evidence/`
 and scored model-written kernels in `golden/`. Both were removed from `main`,
 so the jobs were retired with them; `pages.yml` published a dashboard from a
-directory that was never tracked. All of it is on the
-`archive/campaign-2026` branch:
+directory that was never tracked.
+
+The published site is retired too, not merely unbuilt. Deleting the workflow
+would have left `https://aloschilov.github.io/pyasc-skill-stack/` live and
+frozen, still serving the campaign evidence this repository pruned — an
+orphaned page that nothing could refresh or correct. GitHub Pages is disabled
+for the repository, so there is no stale public claim outliving its source.
+
+All of it is on the `archive/campaign-2026` branch:
 
 ```bash
 git show archive/campaign-2026:.github/workflows/ci.yml

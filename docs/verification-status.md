@@ -211,17 +211,32 @@ empty).
    two-part review split still hit the ceiling at 8187 + 5. Step size is not
    the binding constraint. Not recommended.
 
-### A second, independent blocker
+### A second blocker, since resolved
 
-Fixing the token ceiling is necessary but may not be sufficient. The harness
-caps the review call at 60 seconds (`rc = p.wait(timeout=60)`), and one review
-failed on exactly that timeout, separately from the token issue. Observed
-review steps took 132.2 s and 129.0 s, so a reasoning model will very likely
-exceed 60 s even with tokens to spare. The authoring call is given 240 s.
-Expect to raise the review timeout before the end-to-end path can complete.
+This section used to report a 60-second cap on the review call, citing
+`rc = p.wait(timeout=60)`, and warned that observed review steps of 132.2 s
+and 129.0 s would exceed it even with tokens to spare.
 
-No fix is applied here: `~/.config/opencode/opencode.json` is outside this
-repository, and changing it is the maintainer's decision.
+That line no longer exists anywhere in the repository. The driver now uses
+`WORKER_TIMEOUT_S = 900` (`integrations/cannbench/workers/driver.py:44`),
+which is comfortably above the observed durations. The timing observation was
+real; the code it described has been replaced. Recorded rather than deleted,
+because a reader who met the old diagnosis elsewhere should be able to find
+out what became of it.
+
+### Which path the diagnosis was made against
+
+Worth being precise, because the three entry points are not the same path.
+The `opencode run --pure --format json -m gateway/glm-5.3` invocation quoted
+above belongs to `integrations/cannbench/workers/driver.py:485-487`, the
+CANNBench worker driver. Neither `tests/integration/test-kernel-generation.sh`
+nor `tests/tools/collect_generative_evidence.py` passes `--pure` or `-m`.
+
+The ceiling still reaches them, though, and by a different route: the global
+config sets `model: gateway/glm-5.3` as the *default*, so any invocation that
+does not name a model inherits both the model and its 8192 cap. That is why
+the blocker generalises — not because all three share an invocation, but
+because they share a default.
 
 ## What none of this establishes
 

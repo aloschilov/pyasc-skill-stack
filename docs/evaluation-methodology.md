@@ -38,8 +38,12 @@ task cell (capabilities.yaml)
    -> evaluator (static -> JIT -> simulator -> [performance, planned])
    -> evidence/<op>-<dtype>-generative*.json
    -> compare_skills_value.py -> evidence/skills-value-summary.json
-   -> generate_dashboard.py   -> Pages dashboard
+   -> generate_dashboard.py   -> Pages dashboard (retired)
 ```
+
+That last stage no longer exists: the dashboard and the Pages site it fed were
+retired with the campaign evidence they rendered. The rest of the pipeline is
+described here as the archived campaign ran it.
 
 A task cell is the unit of work: `(operation, dtype, platform, prompt,
 shapes, prompt_variants, golden, ...)` as defined in

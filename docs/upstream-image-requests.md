@@ -17,10 +17,10 @@ delivered: a dev overlay built on the pinned base, a stated rebuild cadence, a
 stable qualification-report URL, the restored `latest` pointer, and an answer
 on test scope. What the answers mean for this repository is recorded in
 [`evidence-sources.md`](evidence-sources.md), which is the document to read
-first; this one is kept as the record of what was asked. Case counts in the
-prompt below are attributed to `ea2dbf9d` and should not be read as current —
-upstream's own caution is to use each report's collected inventory rather than
-a fixed number.
+first; this one is kept as the record of what was asked. Every state claim in
+the prompt below — case counts, `suite_status`, which overlays existed — is a
+snapshot from the day it was sent and has since moved. Read it as a question
+that was asked, never as a description of upstream today.
 
 ---
 

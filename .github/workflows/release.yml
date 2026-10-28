@@ -17,6 +17,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Not optional. tests/lib/test-helpers.sh resolves
+      # PYTHON="${PYASC_PYTHON:-python3.10}", and two fast-suite tests invoke
+      # it unguarded under `set -euo pipefail`. ubuntu-latest is 24.04 and
+      # ships 3.12, so without this the gate below fails on every tag and the
+      # archives are never built. pr-gate in ci.yml pins the same version;
+      # these two must not drift apart.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
       - name: Gate on the fast suite
         run: bash tests/run-tests.sh --fast
 
