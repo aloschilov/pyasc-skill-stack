@@ -14,7 +14,7 @@ provider or device is an honest `blocked`, never a fabricated pass.
 | install | `passed` | `pip install --pre pyasc-dev` into a clean venv, in an external project whose path contains spaces |
 | skill discovery | `passed` | `opencode debug skill --pure` resolves the skill from the project |
 | generation (static) | `passed`, marginally | 3 runs on 2026-10-28; kernel + design written every time, 7/7 static checks every time, scores 12/12/11 against a threshold of 12 — see below |
-| generation (executed) | `not-run` | no generated kernel has been run; `asctile` is not importable on this host and `run_and_verify.py` has no docker path |
+| generation (executed) | `not-run` | no *as-generated* kernel runs: all three omit `config.set_platform()`, so they request a real device and die on `SetDeviceWrapper 107001`. Add that one call and the same kernel passes on the simulator — see below |
 | review | `not-run` | depends on executed generation |
 | compile | `passed` | codegen produced a kernel binary; output left untouched under `PYASC_DRY_RUN=1` |
 | numerical | `passed` | simulator execution matches the NumPy reference exactly, tail included |
@@ -59,8 +59,59 @@ satisfy currently decides the gate.
 
 **No generated kernel has been executed.** `run_and_verify.py` returned
 `SKIP — pyasc (asc) not importable` in all three runs: `asctile` lives in the
-pinned simulator image and that script has no docker path. The static result
-is a statement about the source the agent wrote, nothing more.
+pinned simulator image, and that script has no docker backend of its own. The
+static result is a statement about the source the agent wrote, nothing more.
+
+### Why, precisely — and how close it is
+
+That `SKIP` says only that the host cannot run it. It does not say the kernels
+would fail, and it is worth not leaving the question there, because the
+machinery to answer it already exists: `run_docker_verify()` in
+`tests/tools/collect_generative_evidence.py` bind-mounts the repo at `/repo`
+and the project at `/workspace` and runs `run_and_verify.py --mode simulator`
+inside the pinned image. The integration test simply does not call it. So the
+gap is wiring, not new machinery.
+
+Run by hand against the pinned dev overlay on 2026-10-28, the answer is
+narrow and specific:
+
+| What was run | Result |
+|---|---|
+| `run-1/kernel.py` as generated, with `-r Model -v Ascend950PR_9599` | `FAIL` — `SetDeviceWrapper returned 107001` |
+| `run-1/kernel.py` as generated, no arguments | `FAIL` — identical error |
+| `run-1/kernel.py` plus `config.set_platform()` and `-r`/`-v` parsing | **`PASS`** — executed on `Model/Ascend950PR_9599`, `torch.allclose` verified |
+
+Two things follow. First, the `-r`/`-v` arguments the harness passes are
+**silently ignored** — the failure is byte-identical with and without them,
+because none of the generated kernels parse arguments. Second, and more
+usefully: the kernel *logic* is correct. The only thing missing is the launch
+contract — parse `-r`/`-v`, then call `config.set_platform(backend, platform)`
+before launching. Add that and nothing else, and the agent's own vector add
+runs on the simulator and matches `torch`.
+
+So `generation (executed)` is `not-run` because of a missing four-line
+preamble, not because the agent writes kernels that do not work.
+
+### A defect this turned up in the skill stack itself
+
+`skills/pyasc-codegen-workflow/templates/kernel-template.py` is where that
+contract is taught — it parses `-r`/`-v` and calls `config.set_platform()` at
+lines 85-101. The agent reads this file (it is the fifth tool call in the
+traced run) and did not copy the pattern.
+
+The template also does not compile against the pinned runtime. Run it
+directly and codegen rejects it:
+
+```
+asc.codegen.errors.UnsupportedSyntaxError: at <source>:14:8
+```
+
+— the `if valid > tile_size:` guard inside the `asctile.range` loop. The
+generated kernels sidestep it with `valid = min(size - offset, tile_size)`,
+which does compile. The template the stack ships as its worked example is
+therefore both the authority on the launch contract and broken, and nothing
+in the test suite compiles it. Neither fix is made here; both are recorded so
+the next change starts from evidence.
 
 **Nothing re-checks this automatically.** `tests/ci-gate.sh` supports only
 `--tier pr`, which runs `run-tests.sh --fast` — the unit category. No

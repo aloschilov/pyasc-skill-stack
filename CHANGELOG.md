@@ -39,6 +39,33 @@ could find:
 The 8192-token output ceiling diagnosed in v0.1.0 was real but was neither
 the only obstacle nor the first one encountered.
 
+### What `generation (executed)` is actually waiting on
+
+`not-run` previously read as though executing a generated kernel needed
+machinery nobody had built. It does not. `run_docker_verify()` already runs
+`run_and_verify.py --mode simulator` inside the pinned image; the integration
+test just does not call it.
+
+Run by hand against the pinned dev overlay, the gap turns out to be four
+lines. As generated, every kernel omits `config.set_platform()`, so it asks
+for a real device and dies on `SetDeviceWrapper returned 107001` — with or
+without the `-r`/`-v` arguments the harness passes, which none of them parse,
+so the failure is byte-identical either way. Add the launch contract and
+nothing else, and the agent's own vector add **executes on the simulator and
+matches `torch`**.
+
+The kernel logic was never the problem. `docs/verification-status.md` carries
+the three-row comparison.
+
+This also turned up a defect in the stack itself:
+`skills/pyasc-codegen-workflow/templates/kernel-template.py` — the file that
+teaches the launch contract, and which the agent demonstrably reads — does
+not compile against the pinned runtime. Codegen rejects the
+`if valid > tile_size:` guard inside its `asctile.range` loop with
+`UnsupportedSyntaxError`. The generated kernels sidestep it with
+`min(size - offset, tile_size)`. Nothing in the test suite compiles the
+template, which is why this went unseen. Recorded, not fixed.
+
 ### One source of truth for opencode profiles
 
 `tests/tools/opencode_profile.py` is new, and both generation entry points go
