@@ -16,7 +16,18 @@ RUN_INTEGRATION=false
 RUN_ALL=false
 RUN_AGENTIC=false
 SINGLE_TEST=""
+# Per-file wall-clock budget, by category. One number cannot serve both: a
+# unit test that takes 300s is broken, while an integration test spends most
+# of its budget waiting on a cloud agent and legitimately needs minutes.
+#
+# The single 300s budget that used to apply to everything collided with the
+# agent timeout inside tests/integration/test-kernel-generation.sh, which was
+# also 300s. The outer timer starts first and includes project setup, so it
+# always expired first: the agent's own timeout handling and every
+# verification phase after it were unreachable, and the run was recorded as a
+# skip. Keep INTEGRATION_TIMEOUT comfortably above PYASC_AGENT_TIMEOUT.
 TIMEOUT=300
+INTEGRATION_TIMEOUT="${PYASC_INTEGRATION_TIMEOUT:-1800}"
 VERBOSE=false
 OUTPUT_FORMAT="text"
 LIST_ONLY=false
@@ -138,6 +149,7 @@ declare -a TEST_RESULTS=()
 TOTAL_PASS=0
 TOTAL_FAIL=0
 TOTAL_SKIP=0
+TOTAL_BLOCKED=0
 START_TIME=$(date +%s)
 
 run_test_file() {
@@ -147,11 +159,16 @@ run_test_file() {
     echo ""
     echo -e "${BOLD}--- Running: $rel_path ---${NC}"
 
+    local budget="$TIMEOUT"
+    case "$rel_path" in
+        integration/*) budget="$INTEGRATION_TIMEOUT" ;;
+    esac
+
     local test_start
     test_start=$(date +%s)
     local exit_code=0
 
-    if timeout "$TIMEOUT" bash "$test_file"; then
+    if timeout "$budget" bash "$test_file"; then
         exit_code=0
     else
         exit_code=$?
@@ -165,8 +182,13 @@ run_test_file() {
         TOTAL_PASS=$((TOTAL_PASS + 1))
         TEST_RESULTS+=("PASS|$rel_path|${duration}s")
     elif [ $exit_code -eq 124 ]; then
-        TOTAL_SKIP=$((TOTAL_SKIP + 1))
-        TEST_RESULTS+=("SKIP|$rel_path|timeout")
+        # Blocked, not skipped. "Skipped" means we chose not to run this;
+        # a timeout means it ran and we learned nothing, which is the
+        # `blocked` state the rest of this repository reports separately
+        # from `failed` (see docs/verification-status.md). Folding the two
+        # together let an exhausted budget read as a deliberate omission.
+        TOTAL_BLOCKED=$((TOTAL_BLOCKED + 1))
+        TEST_RESULTS+=("BLOCK|$rel_path|timeout at ${budget}s")
     else
         TOTAL_FAIL=$((TOTAL_FAIL + 1))
         TEST_RESULTS+=("FAIL|$rel_path|${duration}s")
@@ -247,6 +269,7 @@ echo "========================================"
 echo ""
 echo -e "  ${GREEN}Passed:${NC}  $TOTAL_PASS"
 echo -e "  ${RED}Failed:${NC}  $TOTAL_FAIL"
+echo -e "  ${YELLOW}Blocked:${NC} $TOTAL_BLOCKED"
 echo -e "  ${YELLOW}Skipped:${NC} $TOTAL_SKIP"
 echo "  Duration: ${TOTAL_DURATION}s"
 echo ""
@@ -256,9 +279,10 @@ if [ ${#TEST_RESULTS[@]} -gt 0 ]; then
     for result in "${TEST_RESULTS[@]}"; do
         IFS='|' read -r status name duration <<< "$result"
         case "$status" in
-            PASS) echo -e "  ${GREEN}[PASS]${NC} $name ($duration)" ;;
-            FAIL) echo -e "  ${RED}[FAIL]${NC} $name ($duration)" ;;
-            SKIP) echo -e "  ${YELLOW}[SKIP]${NC} $name ($duration)" ;;
+            PASS)  echo -e "  ${GREEN}[PASS]${NC} $name ($duration)" ;;
+            FAIL)  echo -e "  ${RED}[FAIL]${NC} $name ($duration)" ;;
+            BLOCK) echo -e "  ${YELLOW}[BLOCKED]${NC} $name ($duration)" ;;
+            SKIP)  echo -e "  ${YELLOW}[SKIP]${NC} $name ($duration)" ;;
         esac
     done
 fi
@@ -266,6 +290,9 @@ fi
 echo ""
 if [ "$TOTAL_FAIL" -gt 0 ]; then
     print_status_failed
+elif [ "$TOTAL_BLOCKED" -gt 0 ]; then
+    echo -e "${YELLOW}STATUS: BLOCKED${NC} — $TOTAL_BLOCKED test(s) exhausted their budget."
+    echo "No failure was observed, but no evidence was produced either."
 else
     print_status_passed
 fi
@@ -275,6 +302,8 @@ if [ "$OUTPUT_FORMAT" = "json" ]; then
     JSON_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     if [ "$TOTAL_FAIL" -gt 0 ]; then
         JSON_STATUS="failed"
+    elif [ "$TOTAL_BLOCKED" -gt 0 ]; then
+        JSON_STATUS="blocked"
     else
         JSON_STATUS="passed"
     fi
@@ -287,6 +316,7 @@ if [ "$OUTPUT_FORMAT" = "json" ]; then
     printf '  "status": "%s",\n' "$JSON_STATUS"
     printf '  "passed": %d,\n' "$TOTAL_PASS"
     printf '  "failed": %d,\n' "$TOTAL_FAIL"
+    printf '  "blocked": %d,\n' "$TOTAL_BLOCKED"
     printf '  "skipped": %d,\n' "$TOTAL_SKIP"
     printf '  "duration": %d,\n' "$TOTAL_DURATION"
     printf '  "timestamp": "%s",\n' "$JSON_TS"
@@ -297,10 +327,11 @@ if [ "$OUTPUT_FORMAT" = "json" ]; then
     for result in "${TEST_RESULTS[@]}"; do
         IFS='|' read -r t_status t_name t_dur <<< "$result"
         case "$t_status" in
-            PASS) t_json_status="passed" ;;
-            FAIL) t_json_status="failed" ;;
-            SKIP) t_json_status="skipped" ;;
-            *)    t_json_status="unknown" ;;
+            PASS)  t_json_status="passed" ;;
+            FAIL)  t_json_status="failed" ;;
+            BLOCK) t_json_status="blocked" ;;
+            SKIP)  t_json_status="skipped" ;;
+            *)     t_json_status="unknown" ;;
         esac
         if [[ "$t_dur" =~ ^[0-9]+s$ ]]; then
             t_dur_json="${t_dur%s}"
@@ -320,6 +351,12 @@ if [ "$OUTPUT_FORMAT" = "json" ]; then
     printf '}\n'
 fi
 
+# 1 = something failed. 2 = nothing failed but something is blocked, which is
+# not success and must not be reported as such, yet is also not a defect in
+# the code under test. Callers that only care about failures should test for
+# exit 1 specifically rather than for non-zero.
 if [ "$TOTAL_FAIL" -gt 0 ]; then
     exit 1
+elif [ "$TOTAL_BLOCKED" -gt 0 ]; then
+    exit 2
 fi

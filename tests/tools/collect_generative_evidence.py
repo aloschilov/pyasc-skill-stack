@@ -51,6 +51,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+import opencode_profile  # noqa: E402
 from repo_paths import (  # noqa: E402
     external_root, portable_pyasc_revision, relativize_evidence)
 
@@ -140,32 +141,33 @@ def _pinned_sim_image() -> str:
     Read from reference/images/ENV.json rather than hardcoded: the upstream
     matrix moves between versions, and a stale literal here would silently
     record evidence against a runtime nobody else is using.
+
+    Prefers ``dev_image`` over ``image``. The two are not interchangeable:
+    the minimal image carries pyasc alone, while the dev overlay adds CPU
+    torch and pytest. Generated kernels verify themselves with
+    ``torch.allclose``, so on the minimal image every runtime verification
+    dies on ``import torch`` -- a missing dependency reported as a kernel
+    defect. CI (``.github/workflows/ci.yml``) and
+    ``tests/tools/verify_pyasc_image.sh`` already resolve the dev overlay;
+    this function was the last place that did not, so a local run and a CI
+    run evaluated against different runtimes.
     """
     pin = REPO_ROOT / "reference" / "images" / "ENV.json"
     try:
         with open(pin, encoding="utf-8") as fh:
-            return json.load(fh)["image"]["ref"]
-    except (OSError, KeyError, ValueError):
+            data = json.load(fh)
+    except (OSError, ValueError):
         return ""
+    for key in ("dev_image", "image"):
+        ref = (data.get(key) or {}).get("ref")
+        if ref:
+            return ref
+    return ""
 
 
 DOCKER_IMAGE = os.environ.get("PYASC_SIM_IMAGE") or _pinned_sim_image()
 
 PROFILE_DIR = REPO_ROOT / "integrations" / "opencode" / "profiles"
-KNOWN_PROFILES = {
-    "cloud-default",
-    "cloud-glm-5.1",
-    "cloud-qwen3.7-max",
-    "cloud-glm-5.2",
-    "cloud-deepseek-v4-pro",
-    "cloud-kimi-k2.7-code",
-    "cloud-minimax-m2.5",
-    "cloud-qwen3-coder-next",
-    "local-qwen-coder-7b",
-    "local-llama-3.1-8b",
-    "local-qwen3-coder-30b",
-    "local-gpt-oss-120b",
-}
 SCHEMA_VERSION = "4"
 
 
@@ -253,19 +255,11 @@ def load_platform_from_capabilities(op: str, dtype: str,
     return cell.get("platform") or default
 
 
-_MINIMAL_OPENCODE_JSON: dict = {
-    "$schema": "https://opencode.ai/config.json",
-    "permission": {
-        "read": "allow",
-        "edit": "allow",
-        "bash": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "list": "allow",
-        "skill": "allow",
-        "task": "allow",
-    },
-}
+# Profile rendering lives in opencode_profile so that this collector and
+# tests/integration/test-kernel-generation.sh resolve a profile the same way.
+# They did not always: the shell test wrote no config at all and inherited
+# whatever global opencode.json the host had, including its output cap.
+_MINIMAL_OPENCODE_JSON: dict = opencode_profile.MINIMAL_OPENCODE_JSON
 
 
 def resolve_opencode_config(
@@ -273,38 +267,26 @@ def resolve_opencode_config(
 ) -> tuple[dict, Path | None]:
     """Resolve an opencode config dict for a given profile.
 
-    Resolution order:
-      1. If ``override_path`` is given, load that JSON template directly.
-      2. Otherwise, look up the profile in ``integrations/opencode/profiles/<profile>.json``.
-      3. If neither exists, fall back to ``_MINIMAL_OPENCODE_JSON``.
-
-    Template files may reference environment variables using ``${VAR}`` —
-    they are substituted from the current process environment (or replaced
-    with an empty string when unset). This lets us point local-model
-    profiles at a sidecar Ollama endpoint via ``OLLAMA_BASE_URL`` without
-    baking secrets into the repo.
-
-    Returns the merged dict and the path of the source template (or None
-    when the minimal fallback is used).
+    Thin wrapper over :func:`opencode_profile.resolve` that drops the
+    missing-variable list, preserving this module's older two-tuple contract.
+    Callers that need to *act* on missing credentials should use
+    :func:`require_opencode_credentials` instead of inspecting the config.
     """
-    if override_path:
-        path = Path(override_path)
-    else:
-        path = PROFILE_DIR / f"{profile}.json"
+    cfg, path, _ = opencode_profile.resolve(profile, override_path)
+    return cfg, path
 
-    if not path.exists():
-        return dict(_MINIMAL_OPENCODE_JSON), None
 
-    raw = path.read_text()
-    expanded = Template(raw).safe_substitute(os.environ)
-    try:
-        data = json.loads(expanded)
-    except json.JSONDecodeError as exc:
-        print(f"  WARN: profile template {path} not valid JSON after "
-              f"env substitution ({exc}); falling back to minimal config",
-              file=sys.stderr)
-        return dict(_MINIMAL_OPENCODE_JSON), None
-    return data, path
+def require_opencode_credentials(
+    profile: str, override_path: str | None = None,
+) -> None:
+    """Stop before the run if the chosen profile cannot authenticate.
+
+    A cloud sweep is measured in minutes per case. Discovering an unset key
+    from a provider-side 401 partway through wastes all of it and produces an
+    error that names neither the profile nor the variable.
+    """
+    _, path, absent = opencode_profile.resolve(profile, override_path)
+    opencode_profile.require_env(profile, absent, path)
 
 
 def build_opencode_json(
@@ -317,12 +299,7 @@ def build_opencode_json(
     removed entirely so the agent operates as raw opencode with no
     skill-stack hints.
     """
-    cfg, _ = resolve_opencode_config(profile, override_path)
-    if skills_mode == "on":
-        cfg["skills"] = {"paths": ["./skills"]}
-    else:
-        cfg.pop("skills", None)
-    return cfg
+    return opencode_profile.build(profile, skills_mode, override_path)
 
 
 def _materialize_workspace_tree(
@@ -1638,8 +1615,13 @@ def main() -> None:
                              "value is derived from the protocol table and "
                              "any conflicting --skills-mode is rejected. "
                              "(default: on when neither flag is given)")
-    parser.add_argument("--model-profile", default="cloud-default",
-                        help="Named opencode profile (default: cloud-default). "
+    # cloud-glm-5.3, not cloud-default. cloud-default names dashscope/glm-5
+    # behind DASHSCOPE_API_KEY, a key no runner here holds, so the default
+    # could not complete a run. cloud-glm-5.3 pins output to 32768 with
+    # reasoning disabled, which is the configuration that addresses the
+    # truncation recorded in docs/verification-status.md.
+    parser.add_argument("--model-profile", default="cloud-glm-5.3",
+                        help="Named opencode profile (default: cloud-glm-5.3). "
                              "Templates live in integrations/opencode/profiles/")
     parser.add_argument("--opencode-config", default=None,
                         help="Override the profile template with a JSON file at "
@@ -1747,8 +1729,30 @@ def main() -> None:
             args.op, args.dtype, variant=args.prompt_variant,
         )
     if not primary_prompt:
-        print(f"ERROR: No prompt provided and none found in capabilities.yaml "
-              f"for {args.op}/{args.dtype}", file=sys.stderr)
+        if not CAPABILITIES_FILE.exists():
+            # The usual case on a clean clone, and not an error in the tree:
+            # capabilities.yaml was the campaign scoreboard and was pruned at
+            # v0.1.0 (it is in .gitignore). The old message named a file the
+            # reader would not find and could not be expected to create,
+            # which reads as a broken checkout rather than a missing flag.
+            print(
+                "ERROR: no prompt. Pass --prompt.\n"
+                f"  --op/--dtype ({args.op}/{args.dtype}) reads prompts from\n"
+                f"  {CAPABILITIES_FILE}, which this clone does not have: it was\n"
+                "  the campaign scoreboard and was pruned at v0.1.0.\n"
+                "  Restore it with:\n"
+                "    git checkout archive/campaign-2026 -- capabilities.yaml",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"ERROR: no prompt. {CAPABILITIES_FILE} exists but defines no\n"
+                f"  cell for {args.op}/{args.dtype}"
+                + (f" with variant {args.prompt_variant!r}"
+                   if args.prompt_variant else "")
+                + ".\n  Pass --prompt, or add the cell.",
+                file=sys.stderr,
+            )
         sys.exit(1)
 
     fallback_prompt = None
@@ -1763,6 +1767,28 @@ def main() -> None:
     if agent_backend == "host" and shutil.which("opencode") is None:
         print("SKIP: opencode CLI not found on PATH", file=sys.stderr)
         sys.exit(2)
+
+    # Validate the profile name against what is actually on disk. A typo
+    # otherwise resolves to the minimal fallback config, which names no
+    # model, so the run silently adopts the host's global default -- it
+    # completes and produces evidence attributed to the wrong model. There
+    # used to be a hand-maintained KNOWN_PROFILES set here; it had already
+    # drifted, listing neither cloud-glm-5.3 nor cloud-glm-5.2's departure.
+    if args.opencode_config is None:
+        known = opencode_profile.available_profiles()
+        if args.model_profile not in known:
+            print(
+                f"ERROR: unknown --model-profile {args.model_profile!r}.\n"
+                f"  Available: {', '.join(known) or '(none found)'}\n"
+                f"  Or pass --opencode-config with a template path.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    # Before anything expensive. A sweep is minutes per case, and an unset
+    # key surfaces as a provider-side 401 that names neither the profile nor
+    # the variable.
+    require_opencode_credentials(args.model_profile, args.opencode_config)
 
     # Capture pyasc revision up-front so downstream JSON always has it.
     pyasc_revision = collect_pyasc_revision()

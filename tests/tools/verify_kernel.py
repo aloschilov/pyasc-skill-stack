@@ -48,19 +48,46 @@ except AttributeError:
     pass
 
 
+# The module a `.jit` decorator may hang off. `asctile` is the spelling this
+# repository's skills mandate and the one the generation prompt asks for; it
+# was missing here, so every correctly-written kernel failed `jit_decorator`
+# and then cascaded into three "skipped (no JIT function)" failures. The gate
+# had never been run end to end, so the omission went unobserved.
+_JIT_MODULES = frozenset({"asc", "asc2", "asctile"})
+
+
+def _decorator_root(node: ast.expr) -> str | None:
+    """Return the leftmost name of a dotted expression, or None.
+
+    Handles the nested-Attribute case that a bare ``isinstance(node.value,
+    ast.Name)`` test misses: ``@asc.experimental.asctile.jit`` parses as
+    Attribute(Attribute(Attribute(Name))), and the import form the generated
+    kernels actually use (``from asc.experimental import asctile``) makes
+    that spelling reachable.
+    """
+    while isinstance(node, ast.Attribute):
+        node = node.value
+    return node.id if isinstance(node, ast.Name) else None
+
+
 def _is_jit_decorator(node: ast.expr) -> bool:
-    """Return True if *node* represents @asc.jit, @asc2.jit, or their call forms."""
-    if isinstance(node, ast.Attribute):
-        if isinstance(node.value, ast.Name):
-            if node.value.id in ("asc", "asc2") and node.attr == "jit":
-                return True
+    """True for @<mod>.jit and its call form, for any recognized <mod>.
+
+    Also accepts the immediate parent segment, so ``asc.experimental.asctile.jit``
+    matches on ``asctile`` even though the root name is ``asc``.
+    """
     if isinstance(node, ast.Call):
         return _is_jit_decorator(node.func)
-    return False
+    if not isinstance(node, ast.Attribute) or node.attr != "jit":
+        return False
+    if _decorator_root(node) in _JIT_MODULES:
+        return True
+    parent = node.value
+    return isinstance(parent, ast.Attribute) and parent.attr in _JIT_MODULES
 
 
 def _find_jit_functions(tree: ast.Module) -> list[ast.FunctionDef]:
-    """Return top-level functions decorated with @asc.jit or @asc2.jit."""
+    """Return top-level functions decorated with a recognized ``.jit``."""
     results = []
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, ast.FunctionDef):
@@ -167,7 +194,9 @@ def verify(path: str) -> list[CheckResult]:
     results.append(CheckResult(
         "jit_decorator",
         len(jit_funcs) > 0,
-        f"Found {len(jit_funcs)} @asc2.jit/@asc.jit function(s)" if jit_funcs else "No JIT function found",
+        f"Found {len(jit_funcs)} @asctile.jit/@asc.jit/@asc2.jit function(s)"
+        if jit_funcs else
+        "No JIT function found (expected @asctile.jit, @asc.jit or @asc2.jit)",
     ))
 
     if not jit_funcs:

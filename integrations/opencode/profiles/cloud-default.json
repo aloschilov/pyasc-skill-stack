@@ -26,9 +26,7 @@
     "skill": "allow",
     "task": "allow",
     "external_directory": {
-      "*": "deny",
-      "~/workspace/pyasc/*": "allow",
-      "~/workspace/pyasc-skill-stack/*": "allow"
+      "*": "deny"
     }
   }
 }

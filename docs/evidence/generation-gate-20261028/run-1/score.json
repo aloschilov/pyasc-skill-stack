@@ -1,0 +1,79 @@
+{
+  "file": "/tmp/kernel-gen.jz1JO7/kernels/add/kernel.py",
+  "score": 12.0,
+  "max_score": 16,
+  "threshold": 12.0,
+  "accepted": true,
+  "failure_category": null,
+  "gating_detail": {
+    "legacy_api_findings": [],
+    "missing_asc2_import": false,
+    "allow_legacy_apis": false
+  },
+  "checks": {
+    "jit_decorator": {
+      "passed": false,
+      "detail": "missing"
+    },
+    "no_return_value": {
+      "passed": true,
+      "detail": "OK"
+    },
+    "no_banned_constructs": {
+      "passed": true,
+      "detail": "OK"
+    },
+    "asc2_load_store": {
+      "passed": false,
+      "detail": "missing asc2.load/asc2.store"
+    },
+    "asc2_tensor": {
+      "passed": false,
+      "detail": "missing asc2.tensor"
+    },
+    "loop_range": {
+      "passed": false,
+      "detail": "no range call in kernel"
+    },
+    "verification": {
+      "passed": true,
+      "detail": "verification call present"
+    },
+    "launch_pattern": {
+      "passed": true,
+      "detail": "kernel launch found"
+    },
+    "global_address": {
+      "passed": true,
+      "detail": "GlobalAddress found"
+    },
+    "valid_python": {
+      "passed": true,
+      "detail": "parsed without errors"
+    },
+    "input_arity": {
+      "passed": true,
+      "detail": "skipped (no --op or op not in arity table)"
+    },
+    "output_dtype": {
+      "passed": true,
+      "detail": "skipped (no --dtype)"
+    },
+    "tiling_consistency": {
+      "passed": true,
+      "detail": "tiling logic found"
+    },
+    "multi_shape_verification": {
+      "passed": true,
+      "detail": "verify x2, shape loop=no"
+    },
+    "no_hardcoded_shapes": {
+      "passed": true,
+      "detail": "shapes parameterized"
+    },
+    "semantic_api_usage": {
+      "passed": true,
+      "detail": "skipped (no --op or op not in semantic table)"
+    }
+  }
+}
