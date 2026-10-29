@@ -60,7 +60,7 @@ record its location and SHA256 in the qualification handoff and link the durable
 archive in repository documentation when a durable shared location is available.
 No historical evidence is moved or rewritten by this change.
 
-Local checks do not prove that a new PR workflow ran. The final CI run and its
-wall time remain outstanding until the reviewed changes are committed/pushed
-and run through Actions. The target remains under five minutes for examples;
-a measured overrun must be reported explicitly, never hidden as a green claim.
+Local checks do not prove that a new PR workflow ran. The dated PR run, tested
+revision, full job duration and artifact digest are recorded in
+[verification-status.md](verification-status.md). That run satisfied the
+under-five-minute examples target; later revisions require their own checks.

@@ -6,7 +6,8 @@ see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 
 ## Unreleased
 
-Close-generation-loop audit fixes (locally qualified; CI pending):
+Close-generation-loop audit fixes (local qualification and PR CI passed; see
+[verification status](docs/verification-status.md) for the tested revision):
 
 - Harness-owned runpy execution, counted launches and an explicit Docker backend.
 - Numerical verification requires an attributable failed comparison in the

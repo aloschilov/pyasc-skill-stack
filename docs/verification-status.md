@@ -5,14 +5,15 @@ cannot count as successful acceptance. Historical evidence remains unchanged.
 
 ## Generation and harness qualification
 
-The close-generation-loop implementation has passed local qualification, but is
-not landed. A green CI run for the earlier v0.2.0 commit does not verify these edits.
+The close-generation-loop implementation has passed local qualification and
+real PR checks in [PR #18](https://github.com/aloschilov/pyasc-skill-stack/pull/18).
+It is not merged. The evidence below identifies the tested revision explicitly.
 
 | Gate | Status | Basis |
 |---|---|---|
 | generation (static, historical) | passed, marginally | three runs on 2026-10-28; scores 12/12/11, threshold 12; all runtime checks SKIPped |
 | generation (executed, fresh) | passed locally | one fresh attempt passed end to end; a second was initially rejected by a scorer tuple-loop defect, then its unchanged artifact passed corrected static/JIT/numerical qualification |
-| generated-kernel regression | passed locally; not-run in CI | 16/16 contract cases in 89.7 s; includes run-1/run-3 positives, original run-2 expected compilation failure, template, fixtures and three complete skill listings |
+| generated-kernel regression | passed in PR CI | 16/16 cases; matrix 88.47 s, full examples job 106 s; includes run-1/run-3 positives, original run-2 expected compilation failure, template, fixtures and three complete skill listings |
 | independent review | not-run | executing kernels is not independent review |
 | hardware | not-run | outside this change |
 | performance | not-run | simulator checks are not performance evidence |
@@ -20,8 +21,9 @@ not landed. A green CI run for the earlier v0.2.0 commit does not verify these e
 Local qualification on 2026-10-29 also passed both mutation checks (restoring
 the template reassignment and removing harness platform setup), the fast PR
 gate, portability, and nine focused harness/scoring unit tests. The 89.7 s
-matrix time excludes image pull and CI queue/setup; CI's under-five-minute
-criterion is still unverified.
+matrix time excludes image pull and CI queue/setup. The real PR examples job
+completed in 106 s including setup, image pull and artifact upload, satisfying
+the under-five-minute criterion for this run (not a future runtime guarantee).
 
 Two fresh generations were retained, not selected by silently discarding
 failures. The second used `for size in (1024, 1025)` with a numerical check
@@ -35,8 +37,8 @@ The first attempt passed with two launches, as did the requalified second.
 Retained external archive: `close-generation-qualification-20261029.tar.gz`;
 SHA256 `b2ad97856246522fac3427eef4783ad567116bf8195c10b44246def2969a86b4`.
 Copies are retained outside both working checkouts on the workstation and VM;
-the handoff supplies the local archive link. No shared archive URL or new CI
-run is claimed. [Storage and retention policy](verification-contract.md#storage).
+the handoff supplies the local archive link. No shared URL is claimed for that
+manual qualification archive; the separate CI evidence is linked below. [Storage and retention policy](verification-contract.md#storage).
 
 The original acceptance requirement “all three frozen kernels PASS unchanged”
 was invalidated by execution: run-2 reassigns `valid` from PlainValue to int and
@@ -55,10 +57,24 @@ supported numerical comparison at the same source site that passed in the
 real run. Timeout, missing report, and unrelated exceptions do not qualify.
 See [the report and storage contract](verification-contract.md).
 
-The examples workflow is **configured** for PRs. Until a run against the final
-commit exists, neither its CI success nor its wall time is claimed. The local
-matrix cannot substitute for that evidence. No nightly run is established by
-this change, and CI's workflow has no scheduled generation trigger.
+[CI run 40892900455](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/40892900455)
+verified PR head `1d8231e3dd169911201a051b8c065d49c7bddd68` via GitHub's
+synthetic merge revision `395ce055140133007471082aaf5fcd8ec6401bb8` on 2026-10-29:
+
+- pr-gate: success, 15 s; ten test groups and nine focused unit tests, no skips.
+- examples-gate: success, 106 s; all 16 expected outcomes, no failed cases,
+  input hashes unchanged and matching the reviewed source.
+- merge-gate: skipped by design on pull_request; no merge was performed.
+
+[CI artifact](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/40892900455/artifacts/12903949791)
+ZIP SHA256: `fcc53886f9b6991eabb4133c2a75374f259f3da47d412fa32dc424174f3f1e40`.
+The downloaded ZIP, manifest and logs are retained outside the checkout;
+artifact digest, individual log hashes and all source hashes were verified.
+The Actions copy expires on 2026-11-28, so it is not the only retained copy.
+
+These are dated checks of the identified revision, not an assertion that every
+later commit passed. No nightly run is established by this change, and CI's
+workflow has no scheduled generation trigger.
 
 Commands (choose new result directories outside the checkout):
 
