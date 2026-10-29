@@ -4,6 +4,25 @@ Releases are git tags. Tagging `v*` builds the archives and publishes them —
 see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 `release/<date>/` directory; a dated copy of a tree drifts from the tree.
 
+## Unreleased
+
+Close-generation-loop audit fixes (locally qualified; CI pending):
+
+- Harness-owned runpy execution, counted launches and an explicit Docker backend.
+- Numerical verification requires an attributable failed comparison in the
+  suppressed-launch control, not merely a failing process. Timeout, missing
+  reports and unrelated exceptions leave the result at `executed`.
+- The regression matrix includes original run-2 as an expected compilation
+  failure; run-1/run-3 and the fixed tail-bearing template are positive controls.
+- Strict fresh generation requires static acceptance, codegen and numerical
+  execution. Runtime failure or unavailability cannot become a passing cycle.
+- Multi-shape scoring recognizes a direct verification loop over tuple sizes
+  as well as list sizes; thresholds and historical evidence remain unchanged.
+- Run manifests, logs and generated sources live outside the checkout. CI
+  uploads artifacts; accepted qualifications need a retained archive beyond CI
+  artifact expiry. Historical evidence is unchanged.
+
+
 ## v0.2.0
 
 The release that ran the gate the first release only described.

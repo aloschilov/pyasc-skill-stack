@@ -905,37 +905,40 @@ def _kernel_path_diagnostics(
 
 def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
                       platform: str = "Ascend950PR_9599") -> dict:
-    """Run simulator verification inside the Docker container.
+    """Run kernel verification inside the Docker container.
 
-    Mounts the repo at /repo (for tool scripts) and the project at /workspace
-    (for the generated kernel). Runs run_and_verify.py from /repo.
+    Delegates the container invocation to ``run_and_verify.py
+    --runtime-backend docker``, which owns the single definition of how a
+    kernel is run inside the pinned image (mounts, ulimits, interpreter). That
+    keeps this path and the CI gates from drifting apart.
 
-    *platform* is forwarded to run_and_verify.py via ``--platform``. The
-    default ``Ascend950PR_9599`` (C310) is the only platform the stack
-    targets. Heavy CANN simulator runs need a high open-files ulimit.
+    Uses ``--mode execute``: the harness sets the platform on the kernel's
+    behalf and requires a counted real launch, rather than running the kernel
+    unassisted and inferring the outcome. ``--mode simulator`` is now an alias
+    for the same counted-launch contract.
+
+    *platform* is forwarded via ``--platform``. The default
+    ``Ascend950PR_9599`` (C310) is the only platform the stack targets.
 
     *timeout* bounds both the outer ``docker run`` subprocess and the inner
-    simulator-kernel subprocess (forwarded as ``run_and_verify.py
-    --timeout``). They must agree, otherwise the inner default of 300 s
-    short-circuits the outer wait — see the 2026-05-07 nightly post-mortem
-    in docs/perf-methodology/.
+    kernel subprocess (forwarded as ``run_and_verify.py --timeout``). They must
+    agree, otherwise the inner default of 300 s short-circuits the outer
+    wait — see the 2026-05-07 nightly post-mortem in docs/perf-methodology/.
     """
     rel_kernel = kernel_path.relative_to(project_dir)
     cmd = [
-        "docker", "run", "--rm",
-        "--ulimit", "nofile=65536:65536",
-        "-v", f"{REPO_ROOT}:/repo:ro",
-        "-v", f"{project_dir}:/workspace",
-        "-w", "/workspace",
-        DOCKER_IMAGE,
-        "python3.11", "/repo/tests/tools/run_and_verify.py",
-        str(rel_kernel), "--mode", "simulator", "--json",
+        sys.executable or "python3", str(RUN_VERIFY_SCRIPT),
+        str(kernel_path),
+        "--runtime-backend", "docker",
+        "--docker-image", DOCKER_IMAGE,
+        "--project-dir", str(project_dir),
+        "--mode", "execute", "--json",
         "--platform", platform,
         "--timeout", str(max(60, timeout - 30)),
     ]
     code, out, err = _run(cmd, timeout=timeout)
     result = {
-        "mode": "simulator", "backend": "Model", "platform": platform,
+        "mode": "execute", "backend": "Model", "platform": platform,
     }
     if code == 0:
         result["status"] = "pass"
@@ -948,6 +951,10 @@ def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
         parsed = json.loads(out)
         result["detail"] = parsed.get("detail", "")
         result["shapes_verified"] = parsed.get("shapes_verified", [])
+        # Carry how much was actually demonstrated into the evidence record,
+        # so a reader never has to infer it from a bare pass/fail.
+        result["verification_level"] = parsed.get("verification_level")
+        result["launcher_calls"] = parsed.get("launcher_calls")
     except (json.JSONDecodeError, TypeError):
         raw = err or out
         traceback_line = ""
@@ -961,6 +968,8 @@ def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
             detail = f"... {traceback_line}\n{detail}"
         result["detail"] = detail
         result["shapes_verified"] = []
+        result["verification_level"] = None
+        result["launcher_calls"] = None
 
     if result["status"] == "fail":
         # Capture *why* the container couldn't run the kernel. The dominant

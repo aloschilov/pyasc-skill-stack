@@ -45,6 +45,17 @@ echo ""
 
 FAILED=0
 
+echo "--- Skill Code Blocks ---"
+# Cheap static guard: the skills are copied into kernels by an agent, so a
+# python block that does not even parse is a defect that propagates. Needs no
+# runtime, so it belongs here rather than in the container gate.
+if "${PYTHON:-python3}" "$SCRIPT_DIR/tools/check_skill_code_blocks.py"; then
+    echo ""
+else
+    FAILED=$((FAILED + 1))
+    echo ""
+fi
+
 echo "--- L1 Unit Tests ---"
 if bash "$SCRIPT_DIR/run-tests.sh" --fast; then
     echo ""
