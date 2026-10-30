@@ -73,11 +73,13 @@ class RunArtifacts:
         self.data['commands'].append(record); self.save()
         return code, report
 
-    def finish(self, status):
+    def finish(self, status, *, error=None):
         self.data.update(status=status, elapsed_s=time.time()-self.data['started_unix'])
+        if error is not None:
+            self.data['error'] = {'type': type(error).__name__, 'message': str(error)}
         self.data['inputs_unchanged'] = self.data['input_sha256'] == input_hashes()
         if not self.data['inputs_unchanged']:
             self.data['status'] = 'failed-inputs-changed'
         self.save()
-        if not self.data['inputs_unchanged']:
+        if not self.data['inputs_unchanged'] and error is None:
             raise RuntimeError('Qualification inputs changed during the run')

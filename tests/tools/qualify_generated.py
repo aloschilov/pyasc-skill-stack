@@ -4,13 +4,14 @@ from pathlib import Path
 import shutil
 import sys
 from run_artifacts import ROOT, RunArtifacts, sha
-from run_and_verify import pinned_sim_image
+from run_and_verify import pinned_sim_image, verification_command_timeout
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('kernel', type=Path)
     ap.add_argument('--results-dir', required=True)
+    ap.add_argument('--timeout', type=int, default=120)
     args = ap.parse_args()
     run = RunArtifacts(args.results_dir, 'fresh-generated-kernel-qualification')
     image = pinned_sim_image()
@@ -29,7 +30,8 @@ def main():
         for mode, level in [('jit', 'compiled'), ('execute', 'numerically_verified')]:
             code, report = run.command(mode, [sys.executable, str(ROOT/'tests/tools/run_and_verify.py'),
                 str(kernel), '--mode', mode, '--runtime-backend', 'docker', '--docker-image', image,
-                '--platform', 'Ascend950PR_9599', '--timeout', '120', '--json'], timeout=390)
+                '--platform', 'Ascend950PR_9599', '--timeout', str(args.timeout), '--json'],
+                timeout=verification_command_timeout(args.timeout))
             if code == 2:
                 status = 'blocked'; return 2
             if code or report.get('status') != 'PASS' or report.get('verification_level') != level:
@@ -39,7 +41,7 @@ def main():
         status = 'passed'; result = 0
         return result
     finally:
-        run.finish(status)
+        run.finish(status, error=sys.exc_info()[1])
 
 
 if __name__ == '__main__':

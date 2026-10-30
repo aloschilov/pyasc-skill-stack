@@ -7,12 +7,13 @@ import shutil
 from pathlib import Path
 import sys
 from run_artifacts import ROOT, RunArtifacts
-from run_and_verify import pinned_sim_image
+from run_and_verify import pinned_sim_image, verification_command_timeout
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--results-dir', required=True)
+    ap.add_argument('--timeout', type=int, default=120)
     args = ap.parse_args()
     run = RunArtifacts(args.results_dir, 'verification-contract')
     image = pinned_sim_image()
@@ -30,6 +31,8 @@ def main():
         ('prints-pass', fixtures/'prints_pass.py', 'execute', 1, None, 0, 'no kernel launch'),
         ('no-main', fixtures/'no_main.py', 'execute', 1, None, 0, 'no __main__'),
         ('unverified', fixtures/'unverified.py', 'execute', 0, 'executed', 1, None),
+        ('imported-check', fixtures/'imported_check.py', 'execute', 0, 'numerically_verified', 1, None),
+        ('logging-check', fixtures/'logging_check.py', 'execute', 0, 'numerically_verified', 1, None),
         ('template', template, 'execute', 0, 'numerically_verified', 3, None),
         ('run-1', evidence/'run-1/kernel.py', 'execute', 0, 'numerically_verified', 1, None),
         ('run-2', evidence/'run-2/kernel.py', 'execute', 1, None, 0, 'UnsupportedSyntaxError'),
@@ -40,6 +43,8 @@ def main():
     from skill_jit_examples import extract_examples
     for label, path in extract_examples(run.path/'skill-examples'):
         cases.append((label, path, 'jit', 0, 'compiled', None, None))
+    inventory = json.loads((run.path/'skill-examples/inventory.json').read_text())
+    scalar_args = {entry['label']: entry['scalar_args'] for entry in inventory if not entry['excluded']}
     failed = []
     try:
         for label, kernel, mode, expected_code, level, calls, reason in cases:
@@ -51,10 +56,10 @@ def main():
                 shutil.copy2(fixtures/'_base.py', case_dir/'_base.py')
             argv = [sys.executable, str(ROOT/'tests/tools/run_and_verify.py'), str(copied),
                     '--mode', mode, '--runtime-backend', 'docker', '--docker-image', image,
-                    '--platform', 'Ascend950PR_9599', '--timeout', '120', '--json']
-            if label == 'skill-jit-3':
-                argv += ['--jit-scalar-args', json.dumps({'size':1025,'tile_size':1024})]
-            code, report = run.command(label, argv, timeout=390)
+                    '--platform', 'Ascend950PR_9599', '--timeout', str(args.timeout), '--json']
+            if scalar_args.get(label):
+                argv += ['--jit-scalar-args', json.dumps(scalar_args[label])]
+            code, report = run.command(label, argv, timeout=verification_command_timeout(args.timeout))
             ok = (code == expected_code and report.get('status') == ('PASS' if code == 0 else 'FAIL')
                   and report.get('verification_level') == level
                   and (calls is None or report.get('launcher_calls') == calls)

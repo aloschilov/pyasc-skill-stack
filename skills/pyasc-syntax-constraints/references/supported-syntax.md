@@ -38,13 +38,16 @@ A name may not be re-bound to a value of a *different type* within a JIT
 function. This bites hardest when clamping a partial-tile tail, where the
 obvious `if` form rebinds a traced value to a plain Python `int`:
 
+<!-- skill-code: counter-example -->
 ```python
 # Rejected: UnsupportedSyntaxError: 'valid' was re-assigned to an object
 # with different type: initial type is PlainValue, new type is int
 valid = size - tile_offset      # PlainValue (traced)
 if valid > tile_size:
     valid = tile_size           # int (compile-time constant)
+```
 
+```python
 # Correct: one binding, one type
 valid = min(size - tile_offset, tile_size)
 ```

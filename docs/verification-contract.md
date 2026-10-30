@@ -15,8 +15,10 @@ null level; launcher_calls retains calls observed before failure. Levels:
   same source site after a launch attempt.
 
 Supported observations are torch.allclose / numpy.allclose used directly in
-`assert comparison(...)` or `if not comparison(...): raise ...` (single raise
-body), numpy.testing.assert_allclose and torch.testing.assert_close. Other
+`assert comparison(...)` or `if not comparison(...): ...; raise ...` (the final
+statement must be the rejecting raise), including imported/aliased callables.
+Logging before that raise is supported; unrelated exceptions remain inconclusive.
+Also supported: numpy.testing.assert_allclose and torch.testing.assert_close. Other
 styles remain executable but do not earn numerical verification. This is a
 conservative observation of the script's checks, not an independent oracle or
 protection against malicious scripts. It does not establish untested shapes.
@@ -30,10 +32,21 @@ fixture correctly returns PASS / executed, unlike the five failing fixtures.
 ## Acceptance entry points
 
 `verification_contract.py` checks all three historical kernels, the template in
-JIT and execute modes, six fixtures, auto failure, and complete skill JIT
+JIT and execute modes, eight fixtures, auto failure, and complete skill JIT
 listings. Incomplete and intentionally invalid listings have an explicit
 inventory with reasons; new unexcluded listings enter the compile matrix.
 Original run-2 is required to FAIL with UnsupportedSyntaxError and zero launches.
+The skill inventory binds scalar arguments to the source path, not its position
+in the extracted list.
+
+Docker execution requires the pinned image to be pre-pulled (`docker pull IMAGE`);
+CI does this in a separate step. Containers use `--pull never --network none`.
+A missing image or Docker startup exit 125/126/127 yields SKIP (2), with the
+original exit and log retained; signal/OOM and other unexpected exits yield
+FAIL (1). Strict acceptance never accepts SKIP. Kernel budgets exclude image
+provisioning, and outer command budgets are derived from the execution timeout
+plus daemon probe, container cleanup and CLI overhead. No container memory cap
+is imposed; available memory remains a host prerequisite.
 
 `generation_acceptance.py` records one fresh generation attempt. Its shell
 entry point defaults to strict mode; `--static-only` is explicitly weaker.

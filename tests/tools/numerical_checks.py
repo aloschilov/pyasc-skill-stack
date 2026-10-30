@@ -1,6 +1,6 @@
 """Conservative observation of supported host numerical checks, not stdout.
 
-Only direct assert allclose(...), if not allclose(...): raise, and native
+Only direct assert allclose(...), if not allclose(...): ...; raise, and native
 assert_allclose/assert_close exceptions are attributable. Other check styles
 remain executable but cannot earn the numerical level. This is a test harness,
 not a sandbox against deliberately forged checks or reports.
@@ -76,16 +76,21 @@ class NumericalChecks:
         if not tb or Path(tb.tb_frame.f_code.co_filename).resolve() != self.kernel:
             return None
         def direct_call(node):
-            return (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-                    and node.func.attr == 'allclose' and node.lineno == event['line'])
+            # The wrapper already established the API, including imported
+            # aliases. Keep the AST link to the rejecting assertion/branch:
+            # a false comparison followed by an unrelated raise is insufficient.
+            return (isinstance(node, ast.Call)
+                    and (isinstance(node.func, ast.Name)
+                         or (isinstance(node.func, ast.Attribute) and node.func.attr == 'allclose'))
+                    and node.lineno == event['line'])
         for node in ast.walk(self.tree):
             if (isinstance(node, ast.Assert) and direct_call(node.test)
                     and node.lineno <= tb.tb_lineno <= node.end_lineno):
                 return event
             if (isinstance(node, ast.If) and isinstance(node.test, ast.UnaryOp)
                     and isinstance(node.test.op, ast.Not) and direct_call(node.test.operand)
-                    and len(node.body) == 1 and isinstance(node.body[0], ast.Raise)
-                    and node.body[0].lineno <= tb.tb_lineno <= node.body[0].end_lineno):
+                    and isinstance(node.body[-1], ast.Raise)
+                    and node.body[-1].lineno <= tb.tb_lineno <= node.body[-1].end_lineno):
                 return event
         return None
 

@@ -4,11 +4,12 @@ from pathlib import Path
 import shutil
 import sys
 from run_artifacts import ROOT, RunArtifacts, sha
-from run_and_verify import pinned_sim_image
+from run_and_verify import pinned_sim_image, verification_command_timeout
 
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--results-dir',required=True)
+    ap.add_argument('--timeout', type=int, default=120)
     args=ap.parse_args();run=RunArtifacts(args.results_dir,'mutation-acceptance')
     image=pinned_sim_image();run.data['image']=image
     template=run.path/'bad-template.py'
@@ -34,7 +35,7 @@ def main():
         ('platform-regression',mutant/'tests/tools/run_and_verify.py',kernel,'107001')]:
         code,report=run.command(label,[sys.executable,str(driver),str(path),'--mode','execute',
                     '--runtime-backend','docker','--docker-image',image,'--platform','Ascend950PR_9599',
-                    '--timeout','120','--json'],timeout=390)
+                    '--timeout',str(args.timeout),'--json'],timeout=verification_command_timeout(args.timeout))
         ok=code==1 and report.get('status')=='FAIL' and reason in report.get('detail','')
         print(label, 'PASS (regression detected)' if ok else 'FAIL', flush=True)
         if not ok:failed.append(label)

@@ -1,7 +1,11 @@
 import importlib
+import contextlib
+import io
 import json
 from pathlib import Path
 import sys
+import shutil
+import subprocess
 import tempfile
 import types
 import unittest
@@ -65,10 +69,107 @@ class Contract(unittest.TestCase):
     def test_direct_checks_attributed(self):
         self.assertIsNotNone(self.observe('import torch\nassert torch.allclose(1,2)\n'))
         self.assertIsNotNone(self.observe('import torch\nif not torch.allclose(1,2):\n    raise ValueError("bad")\n'))
+        for name in ('allclose', 'close'):
+            self.assertIsNotNone(self.observe(f'from torch import allclose as {name}\nassert {name}(1,2)\n'))
+        self.assertIsNotNone(self.observe('import torch\nif not torch.allclose(1,2):\n    print("bad values")\n    raise ValueError("bad")\n'))
 
     def test_unrelated_exception_after_false_comparison_not_attributed(self):
         self.assertIsNone(self.observe('import torch\ntorch.allclose(1,2)\nraise AssertionError("unrelated")\n'))
         self.assertIsNone(self.observe('import torch\nassert torch.allclose(1,1)\nraise ValueError("unrelated")\n'))
+        self.assertIsNone(self.observe('from torch import allclose\nallclose(1,2)\nraise AssertionError("unrelated")\n'))
+        self.assertIsNone(self.observe('import torch\nif not torch.allclose(1,2):\n    raise ValueError("earlier unrelated error")\n    raise ValueError("numerical rejection")\n'))
+
+    def invoke_cli(self, *args):
+        output = io.StringIO()
+        with patch.object(sys, 'argv', ['verify', __file__, '--json', *args]), \
+             contextlib.redirect_stdout(output), self.assertRaises(SystemExit) as caught:
+            rv.main()
+        return caught.exception.code, json.loads(output.getvalue())
+
+    def test_docker_exit_contract_preserves_raw_error(self):
+        for raw_code, expected in [(125,2),(126,2),(127,2),(137,1),(-9,1),(23,1)]:
+            with self.subTest(raw_code=raw_code), \
+                 patch.object(rv, '_docker_available', return_value=True), \
+                 patch.object(rv, '_run_in_docker', return_value=(raw_code, 'partial output', 'raw failure')):
+                code, report = self.invoke_cli('--runtime-backend', 'docker')
+                self.assertEqual(code, expected)
+                self.assertEqual(report['status'], 'SKIP' if expected == 2 else 'FAIL')
+                self.assertIsNone(report['verification_level'])
+                self.assertEqual(report['evidence']['docker'], {'exit_code':raw_code, 'log':'raw failure'})
+
+    def test_auto_fallback_retains_both_reports(self):
+        def execution(*args, evidence, **kwargs):
+            evidence['execution'] = {'exit_code':2, 'log':'unavailable'}
+            return 2, 'unavailable', None, 0
+        def jit(kernel, use_json, platform, scalars, evidence):
+            evidence['jit'] = {'exit_code':0, 'log':'compiled', 'argv':['jit',kernel]}
+            return 0, 'compiled'
+        with patch.object(rv, '_can_import', return_value=True), \
+             patch.object(rv, '_run_execute', side_effect=execution), \
+             patch.object(rv, '_run_jit', side_effect=jit):
+            code, report = self.invoke_cli('--mode', 'auto')
+        self.assertEqual(code, 0)
+        self.assertEqual(report['verification_level'], 'compiled')
+        self.assertEqual(report['mode'], 'auto (jit fallback)')
+        self.assertEqual(report['evidence']['execution']['exit_code'], 2)
+        self.assertEqual(report['evidence']['jit']['log'], 'compiled')
+        self.assertTrue(report['evidence']['jit']['argv'])
+
+    def test_docker_budget_and_offline_execution(self):
+        for timeout in (10, 120, 300):
+            with patch.object(rv, '_docker_available', return_value=True), \
+                 patch.object(rv, '_run_in_docker', return_value=(2, '', 'unavailable')) as run:
+                self.invoke_cli('--runtime-backend', 'docker', '--timeout', str(timeout))
+            inner = run.call_args.kwargs['timeout']
+            self.assertEqual(inner, rv.docker_run_timeout(timeout))
+            self.assertGreater(rv.verification_command_timeout(timeout),
+                               inner + rv.DOCKER_PROBE_TIMEOUT + rv.DOCKER_CLEANUP_TIMEOUT)
+        with patch.object(rv.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '', '')) as run:
+            rv._run_in_docker(__file__, ['--mode','execute'], 'image@sha256:test', 360)
+        command = run.call_args_list[0].args[0]
+        self.assertEqual(command[command.index('--pull')+1], 'never')
+        self.assertEqual(command[command.index('--network')+1], 'none')
+
+    def test_skill_scalar_overrides_survive_insertion(self):
+        import skill_jit_examples as skills
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shutil.copytree(ROOT/'skills', root/'skills')
+            with patch.object(skills, 'ROOT', root):
+                skills.extract_examples(root/'before')
+                earlier = root/'skills/aaa-new/SKILL.md'
+                earlier.parent.mkdir()
+                earlier.write_text('```python\nimport asc\n@asc.jit\ndef extra():\n    pass\n```\n')
+                skills.extract_examples(root/'after')
+            before = json.loads((root/'before/inventory.json').read_text())
+            after = json.loads((root/'after/inventory.json').read_text())
+            target = 'skills/pyasc-target-operator/SKILL.md'
+            old = next(e for e in before if e['file'] == target)
+            new = next(e for e in after if e['file'] == target)
+            self.assertNotEqual(old['label'], new['label'])
+            self.assertEqual(new['scalar_args'], {'size':1025, 'tile_size':1024})
+            self.assertTrue(all(not e['scalar_args'] for e in after
+                                if not e['excluded'] and e['file'] != target))
+
+    def test_qualification_preserves_original_error_when_inputs_change(self):
+        import qualify_generated as q
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); kernel = root/'kernel.py'; kernel.write_text('# input')
+            output = root/'result'
+            with patch('run_artifacts.input_hashes', side_effect=[{'input':'before'}, {'input':'after'}]), \
+                 patch.object(RunArtifacts, 'command', side_effect=OSError('original command error')), \
+                 patch.object(q, 'pinned_sim_image', return_value='image@sha256:test'), \
+                 patch.object(sys, 'argv', ['qualify', str(kernel), '--results-dir', str(output)]):
+                with self.assertRaisesRegex(OSError, 'original command error'):
+                    q.main()
+            manifest = json.loads((output/'manifest.json').read_text())
+            self.assertEqual(manifest['status'], 'failed-inputs-changed')
+            self.assertFalse(manifest['inputs_unchanged'])
+            self.assertEqual(manifest['error']['message'], 'original command error')
+            with patch('run_artifacts.input_hashes', side_effect=[{}, {'new':'input'}]):
+                run = RunArtifacts(root/'changed', 'test')
+                with self.assertRaisesRegex(RuntimeError, 'inputs changed'):
+                    run.finish('passed')
 
     def test_strict_generated_qualification_rejects_skip_fail_and_weak_pass(self):
         import qualify_generated as q

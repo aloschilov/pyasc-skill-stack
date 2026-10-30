@@ -60,6 +60,20 @@ LEVEL_COMPILED = "compiled"
 LEVEL_EXECUTED = "executed"
 LEVEL_NUMERIC = "numerically_verified"
 
+# Shared budgets for the nested CLI and its callers. Image provisioning is
+# deliberately separate: docker run must never spend a kernel budget pulling.
+DOCKER_PROBE_TIMEOUT = 30
+DOCKER_CLEANUP_TIMEOUT = 30
+
+
+def docker_run_timeout(execution_timeout: int) -> int:
+    return 2 * execution_timeout + 120  # primary, control, JIT/startup allowance
+
+
+def verification_command_timeout(execution_timeout: int) -> int:
+    return (docker_run_timeout(execution_timeout) + DOCKER_PROBE_TIMEOUT
+            + DOCKER_CLEANUP_TIMEOUT + 30)  # outer CLI startup/report headroom
+
 
 def _can_import(module_name: str) -> bool:
     try:
@@ -198,7 +212,7 @@ def _docker_available() -> bool:
         return subprocess.run(
             ["docker", "info"],
             capture_output=True,
-            timeout=30,
+            timeout=DOCKER_PROBE_TIMEOUT,
         ).returncode == 0
     except (OSError, subprocess.SubprocessError):
         return False
@@ -241,6 +255,7 @@ def _run_in_docker(
     container_name = "pyasc-verify-" + uuid.uuid4().hex
     cmd = [
         "docker", "run", "--rm", "--name", container_name,
+        "--pull", "never", "--network", "none",
         # Heavy CANN simulator runs exhaust the default open-file limit.
         "--ulimit", "nofile=65536:65536",
         "-v", f"{REPO_ROOT}:/repo:ro",
@@ -264,7 +279,7 @@ def _run_in_docker(
         return 1, "", f"docker run error: {exc}"
     finally:
         try:
-            subprocess.run(["docker", "rm", "-f", container_name], capture_output=True, timeout=30)
+            subprocess.run(["docker", "rm", "-f", container_name], capture_output=True, timeout=DOCKER_CLEANUP_TIMEOUT)
         except (OSError, subprocess.SubprocessError):
             pass  # preserve the original failure/report if the daemon vanished
     return result.returncode, result.stdout or "", (result.stdout or "") + (result.stderr or "")
@@ -389,7 +404,7 @@ def _run_execute(
         return (
             0,
             f"{detail}; NOT numerically verified: the kernel passes even with "
-            f"launches suppressed, so it does not check its results",
+            f"launches suppressed; this control did not establish a rejecting check",
             LEVEL_EXECUTED,
             calls,
         )
@@ -506,9 +521,22 @@ def main() -> None:
             kernel_abs=str(Path(kernel_path).resolve()),
             argv_rest=passthrough,
             image=image,
-            timeout=2 * args.timeout + 120,
+            timeout=docker_run_timeout(args.timeout),
             project_dir=Path(args.project_dir) if args.project_dir else None,
         )
+        # Docker startup errors are unavailable infrastructure, not kernel
+        # verdicts. Other unexpected exits (signals/OOM) remain failures. Keep
+        # the raw exit and log while honoring the public 0/1/2 exit contract.
+        raw_code = code
+        if code not in (0, 1, 2):
+            code = 2 if code in (125, 126, 127) else 1
+            detail = (f"Docker runtime unavailable (exit {raw_code}); pre-pull the "
+                      f"pinned image with docker pull {image}. " if code == 2 else
+                      f"Docker process terminated with exit {raw_code}. ")
+            _report(use_json, kernel_path, status_of_code(code),
+                    detail + raw.strip()[-500:], f"{args.mode} (docker)", None,
+                    {"evidence": {"docker": {"exit_code": raw_code, "log": raw}}})
+            sys.exit(code)
         # The inner invocation already emitted a complete report; forward it
         # verbatim so the two backends are indistinguishable to a consumer.
         if stdout.strip():
@@ -516,7 +544,7 @@ def main() -> None:
         else:
             _report(
                 use_json, kernel_path,
-                {0: "PASS", 2: "SKIP"}.get(code, "FAIL"),
+                status_of_code(code),
                 (raw.strip()[-500:] or f"docker run exit {code}"),
                 f"{args.mode} (docker)", None,
             )
@@ -580,7 +608,8 @@ def main() -> None:
             f"{jit_detail}"
         )
         _report(
-            use_json, kernel_path, "PASS", combined, "auto (jit fallback)", LEVEL_COMPILED
+            use_json, kernel_path, "PASS", combined, "auto (jit fallback)", LEVEL_COMPILED,
+            extra={"evidence": evidence},
         )
         sys.exit(0)
     if jit_code == 2:
@@ -591,6 +620,7 @@ def main() -> None:
             f"Execute: {exe_detail}; JIT: {jit_detail}",
             "auto",
             None,
+            extra={"evidence": evidence},
         )
         sys.exit(2)
 
@@ -601,6 +631,7 @@ def main() -> None:
         f"Execution skipped ({exe_detail}); JIT: {jit_detail}",
         "auto (jit fallback failed)",
         None,
+        extra={"evidence": evidence},
     )
     sys.exit(1)
 

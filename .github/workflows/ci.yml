@@ -76,6 +76,8 @@ jobs:
   # Without those, this job could go green while verifying nothing.
   # ==========================================================================
   examples-gate:
+    # Checks are advisory until branch protection/rulesets require them.
+    # Offline runners leave these jobs queued; see docs/verification-status.md.
     runs-on: [self-hosted, arm64]
     timeout-minutes: 20
     needs: [pr-gate]

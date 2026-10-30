@@ -9,6 +9,15 @@ The close-generation-loop implementation has passed local qualification and
 real PR checks in [PR #18](https://github.com/aloschilov/pyasc-skill-stack/pull/18).
 It is not merged. The evidence below identifies the tested revision explicitly.
 
+Enforcement is manual, by convention. On 2026-10-30, the `main` branch protection
+API returned “Branch not protected” and the repository ruleset list was empty.
+Neither `pr-gate` nor `examples-gate` is a required GitHub check; a red check
+does not technically prevent a merge. Both must complete successfully on the
+current PR head before manual acceptance. Queued, cancelled, skipped or missing
+checks are not acceptance. Both jobs depend on the self-hosted arm64 runner;
+if it is offline, work can remain queued and examples cannot run until pr-gate
+passes. Workflow execution timeouts do not bound time waiting for a runner.
+
 | Gate | Status | Basis |
 |---|---|---|
 | generation (static, historical) | passed, marginally | three runs on 2026-10-28; scores 12/12/11, threshold 12; all runtime checks SKIPped |

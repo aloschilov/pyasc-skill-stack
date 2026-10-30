@@ -14,6 +14,11 @@ EXCLUDED = {
     'skills/pyasc-syntax-constraints/references/constexpr-guide.md': 'conditional input fragment without imports or output',
 }
 
+# Parameters belong to a source listing, never its enumeration position.
+SCALAR_ARGS = {
+    'skills/pyasc-target-operator/SKILL.md': {'size': 1025, 'tile_size': 1024},
+}
+
 
 def extract_examples(directory):
     directory = Path(directory); directory.mkdir(parents=True)
@@ -34,6 +39,8 @@ def extract_examples(directory):
             inventory.append(entry)
             if reason: continue
             label = f'skill-jit-{len(examples)+1}'
+            entry['label'] = label
+            entry['scalar_args'] = SCALAR_ARGS.get(rel, {})
             output = directory/(label+'.py'); output.write_text(code+'\n')
             examples.append((label, output))
     if not examples or seen_exclusions != set(EXCLUDED):
