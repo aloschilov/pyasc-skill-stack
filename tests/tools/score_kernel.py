@@ -184,6 +184,39 @@ DTYPE_STRINGS = {
 # Scoring
 # ---------------------------------------------------------------------------
 
+def _has_literal_shape_checks(tree: ast.AST) -> bool:
+    """Recognize direct verification loops over distinct literal sizes/shapes.
+
+    Tuple and list spellings are equivalent Python. Keep this structural:
+    merely mentioning allclose in a comment or iterating an unrelated tuple
+    must not earn the multi-shape point.
+    """
+    def dimension(node):
+        return isinstance(node, ast.Constant) and type(node.value) is int and node.value > 0
+
+    def shape(node):
+        return dimension(node) or (isinstance(node, (ast.Tuple, ast.List))
+                                  and bool(node.elts) and all(dimension(n) for n in node.elts))
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.For) or not isinstance(node.iter, (ast.Tuple, ast.List)):
+            continue
+        sizes = node.iter.elts
+        if len(sizes) < 2 or not all(shape(n) for n in sizes):
+            continue
+        if len({ast.dump(n) for n in sizes}) < 2:
+            continue
+        names = {n.id for n in ast.walk(node.target) if isinstance(n, ast.Name)}
+        body = [n for statement in node.body for n in ast.walk(statement)]
+        uses_size = any(isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)
+                        and n.id in names for n in body)
+        checks = any(isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                     and n.func.attr in ('allclose', 'assert_close', 'assert_allclose') for n in body)
+        if uses_size and checks:
+            return True
+    return False
+
+
 class ScoreResult(NamedTuple):
     checks: list[Check]
     failure_category: str | None
@@ -312,6 +345,7 @@ def score(path: str, op: str | None = None, dtype: str | None = None,
     has_shape_loop = bool(re.search(r'for\s+\w+\s+in\s+.*shape', source, re.IGNORECASE)
                           or re.search(r'for\s+\w+\s+in\s+\[.*\(', source)
                           or re.search(r'for\s+.*\bin\b.*\[.*,.*\]', source))
+    has_shape_loop = has_shape_loop or _has_literal_shape_checks(tree)
     multi_shape = verify_count >= 2 or has_shape_loop
     checks.append(Check("multi_shape_verification", multi_shape,
                          f"verify x{verify_count}, shape loop={'yes' if has_shape_loop else 'no'}"

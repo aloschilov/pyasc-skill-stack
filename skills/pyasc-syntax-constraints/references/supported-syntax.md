@@ -34,4 +34,27 @@ operators are not supported, group pairs with parentheses`. Group pairwise:
 inside ternary conditions (measured on pinned-runtime candidates for
 conv_3d_backprop_filter and dilation_2d).
 
+A name may not be re-bound to a value of a *different type* within a JIT
+function. This bites hardest when clamping a partial-tile tail, where the
+obvious `if` form rebinds a traced value to a plain Python `int`:
+
+<!-- skill-code: counter-example -->
+```python
+# Rejected: UnsupportedSyntaxError: 'valid' was re-assigned to an object
+# with different type: initial type is PlainValue, new type is int
+valid = size - tile_offset      # PlainValue (traced)
+if valid > tile_size:
+    valid = tile_size           # int (compile-time constant)
+```
+
+```python
+# Correct: one binding, one type
+valid = min(size - tile_offset, tile_size)
+```
+
+`min()` and `max()` lower correctly over a traced value and a `ConstExpr`
+bound, so they are the idiomatic way to clamp. Measured on the pinned
+pyasc-sim-dev image: the `if` form fails codegen before any launch, the
+`min()` form compiles and executes.
+
 Check optional loop and JIT keywords against the exact selected source.

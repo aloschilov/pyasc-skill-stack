@@ -70,7 +70,7 @@ polynomial. Compiler-generated register code from `vf_fusion=True` is allowed.
 ## Canonical elementwise structure
 
 ```python
-import asctile
+from asc.experimental import asctile
 import pytest
 import torch
 

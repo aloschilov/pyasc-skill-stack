@@ -4,7 +4,7 @@
 # =============================================================================
 # End-to-end test: OpenCode generates a pyasc vector add kernel, then the
 # test harness verifies the output with static AST checks, automated scoring,
-# and optional runtime verification.
+# and mandatory runtime verification (unless --static-only is explicit).
 #
 # Requires: opencode CLI, python3.10 with pyasc importable
 # Estimated time: 5-15 minutes
@@ -14,6 +14,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/test-helpers.sh"
+
+STRICT=1
+case "${1:-}" in
+    --static-only) STRICT=0 ;;
+    --strict|"") ;;
+    *) echo "Usage: $0 [--strict|--static-only]"; exit 1 ;;
+esac
 
 echo "========================================"
 echo -e " ${BOLD}L3 Integration: Kernel Generation E2E${NC}"
@@ -30,26 +37,44 @@ if ! check_opencode; then
     # "not exercised here", which run-tests.sh records as a skip. Exiting 1
     # would report a missing optional dependency as a product defect.
     print_skip "opencode CLI not found on PATH; generation not exercised"
-    exit 0
+    exit 2
 fi
 
 # ============================================
 # Setup
 # ============================================
 
-TEST_PROJECT=$(create_test_project "kernel-gen")
+TEST_PROJECT=$(mktemp -d -t "kernel-gen.XXXXXX")
+ln -s "$SKILLS_DIR/skills" "$TEST_PROJECT/skills"
 KERNEL_DIR="$TEST_PROJECT/kernels/add"
 mkdir -p "$KERNEL_DIR/docs"
 
-# Set PYASC_KEEP_PROJECT=1 to retain the generated tree. Without it the only
-# record of a run is the summary text, which is enough to see that something
-# failed and never enough to see why -- and a generation is not reproducible,
-# so the artifact cannot be recovered by re-running.
-if [ "${PYASC_KEEP_PROJECT:-0}" = "1" ]; then
-    trap "echo ''; echo \"Project retained at: $TEST_PROJECT\"" EXIT
-else
-    trap "cleanup_test_project '$TEST_PROJECT'" EXIT
-fi
+# Persist only allowlisted outputs, never rendered auth/config files.
+finish_project() {
+    if [ -n "${PYASC_GENERATION_OUTPUT:-}" ]; then
+        mkdir -p "$PYASC_GENERATION_OUTPUT"
+        for file in kernels/add/kernel.py kernels/add/docs/design.md kernel.py docs/design.md; do
+            if [ -f "$TEST_PROJECT/$file" ]; then
+                mkdir -p "$PYASC_GENERATION_OUTPUT/$(dirname "$file")"
+                cp "$TEST_PROJECT/$file" "$PYASC_GENERATION_OUTPUT/$file"
+            fi
+        done
+        "$PYTHON" - "$TEST_PROJECT" "$PYASC_GENERATION_OUTPUT" <<'PYLOG'
+import os, pathlib, sys
+source, target = map(pathlib.Path, sys.argv[1:])
+for name in ('agent-output.txt', 'prompt.txt'):
+    path = source/name
+    if not path.is_file(): continue
+    text = path.read_text(errors='replace')
+    for key in ('OPENCODE_API_KEY', 'OPENCODE_BASE_URL'):
+        secret = os.environ.get(key)
+        if secret: text = text.replace(secret, '<redacted>')
+    (target/name).write_text(text)
+PYLOG
+    fi
+    rm -rf "$TEST_PROJECT"
+}
+trap finish_project EXIT
 
 # Render a tracked profile into the project rather than letting opencode fall
 # back to the user's ~/.config/opencode/opencode.json. That global config is
@@ -64,7 +89,7 @@ if ! $PYTHON "$TOOLS_DIR/opencode_profile.py" \
         --require-credentials \
         --out "$TEST_PROJECT/opencode.json"; then
     print_skip "profile '$MODEL_PROFILE' has no usable credentials; generation not exercised"
-    exit 0
+    exit 2
 fi
 
 echo "Test project: $TEST_PROJECT"
@@ -93,7 +118,7 @@ ENVIRONMENT — read this first and do not try to verify it:
   for it, do not try to import it, and do not try to execute the kernel.
 - Other asctile or pyasc checkouts may exist elsewhere on this host. They are
   stale and are not the reference. Ignore them.
-- Your work is evaluated statically, from the source you write. Write the
+- Your source will be compiled and executed by a separate deterministic harness. Write the
   kernel as if it will run; it will be executed elsewhere.
 - The skills under ./skills are the authority for API and syntax. Read them
   rather than inferring the API from any installed package.
@@ -104,8 +129,9 @@ kernels/add/:
 1. A design document at kernels/add/docs/design.md
 2. The kernel at kernels/add/kernel.py, using @asctile.jit with
    asctile.copy_in / asctile.copy_out for data movement
-3. A torch.allclose verification in that file, guarded so that importing the
-   module does not execute it
+3. torch.allclose checks against x + y at sizes 1024 and 1025; use
+   assert torch.allclose(...) or if not torch.allclose(...): raise ValueError(...)
+   directly. Guard execution with if __name__ == \"__main__\" so import does not run it
 
 Requirements:
 - Use asctile.global_tensor, asctile.copy_in, asctile.copy_out, and
@@ -116,6 +142,7 @@ Requirements:
 
 Write the files, then stop. Do not run them."
 
+printf '%s\n' "$PROMPT" > "$TEST_PROJECT/prompt.txt"
 OUTPUT_FILE="$TEST_PROJECT/agent-output.txt"
 
 # Must stay below run-tests.sh's INTEGRATION_TIMEOUT (1800s), which bounds
@@ -197,6 +224,7 @@ if [ -n "$DESIGN_MD" ]; then
     print_pass "design.md found: $DESIGN_MD"
 else
     print_warn "design.md not found (agent may have skipped design phase)"
+    if [ "$STRICT" = 1 ]; then FAILED=$((FAILED + 1)); fi
 fi
 
 echo ""
@@ -274,28 +302,20 @@ fi
 echo ""
 
 # ============================================
-# Runtime verification (optional)
+# Runtime verification: mandatory in strict mode
 # ============================================
-
-print_section_header "Phase: Runtime Verification"
-
-if [ -n "$KERNEL_PY" ]; then
-    echo "Running run_and_verify.py..."
-    # `|| true` here would set $? to 0 unconditionally, so every run -- even
-    # a crash -- reported "Runtime verification passed". Capture the real
-    # status instead; `set -e` is held off by the if-less assignment idiom.
+if [ "$STRICT" = 1 ] && [ -n "$KERNEL_PY" ]; then
     runtime_exit=0
-    $PYTHON "$TOOLS_DIR/run_and_verify.py" "$KERNEL_PY" --json 2>&1 || runtime_exit=$?
-
-    if [ "$runtime_exit" -eq 0 ]; then
-        print_pass "Runtime verification passed"
-    elif [ "$runtime_exit" -eq 2 ]; then
-        print_skip "Runtime unavailable (CANN simulator not present)"
-    else
-        print_warn "Runtime verification failed (non-blocking for this test)"
+    "$PYTHON" "$TOOLS_DIR/qualify_generated.py" "$KERNEL_PY" \
+        --results-dir "${PYASC_GENERATION_OUTPUT:?strict mode requires an external artifact directory}/qualification" || runtime_exit=$?
+    if [ "$runtime_exit" -eq 2 ] && [ "$FAILED" -eq 0 ]; then
+        print_skip "Runtime unavailable: strict generation is blocked"
+        exit 2
+    elif [ "$runtime_exit" -ne 0 ]; then
+        FAILED=$((FAILED + 1))
     fi
-else
-    print_skip "No kernel.py for runtime verification"
+elif [ "$STRICT" = 0 ]; then
+    print_info "Static-only observation; does not establish generation (executed)"
 fi
 
 echo ""

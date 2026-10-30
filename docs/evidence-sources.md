@@ -208,7 +208,7 @@ catches API drift first. It establishes **nothing** about numerical
 correctness, and must never be reported as if it did. Upstream's own
 formulation: do not describe `--compile-only` as numerical qualification.
 
-Numerical execution on the camodel is a v0.2.0 gate.
+Numerical execution on the camodel remains deferred; it is not scheduled to a release.
 
 ## Performance — CANNBench
 
@@ -239,10 +239,10 @@ See [`../skills/pyasc-cannbench-kernel/references/ttk.md`](../skills/pyasc-cannb
 
 | Source | State |
 |---|---|
-| Target suite | Vendored and pinned; 24 modules. **Compile-checked only** in `merge-gate` — launch and numerical assertions are mocked. Full numerical execution on the camodel is a v0.2.0 gate. |
+| Target suite | Vendored and pinned; 24 modules. **Compile-checked only** in `merge-gate` — launch and numerical assertions are mocked. Full numerical execution on the camodel remains deferred. |
 | Upstream qualification | Published per overlay release. `incomplete` for the pinned cell as of 2026-10-28, i.e. `blocked` — 2824 passed, 0 failed, but every `target/` module still `not-run`. Re-derive before citing. |
-| CANNBench | Task definitions tracked. The campaign-era runner and its results were archived; a scorer that produces ratios from a clean clone is v0.2.0. |
-| TTK | Column shape and role documented. The generator read an absolute path outside the repository, so the manifest is **not reproducible here yet** — v0.2.0. |
+| CANNBench | Task definitions tracked. The campaign-era runner and its results were archived; a scorer that produces ratios from a clean clone is still unbuilt. |
+| TTK | Column shape and role documented. The generator read an absolute path outside the repository, so the manifest is **not reproducible here yet**, and making it portable is still open. |
 
 Honest `blocked` beats an invented number. The gate vocabulary is
 `passed | failed | blocked | not-run`, and generation, compile, numerical and

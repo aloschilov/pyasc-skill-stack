@@ -41,9 +41,13 @@ def kernel_func(x_ptr: asc.GlobalAddress, y_ptr: asc.GlobalAddress, out_ptr: asc
         asctile.block_idx(), num_tiles, asctile.block_num(), unroll_factor=2
     ):
         tile_offset = tile_id * tile_size
-        valid = size - tile_offset
-        if valid > tile_size:
-            valid = tile_size
+        # Clamp the tail with min(), not an if-reassignment. Inside @asctile.jit
+        # a name may not be re-bound to a value of a different type, and
+        # `valid = size - tile_offset` followed by `valid = tile_size` rebinds a
+        # traced PlainValue to a plain int:
+        #     UnsupportedSyntaxError: 'valid' was re-assigned to an object with
+        #     different type: initial type is PlainValue, new type is int
+        valid = min(size - tile_offset, tile_size)
         x = asctile.copy_in(
             x_gm, [tile_offset], [tile_size], real_shape=[valid], pad_value=0
         )
@@ -66,8 +70,12 @@ def kernel_launch(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
 def run_kernel(backend: config.Backend, platform: config.Platform):
     config.set_platform(backend, platform)
-    # TODO: Update sizes, dtype, and expected result for your operation
-    test_sizes = [8192, 131072]
+    # TODO: Update sizes, dtype, and expected result for your operation.
+    # Keep at least one size that is NOT a multiple of TILE_SIZE: with only
+    # exact multiples the partial-tile tail (the `valid` clamp above, and the
+    # real_shape arguments that depend on it) is never executed, so a tail bug
+    # verifies clean.
+    test_sizes = [8192, 8191, 131072]
     rng = np.random.default_rng(seed=2026)
     for size in test_sizes:
         x = rng.random(size, dtype=np.float32) * 10

@@ -61,13 +61,16 @@ tests/
 │       └── test-premature-action.sh
 ├── integration/                      # L3
 │   ├── test-kernel-generation.sh
+│   ├── test-kernel-verification-contract.sh
 │   └── test-workflow-execution.sh
 ├── tools/
 │   ├── run_target_test.py            # runs a target-suite module (used by merge-gate)
 │   ├── verify_pyasc_image.sh         # asserts the sim image matches its pin
 │   ├── verify_kernel.py              # Static AST verifier for kernels
-│   ├── run_and_verify.py             # Runtime verification (jit / simulator / auto)
+│   ├── run_and_verify.py             # Runtime verification (jit / execute / simulator / auto)
+│   ├── execute_kernel.py             # Runs a kernel as __main__ with a harness-set platform
 │   ├── pytest_verify_kernel.py       # JIT-focused pytest-style verifier
+│   ├── check_skill_code_blocks.py    # Parses python blocks in skills/ (pr gate)
 │   ├── analyze-session.sh            # OpenCode session inspection
 │   ├── analyze-workflow.sh           # Workflow / ordering heuristics
 │   └── analyze-tokens.sh             # Token usage
@@ -140,6 +143,7 @@ functions still exist in `lib/test-helpers.sh` if agent definitions return.
 | Script | Intent |
 |--------|--------|
 | `test-kernel-generation.sh` | Kernel generation / workflow smoke tests |
+| `test-kernel-verification-contract.sh` | What the harness may claim: negative fixtures + shipped kernels in Docker |
 | `test-workflow-execution.sh` | Workflow scripts and execution paths |
 
 ---
@@ -259,8 +263,10 @@ Run from repo root or `tests/tools/`; use `PYASC_PYTHON` where noted.
 | [`eval-report.sh`](tools/eval-report.sh) | Combined report; `bash eval-report.sh [--json] [--kernel path] [--session path]` |
 | [`verify_kernel.py`](tools/verify_kernel.py) | Static AST rules for `@asc.jit` kernels |
 | [`score_kernel.py`](tools/score_kernel.py) | Checklist score / `--json` |
-| [`run_and_verify.py`](tools/run_and_verify.py) | `--mode jit\|simulator\|auto`, optional `--json` |
+| [`run_and_verify.py`](tools/run_and_verify.py) | `--mode jit\|execute\|simulator\|auto`, `--runtime-backend host\|docker\|auto`, optional `--json` |
+| [`execute_kernel.py`](tools/execute_kernel.py) | Runs a kernel as `__main__` with a harness-set platform; requires a counted real launch |
 | [`pytest_verify_kernel.py`](tools/pytest_verify_kernel.py) | JIT-oriented verification |
+| [`check_skill_code_blocks.py`](tools/check_skill_code_blocks.py) | Parses every python block under `skills/`; `<!-- skill-code: fragment -->` opts out |
 
 ---
 
@@ -282,3 +288,6 @@ For new **Python** checks, add a script under `tests/tools/` and invoke it from 
 
 - Repository [`README.md`](../README.md) for skill-stack overview
 - Skill-specific verification: `skills/pyasc-build-run-verify/` and `skills/pyasc-codegen-workflow/`
+
+Run storage, strict generation acceptance and numerical proof semantics are
+defined in [verification-contract](../docs/verification-contract.md).

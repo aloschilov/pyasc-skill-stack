@@ -11,6 +11,7 @@ effective options, and caches as described below.
 
 ## Decorator syntax
 
+<!-- skill-code: fragment -->
 ```python
 @asctile.jit                         # default baseline (uses cache)
 @asctile.jit(reuse_alloc=1)           # second baseline; public AscTile API

@@ -74,15 +74,33 @@ def _try_import_asc():
 
         from asc.runtime import config  # noqa: F401
         import asc.runtime.launcher  # noqa: F401
-
-        # Deep ABI probe: golden kernels import the tile language, which binds
-        # native enums (ir.AtomicKind, ...) at import time. On an ABI-skewed
-        # native extension this raises AttributeError rather than ImportError.
-        import asc.language.tile.atomic_ops  # noqa: F401
-
-        return asc, None
     except (ImportError, AttributeError) as e:
         return None, str(e)
+
+    # Deep ABI probe: kernels import the tile language, which binds native
+    # enums (ir.AtomicKind, ...) at import time. On an ABI-skewed native
+    # extension this raises AttributeError rather than ImportError.
+    #
+    # The tile layer's import path depends on how pyasc was built: the
+    # published wheel exposes it as ``asc.experimental.asctile`` while source
+    # builds expose ``asc.language.tile`` or a top-level ``asctile``. Probing
+    # only one path made this function report "not importable" on a perfectly
+    # usable environment — which turned every JIT verification inside the
+    # pinned pyasc-sim-dev image into a silent SKIP. Probe each known layout
+    # and require that *one* of them works.
+    tile_errors: List[str] = []
+    for mod_name in ("asc.language.tile.atomic_ops", "asc.experimental.asctile", "asctile"):
+        try:
+            importlib.import_module(mod_name)
+            return asc, None
+        except ModuleNotFoundError as e:
+            # This layout is simply absent; try the next one.
+            tile_errors.append(f"{mod_name}: {e}")
+        except (ImportError, AttributeError) as e:
+            # Present but broken — that is the ABI skew we are looking for.
+            return None, f"{mod_name}: {e}"
+
+    return None, "no usable tile language layer (" + "; ".join(tile_errors) + ")"
 
 
 def _asc_package_dir(asc_mod: Any) -> Optional[str]:
@@ -91,6 +109,26 @@ def _asc_package_dir(asc_mod: Any) -> Optional[str]:
     if not asc_file:
         return None
     return os.path.abspath(os.path.dirname(asc_file))
+
+
+def _is_provisioning_error(exc: BaseException, asc_pkg_dir: Optional[str]) -> bool:
+    """True if *exc* indicates a broken pyasc install rather than a bad kernel.
+
+    "Raised from inside pyasc" is not sufficient on its own. ``asc.codegen``
+    raises ``UnsupportedSyntaxError`` from inside the package when the *kernel*
+    uses unsupported syntax — a hard kernel defect whose deepest frame is in
+    pyasc. Excusing that as an environment problem reports a non-compiling
+    kernel as SKIP, which is how a broken kernel slips through a gate. A partial
+    or ABI-skewed install instead manifests as an import/attribute/loader
+    failure, so require that shape *and* an origin inside pyasc, and never
+    excuse an error raised by the compiler or the language layer.
+    """
+    origin = (type(exc).__module__ or "").split(".")
+    if origin[:1] == ["asc"] and len(origin) > 1 and origin[1] in ("codegen", "language"):
+        return False
+    if not isinstance(exc, (ImportError, AttributeError, OSError)):
+        return False
+    return _exc_raised_inside_asc(exc, asc_pkg_dir)
 
 
 def _exc_raised_inside_asc(exc: BaseException, asc_pkg_dir: Optional[str]) -> bool:
@@ -173,7 +211,7 @@ def _mock_tensor_dtype(asc_mod: Any, ann: Any):
     return MockTensor(asc_mod.float16)
 
 
-def _build_call_args(asc_mod: Any, jit_fn: Any) -> Tuple[List[Any], List[str]]:
+def _build_call_args(asc_mod: Any, jit_fn: Any, scalar_args: Optional[dict] = None) -> Tuple[List[Any], List[str]]:
     """Positional args for ``jit_fn[...](*args)`` from the wrapped function signature."""
     from asc.common.compat import get_annotations
     from asc.language.core.constexpr import ConstExpr
@@ -184,11 +222,19 @@ def _build_call_args(asc_mod: Any, jit_fn: Any) -> Tuple[List[Any], List[str]]:
     values: List[Any] = []
     notes: List[str] = []
 
+    if scalar_args and set(scalar_args) - set(sig.parameters):
+        raise ValueError("Unknown scalar argument override")
     for name, param in sig.parameters.items():
         if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
             notes.append(f"skip variadic parameter {name!r}")
             continue
 
+        if scalar_args and name in scalar_args:
+            value = scalar_args[name]
+            if not isinstance(value, (int, float, bool)):
+                raise ValueError("Scalar overrides must be numeric")
+            values.append(value); notes.append(f"{name}: explicit -> {value}")
+            continue
         ann = annotations.get(name, param.annotation)
         ann = _unwrap_optional(ann)
 
@@ -270,7 +316,7 @@ def _launch_binders(jit_fn: Any) -> List[Tuple[str, Callable[[], Any]]]:
     return binders
 
 
-def _verify_single_jit(asc_mod: Any, jit_fn: Any) -> dict[str, Any]:
+def _verify_single_jit(asc_mod: Any, jit_fn: Any, scalar_args: Optional[dict] = None) -> dict[str, Any]:
     """Run one JITFunction under Launcher.run patch; return result dict."""
     name = getattr(jit_fn, "__name__", getattr(jit_fn.fn, "__name__", "<unknown>"))
     result: dict[str, Any] = {
@@ -282,7 +328,7 @@ def _verify_single_jit(asc_mod: Any, jit_fn: Any) -> dict[str, Any]:
         "error": None,
     }
     try:
-        pos_args, notes = _build_call_args(asc_mod, jit_fn)
+        pos_args, notes = _build_call_args(asc_mod, jit_fn, scalar_args)
     except Exception as e:
         result["error"] = f"build args: {e}"
         return result
@@ -334,6 +380,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Verify pyasc JIT kernels with a mocked Launcher.run.")
     parser.add_argument("kernel_py", type=Path, help="Path to kernel.py")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON on stdout")
+    parser.add_argument("--platform", default="Ascend950PR_9599")
+    parser.add_argument("--scalar-args", type=json.loads, default={})
     args = parser.parse_args(argv)
 
     asc_mod, import_err = _try_import_asc()
@@ -367,7 +415,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"FAIL: {payload['error']}", file=sys.stderr)
         return EXIT_FAIL
 
-    config.set_platform(config.Backend.Model, check=False)
+    config.set_platform(config.Backend.Model, config.Platform(args.platform), check=False)
 
     try:
         mod = _load_kernel_module(kernel_path)
@@ -424,7 +472,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         # means the runner's pyasc is only partially provisioned, not that the
         # kernel is broken — SKIP (exit 2), matching the "asc not importable"
         # and "missing runtime dependency" contracts above.
-        if _exc_raised_inside_asc(e, _asc_package_dir(asc_mod)):
+        if _is_provisioning_error(e, _asc_package_dir(asc_mod)):
             payload = {
                 "status": "skip",
                 "exit_code": EXIT_SKIP,
@@ -466,7 +514,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"FAIL: {payload['error']}", file=sys.stderr)
         return EXIT_FAIL
 
-    results = [_verify_single_jit(asc_mod, fn) for fn in jit_fns]
+    results = [_verify_single_jit(asc_mod, fn, args.scalar_args) for fn in jit_fns]
     all_passed = all(r["passed"] for r in results)
 
     payload = {

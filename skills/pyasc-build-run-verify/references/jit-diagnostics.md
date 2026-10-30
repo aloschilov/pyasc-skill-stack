@@ -17,6 +17,7 @@ Check `$PYASC_DUMP_PATH` for:
 
 ### Step 2: Force recompile
 
+<!-- skill-code: fragment -->
 ```python
 @asctile.jit(always_compile=True)
 def kernel(...):
@@ -27,6 +28,7 @@ This bypasses the JIT cache and forces a fresh compilation.
 
 ### Step 3: Reduce optimization
 
+<!-- skill-code: fragment -->
 ```python
 @asctile.jit(opt_level=0)
 def kernel(...):
@@ -37,6 +39,7 @@ Lower optimization may produce clearer error messages.
 
 ### Step 4: Enable auto-sync logging
 
+<!-- skill-code: fragment -->
 ```python
 @asctile.jit(insert_sync=True)
 def kernel(...):
