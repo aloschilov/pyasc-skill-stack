@@ -23,6 +23,7 @@ SCALAR_ARGS = {
 def extract_examples(directory):
     directory = Path(directory); directory.mkdir(parents=True)
     inventory = []; examples = []; seen_exclusions = set()
+    seen_scalar_args = set()
     exclusion_counts = {}
     for path in sorted((ROOT/'skills').rglob('*.md')):
         rel = str(path.relative_to(ROOT))
@@ -41,8 +42,14 @@ def extract_examples(directory):
             label = f'skill-jit-{len(examples)+1}'
             entry['label'] = label
             entry['scalar_args'] = SCALAR_ARGS.get(rel, {})
+            if rel in SCALAR_ARGS:
+                seen_scalar_args.add(rel)
             output = directory/(label+'.py'); output.write_text(code+'\n')
             examples.append((label, output))
+    stale_scalar_args = set(SCALAR_ARGS) - seen_scalar_args
+    if stale_scalar_args:
+        raise ValueError('Stale scalar argument overrides (no included JIT listing): '
+                         + ', '.join(sorted(stale_scalar_args)))
     if not examples or seen_exclusions != set(EXCLUDED):
         raise ValueError('Empty JIT coverage or stale exclusion inventory')
     (directory/'inventory.json').write_text(json.dumps(inventory, indent=2)+'\n')

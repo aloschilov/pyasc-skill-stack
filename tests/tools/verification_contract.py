@@ -69,8 +69,9 @@ def main():
             print(f'{"PASS" if ok else "FAIL"}: {label} (exit={code}, level={report.get("verification_level")})', flush=True)
         run.data['failed_cases'] = failed
         run.finish('failed' if failed else 'passed')
-    except BaseException:
-        run.finish('interrupted'); raise
+    except BaseException as exc:
+        run.finish('interrupted', error=exc)
+        raise
     return int(bool(failed))
 
 

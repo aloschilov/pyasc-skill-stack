@@ -171,6 +171,50 @@ class Contract(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, 'inputs changed'):
                     run.finish('passed')
 
+    def test_contract_preserves_interrupt_and_records_input_integrity(self):
+        import verification_contract as contract
+        for changed in (False, True):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as tmp:
+                output = Path(tmp)/'result'
+                error = KeyboardInterrupt('operator cancelled')
+                before = {'input':'before'}
+                after = {'input':'after'} if changed else before
+                with patch('run_artifacts.input_hashes', side_effect=[before, after]), \
+                     patch.object(RunArtifacts, 'command', side_effect=error), \
+                     patch.object(contract, 'pinned_sim_image', return_value='image@sha256:test'), \
+                     patch.object(sys, 'argv', ['contract', '--results-dir', str(output)]):
+                    with self.assertRaises(KeyboardInterrupt) as caught:
+                        contract.main()
+                self.assertIs(caught.exception, error)
+                manifest = json.loads((output/'manifest.json').read_text())
+                self.assertEqual(manifest['status'], 'failed-inputs-changed' if changed else 'interrupted')
+                self.assertEqual(manifest['inputs_unchanged'], not changed)
+                self.assertEqual(manifest['error'], {'type':'KeyboardInterrupt', 'message':'operator cancelled'})
+
+    def test_skill_scalar_overrides_reject_stale_sources(self):
+        import skill_jit_examples as skills
+        target = 'skills/pyasc-target-operator/SKILL.md'
+        for change in ('bogus-key', 'removed', 'renamed', 'marked-fragment'):
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                shutil.copytree(ROOT/'skills', root/'skills')
+                overrides = dict(skills.SCALAR_ARGS)
+                stale = target
+                if change == 'bogus-key':
+                    stale = 'skills/missing/SKILL.md'
+                    overrides[stale] = {'size':1}
+                elif change == 'removed':
+                    (root/target).unlink()
+                elif change == 'renamed':
+                    (root/target).rename(root/target.replace('SKILL.md', 'renamed.md'))
+                else:
+                    path = root/target
+                    path.write_text(path.read_text().replace('```python', '<!-- skill-code: fragment -->\n```python'))
+                with patch.object(skills, 'ROOT', root), patch.object(skills, 'SCALAR_ARGS', overrides):
+                    with self.assertRaisesRegex(ValueError, 'Stale scalar argument overrides') as caught:
+                        skills.extract_examples(root/'examples')
+                self.assertIn(stale, str(caught.exception))
+
     def test_strict_generated_qualification_rejects_skip_fail_and_weak_pass(self):
         import qualify_generated as q
         from unittest.mock import MagicMock
