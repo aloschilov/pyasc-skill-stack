@@ -6,7 +6,7 @@
 
 This is the single source of truth for the terminology used by
 `capabilities.yaml` (archived), the golden kernels under
-[golden/kernels/](../golden/kernels/), and the evaluation methodology
+[golden/kernels/ (archived)](https://github.com/aloschilov/pyasc-skill-stack/tree/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/golden/kernels), and the evaluation methodology
 in [docs/evaluation-methodology.md](evaluation-methodology.md).
 
 It documents the standard pyasc / asc2 / CANN vocabulary (sections 1–5)
@@ -18,7 +18,7 @@ The metadata fields documented here are reporting-only — they describe
 what each cell *claims to prove*. They do not change the prompt the
 agent sees and they do not change kernel behavior. The cell metadata
 must mirror the golden kernel's docstring header (see
-[golden/kernels/](../golden/kernels/)); the
+[golden/kernels/ (archived)](https://github.com/aloschilov/pyasc-skill-stack/tree/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/golden/kernels)); the
 `tests/tools/check_capabilities.py` (archived)
 gate refuses drift between the two.
 
@@ -211,7 +211,7 @@ Free-form list of regime slugs that this cell explicitly does *not*
 cover. Each slug below is `currently_unsupported_in_this_cell` —
 removing the entry (after adding the support) is the path forward,
 not adding a contradictory new slug. See Phase 1 risks in
-[`.cursor/plans/phase_1_spec_hygiene.plan.md`](../.cursor/plans/phase_1_spec_hygiene.plan.md).
+[`.cursor/plans/phase_1_spec_hygiene.plan.md` (archived)](https://github.com/aloschilov/pyasc-skill-stack/blob/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/.cursor/plans/phase_1_spec_hygiene.plan.md).
 
 Standard slugs (alphabetic):
 

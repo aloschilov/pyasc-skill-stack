@@ -1,0 +1,27 @@
+{
+  "baseline_revision": "1ab1940e3a3dfa4eee833983deb934186a8f211f",
+  "sha256": {
+    "tests/tools/score_kernel.py": "e0c2e908cc389e45abf9fd5fd69bebdf2856b58d7c91f9695759fe2bbe5207d2",
+    "tests/tools/verify_kernel.py": "93194b2c337b3862bcff9438c7351f4448062bf53c1a51fa4e00023e59f4c467",
+    "tests/tools/semantic_markers.py": "fefdc46fb601f874fa9b7422bb12dab4ab9d7bd209e52420c647b674e1c1e7f9",
+    "tests/tools/pytest_verify_kernel.py": "909a43fab98dc992cb37573ea14f350809ff9c5ab10b4857c9ad6f65f011a30f",
+    "docs/evidence/generation-gate-20261028/README.md": "a2e2e209dedc7ce2b73096757b1442788a9729652b905ff5679312aefa8fef82",
+    "docs/evidence/generation-gate-20261028/run-1/design.md": "7209cb8329b72e02125eaac94a70931d7b18b2aea88fd6df39b3162eb3f1dabe",
+    "docs/evidence/generation-gate-20261028/run-1/harness.log": "17cda2400620c822cdf57a11f614ca279afed66ff297739f1c77a4652821bff6",
+    "docs/evidence/generation-gate-20261028/run-1/kernel.py": "4c4efa88f3126208d83184928d3284cade9fbc4fbbf2577ddff9216633c8369e",
+    "docs/evidence/generation-gate-20261028/run-1/score.json": "5eb2ae15a2404be7137c54605c3fb6ae13ef82b80ac94cec5c59c5953636c503",
+    "docs/evidence/generation-gate-20261028/run-2/design.md": "4135fff4b40570722599123ca65b4995faa17433d781947aeb9efb44648442d6",
+    "docs/evidence/generation-gate-20261028/run-2/harness.log": "17cda2400620c822cdf57a11f614ca279afed66ff297739f1c77a4652821bff6",
+    "docs/evidence/generation-gate-20261028/run-2/kernel.py": "448a966355655cc1d4847a939cd9de1e5e9d6ea31ec5c2a4fce5c5e80709d7ed",
+    "docs/evidence/generation-gate-20261028/run-2/score.json": "99833dacbd1fa34b9c4c7e206d4f0830cf0dad682b75fc2f6bdaaebc1e692827",
+    "docs/evidence/generation-gate-20261028/run-3/design.md": "4f9eef65a97c0ea82e22a8f73d15df01437876a57fd7364f9b669c93d6268176",
+    "docs/evidence/generation-gate-20261028/run-3/harness.log": "3b42afae1e4df4b4e7df4faf2b044099c21cc2e03e17bbebce47257d42c2a861",
+    "docs/evidence/generation-gate-20261028/run-3/kernel.py": "469520810a99054975378c57b95807877c73b3b7e96452e7ac06088051944fe9",
+    "docs/evidence/generation-gate-20261028/run-3/score.json": "b091d05c9ec2b307d0bb2eabd8533df68763b3cad04e17ca281ad83397a8c255"
+  },
+  "check_names_json": {
+    "docs/evidence/generation-gate-20261028/run-3/score.json": "[\"asc2_load_store\",\"asc2_tensor\",\"global_address\",\"input_arity\",\"jit_decorator\",\"launch_pattern\",\"loop_range\",\"multi_shape_verification\",\"no_banned_constructs\",\"no_hardcoded_shapes\",\"no_return_value\",\"output_dtype\",\"semantic_api_usage\",\"tiling_consistency\",\"valid_python\",\"verification\"]",
+    "docs/evidence/generation-gate-20261028/run-2/score.json": "[\"asc2_load_store\",\"asc2_tensor\",\"global_address\",\"input_arity\",\"jit_decorator\",\"launch_pattern\",\"loop_range\",\"multi_shape_verification\",\"no_banned_constructs\",\"no_hardcoded_shapes\",\"no_return_value\",\"output_dtype\",\"semantic_api_usage\",\"tiling_consistency\",\"valid_python\",\"verification\"]",
+    "docs/evidence/generation-gate-20261028/run-1/score.json": "[\"asc2_load_store\",\"asc2_tensor\",\"global_address\",\"input_arity\",\"jit_decorator\",\"launch_pattern\",\"loop_range\",\"multi_shape_verification\",\"no_banned_constructs\",\"no_hardcoded_shapes\",\"no_return_value\",\"output_dtype\",\"semantic_api_usage\",\"tiling_consistency\",\"valid_python\",\"verification\"]"
+  }
+}

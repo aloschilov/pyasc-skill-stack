@@ -694,7 +694,7 @@ warnings with `--no-strict-metadata`):
 
 ### Golden-header ↔ capabilities.yaml mirroring
 
-Every golden under [golden/kernels/](../golden/kernels/) carries a
+Every golden under [golden/kernels/ (archived)](https://github.com/aloschilov/pyasc-skill-stack/tree/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/golden/kernels) carries a
 "Cell metadata (mirrors capabilities.yaml; do not drift)" block in
 its top-of-file docstring. The
 `tests/unit/tools/test-golden-header.sh` (archived)
