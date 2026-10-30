@@ -10,20 +10,11 @@ from run_artifacts import ROOT, RunArtifacts
 from run_and_verify import pinned_sim_image, verification_command_timeout
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('--results-dir', required=True)
-    ap.add_argument('--timeout', type=int, default=120)
-    args = ap.parse_args()
-    run = RunArtifacts(args.results_dir, 'verification-contract')
-    image = pinned_sim_image()
-    if '@sha256:' not in image:
-        raise ValueError('Acceptance requires a digest-pinned image')
-    run.data['image'] = image
+def core_cases():
     fixtures = ROOT/'tests/fixtures/kernels'
     evidence = ROOT/'docs/evidence/generation-gate-20261028'
     template = ROOT/'skills/pyasc-codegen-workflow/templates/kernel-template.py'
-    cases = [
+    return [
         ('wrong-numerics', fixtures/'wrong_numerics.py', 'execute', 1, None, 1, 'verification failed'),
         ('raises-midrun', fixtures/'raises_midrun.py', 'execute', 1, None, 1, 'deliberate post-launch'),
         ('no-launch', fixtures/'no_launch.py', 'execute', 1, None, 0, 'no kernel launch'),
@@ -40,6 +31,20 @@ def main():
         ('auto-failure', fixtures/'raises_midrun.py', 'auto', 1, None, 1, 'deliberate post-launch'),
         ('template-jit', template, 'jit', 0, 'compiled', None, None),
     ]
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument('--results-dir', required=True)
+    ap.add_argument('--timeout', type=int, default=120)
+    args = ap.parse_args()
+    run = RunArtifacts(args.results_dir, 'verification-contract')
+    image = pinned_sim_image()
+    if '@sha256:' not in image:
+        raise ValueError('Acceptance requires a digest-pinned image')
+    run.data['image'] = image
+    fixtures = ROOT/'tests/fixtures/kernels'
+    cases = core_cases()
     from skill_jit_examples import extract_examples
     for label, path in extract_examples(run.path/'skill-examples'):
         cases.append((label, path, 'jit', 0, 'compiled', None, None))

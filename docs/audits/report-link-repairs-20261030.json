@@ -1,0 +1,104 @@
+[
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/README.md",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/cf37194787df81e4a598f09d16bd398e86e425c4/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/README.md",
+    "archive_revision": "cf37194787df81e4a598f09d16bd398e86e425c4"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/case-results.csv",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/cf37194787df81e4a598f09d16bd398e86e425c4/integrations/cannbench/comparisons/gelu-tiling-reuse-20260908/case-results.csv",
+    "archive_revision": "cf37194787df81e4a598f09d16bd398e86e425c4"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/gelu-upstream-diagnostics-20260907/README.md",
+    "target": null,
+    "reason": "Absent from all four retained archive refs"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/gelu-reference-20260907/README.md",
+    "target": null,
+    "reason": "Absent from all four retained archive refs"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/README.md",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/cf37194787df81e4a598f09d16bd398e86e425c4/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/README.md",
+    "archive_revision": "cf37194787df81e4a598f09d16bd398e86e425c4"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/LOWERING.md",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/cf37194787df81e4a598f09d16bd398e86e425c4/integrations/cannbench/comparisons/gelu-asctile-jit-20260907/LOWERING.md",
+    "archive_revision": "cf37194787df81e4a598f09d16bd398e86e425c4"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/target-intersection-20260902/reports/final-cannbench-reruns.md",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/integrations/cannbench/comparisons/target-intersection-20260902/reports/final-cannbench-reruns.md",
+    "archive_revision": "ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/target-intersection-20260902/reports/final-cannbench-reruns.html",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/integrations/cannbench/comparisons/target-intersection-20260902/reports/final-cannbench-reruns.html",
+    "archive_revision": "ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/target-intersection-20260902/reports/final-cannbench-reruns.pdf",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/integrations/cannbench/comparisons/target-intersection-20260902/reports/final-cannbench-reruns.pdf",
+    "archive_revision": "ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/four-operator-20260903/reports/four-operator-comparison.md",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/integrations/cannbench/comparisons/four-operator-20260903/reports/four-operator-comparison.md",
+    "archive_revision": "ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/four-operator-20260903/reports/four-operator-comparison.html",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/integrations/cannbench/comparisons/four-operator-20260903/reports/four-operator-comparison.html",
+    "archive_revision": "ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/four-operator-20260903/reports/four-operator-comparison.pdf",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/integrations/cannbench/comparisons/four-operator-20260903/reports/four-operator-comparison.pdf",
+    "archive_revision": "ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee"
+  },
+  {
+    "file": "docs/cannbench-reports.md",
+    "previous": "../integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/REPORT.md",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/cf37194787df81e4a598f09d16bd398e86e425c4/integrations/cannbench/comparisons/gelu-handwritten-deepdive-20260903/REPORT.md",
+    "archive_revision": "cf37194787df81e4a598f09d16bd398e86e425c4"
+  },
+  {
+    "file": "docs/evaluation-methodology.md",
+    "previous": "../golden/kernels/",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/tree/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/golden/kernels",
+    "archive_revision": "ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee"
+  },
+  {
+    "file": "docs/glossary.md",
+    "previous": "../golden/kernels/",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/tree/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/golden/kernels",
+    "archive_revision": "ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee"
+  },
+  {
+    "file": "docs/glossary.md",
+    "previous": "../golden/kernels/",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/tree/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/golden/kernels",
+    "archive_revision": "ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee"
+  },
+  {
+    "file": "docs/glossary.md",
+    "previous": "../.cursor/plans/phase_1_spec_hygiene.plan.md",
+    "target": "https://github.com/aloschilov/pyasc-skill-stack/blob/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/.cursor/plans/phase_1_spec_hygiene.plan.md",
+    "archive_revision": "ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee"
+  }
+]

@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  packages: read
 
 env:
   # Pinned by digest, not by tag: a moving runtime silently invalidates every

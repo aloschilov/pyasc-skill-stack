@@ -33,8 +33,6 @@ __pycache__/
 /integrations/cannbench/submissions/
 /integrations/cannbench/workers/runs/
 /integrations/cannbench/.uploads/
-/integrations/cannbench/catalogs/
-/integrations/cannbench/ci/
 
 # Local run areas that are evidence, not repository content: build scratch,
 # qualification runs, campaign state, generated reports.

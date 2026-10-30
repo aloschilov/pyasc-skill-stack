@@ -1,5 +1,9 @@
 # Ticks Calculation Methodology (camodel / `Ascend950PR_9599`)
 
+This is a historical campaign methodology. Its API examples and measured claims
+belong to the recorded revisions; the current public interface is `asctile`.
+Do not mechanically rename the old executable examples.
+
 > **API note (2026-08, post v2 `4d1db41d`):** `asc2.range`'s `parallel=` flag
 > was renamed to `gm_barrier` with inverted polarity — `gm_barrier=False`
 > (default) = overlap ON; `gm_barrier=True` = barrier/overlap OFF. The perf

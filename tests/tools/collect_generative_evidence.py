@@ -753,8 +753,7 @@ def run_host_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
     in the current Python interpreter so the host's editable
     ``asc``/``asc2`` packages and the CANN simulator libs (resolved
     via ``ASCEND_HOME_PATH`` + ``_simulator_env``) are used directly —
-    no Docker. Pattern copied from
-    :func:`tests.tools.collect_evidence.collect_runtime`.
+    no Docker. Runtime verification is delegated to the shared harness.
 
     Returns the same evidence-block shape as ``run_docker_verify`` so
     callers don't need to special-case the backend.
