@@ -7,7 +7,8 @@ cannot count as successful acceptance. Historical evidence remains unchanged.
 
 The close-generation-loop implementation has passed local qualification and
 real PR checks in [PR #18](https://github.com/aloschilov/pyasc-skill-stack/pull/18).
-It is not merged. The evidence below identifies the tested revision explicitly.
+It was merged as `1ab1940` on 2026-10-30. The evidence below identifies each
+tested revision explicitly; later changes require their own checks.
 
 Enforcement is manual, by convention. On 2026-10-30, the `main` branch protection
 API returned “Branch not protected” and the repository ruleset list was empty.
@@ -24,7 +25,7 @@ passes. Workflow execution timeouts do not bound time waiting for a runner.
 | generation (executed, fresh) | passed locally | one fresh attempt passed end to end; a second was initially rejected by a scorer tuple-loop defect, then its unchanged artifact passed corrected static/JIT/numerical qualification |
 | generated-kernel regression | passed in PR CI | 16/16 cases; matrix 88.47 s, full examples job 106 s; includes run-1/run-3 positives, original run-2 expected compilation failure, template, fixtures and three complete skill listings |
 | independent review | not-run | executing kernels is not independent review |
-| hardware | not-run | outside this change |
+| hardware | not-run (access blocked) | 2026-10-30: CANNLab authentication rejected; retained David channel cannot safely resume until recovery journals/client state are restored. No new NPU matrix was dispatched; see [hardware lane](hardware-lane.md). |
 | performance | not-run | simulator checks are not performance evidence |
 
 Local qualification on 2026-10-29 also passed both mutation checks (restoring

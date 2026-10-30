@@ -436,8 +436,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--platform",
-        default="Ascend950PR_9599",
-        help="Platform passed as -v for simulator mode (default: Ascend950PR_9599)",
+        default=None,
+        help="Platform: detected on SSH; Ascend950PR_9599 for host/docker unless specified",
     )
     parser.add_argument(
         "--json",
@@ -452,7 +452,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--runtime-backend",
-        choices=("host", "docker", "auto"),
+        choices=("host", "docker", "ssh", "auto"),
         default="host",
         help=(
             "Where to run: host=this interpreter; docker=inside the pinned "
@@ -483,6 +483,10 @@ def main() -> None:
         ),
     )
     parser.add_argument("--jit-scalar-args", default="{}", help="Explicit scalar arguments for JIT examples, as JSON")
+    parser.add_argument('--ssh-target', default=os.environ.get('PYASC_SSH_TARGET', 'cannlab'))
+    parser.add_argument('--ssh-remote-dir', default=os.environ.get('PYASC_SSH_REMOTE_DIR', '/tmp/pyasc-hardware-runs'))
+    parser.add_argument('--ssh-python', default=os.environ.get('PYASC_SSH_PYTHON', 'python3'))
+    parser.add_argument('--ssh-env', default=os.environ.get('PYASC_SSH_ENV'), help='Remote CANN environment script to source')
     args = parser.parse_args()
 
     kernel_path = args.kernel_py
@@ -491,6 +495,17 @@ def main() -> None:
     if not Path(kernel_path).exists():
         _report(use_json, kernel_path, "FAIL", "File not found", args.mode)
         sys.exit(1)
+
+    if args.runtime_backend == 'ssh':
+        from ssh_runtime import run
+        code, payload = run(args)
+        if use_json:
+            print(json.dumps(payload, indent=2))
+        else:
+            _report(False, kernel_path, payload['status'], payload['detail'],
+                    payload.get('mode'), payload.get('verification_level'))
+        sys.exit(code)
+    args.platform = args.platform or 'Ascend950PR_9599'
 
     # Container delegation happens before the host asc probe: the whole point of
     # the docker backend is to run where pyasc *is* installed.
