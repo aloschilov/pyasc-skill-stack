@@ -339,7 +339,7 @@ file — the earliest in the F1 → F13 order that applies.
 | Id | Definition |
 |---|---|
 | F1 | prompt/spec misunderstood |
-| F2 | wrong pyasc/asc2 API usage |
+| F2 | wrong pyasc/asctile API usage |
 | F3 | invalid `@asc2.jit` syntax |
 | F4 | tiling or shape mismatch |
 | F5 | dtype/precision mismatch |
@@ -655,7 +655,7 @@ no kernel behavior change. Today's consumers
 dashboard / aggregator panels will land in Phase 2/3.
 
 [docs/glossary.md](glossary.md) is the single source of truth for the
-terminology used by these fields and for the standard pyasc / asc2 /
+terminology used by these fields and for the standard pyasc / asctile /
 CANN vocabulary. The same file documents the ReLU scope decision
 (`relu` is covered by pattern under the `abs` op's
 `representative_of` list; see `glossary.md#7-operator-coverage-notes` (archived)).

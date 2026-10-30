@@ -1,4 +1,4 @@
-# Glossary — pyasc / asc2 / capability cell metadata
+# Glossary — pyasc / asctile / capability cell metadata
 
 > Paths marked `(archived)` were removed from `main` with the campaign
 > scoreboard. Recover any of them with
@@ -9,7 +9,7 @@ This is the single source of truth for the terminology used by
 [golden/kernels/ (archived)](https://github.com/aloschilov/pyasc-skill-stack/tree/ebd2b3606a8fc102ecbf8740cb0bf8681f6679ee/golden/kernels), and the evaluation methodology
 in [docs/evaluation-methodology.md](evaluation-methodology.md).
 
-It documents the standard pyasc / asc2 / CANN vocabulary (sections 1–5)
+It documents the standard pyasc / asctile / CANN vocabulary (sections 1–5)
 and the new Phase 1 capability-cell metadata enums (section 6). Every
 term has a one-sentence definition, one example from a current golden
 kernel, and a back-link to the cell that uses it.
@@ -24,6 +24,10 @@ gate refuses drift between the two.
 
 ---
 
+Current API: `asctile`, imported with `from asc.experimental import asctile`.
+Code-level spellings below describe archived campaign kernels and are retained
+for interpreting their evidence; use the current skills for new kernels.
+
 ## §1 Shape vocabulary
 
 - **shape** — the ordered tuple of axis lengths for a tensor; in
@@ -35,7 +39,7 @@ gate refuses drift between the two.
   from `reduce_sum/f32` only in `dtype` and the corresponding
   `OUT_PAD` constant in `golden/kernels/reduce_sum_f16.py` (archived).
 - **contiguous layout** — a layout where neighboring elements along
-  the last axis are at adjacent memory addresses; every asc2 kernel
+  the last axis are at adjacent memory addresses; every asctile kernel
   in this repo assumes contiguous inputs.
 - **axis** — a single dimension of a tensor's shape; `axis=-1` denotes
   the last axis (the convention used by every reducing op).
