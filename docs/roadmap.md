@@ -18,6 +18,9 @@ remote-shell access. The archived multi-model campaign is not a prerequisite.
    the current task contract; package its candidate with a compatible runtime.
    Compare the service's correctness and timing results with the reference.
    Performance hints guide changes; measured results determine whether they help.
+   Publish the score through a specific CI run only with the complete
+   [generation-to-metric provenance](verification-contract.md#attributing-a-cannbench-score-to-generated-code).
+   This remains open; the reference smoke cannot close it.
 
 The hardware smoke is manual and quota-consuming, separate from ordinary CI.
 Inspect remaining credits (the working budget is 10/day); do not schedule an

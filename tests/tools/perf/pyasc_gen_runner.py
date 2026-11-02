@@ -3,7 +3,8 @@
 
 Measures the *per-launch* camodel tick count (``gen_ticks``) of a generated
 pyasc kernel at a pinned shape, using the warm-up + ``current_tick()`` delta
-pattern from ``docs/perf-methodology/ticks-calculation.md`` §6.3. This avoids
+pattern from ``skills/pyasc-api-patterns/references/cann-performance-tuning.md``
+(Simulator timing protocol). This avoids
 the cumulative ``Total tick:`` multi-launch trap: a single process does one
 warm-up launch (populates the JIT/codegen cache, advances the counter) and
 then N measured launches, reading ``asc.lib.runtime.current_tick()`` before and
@@ -198,7 +199,7 @@ class GenError(RuntimeError):
 # with the AscendC reference (one aclnn launch -> Total tick) and avoids the
 # multi-launch-in-one-process instability with ``always_compile=True`` kernels.
 # Determinism comes from running this probe in N separate processes (see
-# ticks-calculation.md §3: for single-launch processes Total tick == per-launch
+# Simulator timing protocol: for single-launch processes Total tick == per-launch
 # ticks; §2: JIT compile does not advance the tick counter).
 PROBE_TEMPLATE = r'''
 import importlib.util, inspect, json, sys
@@ -422,7 +423,7 @@ def measure(kernel_path: Path, shape: list[int], dtype: str, *, eval_root: Path,
         "n_elements": n,
         "arch": ARCH_PIN,
         "metric": "camodel_total_tick",
-        "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+        "method": "single-launch process, Total tick, median of processes (simulator timing protocol)",
         "gen_ticks": median,
         "gen_ticks_runs": ticks,
         "gen_ticks_method": f"median_of_{runs}",

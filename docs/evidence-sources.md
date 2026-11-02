@@ -224,7 +224,7 @@ generated kernel, both measured on the same camodel. `>= 0.70` means within
 roughly 30% of hand-written. The symmetry requirements — identical shapes,
 dtypes, platform and fixed-overhead treatment on both sides — are what make the
 number mean anything, and they are spelled out in
-[`perf-methodology/ticks-calculation.md`](perf-methodology/ticks-calculation.md).
+[the historical timing analysis](https://github.com/aloschilov/pyasc-skill-stack/blob/6f43ce4c70ca3bf52c1accd874b53a46bf4c1ecf/docs/perf-methodology/ticks-calculation.md).
 
 ## The CANN baseline — TTK
 

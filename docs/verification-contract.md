@@ -77,3 +77,28 @@ Local checks do not prove that a new PR workflow ran. The dated PR run, tested
 revision, full job duration and artifact digest are recorded in
 [verification-status.md](verification-status.md). That run satisfied the
 under-five-minute examples target; later revisions require their own checks.
+
+## Attributing a CANNBench score to generated code
+
+A performance number is a result of one immutable run, not a property of the
+skill name. An attributable generated-kernel result must bind:
+
+- the pyasc-skill-stack commit and loaded skill-file hashes;
+- the PyASC/AscTile source revision, runtime wheel hash, Python/CANN and runner;
+- the actual provider/model identifier, model configuration, OpenCode version,
+  session and prompt hashes (record unavailable model revisions as unknown);
+- the benchmark version, task/case snapshot, generated candidate hash and exact
+  submitted wheel/archive hashes;
+- the CI workflow/run/attempt and hardware submission/job identities, complete
+  correctness and anti-cheat results, per-case timings, score and aggregation rule.
+
+Keep the manifest, source, logs and service response in run artifacts; preserve
+an accepted run in durable external storage before CI artifacts expire. CI must
+reject mismatched hashes, missing provenance or incomplete results rather than
+publish a score copied from a narrative report. Retain failed attempts too.
+
+The current CANNBench smoke uses a reference candidate and records no generation
+model. Its hardware result cannot satisfy this generated-code contract. Ordinary
+`pr-gate` and `examples-gate` measure repository checks and simulator execution,
+not model-attributed CANNBench performance. The historical full-catalog workflow
+is not a substitute for an actually completed, provenance-bound CI run.
