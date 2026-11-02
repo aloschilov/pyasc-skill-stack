@@ -45,6 +45,37 @@ class SSHRuntime(unittest.TestCase):
             self.assertEqual(code,2); self.assertEqual(report['status'],'SKIP')
             self.assertIn('Permission denied',report['detail']);call.assert_called_once()
 
+    def test_invalid_configuration_is_skip_without_device_contact(self):
+        for field, value, diagnostic in (
+                ('ssh_target', '-oProxyCommand=bad', 'valid SSH alias'),
+                ('ssh_remote_dir', '/tmp/../shared', 'absolute path'),
+                ('backend', 'Model', '--backend NPU')):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as tmp:
+                args = self.args(Path(tmp) / 'kernel.py')
+                setattr(args, field, value)
+                with patch.object(ssh.subprocess, 'run') as call:
+                    code, report = ssh.run(args)
+                self.assertEqual((code, report['status']), (2, 'SKIP'))
+                self.assertIsNone(report['verification_level'])
+                self.assertIn(diagnostic, report['detail'])
+                call.assert_not_called()
+
+    def test_missing_and_corrupt_reports_fail_with_distinct_diagnostics(self):
+        for exit_code, output, diagnostic in (
+                (1, b'', 'Remote report missing or unreadable'),
+                (0, b'not json', 'Expecting value')):
+            with self.subTest(exit_code=exit_code), tempfile.TemporaryDirectory() as tmp:
+                kernel = Path(tmp) / 'kernel.py'
+                kernel.write_text('pass')
+                responses = [subprocess.CompletedProcess([], 0, b'', b'')] * 3
+                responses.append(subprocess.CompletedProcess([], exit_code, output, b'report unavailable'))
+                with patch.object(ssh.subprocess, 'run', side_effect=responses), \
+                     patch.object(ssh.shutil, 'which', return_value=None):
+                    code, report = ssh.run(self.args(kernel))
+                self.assertEqual((code, report['status']), (1, 'FAIL'))
+                self.assertIn(diagnostic, report['detail'])
+                self.assertIsNone(report['verification_level'])
+
     def test_transport_forwarding_tar_and_rsync(self):
         for rsync in (True,False):
             with self.subTest(rsync=rsync), tempfile.TemporaryDirectory() as tmp:

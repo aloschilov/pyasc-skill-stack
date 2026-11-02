@@ -62,11 +62,11 @@ def run(args):
         report['detail'] = 'Set PYASC_SSH_TARGET or --ssh-target to a valid SSH alias'
         return 2, report
     if not re.fullmatch(r'/[A-Za-z0-9_./-]+', base) or '..' in Path(base).parts:
-        report.update(status='FAIL', detail='SSH remote directory must be an absolute path without spaces or ..')
-        return 1, report
+        report['detail'] = 'SSH remote directory must be an absolute path without spaces or ..'
+        return 2, report
     if args.backend != 'NPU':
-        report.update(status='FAIL', detail='SSH hardware lane requires --backend NPU')
-        return 1, report
+        report['detail'] = 'SSH hardware lane requires --backend NPU'
+        return 2, report
     remote = base.rstrip('/')+'/run-'+uuid.uuid4().hex
     ssh = ['ssh', *SSH_OPTIONS, target]
     evidence.update(target=target, remote_dir=remote, stages=[])
@@ -120,8 +120,11 @@ def run(args):
             if result.returncode == 255:
                 report['detail'] = 'SSH disconnected while fetching result; execution is unverified'
                 return 2, report
+            if result.returncode:
+                raise ValueError('Remote report missing or unreadable: '+
+                                 result.stderr.decode(errors='replace')[-1000:])
             inner = json.loads(result.stdout)
-            if (result.returncode or remote_code not in (0,1,2) or not isinstance(inner,dict)
+            if (remote_code not in (0,1,2) or not isinstance(inner,dict)
                     or inner.get('status') != {0:'PASS',1:'FAIL',2:'SKIP'}[remote_code]):
                 raise ValueError('Remote report/exit mismatch')
             if remote_code == 0 and (inner.get('device_identity',{}).get('status') != 'ready'

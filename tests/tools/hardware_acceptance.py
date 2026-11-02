@@ -8,7 +8,7 @@ import sys
 from device_identity import probe
 from run_artifacts import ROOT, RunArtifacts
 from ssh_runtime import command_timeout
-from verification_contract import core_cases
+from verification_contract import core_cases, matches_outcome
 
 
 def main():
@@ -55,11 +55,8 @@ def main():
                 run.data['device_identity'] = identity
             same_device = ready and all(observed.get(k) == identity.get(k)
                 for k in ('hostname','soc_version','cann','pyasc_version'))
-            ok = (same_device and code == expected
-                  and report.get('status') == ('PASS' if expected == 0 else 'FAIL')
-                  and report.get('verification_level') == level
-                  and report.get('launcher_calls') == calls
-                  and (reason is None or reason in report.get('detail','')))
+            ok = same_device and matches_outcome(
+                report, code, mode=mode, expected=expected, level=level, calls=calls, reason=reason)
             if not ok: failed.append(label)
             print(f'{"PASS" if ok else "FAIL"}: {label}', flush=True)
         run.data['failed_cases'] = failed

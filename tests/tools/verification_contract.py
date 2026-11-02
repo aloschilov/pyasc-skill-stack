@@ -33,6 +33,16 @@ def core_cases():
     ]
 
 
+def matches_outcome(report, code, *, mode, expected, level, calls, reason):
+    """Shared simulator/NPU verdict policy; device identity is checked separately."""
+    return (code == expected
+            and report.get('status') == ('PASS' if expected == 0 else 'FAIL')
+            and report.get('verification_level') == level
+            and (calls is None or report.get('launcher_calls') == calls)
+            and (reason is None or reason in report.get('detail', ''))
+            and (mode != 'auto' or report.get('mode') == 'auto (execute)'))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--results-dir', required=True)
@@ -65,11 +75,8 @@ def main():
             if scalar_args.get(label):
                 argv += ['--jit-scalar-args', json.dumps(scalar_args[label])]
             code, report = run.command(label, argv, timeout=verification_command_timeout(args.timeout))
-            ok = (code == expected_code and report.get('status') == ('PASS' if code == 0 else 'FAIL')
-                  and report.get('verification_level') == level
-                  and (calls is None or report.get('launcher_calls') == calls)
-                  and (reason is None or reason in report.get('detail', ''))
-                  and (mode != 'auto' or report.get('mode') == 'auto (execute)'))
+            ok = matches_outcome(report, code, mode=mode, expected=expected_code,
+                                 level=level, calls=calls, reason=reason)
             if not ok: failed.append(label)
             print(f'{"PASS" if ok else "FAIL"}: {label} (exit={code}, level={report.get("verification_level")})', flush=True)
         run.data['failed_cases'] = failed
