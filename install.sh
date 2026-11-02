@@ -8,7 +8,7 @@
 #   ./install.sh --target DIR # link into DIR only, leaving the defaults alone
 #
 # Each skill folder stays in this repository; symlinks point at it.
-# Re-run after moving the clone to refresh links.
+# Existing links to another location are preserved; remove them explicitly to migrate.
 
 set -euo pipefail
 
@@ -59,7 +59,12 @@ link_skill() {
   local link_path="${target_parent}/${skill_name}"
   mkdir -p "${target_parent}"
   if [[ -L "${link_path}" ]]; then
-    rm -f "${link_path}"
+    if [[ "$(readlink "${link_path}")" == "${skill_src}" ]]; then
+      echo "already linked ${link_path}"
+      return
+    fi
+    echo "error: ${link_path} links to another location; preserved (remove explicitly to replace)" >&2
+    exit 1
   elif [[ -e "${link_path}" ]]; then
     echo "error: ${link_path} exists and is not a symlink; remove manually" >&2
     exit 1

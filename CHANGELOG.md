@@ -6,6 +6,12 @@ see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 
 ## Unreleased
 
+- Installer preserves existing links to other locations, including dangling
+  links, instead of replacing another project's skill. Reinstallation of the
+  same links and pruning of owned stale links remain supported.
+- README uses the existing pinned Docker qualification path and separates
+  core skills, host setup and skills-only release limitations.
+
 Close-generation-loop audit fixes (local qualification and PR CI passed; see
 [verification status](docs/verification-status.md) for the tested revision):
 
