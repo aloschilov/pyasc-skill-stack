@@ -392,11 +392,15 @@ rather than by date. Gate statuses are `passed | failed | blocked | not-run`;
 a missing runtime, provider or device is an honest `blocked`, never a
 fabricated pass.
 
-Current headline: install, skill discovery, compile and numerical gates pass
-on the simulator with a hand-written kernel. The **generation** gate — an
-agent producing the kernel from a plain-language request — is `blocked` on a
-locally configured 8192-token output ceiling, diagnosed in that document.
-Hardware and performance are `not-run`.
+Current headline: fresh generation has passed local static, compilation and
+simulator numerical qualification; the shipped-kernel contract also passed
+real PR CI on the revisions recorded in the status document. NPU attempts
+remain blocked before launch by a device-allocation conflict. Performance is
+`not-run`; a simulator pass is not a hardware or performance claim.
+
+The [delivery roadmap](docs/roadmap.md) separates software review, local
+simulator qualification and scarce NPU windows. Backend fixes and audited
+cleanup can proceed while David is occupied, with hardware acceptance left open.
 
 The evaluation protocol taxonomy, failure taxonomy and evidence schema are in
 [docs/evaluation-methodology.md](docs/evaluation-methodology.md). The

@@ -119,6 +119,20 @@ lane arithmetic. A finite random smoke is not enough for exp/GELU/norm/softmax.
 
 ## Remote evidence
 
+On shared remote Linux hardware, all tool/dependency installation, source
+staging/editing, OpenCode use and kernel runs must occur in the current task's
+own container. Verify the owner and full container/image identity before use;
+an idle or historical smoke container is not automatically yours. Keep shared
+inputs read-only and use task-only writable scratch. Host commands are limited
+to scoped readiness checks and container orchestration. Reserve the NPU
+separately; container isolation does not establish exclusive device access.
+For David, respect the live WeLink queue and confirm `busy` (or `занял`) before NPU work,
+then confirm `free` (or `отпустил`) after all own device processes end; see the
+[reservation protocol](references/hardware.md#david-reservation-through-welink).
+The retained David image permits checkout/fetch but cannot push. Return scoped
+changes and evidence to the Mac for review and separately authorized publication.
+See [hardware operating requirements](references/hardware.md#own-container-and-channel-ownership).
+
 For performance iterations use the
 [top-down CANN-sample methodology](../pyasc-api-patterns/references/cann-performance-tuning.md).
 Capture per-block envelope, engine intervals and requested/effective geometry

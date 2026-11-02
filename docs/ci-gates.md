@@ -1,47 +1,72 @@
 # CI gates
 
-Two gates, plus a release workflow. Both live in
+Three jobs, plus a release workflow. The CI jobs live in
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
 
 | Gate | Trigger | Duration | What it checks |
 |---|---|---|---|
-| `pr-gate` | every push and PR | seconds | L1 unit tests and static checks |
-| `merge-gate` | push to `main`, manual dispatch | ~30 min | compile-check of the AscTile target suite on the camodel |
+| `pr-gate` | PR, push to `main`, manual dispatch | seconds | L1 unit tests and static checks |
+| `examples-gate` | same triggers, after `pr-gate` | minutes | shipped kernels and verification contract on pinned simulator |
+| `merge-gate` | push to `main`, manual dispatch | minutes; 60-minute cap | compile-check of the AscTile target suite on the camodel |
 | release | `v*` tag | minutes | `pr-gate` plus archive build and install verification |
 
 ## `pr-gate`
 
 ```bash
 bash tests/ci-gate.sh --tier pr      # what CI runs
-bash tests/run-tests.sh --fast       # the same thing, directly
+bash tests/run-tests.sh --fast       # unit portion only; no skill-block syntax check
 ```
 
-Deterministic structure and content checks over `skills/` and `agents/`, the
+Deterministic structure and content checks over `skills/`, the
 runtime-backend dispatch logic, and an offline drift check comparing the
 vendored target suite against `reference/asctile/PIN.json`. No Docker, no
 CANN, no network, no provider calls.
 
-This is the gate a release tag must pass.
+This is the gate a release tag must pass. It has no device or provider dependency.
+
+## `examples-gate`
+
+Runs `tests/integration/test-kernel-verification-contract.sh` using the
+digest-pinned development image in `reference/images/ENV.json`. The matrix
+covers unchanged historical kernels, the tail-bearing template, negative and
+weak-positive fixtures, and complete skill listings. Expected failures must
+fail for the contracted reason; real numerical passes need a suppressed-launch
+control. No NPU or provider call is involved.
+
+```bash
+python3 tests/tools/verification_contract.py --results-dir "$RUN_ROOT/contract"
+```
+
+Choose a new directory outside checkout. CI uploads the complete run directory
+even on failure, retains artifacts for 30 days and caps the job at 20 minutes.
+Accepted qualification also needs a checked durable archive outside expiring
+Actions storage. See [the storage contract](verification-contract.md#storage).
+Both PR jobs must succeed on the current PR head before software acceptance;
+self-hosted runner queue time is separate from job execution time. Neither job
+is evidence that David is free or usable. See [the roadmap](roadmap.md).
 
 ## `merge-gate`
 
-Pulls the pinned `pyasc-sim` image from ghcr.io and compile-checks every
+Pulls the pinned `pyasc-sim-dev` image from ghcr.io and compile-checks every
 module in `reference/asctile/target/` with
 `tests/tools/run_target_test.py --backend Model --platform Ascend950PR_9599`.
 
 Compile-only is deliberate. Each module carries roughly 100 parametrised
-cases and the camodel is slow, so the blocking gate verifies that every case
-generates and compiles; full numerical execution is a manual or nightly run.
+cases and the camodel is slow, so this job attempts compilation without
+numerical execution. Full numerical execution requires a separate explicit
+run. No schedule is configured in the current CI workflow.
 See [review-order.md](review-order.md) for running it by hand.
 
 Runs natively on the self-hosted arm64 runner (no x86 emulation). The image
-tag is version-coupled to an immutable pyasc commit — never point it at a
-mutable tag, because a moving runtime silently invalidates every result
-below it.
+is pinned by digest and tied to a recorded pyasc commit. A mutable image tag
+would make results incomparable across runs.
 
-`test_add_inplace.py` is skipped: 4 of its 20 cases exceed the 192 KB UB
-budget on large shapes even under `--compile-only`. Pending a shape trim or a
-representative-case selection block.
+The workflow discovers modules recursively and does not skip
+`test_add_inplace.py`. Resource-blocked modules are reported separately; the
+current merge job fails on compilation failures but only reports resource
+blocks. A green merge job therefore does not by itself prove that every
+upstream case compiled. Read its summary and the dated
+[verification status](verification-status.md).
 
 ## Release
 
@@ -78,7 +103,8 @@ and that source should be CANNBench rather than checked-in JSON — see
 ## Local test tiers
 
 ```bash
-bash tests/run-tests.sh --fast    # L1 only (what CI gates on)
+bash tests/ci-gate.sh --tier pr   # full offline PR gate
+bash tests/run-tests.sh --fast    # L1 portion only
 bash tests/run-tests.sh --all     # adds L2 behavior and L3 integration
 ```
 

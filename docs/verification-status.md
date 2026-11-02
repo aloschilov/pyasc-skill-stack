@@ -3,6 +3,38 @@
 Gate vocabulary: `passed | failed | blocked | not-run`. A missing dependency
 cannot count as successful acceptance. Historical evidence remains unchanged.
 
+The [delivery roadmap](roadmap.md) lets local/CI work proceed independently of
+David availability. It preserves separate software and hardware acceptance;
+neither a prepared payload nor a green simulator gate qualifies an NPU.
+
+## Local follow-up, 2026-11-02
+
+PR #19 review fixes and the shared matrix outcome policy were locally checked
+on the source content committed as `dc1ebfe` (the run manifests retain the
+pre-commit revision and exact dirty-tree input hashes):
+
+- Full PR gate: 10 groups, 43 Python tests, no skips; 9.64 s.
+- Pinned Docker contract: 18/18 expected outcomes, unchanged inputs; 101.37 s.
+- Both historical mutation regressions detected; 3.82 s.
+
+The unchanged add generated on David failed local JIT import: the pinned wheel
+does not expose top-level `asctile`. This failure is retained. A separately
+hashed manual derivative uses the shipped template's wheel/legacy import
+fallback and `asc.GlobalAddress`/`asc.ConstExpr` annotations. Its algorithm is
+unchanged; static/score/JIT/numerical qualification passed in 31.13 s, with four
+launches at sizes 1, 1024, 1025, 4097 and a falsifying suppressed-launch control.
+Derivative SHA256: `2d050f18a547829549ca2cbbb34fe3374b9c359046f165f8f1e776674c8a304f`.
+This is portability requalification, not fresh generation or NPU acceptance.
+Fresh local generation was not started because the tracked provider's endpoint
+and key environment were absent. No credentials were copied to work around it.
+
+External archive: `~/pyasc-qualification-runs/pr19-local-qualification-20261102.tar.gz`,
+SHA256 `e740cc728743332fda5e7bbaa858a5a736e2e23b0b63b5144e390bb96be2517f`.
+It contains both candidate outcomes, manifests, sources and verified log hashes.
+Current-head CI results are recorded separately in [PR #19](https://github.com/aloschilov/pyasc-skill-stack/pull/19);
+these local checks do not establish that a new GitHub workflow ran. The NPU
+window remains deferred while David is reserved; no new device command was sent.
+
 ## Generation and harness qualification
 
 The close-generation-loop implementation has passed local qualification and
@@ -25,8 +57,15 @@ passes. Workflow execution timeouts do not bound time waiting for a runner.
 | generation (executed, fresh) | passed locally | one fresh attempt passed end to end; a second was initially rejected by a scorer tuple-loop defect, then its unchanged artifact passed corrected static/JIT/numerical qualification |
 | generated-kernel regression | passed in PR CI | 16/16 cases; matrix 88.47 s, full examples job 106 s; includes run-1/run-3 positives, original run-2 expected compilation failure, template, fixtures and three complete skill listings |
 | independent review | not-run | executing kernels is not independent review |
-| hardware | not-run (access blocked) | 2026-10-30: CANNLab authentication rejected; retained David channel cannot safely resume until recovery journals/client state are restored. No new NPU matrix was dispatched; see [hardware lane](hardware-lane.md). |
+| hardware | blocked (execution attempted) | 2026-10-30: own David container, pinned checkout and OpenCode connectivity qualified. Direct NPU matrix attempted all 14 cases: 0 expected outcomes matched, no kernel launches; runtime setup returned GetSocVersionWrapper 507008. See [hardware lane](hardware-lane.md#owned-container-attempt-2026-10-30). |
 | performance | not-run | simulator checks are not performance evidence |
+
+A separate 2026-10-31 own-container run generated a new add kernel and passed
+static/JIT/CaModel numerics for four sizes, with a falsifying negative control.
+Original GeLU and generated-kernel NPU attempts still fail before launch;
+kernel logs now confirm a device-open namespace conflict, without identifying
+the holder. See the [scoped result and limitations](hardware-lane.md#own-container-generation-and-runtime-diagnosis-2026-10-31).
+
 
 Local qualification on 2026-10-29 also passed both mutation checks (restoring
 the template reassignment and removing harness platform setup), the fast PR
