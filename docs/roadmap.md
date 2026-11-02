@@ -13,6 +13,8 @@ remote-shell access. The archived multi-model campaign is not a prerequisite.
    the exact package and job identity outside checkout. Accept only complete
    official-case correctness, zero anti-cheat failures and final hardware
    timings. See [the smoke procedure](../integrations/cannbench/README.md).
+   Completed for the repaired reference at `38951c4`: 20/20 on 2026-11-02;
+   [archived qualification and scope](hardware-lane.md).
    A reference-kernel smoke is not evidence of fresh model generation.
 3. **Then test one generated candidate.** Use one configured OpenCode model and
    the current task contract; package its candidate with a compatible runtime.

@@ -11,11 +11,14 @@ neither a prepared payload nor a green simulator gate qualifies an NPU.
 
 ### External hardware smoke
 
-The first completed CANNBench SwiGlu smoke **failed** strict acceptance:
-18/20 correct and measured cases, zero reported anti-cheat failures, 251.76 s
-execution after 6818.75 s queued. The short-row path is being repaired and
-requalified; no full hardware pass or generation-attributed performance score
-is claimed. See [hardware evidence and limitations](hardware-lane.md).
+The repaired reference SwiGlu smoke **passed** strict CANNBench acceptance:
+20/20 correct and measured cases, zero reported anti-cheat failures, 191.24 s
+execution after 506.17 s queued. Profiler results identify the PyASC device
+kernels. The unweighted geometric mean baseline/candidate timing ratio is
+0.317322x, so this is correctness qualification with measured timings, not an
+acceleration result. The first 18/20 failed attempt remains archived. This does
+not qualify model-generated code or close the generation-attributed CI score
+requirement. See [hardware evidence and limitations](hardware-lane.md).
 
 ### Separate-project workflow qualification
 
