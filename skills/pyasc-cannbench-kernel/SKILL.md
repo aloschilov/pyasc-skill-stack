@@ -88,9 +88,11 @@ from public tile operations is allowed.
    the native runtime is available. It must exercise both ordinary and
    special-value routes using the task's dtype-specific tolerances. Treat a
    small all-finite smoke as insufficient for promotion.
-7. Have a different available model review the task, design, candidate, and
-   local report. Record both model IDs, OpenCode session IDs, loaded skill
-   source hashes, prompt/design/candidate hashes, and gate results.
+7. Review the task, design, candidate and measured report in a fresh session.
+   One configured model is sufficient; a second model is optional. Record the
+   actual model/session IDs and do not describe same-model review as independent
+   model evidence. Retain skill-source, prompt/design/candidate hashes and gate
+   results; compilation and numerical checks determine acceptance.
 
 Local compilation and CaModel are available in the project environment.
 Workers use only preconfigured commands within their time/tool budget, without

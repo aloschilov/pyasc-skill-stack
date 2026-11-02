@@ -4,7 +4,7 @@ Gate vocabulary: `passed | failed | blocked | not-run`. A missing dependency
 cannot count as successful acceptance. Historical evidence remains unchanged.
 
 The [delivery roadmap](roadmap.md) lets local/CI work proceed independently of
-David availability. It preserves separate software and hardware acceptance;
+hardware availability. It preserves separate software and hardware acceptance;
 neither a prepared payload nor a green simulator gate qualifies an NPU.
 
 ## Local follow-up, 2026-11-02
@@ -120,7 +120,7 @@ SHA256 `e740cc728743332fda5e7bbaa858a5a736e2e23b0b63b5144e390bb96be2517f`.
 It contains both candidate outcomes, manifests, sources and verified log hashes.
 Current-head CI results are recorded separately in [PR #19](https://github.com/aloschilov/pyasc-skill-stack/pull/19);
 these local checks do not establish that a new GitHub workflow ran. The NPU
-window remains deferred while David is reserved; no new device command was sent.
+window was deferred; no new device command was sent in that qualification.
 
 ## Generation and harness qualification
 
@@ -144,14 +144,14 @@ passes. Workflow execution timeouts do not bound time waiting for a runner.
 | generation (executed, fresh) | passed locally | one fresh attempt passed end to end; a second was initially rejected by a scorer tuple-loop defect, then its unchanged artifact passed corrected static/JIT/numerical qualification |
 | generated-kernel regression | passed in PR CI | 16/16 cases; matrix 88.47 s, full examples job 106 s; includes run-1/run-3 positives, original run-2 expected compilation failure, template, fixtures and three complete skill listings |
 | independent review | not-run | executing kernels is not independent review |
-| hardware | blocked (execution attempted) | 2026-10-30: own David container, pinned checkout and OpenCode connectivity qualified. Direct NPU matrix attempted all 14 cases: 0 expected outcomes matched, no kernel launches; runtime setup returned GetSocVersionWrapper 507008. See [hardware lane](hardware-lane.md#owned-container-attempt-2026-10-30). |
+| hardware | blocked (execution attempted) | 2026-10-30: own David container, pinned checkout and OpenCode connectivity qualified. Direct NPU matrix attempted all 14 cases: 0 expected outcomes matched, no kernel launches; runtime setup returned GetSocVersionWrapper 507008. See [hardware lane](https://github.com/aloschilov/pyasc-skill-stack/blob/e154f4218554d6ff8119f2886de2632701b21d58/docs/hardware-lane.md#owned-container-attempt-2026-10-30). |
 | performance | not-run | simulator checks are not performance evidence |
 
 A separate 2026-10-31 own-container run generated a new add kernel and passed
 static/JIT/CaModel numerics for four sizes, with a falsifying negative control.
 Original GeLU and generated-kernel NPU attempts still fail before launch;
 kernel logs now confirm a device-open namespace conflict, without identifying
-the holder. See the [scoped result and limitations](hardware-lane.md#own-container-generation-and-runtime-diagnosis-2026-10-31).
+the holder. See the [scoped result and limitations](https://github.com/aloschilov/pyasc-skill-stack/blob/e154f4218554d6ff8119f2886de2632701b21d58/docs/hardware-lane.md#own-container-generation-and-runtime-diagnosis-2026-10-31).
 
 
 Local qualification on 2026-10-29 also passed both mutation checks (restoring

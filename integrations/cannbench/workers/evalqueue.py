@@ -38,6 +38,10 @@ class RemoteError(RuntimeError):
     """The site rejected or failed a private evaluation."""
 
 
+class SubmissionRejected(RemoteError):
+    """An explicit HTTP 4xx rejected this upload before a job was accepted."""
+
+
 def _load_secret_env() -> None:
     """Load the local gitignored BenchSite environment without echoing it."""
     if os.environ.get("BENCHSITE_API_TOKEN") or not SECRETS_FILE.exists():
@@ -163,7 +167,7 @@ class EvalQueue:
             raise RemoteError("CANNBench has no submission credits remaining")
 
     def _submit_streaming(
-        self, zip_path: str, ops: str | list[str], tag: str
+        self, zip_path: str, ops: str | list[str], tag: str, aggregation_token: str | None = None
     ) -> dict:
         """Upload without the adapter's fixed 120-second in-memory timeout.
 
@@ -187,6 +191,8 @@ class EvalQueue:
                 "--silent",
                 "--show-error",
                 "--fail-with-body",
+                "--write-out",
+                "\n%{http_code}",
                 "--connect-timeout",
                 "30",
                 "--max-time",
@@ -214,6 +220,8 @@ class EvalQueue:
                 f"file=@{zip_path};type=application/octet-stream",
                 f"{self._client.base_url}/api/submissions",
             ]
+            if aggregation_token:
+                command[1:1] = ["--form-string", f"aggregation_token={aggregation_token}"]
             resolve_ip = os.environ.get("CANNBENCH_RESOLVE_IP", "").strip()
             if resolve_ip:
                 command[1:1] = [
@@ -227,14 +235,13 @@ class EvalQueue:
                 text=True,
                 timeout=self.upload_timeout + 30,
             )
+        body, _, status = completed.stdout.rpartition("\n")
         if completed.returncode:
-            detail = (completed.stdout or completed.stderr).strip()
-            raise RemoteError(
-                f"CANNBench streaming upload failed (curl rc={completed.returncode}): "
-                f"{detail[:800]}"
-            )
+            detail = (body or completed.stderr).strip()
+            error = SubmissionRejected if completed.returncode == 22 and status in ("400", "401", "403", "413", "422") else RemoteError
+            raise error(f"CANNBench upload failed (HTTP {status}, curl rc={completed.returncode}): {detail[:800]}")
         try:
-            return json.loads(completed.stdout)
+            return json.loads(body)
         except json.JSONDecodeError as exc:
             raise RemoteError("CANNBench upload returned invalid JSON") from exc
 

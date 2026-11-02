@@ -1,4 +1,8 @@
-# CANN Bench worker campaign
+# Legacy CANN Bench worker campaign
+
+For the minimal supported external hardware check, use [the one-operator
+smoke](../README.md). This historical campaign requires archived runtime and
+submission resources and multiple models; it is not required by that workflow.
 
 Automates perf tuning and full-coverage operator generation with local OpenCode
 workers, a credit-free exact-v2 compile gate, and an optional serialized private

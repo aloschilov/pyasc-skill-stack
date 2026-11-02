@@ -43,7 +43,7 @@ Accepted qualification also needs a checked durable archive outside expiring
 Actions storage. See [the storage contract](verification-contract.md#storage).
 Both PR jobs must succeed on the current PR head before software acceptance;
 self-hosted runner queue time is separate from job execution time. Neither job
-is evidence that David is free or usable. See [the roadmap](roadmap.md).
+qualifies NPU execution. The separately invoked [CANNBench smoke](../integrations/cannbench/README.md) records hardware evidence.
 
 ## `merge-gate`
 

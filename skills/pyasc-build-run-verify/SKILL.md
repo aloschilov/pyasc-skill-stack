@@ -128,19 +128,12 @@ lane arithmetic. A finite random smoke is not enough for exp/GELU/norm/softmax.
 
 ## Remote evidence
 
-On shared remote Linux hardware, all tool/dependency installation, source
-staging/editing, OpenCode use and kernel runs must occur in the current task's
-own container. Verify the owner and full container/image identity before use;
-an idle or historical smoke container is not automatically yours. Keep shared
-inputs read-only and use task-only writable scratch. Host commands are limited
-to scoped readiness checks and container orchestration. Reserve the NPU
-separately; container isolation does not establish exclusive device access.
-For David, respect the live WeLink queue and confirm `busy` (or `занял`) before NPU work,
-then confirm `free` (or `отпустил`) after all own device processes end; see the
-[reservation protocol](references/hardware.md#david-reservation-through-welink).
-The retained David image permits checkout/fetch but cannot push. Return scoped
-changes and evidence to the Mac for review and separately authorized publication.
-See [hardware operating requirements](references/hardware.md#own-container-and-channel-ownership).
+Run OpenCode and the skills in the environment that provides PyASC/CANN. The
+existing `host` runtime backend runs in the current interpreter, including
+inside a container. CANNBench can provide external hardware evaluation without
+remote-shell access; see `integrations/cannbench/README.md` for the one-operator
+smoke. Its result qualifies only the submitted package and official cases,
+not fresh generation or the full local verification matrix.
 
 For performance iterations use the
 [top-down CANN-sample methodology](../pyasc-api-patterns/references/cann-performance-tuning.md).

@@ -6,6 +6,11 @@ see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 
 ## Unreleased
 
+- Replace the proposed SSH hardware backend with a manual one-operator CANNBench
+  smoke: immutable packaging, durable upload intent, GET-only reconciliation and
+  strict official-case hardware results. Runtime binaries and run evidence stay
+  outside Git; the reference smoke does not claim fresh generation.
+
 - Recognize same-block named literal size lists in multi-shape scoring without
   changing the acceptance threshold, legacy detectors or frozen score outcomes.
   Requalification of the unchanged generated kernel and rejected ambiguous
