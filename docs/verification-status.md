@@ -9,6 +9,29 @@ neither a prepared payload nor a green simulator gate qualifies an NPU.
 
 ## Local follow-up, 2026-11-02
 
+### Repository stabilization smoke
+
+The documented `generation_acceptance.py` command passed from an isolated VM
+source copy whose path contains spaces, using a new Python venv, existing
+OpenCode 1.19.0 gateway credentials and the pinned ARM64 development image.
+The complete attempt took 61.84 s. Its unchanged generated vector-add kernel
+passed static/score (12/16), JIT and simulator numerical qualification in
+12.45 s, with two counted launches and a falsifying suppressed-launch control.
+The report records `shapes_verified: [[1024]]`; no broader shape, hardware or
+performance qualification is claimed.
+
+Kernel SHA256: `8c212a025bdd3a9bde485d96d1f86d83c9ad614f3d19cf288114cd70e64831f4`.
+Evidence: `~/pyasc-qualification-runs/repo-stabilization-20261102-161049/evidence.tar.gz`
+on the workstation and VM; SHA256
+`60a5c4f98768651c31f7c09a92d3dbc48a2f8ace62028980263757427a84dbc2`.
+Returned manifest log hashes and equality of the original/qualified kernel
+were verified. The manifest identifies base revision `072deb5` and exact input
+hashes from the working copy, including the installer regression subsequently
+committed in `f349988`; it is not represented as a clean run of that later commit.
+The archive retains a launcher-script quoting failure before generation began.
+The existing dirty VM checkout was not changed. This run covers the bounded
+generation quick start, not yet the separate-project interactive instructions.
+
 ### Fresh generation on the VM, without NPU
 
 One fresh OpenCode 1.19.0 / `gateway/glm-5.3` attempt used the tracked
