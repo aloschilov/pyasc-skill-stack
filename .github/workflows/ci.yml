@@ -115,6 +115,16 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: CANNBench candidate short-row simulator regressions
+        run: |
+          docker run --rm --name "pyasc-smoke-${{ github.run_id }}" \
+            --network none --ulimit nofile=65536:65536 \
+            -v "$PWD":/workspace:ro -w /tmp \
+            -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
+            -e PYASC_CACHE_DIR=/tmp/pyasc-cache -e PYASC_DUMP_PATH=/tmp/pyasc-dumps \
+            "${{ env.PYASC_SIM_IMAGE }}" \
+            timeout 180 python3.11 /workspace/tests/integration/check-cannbench-smoke.py
+
 
   # ==========================================================================
   # Merge gate: compile-check the upstream AscTile target suite in Docker

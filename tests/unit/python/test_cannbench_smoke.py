@@ -79,6 +79,25 @@ class Smoke(unittest.TestCase):
                 smoke.collect(queue,run,ledger)
             self.assertFalse((run/'report.json').exists())
 
+    def test_terminal_collection_retains_service_claim_time(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run,ledger,state=self.prepared(Path(tmp)); queue=Mock()
+            manifest=json.loads((run/'manifest.json').read_text())
+            manifest['scope']='reference smoke'; smoke.save(run/'manifest.json',manifest)
+            state.update(job_id='job_test', manifest_sha256=smoke.sha(run/'manifest.json'))
+            smoke.save(ledger/(state['archive_sha256']+'.json'),state)
+            queue._client.get_job.return_value={'job':{
+                'id':'job_test','job_tag':state['job_tag'],'submission_id':'sub_test',
+                'status':'correctness_failed','queued_at':'2026-11-02T15:44:55',
+                'claimed_at':'2026-11-02T17:38:34','finished_at':'2026-11-02T17:42:46'}}
+            with patch.object(smoke,'evaluate',return_value={'gate_passed':False}):
+                code,report=smoke.collect(queue,run,ledger)
+            self.assertEqual(code,1)
+            self.assertEqual(report['claimed_at'],'2026-11-02T17:38:34')
+            self.assertIsNone(report['started_at'])
+            self.assertEqual(json.loads((run/'state.json').read_text())['phase'],'finished')
+            queue._submit_streaming.assert_not_called()
+
     def test_upload_rejection_and_uncertain_server_failure_differ(self):
         from evalqueue import EvalQueue, SubmissionRejected, RemoteError
         queue = EvalQueue.__new__(EvalQueue)

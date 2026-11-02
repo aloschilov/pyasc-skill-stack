@@ -4,8 +4,8 @@ Kernel design:
   - Zero-copy 2-D path for aligned layouts: input viewed as [outer, C*inner],
     x0 in first half_cols columns, x1 in second half of each row.
     Grid-stride over (row, col_tile) with [1, TILE] tiles.
-  - 1-D fallback for degenerate layouts (half_cols * elem_size < 32):
-    narrow + contiguous to materialize x0/x1, then 1-D elementwise.
+  - Short rows use a padded 2-D tile and copy only valid columns directly
+    from/to global memory; no host-framework slicing kernel is needed.
   - f16/bf16 promoted to f32 for internal compute, cast back on store.
   - Stable sigmoid: exp(min(s,0)) / (1 + exp(-|s|)); avoids exp overflow.
   - TILE=1024: the silu*glu chain (~13 visible f32 values) fits the UB
@@ -58,30 +58,28 @@ def _swiglu_2d_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
 
 
 @asctile.jit
-def _swiglu_1d_kernel(x0_ptr: asc.GlobalAddress, x1_ptr: asc.GlobalAddress,
-                      out_ptr: asc.GlobalAddress, size: int, num_tiles: int,
-                      tile_size: asc.ConstExpr[int]):
-    x0_gm = asctile.global_tensor(x0_ptr, [size])
-    x1_gm = asctile.global_tensor(x1_ptr, [size])
-    out_gm = asctile.global_tensor(out_ptr, [size])
+def _swiglu_short_rows(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
+                        outer: int, half_cols: int, total_cols: int,
+                        num_tiles: int, rows: asc.ConstExpr[int],
+                        cols: asc.ConstExpr[int]):
+    x_gm = asctile.global_tensor(x_ptr, [outer, total_cols])
+    out_gm = asctile.global_tensor(out_ptr, [outer, half_cols])
     for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num(),
-                        unroll_factor=2):
-        off = t * tile_size
-        n = tile_size if off + tile_size <= size else size - off
-        x0 = asctile.copy_in(x0_gm, [off], [tile_size], real_shape=[n])
-        x1 = asctile.copy_in(x1_gm, [off], [tile_size], real_shape=[n])
+                          unroll_factor=2):
+        row = t * rows
+        n = rows if row + rows <= outer else outer - row
+        x0 = asctile.copy_in(x_gm, [row, 0], [rows, cols],
+                            real_shape=[n, half_cols])
+        x1 = asctile.copy_in(x_gm, [row, half_cols], [rows, cols],
+                            real_shape=[n, half_cols])
         x0f = x0.to(asc.float32)
         x1f = x1.to(asc.float32)
-        abs_x = asctile.abs(x0f)
-        neg_abs = -abs_x
-        b = asctile.exp(neg_abs)
-        denom = b + 1.0
-        min_x = asctile.minimum(x0f, 0.0)
-        a = asctile.exp(min_x)
-        num = x0f * a
-        silu = num / denom
+        b = asctile.exp(-asctile.abs(x0f))
+        a = asctile.exp(asctile.minimum(x0f, 0.0))
+        silu = (x0f * a) / (b + 1.0)
         result = silu * x1f
-        asctile.copy_out(result.to(x0.dtype), out_gm, [off], real_shape=[n])
+        asctile.copy_out(result.to(x0.dtype), out_gm, [row, 0],
+                        real_shape=[n, half_cols])
 
 
 def swi_glu(input: torch.Tensor, dim: int = -1) -> torch.Tensor:
@@ -133,11 +131,12 @@ def swi_glu(input: torch.Tensor, dim: int = -1) -> torch.Tensor:
         _swiglu_2d_kernel[cores](input, out, outer, half_cols, total_cols,
                                  num_col_tiles, _TILE)
     else:
-        x0 = input.narrow(dim, 0, half_C).contiguous()
-        x1 = input.narrow(dim, half_C, half_C).contiguous()
-        num_tiles = asc.ceildiv(size, _TILE)
+        rows = 64
+        cols = _ALIGN_BYTES // elem_size
+        num_tiles = asc.ceildiv(outer, rows)
         cores = min(_MAX_CORES, num_tiles)
-        _swiglu_1d_kernel[cores](x0, x1, out, size, num_tiles, _TILE)
+        _swiglu_short_rows[cores](input, out, outer, half_cols, total_cols,
+                                  num_tiles, rows, cols)
 
     return out
 

@@ -9,6 +9,14 @@ neither a prepared payload nor a green simulator gate qualifies an NPU.
 
 ## Local follow-up, 2026-11-02
 
+### External hardware smoke
+
+The first completed CANNBench SwiGlu smoke **failed** strict acceptance:
+18/20 correct and measured cases, zero reported anti-cheat failures, 251.76 s
+execution after 6818.75 s queued. The short-row path is being repaired and
+requalified; no full hardware pass or generation-attributed performance score
+is claimed. See [hardware evidence and limitations](hardware-lane.md).
+
 ### Separate-project workflow qualification
 
 The README's installer/profile workflow was exercised in a separate project

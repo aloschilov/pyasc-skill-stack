@@ -266,7 +266,8 @@ def collect(queue, run, ledger):
     report = evaluate(manifest['catalog'], [payload], manifest['target_hardware'])
     report.update(scope=manifest['scope'], archive_sha256=state['archive_sha256'],
                   job_id=job_id, submission_id=state['submission_id'],
-                  queued_at=job.get('queued_at'), started_at=job.get('started_at'), finished_at=job.get('finished_at'))
+                  queued_at=job.get('queued_at'), claimed_at=job.get('claimed_at'),
+                  started_at=job.get('started_at'), finished_at=job.get('finished_at'))
     save(run/'report.json', report)
     return (0 if report['gate_passed'] else 1), report
 
