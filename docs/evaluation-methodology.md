@@ -255,10 +255,10 @@ against.
 
 ## Evidence schema v4 (proposed)
 
-Current evidence is on `schema_version: "3"`. Schema v4 is an additive
-extension; all v3 readers (`compare_skills_value.py`,
-`generate_dashboard.py`, `sync_capabilities.py`) continue to work
-because the new fields are optional and read defensively.
+The historical campaign used `schema_version: "3"`. This proposed v4
+extension described compatibility with its readers, including the now-retired
+`generate_dashboard.py`. It is not the current run-manifest contract; use
+[verification-contract.md](verification-contract.md) for current evidence.
 
 ```yaml
 schema_version: "4"
@@ -510,11 +510,11 @@ by_profile:
 
 The corresponding workflow contract is:
 
-- [`tests/tools/merge_evidence_artifacts.sh`](../tests/tools/merge_evidence_artifacts.sh)
+- [`tests/tools/merge_evidence_artifacts.sh`](https://github.com/aloschilov/pyasc-skill-stack/blob/eb712b6338a2395e55f1c3d5ab0f124053c4b33d/tests/tools/merge_evidence_artifacts.sh)
   folds each matrix leg's fresh per-leg files into `evidence/` using a
   leg-specific glob, so cross-leg stale copies cannot win an overwrite
   race.
-- [`tests/tools/detect_partial_run.py`](../tests/tools/detect_partial_run.py)
+- [`tests/tools/detect_partial_run.py`](https://github.com/aloschilov/pyasc-skill-stack/blob/eb712b6338a2395e55f1c3d5ab0f124053c4b33d/tests/tools/detect_partial_run.py)
   classifies the current CI run as `partial_run: true|false` based on
   the per-job conclusions of `nightly-gate` and `local-stability-gate`
   reported by the GitHub Actions API.

@@ -90,7 +90,11 @@ frozen, still serving the campaign evidence this repository pruned — an
 orphaned page that nothing could refresh or correct. GitHub Pages is disabled
 for the repository, so there is no stale public claim outliving its source.
 
-All of it is on the `archive/campaign-2026` branch:
+The unused dashboard generator, partial-nightly detector and artifact merger
+were also removed after confirming that no current workflow or tool calls them.
+Their historical documentation links to preserved Git revisions.
+
+The original campaign is on the `archive/campaign-2026` branch:
 
 ```bash
 git show archive/campaign-2026:.github/workflows/ci.yml

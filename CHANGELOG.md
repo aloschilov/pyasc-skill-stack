@@ -6,6 +6,11 @@ see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 
 ## Unreleased
 
+- Remove the unused retired dashboard generator and nightly artifact helpers;
+  preserve historical documentation with links to their Git revision.
+- Evidence collection accepts long command arguments and hashes relative input
+  paths against the command working directory.
+
 - Core skill routing uses the repository runtime/source pins and shipped
   references; source fetches and historical campaign layouts are no longer
   prerequisites for ordinary kernel authoring.
