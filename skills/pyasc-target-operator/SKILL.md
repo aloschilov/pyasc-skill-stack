@@ -1,33 +1,25 @@
 ---
 name: pyasc-target-operator
-description: Procedure for authoring and verifying a current-v2 handwritten asctile target operator under python/test/asctile/target. Use for target tests, handwritten reference kernels, simulator verification, and CANN operator parity work.
+description: Procedure for authoring and verifying a current-v2 handwritten asctile target operator in the selected upstream target suite. Use for target tests, handwritten reference kernels, simulator verification, and CANN operator parity work.
 ---
 
 # Current-v2 target operator workflow
 
 A target operator is a handwritten `@asctile.jit` kernel plus pytest coverage
-inside the pyasc repository. For the current v2 tree the location is
-`python/test/asctile/target/`; `python/test/asc2/target/` is obsolete.
+inside the pyasc repository. Locate the suite using the selected source revision. The repository snapshot
+and its upstream path are recorded in `reference/asctile/PIN.json`; historical
+`python/test/asctile/target/` paths are not universal.
 
 ## Version discipline
 
-Record the exact base before editing:
+Record the exact upstream base and use a separate development checkout.
+For the repository runtime, read the upstream URL, commit and `resolved_path`
+from `reference/asctile/PIN.json`. Branch from that revision when extending its
+tests; do not automatically switch to a moving branch or overwrite another task.
 
-```bash
-git fetch origin v2
-git rev-parse origin/v2
-git switch -c <op>-target origin/v2
-```
-
-If a campaign intentionally pins another revision, use that recorded revision
-instead of the fetch/switch example above. The CANNBench campaign is pinned to
-`0a631f70968c3cb7c33ce45330a85768dd5a6f06` (runtime authority). The historical
-high-level GeLU campaign pinned `adadd7d66ed0ee16d33d79487bf584899a26ef1e` and
-is not CANNBench authority; preserve historical results at their original
-revisions. Never mix source from one commit with
-a wheel/runtime from another. Build from source when the selected v2 commit is
-not distributed as a Python package; do not replace it with a repository wheel
-from another revision.
+An explicitly selected campaign may use its own source/runtime pair. Preserve
+historical results at their original revisions. Build from source only when
+the selected revision is not available as a matching runtime artifact.
 
 Use prebuilt local compile/CaModel environments within a worker's assigned
 budget. Missing dependencies are a reported limitation; workers do not install
@@ -152,9 +144,9 @@ export PATH=$ASCEND_HOME_PATH/tools/bisheng_compiler/bin:$PATH
 SIM=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599
 export LD_LIBRARY_PATH=$SIM/camodel:$SIM/lib:$SIM/lib64:$ASCEND_HOME_PATH/lib64:$LD_LIBRARY_PATH
 
-python3 -m pytest python/test/asctile/target/test_<op>.py \
+python3 -m pytest <resolved-target-path>/test_<op>.py \
   --compile-only --backend Model --platform Ascend950PR_9599 -q
-python3 -m pytest python/test/asctile/target/test_<op>.py \
+python3 -m pytest <resolved-target-path>/test_<op>.py \
   --backend Model --platform Ascend950PR_9599 -q
 ```
 

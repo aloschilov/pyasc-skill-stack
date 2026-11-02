@@ -6,6 +6,10 @@ see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 
 ## Unreleased
 
+- Core skill routing uses the repository runtime/source pins and shipped
+  references; source fetches and historical campaign layouts are no longer
+  prerequisites for ordinary kernel authoring.
+
 - Installer preserves existing links to other locations, including dangling
   links, instead of replacing another project's skill. Reinstallation of the
   same links and pruning of owned stale links remain supported.

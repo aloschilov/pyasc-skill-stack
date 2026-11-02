@@ -5,12 +5,9 @@ description: Current pyasc v2 AscTile API and kernel patterns. Use when selectin
 
 # Current pyasc v2 API patterns
 
-The authoritative source is `compiler-team/pyasc` branch `v2`. The CANNBench
-campaign uses commit `0a631f70968c3cb7c33ce45330a85768dd5a6f06` with
-a matching runtime. The historical high-level GeLU campaign used
-`adadd7d66ed0ee16d33d79487bf584899a26ef1e`; that pin is not CANNBench authority.
-Other campaigns must state their own source/runtime pin;
-older snapshot evidence is not automatically current.
+Use the runtime selected by `reference/images/ENV.json` and the matching
+source recorded in `reference/asctile/PIN.json`. For an explicitly selected
+campaign, use its own source/runtime pin and keep its evidence separate.
 The public tile package is `asctile`; `asc2` and `tensor/load/store` belong to
 older snapshots and must not appear in new kernels.
 

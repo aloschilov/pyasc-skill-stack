@@ -8,7 +8,7 @@ Three jobs, plus a release workflow. The CI jobs live in
 | `pr-gate` | PR, push to `main`, manual dispatch | seconds | L1 unit tests and static checks |
 | `examples-gate` | same triggers, after `pr-gate` | minutes | shipped kernels and verification contract on pinned simulator |
 | `merge-gate` | push to `main`, manual dispatch | minutes; 60-minute cap | compile-check of the AscTile target suite on the camodel |
-| release | `v*` tag | minutes | `pr-gate` plus archive build and install verification |
+| release | `v*` tag | minutes | fast unit suite plus archive build and install verification |
 
 ## `pr-gate`
 
@@ -22,7 +22,7 @@ runtime-backend dispatch logic, and an offline drift check comparing the
 vendored target suite against `reference/asctile/PIN.json`. No Docker, no
 CANN, no network, no provider calls.
 
-This is the gate a release tag must pass. It has no device or provider dependency.
+The release workflow runs its fast-unit subset. Neither has a device or provider dependency.
 
 ## `examples-gate`
 

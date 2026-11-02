@@ -1,15 +1,17 @@
-# Current pyasc v2 example catalog
+# Shipped asctile examples
 
-Relative to the selected source root:
+From the skill-stack root, use `reference/asctile/target/`:
 
-- `python/test/asctile/target/`: handwritten production-oriented target tests
-- `python/test/asctile/kernels/`: focused end-to-end AscTile kernels
-- `python/test/asctile/unit/`: API-level behavior where present
-- `python/tutorials/asctile/`: current high-level tutorials
-- `examples/06_gelu`, `examples/07_swiglu`, `examples/08_rmsnorm`: runnable
-  operator examples
-- `python/test/kernels/`: lower-level `asc` API tests; do not copy them as
-  AscTile syntax without translating the programming model
+- `test_vadd.py`: elementwise addition and tail shapes
+- `test_reduce_sum.py`, `test_reduce_max.py`: reductions
+- `test_softmax.py`, `test_rms_norm.py`, `test_layer_norm.py`: normalization
+- `test_transpose.py`, `test_broadcast.py`, `test_gather.py`: movement and indexing
+- `matmul_v3/`: matrix multiplication variants
 
-Choose the nearest example from the exact selected commit. Record a different
-commit as historical evidence rather than treating it as an API contract.
+These are upstream-authored references. `reference/asctile/PIN.json` records
+their revision, original location and hashes. Consult the actual parametrized
+cases rather than assuming every example is qualified for all shapes.
+
+The starter is `skills/pyasc-codegen-workflow/templates/kernel-template.py`.
+It is a development template, not a correctness oracle. Existing generated
+kernels and historical campaign results must not replace the upstream reference.

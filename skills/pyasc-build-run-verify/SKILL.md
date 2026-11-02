@@ -8,13 +8,15 @@ description: Build, compile, execute, and verify current-v2 asctile kernels on e
 Always keep source, wheel, Python ABI, compiler, and platform provenance
 together.
 
-**Default runtime:** the published wheel, `pip install --pre pyasc-dev`, which
-exposes `from asc.experimental import asctile`. It tracks upstream's default
-branch, so read the actual commit from its metadata rather than assuming one:
+**Default runtime:** the digest-pinned development simulator image in
+`reference/images/ENV.json`, paired with `reference/asctile/PIN.json`.
+It includes PyASC, CANN and CPU torch; preserve its entrypoint. The README's
+`qualify_generated.py` command runs static checks, JIT and numerical verification
+with this image. No host PyASC install is required. The wheel exposes
+`from asc.experimental import asctile`.
 
-```bash
-python3 -c "import importlib.metadata as m; print(m.version('pyasc-dev'))"
-```
+Host wheel/source setups are optional; see `docs/cann-setup.md` and record the
+actual wheel version and source revision instead of assuming the latest matches.
 
 **Campaign runtimes** are different artifacts and are pinned deliberately. The
 CANNBench campaign uses `pyasc v2@0a631f70968c3cb7c33ce45330a85768dd5a6f06`
@@ -111,6 +113,13 @@ Common failures:
   runtime/compiler failure and fall back to a bounded non-fused route
 
 ## Numerical verification
+
+For the repository qualification command, put a real launch and a direct
+`assert torch.allclose(actual, expected, ...)` (or supported NumPy/torch testing
+assertion) in the runnable main path. A custom maximum-error assertion may be
+useful but is not recognized by the existing static/numerical contract. See
+`docs/verification-contract.md` for supported comparisons and evidence limits.
+
 
 Compare the full logical output, shape, dtype, and list arity. Use the task's
 atol/rtol, compare NaN/Inf positions, exercise runtime scalars and both sides

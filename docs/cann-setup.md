@@ -18,9 +18,10 @@ guide is for host installs and for hardware.
 
 ## Architecture support
 
-The stack is verified on Ubuntu 22.04 and 24.04, on both `x86_64` and
-`aarch64`. CANN ships a separate installer per architecture; pick the one
-matching `uname -m`:
+Upstream publishes architecture-specific environments. This does not qualify
+every architecture/OS combination for this skill stack; see
+[verification status](verification-status.md) for tested configurations.
+For a host installation, choose the CANN installer matching `uname -m`:
 
 - `Ascend-cann-toolkit_<version>_linux-x86_64.run`
 - `Ascend-cann-toolkit_<version>_linux-aarch64.run`

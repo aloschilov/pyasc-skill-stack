@@ -1,6 +1,7 @@
 # Current pyasc v2 API index
 
-Verify every signature against the selected commit's `python/asctile` source.
+Verify signatures against the runtime/source selected by `reference/images/ENV.json`
+and `reference/asctile/PIN.json`. Source paths vary by revision.
 
 | Area | Current API |
 |---|---|

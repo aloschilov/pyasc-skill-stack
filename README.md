@@ -68,7 +68,8 @@ opencode
 For example, ask:
 
 > Write an asctile vector-add kernel for float32 inputs of sizes 1024 and 1025,
-> with a design document and direct numerical assertions. Read the installed
+> with a design document and direct `assert torch.allclose(...)` checks against
+> `x + y` at both sizes. Read the installed
 > skills. PyASC is available in the pinned Docker image, not on the host; write
 > the files without searching for a host runtime. I will run the repository's
 > qualification command afterward.

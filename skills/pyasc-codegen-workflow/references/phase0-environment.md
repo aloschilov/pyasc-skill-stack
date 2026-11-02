@@ -1,12 +1,16 @@
-# Phase 0: pin the environment
+# Phase 0: identify the selected runtime
 
-Record the selected `origin/v2` commit, source path, wheel hash/ABI/architecture,
-Python and CANN versions, compiler path, platform, backend, and worker models.
-Verify `asc` and `asctile` resolve to the matching runtime: the published
-wheel provides `from asc.experimental import asctile`, while older source
-builds provide a top-level `import asctile`. For the CANNBench campaign use
-the vendored exact-v2 QEMU gate; do not substitute a repository package build
-from another revision.
+For the repository workflow, read `reference/images/ENV.json` and
+`reference/asctile/PIN.json`. Record the image digest, matching source revision,
+Python/CANN versions, backend and platform. Reuse this runtime; no additional
+source fetch or host installation is needed for ordinary authoring.
 
-Exit only when source and runtime provenance match and at least compile-only
-validation is available. Record camodel/NPU absence as a limitation.
+If a task explicitly selects another runtime, record its source revision and
+wheel hash/ABI/architecture. The published wheel provides
+`from asc.experimental import asctile`; older source builds may provide a
+top-level `import asctile`. Do not mix evidence between these runtimes.
+
+When verification is delegated to Docker, keep authoring on the host and use
+the repository qualification command afterward. A missing host import is not
+a reason to search unrelated checkouts. Record unavailable verification as
+blocked; compile-only evidence does not establish numerical or NPU correctness.

@@ -79,11 +79,13 @@ populates the base class's `_config_keywords`. The AscTile subclass inherits
 that cached list through `getattr`, so `@asctile.jit(reuse_alloc=1)` then raises
 `The following option names are unknown: reuse_alloc` during construction.
 Simply importing `asc` is not the measured trigger; base keyword discovery is.
-See the [base-first result](../../../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/evidence/jit-base-first/result.json).
+The base-first result was recorded under the external campaign directory
+`gelu-asctile-jit-20260907/evidence/jit-base-first/result.json`; it is not
+shipped in this repository.
 
 Call-time extraction uses `self.compiler.options_cls`; it is not hardwired to
-the base compiler. The [cold AscTile-first result](../../../integrations/cannbench/comparisons/gelu-asctile-jit-20260907/evidence/jit-cold/result.json)
-records successful native CaModel execution of a 257-element FP32 arithmetic
+the base compiler. The external campaign result
+`gelu-asctile-jit-20260907/evidence/jit-cold/result.json` records successful native CaModel execution of a 257-element FP32 arithmetic
 probe with defaults, decorator `reuse_alloc=1`, a call-time
 `reuse_alloc=2, static_alloc=True, vf_fusion=True` override, a cached repeat,
 and an `always_compile=True` repeat. These are diagnostic routes, not GeLU
