@@ -9,6 +9,35 @@ neither a prepared payload nor a green simulator gate qualifies an NPU.
 
 ## Local follow-up, 2026-11-02
 
+### Fresh generation on the VM, without NPU
+
+One fresh OpenCode 1.19.0 / `gateway/glm-5.3` attempt used the tracked
+`cloud-glm-5.3` profile and skills at `513b888`. It produced a vector-add kernel
+and design document in 77.87 s. Static checks and the unchanged scorer passed
+(12/16). The original kernel then passed JIT and numerical verification in the
+pinned ARM64 simulator image, with two counted launches and a suppressed-launch
+negative control. Qualification took 12.33 s (JIT 2.89 s, execution 9.41 s).
+The source exercises sizes 1024 and 1025; the report's conservative
+`shapes_verified` field records only `[1024]`. This is simulator evidence only.
+
+Kernel SHA256: `9094ff69c5b0f8e97436a936bbd8d65fd6df11130b826c9080b263d0f1399bf3`.
+External archive, retained on the workstation and VM:
+`~/pyasc-qualification-runs/vm-generation-20261102.tar.gz` (workstation),
+`~/pyasc-qualification-runs/vm-generation-20261102/evidence.tar.gz` (VM).
+Archive SHA256: `215f69194069476247b09b2a7bd8ecfea55feb901d09c800f2f4bb6ca12c0e1a`.
+All 53 archived file hashes and the unchanged kernel were checked after return.
+
+The archive also retains setup failures: missing Git in the evidence collector,
+an initially bypassed image entrypoint, and an invalid manually supplied backend
+name. The accepted run uses the image entrypoint and `Model` backend. Its only
+harness patch lets `RunArtifacts` use an explicitly supplied revision without
+invoking Git; verification scripts and the generated kernel are unchanged.
+When neither Git nor an explicit revision is available, the manifest records
+an unknown revision while retaining input hashes. No credentials or run logs
+are committed to the repository.
+
+### Earlier local checks
+
 PR #19 review fixes and the shared matrix outcome policy were locally checked
 on the source content committed as `dc1ebfe` (the run manifests retain the
 pre-commit revision and exact dirty-tree input hashes):

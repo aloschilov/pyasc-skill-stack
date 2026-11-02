@@ -29,10 +29,18 @@ class RunArtifacts:
         if self.path == ROOT or ROOT in self.path.parents:
             raise ValueError('Results must be outside the checkout')
         self.path.mkdir(parents=True, exist_ok=False)
-        rev = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'],
-                             capture_output=True, text=True)
+        revision = os.environ.get('PYASC_SOURCE_REVISION')
+        if not revision:
+            try:
+                rev = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'],
+                                     capture_output=True, text=True)
+                revision = rev.stdout.strip() if rev.returncode == 0 else None
+            except FileNotFoundError:
+                # Runtime images may contain an exported source tree without Git.
+                # Keep the input hashes and report the unknown revision honestly.
+                revision = None
         self.data = {'schema_version': 1, 'kind': kind,
-                     'revision': os.environ.get('PYASC_SOURCE_REVISION') or rev.stdout.strip() or None,
+                     'revision': revision or None,
                      'input_sha256': input_hashes(), 'image': None,
                      'started_unix': time.time(), 'commands': [], 'status': 'running'}
         self.save()
