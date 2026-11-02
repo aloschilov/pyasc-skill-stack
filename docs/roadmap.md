@@ -23,7 +23,9 @@ hardware backend and cleanup. Its five review findings are addressed by:
 
 Acceptance: the current PR head passes real `pr-gate` and `examples-gate`;
 the simulator manifest matches all expected outcomes with unchanged inputs.
-Frozen evidence and protected detector code remain unchanged. Review replies
+Frozen evidence, legacy API detectors and historical scoring outcomes remain
+unchanged. The separately tested named-size-list scoring correction and its
+explicit source-hash update are recorded in the verification status. Review replies
 identify the implementing commit and validation; only then resolve findings.
 Queued, missing or skipped checks are not success. NPU unavailability does not
 block these software changes, but must remain explicit in the PR description.

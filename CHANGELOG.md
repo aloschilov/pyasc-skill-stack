@@ -6,6 +6,11 @@ see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 
 ## Unreleased
 
+- Recognize same-block named literal size lists in multi-shape scoring without
+  changing the acceptance threshold, legacy detectors or frozen score outcomes.
+  Requalification of the unchanged generated kernel and rejected ambiguous
+  assignment cases are recorded in the verification status and regression tests.
+
 - Remove the unused retired dashboard generator and nightly artifact helpers;
   preserve historical documentation with links to their Git revision.
 - Evidence collection accepts long command arguments and hashes relative input

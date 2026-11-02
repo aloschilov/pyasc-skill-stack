@@ -23,5 +23,12 @@
     "docs/evidence/generation-gate-20261028/run-3/score.json": "[\"asc2_load_store\",\"asc2_tensor\",\"global_address\",\"input_arity\",\"jit_decorator\",\"launch_pattern\",\"loop_range\",\"multi_shape_verification\",\"no_banned_constructs\",\"no_hardcoded_shapes\",\"no_return_value\",\"output_dtype\",\"semantic_api_usage\",\"tiling_consistency\",\"valid_python\",\"verification\"]",
     "docs/evidence/generation-gate-20261028/run-2/score.json": "[\"asc2_load_store\",\"asc2_tensor\",\"global_address\",\"input_arity\",\"jit_decorator\",\"launch_pattern\",\"loop_range\",\"multi_shape_verification\",\"no_banned_constructs\",\"no_hardcoded_shapes\",\"no_return_value\",\"output_dtype\",\"semantic_api_usage\",\"tiling_consistency\",\"valid_python\",\"verification\"]",
     "docs/evidence/generation-gate-20261028/run-1/score.json": "[\"asc2_load_store\",\"asc2_tensor\",\"global_address\",\"input_arity\",\"jit_decorator\",\"launch_pattern\",\"loop_range\",\"multi_shape_verification\",\"no_banned_constructs\",\"no_hardcoded_shapes\",\"no_return_value\",\"output_dtype\",\"semantic_api_usage\",\"tiling_consistency\",\"valid_python\",\"verification\"]"
+  },
+  "intentional_source_updates": {
+    "tests/tools/score_kernel.py": {
+      "previous_sha256": "e0c2e908cc389e45abf9fd5fd69bebdf2856b58d7c91f9695759fe2bbe5207d2",
+      "sha256": "3738490f87aee6a21be4d5b78b68ac313d7f8633cff46209fc9280acb8b3b309",
+      "reason": "2026-11-02 stabilization: recognize same-block named literal size loops; preserve thresholds, check names, legacy detectors and frozen per-check outcomes. Covered by named-loop positive and mutation/scope negative regressions."
+    }
   }
 }

@@ -9,6 +9,41 @@ neither a prepared payload nor a green simulator gate qualifies an NPU.
 
 ## Local follow-up, 2026-11-02
 
+### Separate-project workflow qualification
+
+The README's installer/profile workflow was exercised in a separate project
+with spaces in its path, using a fresh venv and the existing VM gateway. Agent
+events confirm successful loading of the API, syntax and workflow skills and
+reading of the installed kernel/design templates. OpenCode generation took
+105.95 s. The unchanged kernel passed strict qualification in 14.91 s after
+fixing a scorer false negative for a named literal size list. Its score is
+12/16 at the unchanged threshold; JIT took 3.15 s and execution 11.72 s.
+Two launches and a falsifying suppressed-launch control established simulator
+numerical verification. The report conservatively records only shape `[1024]`.
+
+The first candidate used an unsupported custom comparison and remains failed.
+The second initially scored 11/16 despite its `test_sizes = [1024, 1025]` loop;
+that failed manifest is retained alongside the successful requalification.
+Neither candidate was manually repaired. The collector's long-argument bug
+was also fixed, with regression coverage. Named-loop scoring tests reject
+mutation, aliases, unknown values and wrong-scope assignments. Frozen historical
+score outcomes and legacy detection tests still pass; the original scorer hash
+is preserved with an explicit intentional-update entry in the cleanup baseline.
+
+Kernel SHA256: `3ca932dfd8e561242f4b0c385cb511db1f43a7de2feaa8dbdd1c8250cc2673ba`.
+Accepted archive, on workstation and VM:
+`~/pyasc-qualification-runs/repo-stabilization-project-20261102-attempt2/evidence-qualified.tar.gz`;
+SHA256 `3710a597eb253e2180d47373a8d80d690077c7283a4f6777cf60feb259c9317c`.
+It retains the original source export, scorer before/after, failed and accepted
+manifests, logs and unmodified generated source. All recorded log hashes and
+original/qualified kernel equality were verified. Generation identifies base
+`a700d78` plus working-copy input hashes; requalification identifies inputs by
+hash, not a claimed clean Git revision. This is simulator evidence only.
+
+The existing release workflow's build/install steps were also exercised locally;
+tar and zip payloads matched (52 files), with macOS metadata disabled for the
+Linux payload comparison. The archive remains skills-only as documented.
+
 ### Repository stabilization smoke
 
 The documented `generation_acceptance.py` command passed from an isolated VM

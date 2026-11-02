@@ -15,6 +15,11 @@ class CleanupInvariants(unittest.TestCase):
         baseline = json.loads((ROOT/'docs/audits/cleanup-invariants-20261030.json').read_text())
         for name, digest in baseline['sha256'].items():
             with self.subTest(path=name):
+                update = baseline.get('intentional_source_updates', {}).get(name)
+                if update:
+                    self.assertEqual(update['previous_sha256'], digest)
+                    self.assertTrue(update['reason'])
+                    digest = update['sha256']
                 self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(), digest)
 
     def test_score_outcomes_preserve_historical_schema_and_behavior(self):
