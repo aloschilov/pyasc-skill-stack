@@ -31,7 +31,9 @@ class Smoke(unittest.TestCase):
             self.assertEqual(smoke.sha(root/'first.zip'), smoke.sha(root/'second.zip'))
             with zipfile.ZipFile(root/'first.zip') as z:
                 self.assertTrue(z.getinfo('build.sh').external_attr >> 16 & 0o111)
-                data = z.read('dist/cann_bench-2.0.0-cp312-cp312-linux_x86_64.whl')
+                self.assertIn('setup.py', z.namelist())
+                self.assertIn('cann_bench/swi_glu.py', z.namelist())
+                data = z.read('vendor/cann_bench-2.0.0-cp312-cp312-linux_x86_64.whl')
             with zipfile.ZipFile(io.BytesIO(data)) as z:
                 self.assertNotIn('cann_bench/other.py', z.namelist())
                 self.assertIn('cann_bench-2.0.0.dist-info/RECORD', z.namelist())
@@ -116,6 +118,38 @@ class Smoke(unittest.TestCase):
             if kind=='timing': op['cases'][0]['elapsed_us']=float('nan')
             if kind=='failure': bad['status']='correctness_failed'
             with self.subTest(kind=kind): self.assertFalse(smoke.evaluate(catalog,[bad])['gate_passed'])
+
+    def test_intent_precedes_upload_and_error_diagnostics_are_redacted(self):
+        from evalqueue import SubmissionRejected
+        for rejected in (False, True):
+            with self.subTest(rejected=rejected), tempfile.TemporaryDirectory() as tmp:
+                run,ledger,state=self.prepared(Path(tmp))
+                record=ledger/(state['archive_sha256']+'.json'); record.unlink()
+                manifest=json.loads((run/'manifest.json').read_text())
+                manifest['aggregation_token']='agg_test'; smoke.save(run/'manifest.json',manifest)
+                smoke.save(run/'task.json',{})
+                queue=Mock(target_hardware='950pr',benchmark_slug='official-tasks')
+                queue._client.token='private-test-token'
+                queue._client.list_jobs.return_value={'jobs':[]}
+                def upload(*args, **kwargs):
+                    self.assertEqual(json.loads(record.read_text())['phase'], 'upload-intent')
+                    self.assertEqual(kwargs['aggregation_token'], 'agg_test')
+                    error = SubmissionRejected if rejected else TimeoutError
+                    raise error('private-test-token at https://example.invalid/?credential=secret')
+                queue._submit_streaming.side_effect=upload
+                with patch.object(smoke,'task_snapshot',return_value=(manifest['catalog'],{})):
+                    with self.assertRaises((SubmissionRejected,TimeoutError)):
+                        smoke.submit_once(queue,run,ledger)
+                self.assertEqual(json.loads(record.read_text())['phase'], 'rejected' if rejected else 'ambiguous')
+                diagnostic=(run/'upload-error.json').read_text()
+                self.assertNotIn('private-test-token',diagnostic)
+                self.assertNotIn('credential=secret',diagnostic)
+                if rejected:
+                    with self.assertRaisesRegex(ValueError,'corrected inputs'):
+                        smoke.submit_once(queue,run,ledger)
+                else:
+                    smoke.submit_once(queue,run,ledger)
+                self.assertEqual(queue._submit_streaming.call_count,1)
 
     def test_repository_output_is_rejected(self):
         with self.assertRaises(ValueError):

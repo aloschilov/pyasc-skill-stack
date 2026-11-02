@@ -114,10 +114,38 @@ def make_bundle(runtime, expected_hash, sources, version, destination):
             wheel.writestr(zipfile.ZipInfo(name, (2026, 1, 1, 0, 0, 0)), data, compress_type=zipfile.ZIP_DEFLATED)
     wheel_bytes = buf.getvalue()
     digest = hashlib.sha256(wheel_bytes).hexdigest()
-    build = ('#!/usr/bin/env bash\nset -euo pipefail\ncd "$(dirname "$0")"\n'
-             f"printf '%s  %s\\n' '{digest}' 'dist/{wheel_name}' | sha256sum --check\n")
+    setup_source = f'''from pathlib import Path
+import hashlib
+import shutil
+from setuptools import Command, setup
+
+WHEEL = "{wheel_name}"
+SHA256 = "{digest}"
+
+class VerifiedWheel(Command):
+    description = "stage the exact prebuilt, self-contained PyASC wheel"
+    user_options = [("dist-dir=", "d", "output directory")]
+    def initialize_options(self):
+        self.dist_dir = "dist"
+    def finalize_options(self):
+        pass
+    def run(self):
+        source = Path(__file__).parent / "vendor" / WHEEL
+        if hashlib.sha256(source.read_bytes()).hexdigest() != SHA256:
+            raise RuntimeError("Vendored wheel hash mismatch")
+        destination = Path(self.dist_dir)
+        destination.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination / WHEEL)
+
+setup(name="cann_bench", version="{version}", packages=["cann_bench"],
+      cmdclass={{"bdist_wheel": VerifiedWheel}})
+'''
+    build = '#!/usr/bin/env bash\nset -euo pipefail\ncd "$(dirname "$0")"\npython3 setup.py bdist_wheel\n'
+    entries = [('build.sh', build.encode()), ('setup.py', setup_source.encode()),
+               ('vendor/' + wheel_name, wheel_bytes)]
+    entries += [(name, data) for name, data in contents.items() if name.startswith('cann_bench/')]
     with zipfile.ZipFile(destination, 'w', zipfile.ZIP_DEFLATED) as bundle:
-        for name, data in [('build.sh', build.encode()), ('dist/' + wheel_name, wheel_bytes)]:
+        for name, data in entries:
             info = zipfile.ZipInfo(name, (2026, 1, 1, 0, 0, 0))
             info.external_attr = (0o100755 if name == 'build.sh' else 0o100644) << 16
             bundle.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED)

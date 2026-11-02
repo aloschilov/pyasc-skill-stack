@@ -17,7 +17,7 @@ simulator's suppressed-launch numerical-control contract.
   adapter (`bash integrations/cannbench/setup-site-mcp.sh`).
 - An existing aggregation scheme owned by or shared with the account. Pass its
   ID as `--aggregation-token` (or `CANNBENCH_AGGREGATION_TOKEN`); this is required
-  for private submissions too. The smoke never creates schemes or opts into
+  for private submissions too ([current API contract](https://cannbench.com/docs/mcp)). The smoke never creates schemes or opts into
   third-party independent runner environments.
 - `BENCHSITE_API_TOKEN` in the environment, or an existing private environment
   file passed as `--credentials-file`. Never commit or print it.
@@ -25,7 +25,8 @@ simulator's suppressed-launch numerical-control contract.
   `asc`, `asctile`, `pybind11` and their licenses. Supply its SHA256 explicitly.
   Runtime binaries are external inputs, not checked into this repository.
   The packager copies only runtime/license files; it replaces candidate code,
-  wheel metadata and RECORD. Arbitrary PyASC revisions are not presumed compatible.
+  wheel metadata and RECORD. The ZIP contains the candidate sources, `setup.py`
+  and `build.sh`; the build stages the exact hash-verified prebuilt wheel. Arbitrary PyASC revisions are not presumed compatible.
 
 The qualification runtime bundle is available in the preserved history at
 `origin/archive/campaign-2026`, under
