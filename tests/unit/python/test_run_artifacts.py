@@ -1,5 +1,6 @@
 """Evidence collection works in runtime images that do not ship Git."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import sys
@@ -12,6 +13,22 @@ from run_artifacts import RunArtifacts
 
 
 class RevisionWithoutGit(unittest.TestCase):
+    def test_long_argument_and_relative_input_preserve_completed_command(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / 'project with spaces'
+            project.mkdir()
+            (project / 'input.txt').write_text('input data')
+            run = RunArtifacts(Path(tmp) / 'run', 'test')
+            code, _ = run.command('long-argument',
+                                  [sys.executable, '-c', 'print("done")',
+                                   'prompt ' * 1000, 'input.txt'], cwd=project)
+            self.assertEqual(code, 0)
+            self.assertEqual((run.path / 'long-argument.stdout').read_text(), 'done\n')
+            record = json.loads((run.path / 'manifest.json').read_text())['commands'][0]
+            self.assertEqual(record['argv_input_sha256']['input.txt'],
+                             hashlib.sha256(b'input data').hexdigest())
+            self.assertNotIn('prompt ' * 1000, record['argv_input_sha256'])
+
     def test_explicit_revision_does_not_invoke_git(self):
         with tempfile.TemporaryDirectory() as tmp, \
                 patch.dict(os.environ, {'PYASC_SOURCE_REVISION': 'a' * 40}), \

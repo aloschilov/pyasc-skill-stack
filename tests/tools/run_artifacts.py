@@ -1,6 +1,7 @@
 """External, append-only run directories. Never archives environment/auth files."""
 from __future__ import annotations
 import hashlib
+import errno
 import json
 import os
 from pathlib import Path
@@ -75,7 +76,20 @@ class RunArtifacts:
             (self.path / (label+'.json')).write_text(json.dumps(report, indent=2)+'\n')
         except ValueError:
             report = {}
-        record['argv_input_sha256'] = {str(v): sha(v) for v in argv if Path(str(v)).is_file()}
+        record['argv_input_sha256'] = {}
+        for value in argv:
+            candidate = Path(str(value))
+            if not candidate.is_absolute():
+                candidate = Path(cwd) / candidate
+            try:
+                is_file = candidate.is_file()
+            except OSError as exc:
+                # Command strings and prompts are arguments, not necessarily paths.
+                if exc.errno not in (errno.ENAMETOOLONG, errno.EINVAL):
+                    raise
+                continue
+            if is_file:
+                record['argv_input_sha256'][str(value)] = sha(candidate)
         record['stdout_sha256'] = sha(self.path / (label+'.stdout'))
         record['stderr_sha256'] = sha(self.path / (label+'.stderr'))
         self.data['commands'].append(record); self.save()
