@@ -14,6 +14,8 @@ on:
         required: true
       BENCHSITE_API_TOKEN:
         required: true
+      QUALIFICATION_PUBLISH_TOKEN:
+        required: false
 
 # No PR trigger, schedule, broad campaign or automatic resubmission.
 concurrency:
@@ -127,6 +129,11 @@ jobs:
 
       - name: Publish durable qualification and verify downloaded archive
         env:
+          # A PR revision can modify workflows relative to the default branch.
+          # GitHub requires Workflows: write for that release target; GITHUB_TOKEN
+          # cannot receive it. A repository-scoped publishing credential is optional
+          # for revisions that do not need it, and is exposed only to this step.
+          GH_TOKEN: ${{ secrets.QUALIFICATION_PUBLISH_TOKEN || github.token }}
           QUALIFICATION_ARCHIVE: ${{ steps.qualification.outputs.archive }}
           QUALIFICATION_CHECKSUM: ${{ steps.qualification.outputs.checksum }}
           QUALIFICATION_TAG: ${{ steps.qualification.outputs.tag }}

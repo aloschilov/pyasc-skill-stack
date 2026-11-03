@@ -96,6 +96,16 @@ Configure repository secrets `OPENCODE_API_KEY`, `BENCHSITE_API_TOKEN` and vars
 its service adapter into an external temporary venv. No interactive checkout or
 private remote transport is part of the product path.
 
+Release publication targets the exact generation commit. If that commit changes
+`.github/workflows/` relative to the default branch, [GitHub requires workflow
+write permission](https://docs.github.com/en/rest/releases/releases#create-a-release),
+which the built-in `GITHUB_TOKEN` cannot receive. Configure a repository-scoped
+GitHub App or fine-grained token with **Contents: write** and **Workflows: write**
+as `QUALIFICATION_PUBLISH_TOKEN` for that case. Only the release-publication step
+receives this optional secret; it is not available to generation or CANNBench.
+A publication failure retains the sealed archive. Resume the same origin through
+CI after configuring the credential; never regenerate or resubmit for publication.
+
 ```bash
 gh workflow run ci.yml --ref <branch> -f cannbench_action=generate
 # Repair a compiled but numerically failed model output, preserving its CI lineage:
@@ -153,6 +163,7 @@ A successful result includes per-case timings, the service score and the
 separately computed baseline/candidate ratio. It publishes a checksum-verified
 qualification archive as a GitHub Release asset under
 `qualification-swiglu-<origin-run-ID>`, beyond normal artifact retention.
-Until such a result exists, the reference qualification in
-[hardware-lane.md](../../docs/hardware-lane.md) remains the only accepted NPU
-result; implementation of this workflow alone does not qualify generation.
+The [recorded generated result](../../docs/hardware-lane.md) passed 20/20 on
+hardware with complete CI provenance. Its durable Release publication remains
+pending; the separate reference qualification is retained with its own scope.
+Implementation or a queued upload alone does not qualify generation.

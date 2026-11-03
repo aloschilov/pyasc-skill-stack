@@ -17,6 +17,16 @@ ci = importlib.util.module_from_spec(spec); spec.loader.exec_module(ci)
 
 
 class GeneratedCI(unittest.TestCase):
+    def test_publication_credential_is_scoped_to_release_step(self):
+        import yaml
+        workflow=yaml.safe_load((ROOT/'.github/workflows/cannbench-generated.yml').read_text())
+        job=workflow['jobs']['generated-swiglu']
+        self.assertNotIn('QUALIFICATION_PUBLISH_TOKEN',json.dumps(job['env']))
+        uses=[step for step in job['steps'] if 'secrets.QUALIFICATION_PUBLISH_TOKEN' in json.dumps(step)]
+        self.assertEqual(len(uses),1)
+        self.assertEqual(uses[0]['name'],'Publish durable qualification and verify downloaded archive')
+        self.assertEqual(uses[0]['env']['GH_TOKEN'],'${{ secrets.QUALIFICATION_PUBLISH_TOKEN || github.token }}')
+
     def qualified_parent(self, parent):
         attempt=parent/'generation/attempt-1';attempt.mkdir(parents=True)
         source=parent/'source';context=parent/'context';source.mkdir();context.mkdir()

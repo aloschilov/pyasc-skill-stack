@@ -7,6 +7,22 @@ The [delivery roadmap](roadmap.md) lets local/CI work proceed independently of
 hardware availability. It preserves separate software and hardware acceptance;
 neither a prepared payload nor a green simulator gate qualifies an NPU.
 
+## CI-generated hardware result, 2026-11-03 UTC
+
+The OpenCode / GLM-5.3 SwiGlu candidate **passed 20/20 official CANNBench
+cases**, with zero reported anti-cheat failures and device-kernel timings.
+Service score: **32.344009230305275**; separate baseline/candidate geometric
+ratio: **0.017450287921005128x** (slower than baseline). Queue: 16478.414 s;
+execution: 303.092 s. Generation, repairs, qualification, submission and
+collection all ran in CI, with exact candidate/package continuity verified.
+
+**Publication remains blocked:** CI sealed and verified the qualification
+archive, but GitHub rejected Release creation because the target modifies
+workflows and the built-in token lacks workflow-write permission. An optional
+repository-scoped publishing secret is supported. This does not invalidate the
+hardware result, but the complete delivery acceptance remains open.
+See [provenance, CI evidence and archive checksum](hardware-lane.md).
+
 ## Local follow-up, 2026-11-02
 
 ### External hardware smoke

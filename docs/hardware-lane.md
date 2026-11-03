@@ -4,7 +4,52 @@ PR #19 uses one CANNBench SwiGlu evaluation as its minimal hardware check.
 The SSH runtime and direct-device matrix are deferred. Use the
 [submission procedure](../integrations/cannbench/README.md).
 
-## Current qualification
+## CI-generated candidate: hardware passed, Release publication pending
+
+On **2026-11-03 UTC**, a fresh OpenCode 1.19.0 / `gateway/glm-5.3` candidate,
+with its model repairs preserved, passed **20/20** official SwiGlu cases in
+[job_8743319cb441](https://cannbench.com/workspace/jobs/job_8743319cb441)
+(`sub_235524e92b9e`). The shared Ascend950PR_9589 runner used CANN 9.2.0,
+Python 3.12.13 and torch_npu 2.10.0 against official-tasks 2.0.0.
+All numerical checks passed, reported anti-cheat failures were zero, and all
+cases have positive finite timings with `_swiglu_impl` device-kernel records.
+
+The service's `overall_score` is **32.344009230305275**. The separate unweighted
+geometric mean baseline/candidate timing ratio is **0.017450287921005128x**:
+the generated candidate is slower than baseline. This is a correctness and
+measurement milestone, not a performance improvement. Queue time was
+**16478.414 s**; execution was **303.092 s**.
+
+[Generation CI 41667872030](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/41667872030)
+used stack `195c3dc570d54e9925426ff9418ebadb31c8d623` and PyASC
+`030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`. It passed exact-runtime lowering
+20/20 and separate newer-simulator numerical preflight 12/12. After a service
+GET failure, [CI continuation 41673353296](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/41673353296)
+packaged and submitted the unchanged candidate on orchestration commit
+`b7dd7d1047b19a6688c260809cfe9faef38506a8` without another model invocation.
+[GET-only collection 41700044928, attempt 2](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/41700044928/attempts/2)
+verified the terminal result and service-returned package hash.
+
+Native sessions, model configuration, loaded skill hashes, all candidate/repair
+outputs, task snapshots and runtime provenance are in the
+[central CI evidence](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/41700044928/artifacts/13271333698).
+Provider model revision is unknown; model attribution comes from CI's native
+OpenCode evidence, not the service's empty model metadata.
+Candidate SHA256: `d1edb86ea9e7f5630cd16d05e4e5573fbc5cf58964298e00d8481eaefa94dac3`.
+Evaluated ZIP SHA256: `e4e1361650737952a9fcd825e0329c14bec227cfeef925e55340afc05da84a7b`.
+
+The sealed CI archive is `run-41673353296-qualification.tar.gz`, SHA256
+`aa86a82a28f4a13edf5858059495119cf083c0df876c81e9641a16b8b3a52d56`.
+Its 5308 recorded member hashes and both 587-file source snapshots were verified.
+It remains on the CI runner under `~/.local/state/pyasc-generated-ci/`, with a
+verified workstation copy under `~/pyasc-qualification-runs/pr19-generated-ci-20261103/`.
+**Durable Release publication is still blocked** by GitHub's workflow-write
+permission requirement; ordinary Actions artifacts expire. The complete
+delivery milestone remains open until CI publishes and verifies that archive.
+See [publishing credentials](../integrations/cannbench/README.md#one-fresh-candidate-through-ci).
+No further generation or hardware submission is needed for this result.
+
+## Reference qualification
 
 **Passed — 20/20 correct and measured cases**, 2026-11-02, for the reference
 candidate at `38951c4661fe165d189b8b00ef063223da2c84f0`.
