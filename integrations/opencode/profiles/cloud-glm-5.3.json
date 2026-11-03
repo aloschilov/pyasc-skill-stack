@@ -12,7 +12,7 @@
         "glm-5.3": {
           "name": "GLM-5.3",
           "options": {
-            "thinking": {"type": "disabled"},
+            "thinking": {"type": "enabled"},
             "reasoningEffort": "low",
             "reasoning_effort": "low"
           },

@@ -52,3 +52,10 @@ with `--allow-root DIR`; no personal workspace layout is required.
 `--skills off` removes the rendered discovery setting. It does not isolate
 skills from a user's global configuration and is not, by itself, a controlled
 skills-on/off experiment.
+
+GLM-5.3 uses forced thinking; its profile requests enabled thinking with low
+reasoning effort, not unsupported `thinking.type=disabled`. See the
+[provider's thinking contract](https://docs.z.ai/guides/capabilities/thinking-mode).
+A gateway may translate model options; recorded configuration is the request,
+not proof of an effective internal reasoning budget or model revision. Retain
+actual session/usage evidence alongside it.
