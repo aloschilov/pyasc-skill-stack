@@ -234,6 +234,18 @@ def worker_permissions(context):
         'doom_loop': 'deny', 'external_directory': {'*': 'deny', str(context / '*'): 'allow'}}
 
 
+def qualification_feedback(iteration, error):
+    parts = [str(error).split('\n',1)[0]]
+    report = iteration/'lowering.json'
+    if report.exists() and load(report).get('status') != 'passed':
+        parts.append(report.read_text()[-8000:])
+    for name in ('lowering.log','simulator.log'):
+        log = iteration/name; meta = iteration/(name+'.meta.json')
+        if log.exists() and meta.exists() and load(meta).get('exit'):
+            parts.append(log.read_text(errors='replace').split('=== STDERR ===')[-1][-6000:])
+    return scrub('\n'.join(parts))
+
+
 def repair_seed(root, origin):
     """Import the failed CI's central evidence; never repair an uncertain submission."""
     parent = root/'parent-ci'
@@ -246,20 +258,26 @@ def repair_seed(root, origin):
             raise ValueError('Parent may have reached submission; use GET-only resume, not repair')
     candidates = []
     for attempt in (parent/'generation').glob('attempt-*'):
-        if all((attempt/name).is_file() for name in ('original-candidate.py','static.json','lowering.json','failure.json')):
-            if load(attempt/'static.json').get('passed') and load(attempt/'lowering.json').get('status') == 'passed':
+        if all((attempt/name).is_file() for name in ('original-candidate.py','static.json','failure.json')):
+            if load(attempt/'static.json').get('passed') and ((attempt/'lowering.json').exists() or (attempt/'lowering.log.meta.json').exists()):
                 candidates.append((int(attempt.name.split('-')[-1]),attempt))
-    if not candidates: raise ValueError('No recorded compiled candidate to repair')
+    if not candidates: raise ValueError('No recorded qualified-or-failed candidate to repair')
     attempt = max(candidates)[1]
     candidate = attempt/'original-candidate.py'
-    if load(attempt/'lowering.json').get('candidate_sha256') != smoke.sha(candidate):
-        raise ValueError('Parent candidate does not match its qualification')
+    if (attempt/'lowering.json').exists():
+        if load(attempt/'lowering.json').get('candidate_sha256') != smoke.sha(candidate):
+            raise ValueError('Parent candidate does not match its qualification')
+    else:
+        log = attempt/'lowering.log'; meta = load(attempt/'lowering.log.meta.json')
+        if not meta.get('exit') or smoke.sha(log) != meta['log_sha256']:
+            raise ValueError('Missing exact interrupted-compiler evidence')
+        for path in ('project/candidate.py','candidate/swi_glu.py'):
+            if smoke.sha(attempt/path) != smoke.sha(candidate):
+                raise ValueError('Interrupted compiler candidate mismatch')
     save(root/'repair-lineage.json', {'origin_run_id': origin, 'parent_commit': load(parent/'run.json')['skill_stack_commit'],
         'candidate': str(candidate.relative_to(root)), 'candidate_sha256': smoke.sha(candidate),
         'parent_files': hashes(parent)})
-    feedback = load(attempt/'failure.json')['error'].split('\n',1)[0]
-    log = attempt/'simulator.log'
-    if log.exists(): feedback += '\n'+log.read_text(errors='replace').split('=== STDERR ===')[-1][-5000:]
+    feedback = qualification_feedback(attempt, load(attempt/'failure.json')['error'])
     return candidate, feedback
 
 
@@ -333,6 +351,9 @@ Use stable 1D/2D memory APIs and padded aligned tile widths for short rows. No c
 For short rows, use a 2D global_tensor view with aligned padded column tiles and explicit real_shape for logical bounds.
 Do not transfer single unaligned elements through a 1D tile. Keep the physical column offset independent of tail width:
 the tail starts after completed full tiles, never again at column zero. These are general memory-layout requirements.
+For this pinned compiler, prefer host-classified full/tail launches with compile-time valid column lengths;
+avoid a runtime Python if that reassigns a scalar bound inside nested tile loops. This is a conservative
+lowering strategy, not proof of the cause of a prior compiler timeout. Keep full and tail physical offsets correct.
 No compiler/runtime hacks. Do not install or execute anything here. CI will run static checks, exact-runtime lowering,
 representative simulator numerical checks, and the full official NPU evaluation. Performance improvement is not required.
 Read performance hints and record chosen/unmeasured options, but do not run an optimization campaign.
@@ -368,14 +389,18 @@ Write the two files and stop.'''
                 raise ValueError('Reference candidate substitution rejected')
             actual = subprocess.check_output(['docker', 'image', 'inspect', PIN['compile_image'], '--format', '{{.Id}}'], text=True).strip()
             if actual != PIN['compile_image_id']: raise ValueError('Compiler image differs from qualified image')
-            call(['docker', 'run', '--rm', '--network', 'none', '--platform', 'linux/amd64', '--entrypoint', 'python',
+            call(['docker', 'run', '--rm', '--network', 'none', '--platform', 'linux/amd64',
+                  '--label', 'pyasc.ci.run='+identity['GITHUB_RUN_ID'], '--entrypoint', 'timeout',
+                  '--label', 'pyasc.ci.repository='+identity['GITHUB_REPOSITORY'],
                   '-v', str(source)+':/workspace:ro', '-v', str(root)+':/evidence', '-v', str(runtime)+':/runtime.whl:ro',
-                  PIN['compile_image'], 'integrations/cannbench/ci/single_qualify.py',
+                  PIN['compile_image'], '-k', '10', '540', 'python', '-u', 'integrations/cannbench/ci/single_qualify.py',
                   '--candidate', '/evidence/'+str((package_source/'swi_glu.py').relative_to(root)),
                   '--task-dir', '/evidence/context/task', '--runtime', '/runtime.whl',
                   '--output', '/evidence/'+str((iteration/'lowering.json').relative_to(root))], iteration/'lowering.log', timeout=600)
             image = load(source/'reference/images/ENV.json')['dev_image']['ref']
             call(['docker', 'run', '--rm', '--network', 'none', '--ulimit', 'nofile=65536:65536',
+                  '--label', 'pyasc.ci.run='+identity['GITHUB_RUN_ID'],
+                  '--label', 'pyasc.ci.repository='+identity['GITHUB_REPOSITORY'],
                   '-v', str(source)+':/workspace:ro', '-v', str(root)+':/evidence', '-w', '/tmp',
                   '-e', 'HOME=/tmp', '-e', 'PYASC_CACHE_DIR=/tmp/cache', '-e', 'PYASC_DUMP_PATH=/tmp/dumps',
                   image, 'timeout', '300', 'python3.11', '/workspace/integrations/cannbench/ci/check_candidate.py',
@@ -404,11 +429,8 @@ Write the two files and stop.'''
                 'resume_policy': 'collect/reconcile only; never repeat an uncertain POST'})
             return
         except Exception as exc:
-            feedback = scrub(str(exc))
+            feedback = qualification_feedback(iteration, exc)
             print(f'Model attempt {attempt} did not qualify: {feedback[:2000]}', flush=True)
-            for name in ('lowering.json', 'simulator.log'):
-                p = iteration/name
-                if p.is_file(): feedback += '\n'+p.read_text(errors='replace')[-16000:]
             if not (iteration/'session.json').exists() and (iteration/'events.log').exists():
                 try:
                     native = trace((iteration/'events.log').read_text(), context/'skills')

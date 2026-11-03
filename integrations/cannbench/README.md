@@ -127,7 +127,8 @@ local state is lost; an unknown delivery never authorizes another POST. If the
 queue exceeds the bounded CI wait, dispatch `resume`, not `generate`. Generation
 failures retain their evidence and consume no submission credit.
 
-`repair` starts a distinct CI run using a compiled candidate from the original
+`repair` starts a distinct CI run using a candidate with retained qualification
+failure (including a compiler timeout) from the original
 run's central artifact. It preserves the original records and hashes, records
 the parent commit, and requires the same task snapshot. It refuses active runs
 or evidence that reached packaging/submission intent: use GET-only `resume`

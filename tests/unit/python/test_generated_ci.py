@@ -30,6 +30,7 @@ class GeneratedCI(unittest.TestCase):
                 ci.save(attempt/'lowering.json',{'status':'passed','candidate_sha256':ci.smoke.sha(candidate)})
                 ci.save(attempt/'failure.json',{'error':'numerics failed'})
                 (attempt/'simulator.log').write_text('retained noisy stdout\n=== STDERR ===\nactual mismatch')
+                ci.save(attempt/'simulator.log.meta.json',{'exit':1})
                 (attempt/'session.json').write_text('native session record')
                 return {'status':'completed'}
             with patch.object(ci,'restore_checkpoint',side_effect=restore):
@@ -56,6 +57,29 @@ class GeneratedCI(unittest.TestCase):
                     return {'status':'in_progress' if marker=='active' else 'completed'}
                 with patch.object(ci,'restore_checkpoint',side_effect=restore), self.assertRaises(ValueError):
                     ci.repair_seed(root,'123')
+
+    def test_interrupted_compile_seed_requires_exact_candidate_and_log(self):
+        for tamper in (None, 'candidate/swi_glu.py', 'lowering.log'):
+            with self.subTest(tamper=tamper), tempfile.TemporaryDirectory() as tmp:
+                root=Path(tmp)
+                for name in ('task.json','catalog.json'): ci.save(root/name,{})
+                def restore(parent, origin):
+                    attempt=parent/'generation/attempt-1';attempt.mkdir(parents=True)
+                    for name in ('task.json','catalog.json'): ci.save(parent/name,{})
+                    ci.save(parent/'run.json',{'skill_stack_commit':'original'})
+                    for name in ('original-candidate.py','project/candidate.py','candidate/swi_glu.py'):
+                        f=attempt/name;f.parent.mkdir(exist_ok=True);f.write_text('model output')
+                    ci.save(attempt/'static.json',{'passed':True})
+                    ci.save(attempt/'failure.json',{'error':'compiler timeout'})
+                    log=attempt/'lowering.log';log.write_text('=== STDERR ===\ncompiler trace')
+                    ci.save(attempt/'lowering.log.meta.json',{'exit':124,'log_sha256':ci.smoke.sha(log)})
+                    if tamper: (attempt/tamper).write_text('replacement')
+                    return {'status':'completed'}
+                with patch.object(ci,'restore_checkpoint',side_effect=restore):
+                    if tamper:
+                        with self.assertRaises(ValueError): ci.repair_seed(root,'123')
+                    else:
+                        _,feedback=ci.repair_seed(root,'123');self.assertIn('compiler trace',feedback)
 
     def test_large_native_session_is_complete_scoped_and_model_checked(self):
         import sqlite3
