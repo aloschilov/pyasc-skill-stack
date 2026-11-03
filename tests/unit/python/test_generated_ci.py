@@ -17,6 +17,20 @@ ci = importlib.util.module_from_spec(spec); spec.loader.exec_module(ci)
 
 
 class GeneratedCI(unittest.TestCase):
+    def test_compact_api_contains_public_contracts_not_implementations(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); api=root/'runtime-api/asctile/language';api.mkdir(parents=True)
+            for name in ('global_tensor','memory_ops','prog_model_ops','unary_ops','binary_ops','creation_ops','indexing_ops','shape_ops','range'):
+                (api/(name+'.py')).write_text('')
+            (api/'memory_ops.py').write_text('def copy_in(src, offsets, shape, *, real_shape=None):\n    """Public copy contract."""\n    secret_implementation()\n')
+            (api/'range.py').write_text('class range:\n    """Loop contract."""\n    def __init__(self, start, stop, step=1): pass\n')
+            ci.summarize_api(root)
+            summary=(root/'API.md').read_text()
+            self.assertIn('real_shape=None',summary)
+            self.assertIn('Public copy contract.',summary)
+            self.assertIn('Loop contract.',summary)
+            self.assertNotIn('secret_implementation',summary)
+
     def test_worker_can_write_root_outputs_without_opening_shell_or_human_prompt(self):
         import fnmatch
         rules=ci.worker_permissions(Path('/run/context'))

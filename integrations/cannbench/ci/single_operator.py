@@ -5,6 +5,7 @@ Only collect may resume an existing submission; it never POSTs. All evidence is
 outside checkout and checkpointed by the workflow before/after the upload.
 """
 import argparse
+import ast
 from datetime import datetime, timezone
 import fcntl
 import hashlib
@@ -164,6 +165,37 @@ def generated_binding(root):
     return meta, gen, staged
 
 
+def summarize_api(context):
+    """Extract public signatures/docstrings from the exact wheel, never a kernel."""
+    requested = {
+        'global_tensor.py': ('global_tensor',),
+        'memory_ops.py': ('copy_in', 'copy_out'),
+        'prog_model_ops.py': ('block_idx', 'block_num'),
+        'unary_ops.py': ('exp', 'abs', 'negative'),
+        'binary_ops.py': ('add', 'sub', 'mul', 'div', 'maximum', 'minimum', 'equal', 'not_equal'),
+        'creation_ops.py': ('cast', 'full'),
+        'indexing_ops.py': ('where',),
+        'shape_ops.py': ('reshape',),
+        'range.py': ('range',),
+    }
+    lines = ['# Public API extracted from the hash-verified runtime wheel',
+             'Source/license: runtime-api/asctile; full licensed sources remain alongside this summary.',
+             'This is API documentation, not a candidate implementation.', '']
+    for filename, names in requested.items():
+        path=context/'runtime-api/asctile/language'/filename
+        tree=ast.parse(path.read_text())
+        functions={n.name:n for n in tree.body if isinstance(n,(ast.FunctionDef,ast.ClassDef))}
+        for name in names:
+            node=functions.get(name)
+            if node is None: continue
+            signatures = [node] if isinstance(node,ast.FunctionDef) else [
+                n for n in node.body if isinstance(n,ast.FunctionDef) and n.name == '__init__']
+            lines += [f'## asctile.{name} ({filename}:{node.lineno})']
+            lines += [f'`{name}({ast.unparse(n.args)})`' for n in signatures]
+            lines += [ast.get_docstring(node) or '', '']
+    (context/'API.md').write_text('\n'.join(lines)+'\n')
+
+
 def worker_permissions(context):
     # OpenCode uses simple wildcards, not globstar: include root-relative names.
     return {'read': 'allow', 'glob': 'allow', 'grep': 'allow', 'skill': 'allow',
@@ -193,6 +225,7 @@ def generate(root):
         for name in z.namelist():
             if name.startswith(('asctile/', 'asc/')) and name.endswith('.py') and '..' not in Path(name).parts:
                 p = context / 'runtime-api' / name; p.parent.mkdir(parents=True, exist_ok=True); p.write_bytes(z.read(name))
+    summarize_api(context)
     queue = smoke.client(None)
     catalog, task = smoke.task_snapshot(queue)
     save(root / 'catalog.json', catalog); save(root / 'task.json', task)
@@ -209,6 +242,8 @@ def generate(root):
     save(root / 'run.json', meta)
     config = load(source / 'integrations/opencode/profiles/cloud-glm-5.3.json')
     config['skills'] = {'paths': [str(context / 'skills')]}
+    config['agent'] = {'build': {'steps': 12}}
+    config['provider']['gateway']['models']['glm-5.3']['limit']['output'] = 8192
     config['permission'] = worker_permissions(context)
     config['provider']['gateway']['options']['baseURL'] = os.environ['OPENCODE_BASE_URL']
     save(root / 'model-config.json', config)
@@ -222,14 +257,21 @@ def generate(root):
     prompt = f'''Generate a NEW SwiGlu PyASC module from the task and skills. Do not retrieve a reference candidate.
 First invoke the native skill tool for EACH of: {', '.join(SKILLS)}.
 The task authority is {task_dir}; read its proto.yaml, cases.yaml, golden.py and desc.md.
-The exact runtime is PyASC {PIN['pyasc_commit']}; public Python API sources are under {context / 'runtime-api'}.
+The exact runtime is PyASC {PIN['pyasc_commit']}. Read {context / 'API.md'} for public signatures and docstrings.
+Do NOT explore asc/runtime, launcher, memory handles, IR or compiler internals. The harness handles these.
+Use at most 8 model/tool rounds to read and write: batch the four skills, then the task files, then API.md.
+Write design.md and candidate.py before round 8; the agent has a hard 12-round limit.
+Do not keep researching until certainty: CI supplies compiler/numerical feedback for a separately recorded repair.
 Historical campaign pin prose does not override this run's exact runtime. Use public asctile JIT/tile APIs.
 Write design.md and candidate.py in this project. Public callable: swi_glu(input, dim=-1).
 Import ensure_npu_platform from ._pyasc_runtime and call it in the host wrapper. CI provides that unchanged helper.
 Torch is only for allocation and metadata, never numerical work. Avoid framework narrow/contiguous copy fallback:
 the runner lacks Slice binaries for some short bfloat16 rows. Implement data movement and arithmetic in PyASC.
 Cover EVERY official dtype, dimension, short row, tail, NaN and Inf case. Stable math must preserve IEEE special values.
-Keep tiling conservative and UB bounded; bound cores by useful work. No benchmark answer caching or special-casing case IDs.
+Keep tiling conservative and UB bounded. For this correctness smoke, use at most 8 cores, bounded by useful tiles;
+record this as a conservative unprofiled cap, not a queried device resource count. No resource discovery is required.
+Pass tensors directly to public JIT launches, e.g. kernel[cores](input, output, constexpr_arguments); never data_ptr().
+Use stable 1D/2D memory APIs and padded aligned tile widths for short rows. No case-ID or benchmark-answer special cases.
 No compiler/runtime hacks. Do not install or execute anything here. CI will run static checks, exact-runtime lowering,
 representative simulator numerical checks, and the full official NPU evaluation. Performance improvement is not required.
 Read performance hints and record chosen/unmeasured options, but do not run an optimization campaign.
@@ -305,7 +347,17 @@ Write the two files and stop.'''
             for name in ('lowering.json', 'simulator.log'):
                 p = iteration/name
                 if p.is_file(): feedback += '\n'+p.read_text(errors='replace')[-16000:]
+            if not (iteration/'session.json').exists() and (iteration/'events.log').exists():
+                try:
+                    native = trace((iteration/'events.log').read_text(), context/'skills')
+                    save(iteration/'skill-trace.json', native)
+                    exported = call(['opencode','export','--pure',native['session_id']], iteration/'session-export.log',
+                                    cwd=project, env=env, timeout=60)
+                    save(iteration/'session.json', json.loads(scrub(exported)))
+                except Exception as export_error:
+                    save(iteration/'session-export-error.json', {'error':scrub(str(export_error))})
             save(iteration/'failure.json', {'error': feedback})
+            if not (project/'candidate.py').is_file(): raise  # No candidate means no repairable compiler/numerical feedback.
             if (root/'package').exists(): raise  # A partially staged package must not be silently replaced.
     raise ValueError('Three recorded model attempts failed qualification; see CI artifacts')
 
