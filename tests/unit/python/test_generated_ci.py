@@ -17,6 +17,18 @@ ci = importlib.util.module_from_spec(spec); spec.loader.exec_module(ci)
 
 
 class GeneratedCI(unittest.TestCase):
+    def test_worker_can_write_root_outputs_without_opening_shell_or_human_prompt(self):
+        import fnmatch
+        rules=ci.worker_permissions(Path('/run/context'))
+        def permits(path):
+            return [v for k,v in rules['edit'].items() if fnmatch.fnmatchcase(path,k)][-1]
+        self.assertEqual(permits('candidate.py'),'allow')
+        self.assertEqual(permits('design.md'),'allow')
+        self.assertEqual(permits('opencode.json'),'deny')
+        self.assertEqual(permits('_pyasc_runtime.py'),'deny')
+        for tool in ('bash','task','websearch','question','doom_loop'):
+            self.assertEqual(rules[tool],'deny')
+
     def test_native_skill_trace_requires_each_actual_loaded_directory(self):
         root = Path('/recorded/skills')
         events = [{'sessionID': 'session-1', 'type': 'tool_use', 'part': {'tool': 'skill', 'state': {

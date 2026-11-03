@@ -164,6 +164,15 @@ def generated_binding(root):
     return meta, gen, staged
 
 
+def worker_permissions(context):
+    # OpenCode uses simple wildcards, not globstar: include root-relative names.
+    return {'read': 'allow', 'glob': 'allow', 'grep': 'allow', 'skill': 'allow',
+        'edit': {'*': 'deny', 'candidate.py': 'allow', 'design.md': 'allow',
+                 '**/candidate.py': 'allow', '**/design.md': 'allow'}, 'bash': 'deny',
+        'task': 'deny', 'webfetch': 'deny', 'websearch': 'deny', 'question': 'deny',
+        'doom_loop': 'deny', 'external_directory': {'*': 'deny', str(context / '*'): 'allow'}}
+
+
 def generate(root):
     if (root / 'generation.json').exists():
         generated_binding(root)
@@ -200,9 +209,7 @@ def generate(root):
     save(root / 'run.json', meta)
     config = load(source / 'integrations/opencode/profiles/cloud-glm-5.3.json')
     config['skills'] = {'paths': [str(context / 'skills')]}
-    config['permission'] = {'read': 'allow', 'glob': 'allow', 'grep': 'allow', 'skill': 'allow',
-        'edit': {'*': 'deny', '**/candidate.py': 'allow', '**/design.md': 'allow'}, 'bash': 'deny',
-        'task': 'deny', 'webfetch': 'deny', 'external_directory': {'*': 'deny', str(context / '*'): 'allow'}}
+    config['permission'] = worker_permissions(context)
     config['provider']['gateway']['options']['baseURL'] = os.environ['OPENCODE_BASE_URL']
     save(root / 'model-config.json', config)
     env = dict(os.environ)
