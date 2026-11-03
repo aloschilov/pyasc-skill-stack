@@ -5,6 +5,16 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      cannbench_action:
+        description: 'Optional single-model SwiGlu NPU evaluation (uses one credit); resume never submits'
+        type: choice
+        default: none
+        options: [none, generate, resume]
+      origin_run:
+        description: 'For resume: original generation CI run ID'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -145,7 +155,7 @@ jobs:
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
       github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'workflow_dispatch' && (inputs.cannbench_action == 'none' || inputs.cannbench_action == ''))
     steps:
       - uses: actions/checkout@v4
 
@@ -227,3 +237,15 @@ jobs:
             echo "ERROR: $FAILED target module(s) failed the compile check"
             exit 1
           fi
+
+  generated-hardware:
+    needs: [pr-gate, examples-gate]
+    if: github.event_name == 'workflow_dispatch' && inputs.cannbench_action != 'none' && inputs.cannbench_action != ''
+    uses: ./.github/workflows/cannbench-generated.yml
+    permissions:
+      contents: write
+      actions: read
+    with:
+      action: ${{ inputs.cannbench_action }}
+      origin_run: ${{ inputs.origin_run }}
+    secrets: inherit

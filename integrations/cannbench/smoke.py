@@ -165,7 +165,7 @@ def prepare(args, queue):
         (sources / name).write_bytes((args.kernel_dir / name).read_bytes())
     wheel_hash = make_bundle(args.runtime_bundle, args.runtime_sha256, sources,
                              catalog['benchmark_version'], args.run_dir / 'submission.zip')
-    manifest = {'prepared_at': now(), 'scope': 'one-operator hardware smoke; not fresh generation',
+    manifest = {'prepared_at': now(), 'scope': 'one-operator hardware smoke; generation provenance recorded separately',
                 'target_hardware': queue.target_hardware, 'catalog': catalog,
                 'aggregation_token': args.aggregation_token,
                 'runtime_bundle_sha256': args.runtime_sha256, 'wheel_sha256': wheel_hash,

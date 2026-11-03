@@ -1,0 +1,9 @@
+{
+  "pyasc_commit": "030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d",
+  "runtime_bundle_sha256": "357f3d10961b2ad1878537b28563f6889931c1fd6b7a01fea32e150d9cd95333",
+  "compile_image": "pyasc-cannbench-local-eval:030e9b2-v2",
+  "compile_image_id": "sha256:afcfbbdff6a668e9e2f6fd72dada34aa5a3218a4877fdabfc3ef917f11ab579b",
+  "model": "gateway/glm-5.3",
+  "profile": "cloud-glm-5.3",
+  "scope": "One freshly generated SwiGlu candidate; runtime bytes must match the compile image before qualification."
+}

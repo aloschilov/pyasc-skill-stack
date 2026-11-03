@@ -1,0 +1,155 @@
+name: Generated SwiGlu hardware evaluation
+
+on:
+  workflow_call:
+    inputs:
+      action:
+        required: true
+        type: string
+      origin_run:
+        default: ''
+        type: string
+    secrets:
+      OPENCODE_API_KEY:
+        required: true
+      BENCHSITE_API_TOKEN:
+        required: true
+
+# No PR trigger, schedule, broad campaign or automatic resubmission.
+concurrency:
+  group: cannbench-single-operator
+  cancel-in-progress: false
+
+jobs:
+  generated-swiglu:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'aloschilov/pyasc-skill-stack'
+    runs-on: cannbench-vm
+    timeout-minutes: 240
+    permissions:
+      contents: write
+      actions: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      CANNBENCH_RUNTIME_BUNDLE: ${{ vars.CANNBENCH_RUNTIME_BUNDLE }}
+      CANNBENCH_AGGREGATION_TOKEN: ${{ vars.CANNBENCH_AGGREGATION_TOKEN }}
+      OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
+      BENCHSITE_API_TOKEN: ${{ secrets.BENCHSITE_API_TOKEN }}
+      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+      REQUEST_ACTION: ${{ inputs.action }}
+      REQUEST_ORIGIN: ${{ inputs.origin_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Select source revision for generation or GET-only resume
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$REQUEST_ACTION" in
+            generate) test -z "$REQUEST_ORIGIN" ;;
+            resume)
+              [[ "$REQUEST_ORIGIN" =~ ^[0-9]+$ ]]
+              revision=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$REQUEST_ORIGIN" --jq '.head_sha')
+              git fetch --depth=1 origin "$revision"
+              git checkout --detach "$revision"
+              ;;
+            *) echo 'Use generate or resume'; exit 1 ;;
+          esac
+          echo 'CANNBENCH_HELPER=integrations/cannbench/ci/single_operator.py' >> "$GITHUB_ENV"
+
+      - name: Install CI adapter environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CANNBENCH_VENV="$RUNNER_TEMP/benchsite-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          bash integrations/cannbench/setup-site-mcp.sh
+          "$CANNBENCH_VENV/bin/pip" install 'PyYAML==6.0.3'
+          echo "CANNBENCH_PYTHON=$CANNBENCH_VENV/bin/python" >> "$GITHUB_ENV"
+
+      - name: Initialize external run state
+        run: |
+          "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" initialize --origin-run "$REQUEST_ORIGIN"
+
+      - name: Generate fresh candidate and qualify exact package
+        if: inputs.action == 'generate'
+        run: |
+          "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" generate
+
+      - name: Central checkpoint before possible POST
+        if: inputs.action == 'generate'
+        id: prepared
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-swiglu-prepared-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.CANNBENCH_RESULTS }}
+          if-no-files-found: error
+          retention-days: 90
+          include-hidden-files: true
+
+      - name: Submit exact qualified candidate once
+        if: inputs.action == 'generate'
+        env:
+          PREPARED_ARTIFACT_ID: ${{ steps.prepared.outputs.artifact-id }}
+        run: |
+          "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" submit
+
+      - name: Central checkpoint after submission
+        if: inputs.action == 'generate' && always() && steps.prepared.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-swiglu-submitted-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.CANNBENCH_RESULTS }}
+          if-no-files-found: error
+          retention-days: 90
+          include-hidden-files: true
+
+      - name: Collect terminal result with GET only
+        run: |
+          "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" collect --origin-run "$CANNBENCH_ORIGIN_RUN" --wait-seconds 9000
+
+      - name: Verify and archive accepted qualification
+        id: qualification
+        run: |
+          "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" publish --origin-run "$CANNBENCH_ORIGIN_RUN"
+
+      - name: Publish durable qualification and verify downloaded archive
+        env:
+          QUALIFICATION_ARCHIVE: ${{ steps.qualification.outputs.archive }}
+          QUALIFICATION_CHECKSUM: ${{ steps.qualification.outputs.checksum }}
+          QUALIFICATION_TAG: ${{ steps.qualification.outputs.tag }}
+          QUALIFICATION_COMMIT: ${{ steps.qualification.outputs.commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view "$QUALIFICATION_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$QUALIFICATION_TAG" --repo "$GITHUB_REPOSITORY" \
+              --target "$QUALIFICATION_COMMIT" --prerelease \
+              --title "Generated SwiGlu qualification $CANNBENCH_ORIGIN_RUN" \
+              --notes-file "$CANNBENCH_RESULTS/RESULT.md"
+          fi
+          for asset in "$QUALIFICATION_ARCHIVE" "$QUALIFICATION_CHECKSUM" "$CANNBENCH_RESULTS/RESULT.md"; do
+            name=$(basename "$asset")
+            present=$(gh release view "$QUALIFICATION_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
+            if ! printf '%s\n' "$present" | grep -Fxq "$name"; then
+              gh release upload "$QUALIFICATION_TAG" "$asset" --repo "$GITHUB_REPOSITORY"
+            fi
+          done
+          received=$(mktemp -d)
+          gh release download "$QUALIFICATION_TAG" --repo "$GITHUB_REPOSITORY" --dir "$received"
+          cmp "$QUALIFICATION_CHECKSUM" "$received/$(basename "$QUALIFICATION_CHECKSUM")"
+          cmp "$CANNBENCH_RESULTS/RESULT.md" "$received/RESULT.md"
+          (cd "$received" && sha256sum --check "$(basename "$QUALIFICATION_CHECKSUM")")
+          echo "Durable evidence: https://github.com/$GITHUB_REPOSITORY/releases/tag/$QUALIFICATION_TAG" >> "$GITHUB_STEP_SUMMARY"
+          cat "$QUALIFICATION_CHECKSUM" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Central final or interrupted evidence
+        if: always() && env.CANNBENCH_RESULTS != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-swiglu-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.CANNBENCH_RESULTS }}
+          if-no-files-found: warn
+          retention-days: 90
+          include-hidden-files: true

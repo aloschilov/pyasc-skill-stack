@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-venv="${repo_root}/.tools/benchsite-mcp"
+venv="${CANNBENCH_VENV:-${repo_root}/.tools/benchsite-mcp}"
 
 download_url="$(${PYTHON:-python3} - <<'PY'
 import json

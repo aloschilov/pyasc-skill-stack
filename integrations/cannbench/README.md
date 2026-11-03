@@ -78,3 +78,51 @@ multi-model requirement and archived resources remain outside this scope.
 
 Keep full evidence privately outside Git. For accepted qualification, retain a
 durable archive and publish only a short result, archive checksum and reference.
+
+## One fresh candidate through CI
+
+The optional manual **CI** dispatch accepts `cannbench_action=generate` for one
+fresh `gateway/glm-5.3` SwiGlu generation and hardware evaluation. Ordinary PR
+checks do not invoke a model or consume CANNBench credits. The old full-catalog
+workflow stays separate; no nightly schedule is needed.
+
+A dedicated runner labelled `cannbench-vm` needs OpenCode, Docker, `gh`, the
+compiler image and exact runtime listed in `ci/single-runtime.json`.
+Configure repository secrets `OPENCODE_API_KEY`, `BENCHSITE_API_TOKEN` and vars
+`OPENCODE_BASE_URL`, `CANNBENCH_RUNTIME_BUNDLE` (runner-local absolute path),
+`CANNBENCH_AGGREGATION_TOKEN` (an existing owned/shared scheme). The job installs
+its service adapter into an external temporary venv. No interactive checkout or
+private remote transport is part of the product path.
+
+```bash
+gh workflow run ci.yml --ref <branch> -f cannbench_action=generate
+# If the original submission is still pending or collection was interrupted:
+gh workflow run ci.yml --ref <branch> -f cannbench_action=resume -f origin_run=<original-CI-run-ID>
+```
+
+The workflow loads selected skills via OpenCode's native skill tool, records
+model/configuration and unavailable provider revisions as `unknown`, and
+preserves each generated/repair output separately. It allows at most three
+local model attempts and one hardware submission per origin run. Qualification
+includes exact-runtime dispatch/lowering of the official case set and separate
+representative numerical checks in the pinned newer CI simulator. Only the
+complete official CANNBench NPU result establishes hardware acceptance.
+
+`generated-swiglu-prepared-*` is uploaded before POST. Submission state is
+checkpointed afterward; `generated-swiglu-evidence-*` retains final/interrupted
+work. Run directories live outside checkout under
+`~/.local/state/pyasc-generated-ci`; the shared account ledger remains
+`~/.local/state/pyasc-cannbench-smoke`. Resume uses the original source revision
+and performs **GET only**. It can restore an unexpired central checkpoint when
+local state is lost; an unknown delivery never authorizes another POST. If the
+queue exceeds the bounded CI wait, dispatch `resume`, not `generate`. Generation
+failures retain their evidence and consume no submission credit.
+
+The workflow re-downloads the evaluated submission and verifies its exact hash.
+A successful result includes per-case timings, the service score and the
+separately computed baseline/candidate ratio. It publishes a checksum-verified
+qualification archive as a GitHub Release asset under
+`qualification-swiglu-<origin-run-ID>`, beyond normal artifact retention.
+Until such a result exists, the reference qualification in
+[hardware-lane.md](../../docs/hardware-lane.md) remains the only accepted NPU
+result; implementation of this workflow alone does not qualify generation.
