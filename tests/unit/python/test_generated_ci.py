@@ -17,6 +17,79 @@ ci = importlib.util.module_from_spec(spec); spec.loader.exec_module(ci)
 
 
 class GeneratedCI(unittest.TestCase):
+    def qualified_parent(self, parent):
+        attempt=parent/'generation/attempt-1';attempt.mkdir(parents=True)
+        source=parent/'source';context=parent/'context';source.mkdir();context.mkdir()
+        (source/'reference/images').mkdir(parents=True)
+        ci.save(source/'reference/images/ENV.json',{'dev_image':{'ref':'simulator'}})
+        for skill in ci.SKILLS:
+            folder=context/'skills'/skill;folder.mkdir(parents=True);(folder/'SKILL.md').write_text(skill)
+        ci.save(parent/'catalog.json',{'required_cases':20});ci.save(parent/'task.json',{})
+        ci.save(parent/'model-config.json',{'skills':{'paths':['/original/context/skills']}})
+        for name in ('original-candidate.py','project/candidate.py','candidate/swi_glu.py'):
+            p=attempt/name;p.parent.mkdir(exist_ok=True);p.write_text('generated output')
+        digest=ci.smoke.sha(attempt/'original-candidate.py')
+        ci.save(attempt/'static.json',{'passed':True})
+        ci.save(attempt/'lowering.json',{'status':'passed','compile_passed':20,'cases':20,
+            'pyasc_commit':ci.PIN['pyasc_commit'],'runtime_bundle_sha256':ci.PIN['runtime_bundle_sha256'],
+            'runtime_files_verified':114,'candidate_sha256':digest})
+        ci.save(attempt/'simulator.json',{'passed':True,'cases':[{'passed':True} for _ in range(12)],'candidate_sha256':digest})
+        events='\n'.join(json.dumps({'sessionID':'session','type':'tool_use','part':{'tool':'skill','state':{
+            'status':'completed','input':{'name':s},'metadata':{'dir':'/original/context/skills/'+s}}}}) for s in ci.SKILLS)
+        (attempt/'events.log').write_text(events)
+        ci.save(attempt/'skill-trace.json',ci.trace(events,Path('/original/context/skills')))
+        ci.save(attempt/'session.json',{'session':{'id':'session','model':json.dumps({'providerID':'gateway','id':'glm-5.3'})},
+            'message':[{'original':'message'}],'part':[{'original':'part'}]})
+        ci.save(parent/'run.json',{'repository':'owner/repo','origin_run_id':'123','origin_run_attempt':'1',
+            'ci_url':'https://github.com/owner/repo/actions/runs/123','skill_stack_commit':'model-commit',
+            'opencode_version':'1.19.0','source_hashes':ci.hashes(source),'context_hashes':ci.hashes(context)})
+
+    def test_continue_preserves_qualified_output_and_distinguishes_ci_provenance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/'new'
+            def restore(parent, origin):
+                self.qualified_parent(parent)
+                ci.save(parent/'generation/attempt-1/failure.json',{'error':'HTTP 503'})
+                (parent/'package').mkdir()
+                return {'status':'completed'}
+            archive=io.BytesIO()
+            with tarfile.open(fileobj=archive,mode='w'): pass
+            identity={'GITHUB_ACTIONS':'true','GITHUB_REPOSITORY':'owner/repo','GITHUB_RUN_ID':'456',
+                'GITHUB_RUN_ATTEMPT':'1','GITHUB_SHA':'continuation-commit'}
+            with patch.dict('os.environ',identity), patch.object(ci,'restore_checkpoint',side_effect=restore), \
+                 patch.object(ci.subprocess,'check_output',return_value=archive.getvalue()), \
+                 patch.object(ci,'ci_client'), patch.object(ci,'call') as model, patch.object(ci,'prepare_qualified') as prepare:
+                ci.continue_qualified(root,'123')
+                model.assert_not_called();prepare.assert_called_once()
+                meta=ci.inputs(root)
+                self.assertEqual(meta['skill_stack_commit'],'model-commit')
+                self.assertEqual(meta['orchestration_commit'],'continuation-commit')
+                self.assertEqual(meta['generation_ci']['origin_run_id'],'123')
+                self.assertEqual(meta['origin_run_id'],'456')
+                ci.check_hashes(root/'qualified-parent',ci.load(root/'continuation-lineage.json')['parent_files'])
+                self.assertEqual(prepare.call_args.args[1]['candidate_sha256'],
+                    ci.smoke.sha(root/'qualified-parent/generation/attempt-1/original-candidate.py'))
+                self.assertFalse((root/'package').exists())
+                ci.save(root/'run.json',dict(meta,skill_stack_commit='false-model-commit'))
+                with self.assertRaisesRegex(ValueError,'generation attribution'): ci.inputs(root)
+
+    def test_continue_refuses_active_submitted_unqualified_or_substituted_parent(self):
+        for marker in ('active','submission-intent.json','submission.json','prepared-artifact.json','package/state.json',
+                       'generation.json','bad-numerics','changed-candidate'):
+            with self.subTest(marker=marker), tempfile.TemporaryDirectory() as tmp:
+                root=Path(tmp)/'new'
+                def restore(parent, origin):
+                    self.qualified_parent(parent)
+                    if marker=='bad-numerics': ci.save(parent/'generation/attempt-1/simulator.json',{'passed':False})
+                    elif marker=='changed-candidate': (parent/'generation/attempt-1/candidate/swi_glu.py').write_text('different')
+                    elif marker!='active':
+                        p=parent/marker;p.parent.mkdir(parents=True,exist_ok=True);ci.save(p,{})
+                    return {'status':'in_progress' if marker=='active' else 'completed'}
+                with patch.dict('os.environ',{'GITHUB_REPOSITORY':'owner/repo'}), \
+                     patch.object(ci,'restore_checkpoint',side_effect=restore), patch.object(ci,'prepare_qualified') as prepare:
+                    with self.assertRaises(ValueError): ci.continue_qualified(root,'123')
+                    prepare.assert_not_called()
+
     def test_transient_get_retry_is_bounded_and_does_not_wrap_post(self):
         class HTTPError(RuntimeError):
             def __init__(self,status): self.status=status

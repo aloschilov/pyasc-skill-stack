@@ -163,6 +163,13 @@ def inputs(root):
         lineage = load(root/'repair-lineage.json')
         check_hashes(root/'parent-ci', lineage['parent_files'])
         check_hashes(root, {lineage['candidate']: lineage['candidate_sha256']})
+    if (root/'continuation-lineage.json').exists():
+        lineage = load(root/'continuation-lineage.json')
+        check_hashes(root/'qualified-parent', lineage['parent_files'])
+        parent = load(root/'qualified-parent/run.json')
+        for key in ('skill_stack_commit', 'source_hashes', 'context_hashes', 'opencode_version'):
+            if meta[key] != parent[key]: raise ValueError('Continuation changed generation attribution: '+key)
+        check_hashes(root/'orchestration-source', meta['orchestration_source_hashes'])
     return meta
 
 
@@ -300,6 +307,85 @@ def repair_seed(root, origin):
     return candidate, feedback
 
 
+def qualified_generation(root):
+    """Reconstruct attribution from retained native records, without invoking a model."""
+    meta = inputs(root)
+    config = load(root/'model-config.json')
+    attempts = sorted((root/'generation').glob('attempt-*'), key=lambda p: int(p.name.split('-')[-1]))
+    if not attempts: raise ValueError('No generated candidate retained')
+    iteration = attempts[-1]
+    original = iteration/'original-candidate.py'
+    digest = smoke.sha(original)
+    for name in ('project/candidate.py', 'candidate/swi_glu.py'):
+        if smoke.sha(iteration/name) != digest: raise ValueError('Qualified candidate changed')
+    if load(iteration/'static.json').get('passed') is not True: raise ValueError('Static checks did not pass')
+    native = trace((iteration/'events.log').read_text(), Path(config['skills']['paths'][0]))
+    if native != load(iteration/'skill-trace.json'): raise ValueError('Native skill trace changed')
+    session = load(iteration/'session.json')
+    model = json.loads(session['session']['model'])
+    if (session['session']['id'] != native['session_id'] or model['providerID']+'/'+model['id'] != MODEL
+            or not session['message'] or not session['part']):
+        raise ValueError('Native generation session mismatch')
+    gen = {'model': MODEL, 'provider_model_revision': 'unknown', 'opencode_version': meta['opencode_version'],
+        'attempt': int(iteration.name.split('-')[-1]), 'native_trace': native, 'candidate_sha256': digest,
+        'skill_hashes': {name: hashes(root/'context/skills'/name) for name in native['loaded_skills']},
+        'simulator_image': load(root/'source/reference/images/ENV.json')['dev_image']['ref'],
+        'original_candidate': str(original.relative_to(root)),
+        'model_configuration_sha256': smoke.sha(root/'model-config.json'),
+        'files': {str(p.relative_to(root)): smoke.sha(p) for p in (root/'generation').rglob('*')
+                  if p.is_file() and '__pycache__' not in p.parts}}
+    qualified_binding(root, gen, load(root/'catalog.json'))
+    return gen
+
+
+def prepare_qualified(root, generation, queue):
+    runtime = Path(os.environ['CANNBENCH_RUNTIME_BUNDLE']).resolve()
+    package_source = root/'generation'/f"attempt-{generation['attempt']}"/'candidate'
+    args = SimpleNamespace(run_dir=root/'package', kernel_dir=package_source, runtime_bundle=runtime,
+        runtime_sha256=PIN['runtime_bundle_sha256'], aggregation_token=os.environ['CANNBENCH_AGGREGATION_TOKEN'])
+    prepared = smoke.prepare(args, queue)
+    if prepared['catalog'] != load(root/'catalog.json') or load(root/'package/task.json') != load(root/'task.json'):
+        raise ValueError('Official task changed during generation')
+    save(root/'generation.json', generation)
+    generated_binding(root)
+    save(root/'submission-intent.json', {'phase': 'prepared-not-posted', 'ci': ci_identity(),
+        'archive_sha256': prepared['files']['submission.zip'],
+        'job_tag': 'pyasc-smoke-'+prepared['files']['submission.zip'][:24],
+        'manifest_sha256': smoke.sha(root/'package/manifest.json'),
+        'resume_policy': 'collect/reconcile only; never repeat an uncertain POST'})
+
+
+def continue_qualified(root, origin):
+    """New CI packaging attempt; preserve qualified output and original model provenance."""
+    if root.exists(): raise ValueError('Continuation state already exists; never overwrite it')
+    parent = root/'qualified-parent'
+    previous = restore_checkpoint(parent, origin)
+    if previous['status'] != 'completed': raise ValueError('Parent CI is still active')
+    for name in ('submission-intent.json', 'submission.json', 'prepared-artifact.json', 'package/state.json', 'generation.json'):
+        if (parent/name).exists(): raise ValueError('Parent may have reached submission; use GET-only resume')
+    generation = qualified_generation(parent)
+    # Keep the complete interrupted package and lineage in qualified-parent.
+    # Copy only immutable generation inputs/outputs into the new run.
+    for name in ('source', 'context', 'generation', 'parent-ci'):
+        if (parent/name).exists(): shutil.copytree(parent/name, root/name)
+    for name in ('task.json', 'catalog.json', 'model-config.json', 'opencode-version.log', 'repair-lineage.json'):
+        if (parent/name).exists(): shutil.copy2(parent/name, root/name)
+    identity = ci_identity(); meta = load(parent/'run.json')
+    orchestration = root/'orchestration-source'; orchestration.mkdir()
+    archive = subprocess.check_output(['git', 'archive', identity['GITHUB_SHA']], cwd=ROOT)
+    with tarfile.open(fileobj=io.BytesIO(archive)) as z: z.extractall(orchestration, filter='data')
+    meta['generation_ci'] = meta.get('generation_ci') or {k: meta[k] for k in
+        ('ci_url', 'origin_run_id', 'origin_run_attempt', 'skill_stack_commit')}
+    meta.update(origin_run_id=identity['GITHUB_RUN_ID'], origin_run_attempt=identity['GITHUB_RUN_ATTEMPT'],
+        ci_url=f"https://github.com/{identity['GITHUB_REPOSITORY']}/actions/runs/{identity['GITHUB_RUN_ID']}",
+        orchestration_commit=identity['GITHUB_SHA'], orchestration_source_hashes=hashes(orchestration))
+    save(root/'run.json', meta)
+    save(root/'continuation-lineage.json', {'parent_run_id': origin, 'parent_files': hashes(parent),
+        'candidate_sha256': generation['candidate_sha256'], 'model_invoked': False})
+    inputs(root)
+    prepare_qualified(root, generation, ci_client())
+
+
 def generate(root, repair_origin=''):
     if (root / 'generation.json').exists():
         generated_binding(root)
@@ -428,24 +514,13 @@ Write the two files and stop.'''
             if smoke.sha(original) != smoke.sha(candidate) or smoke.sha(candidate) != smoke.sha(package_source/'swi_glu.py'):
                 raise ValueError('Candidate changed during qualification')
             inputs(root)
-            args = SimpleNamespace(run_dir=root/'package', kernel_dir=package_source, runtime_bundle=runtime,
-                    runtime_sha256=PIN['runtime_bundle_sha256'], aggregation_token=os.environ['CANNBENCH_AGGREGATION_TOKEN'])
-            prepared = smoke.prepare(args, queue)
-            if prepared['catalog'] != catalog or load(root/'package/task.json') != task:
-                raise ValueError('Official task changed during generation')
             generation = {'model': MODEL, 'provider_model_revision': 'unknown', 'opencode_version': version,
                 'attempt': attempt, 'native_trace': native, 'candidate_sha256': smoke.sha(original),
                 'skill_hashes': {name: hashes(context/'skills'/name) for name in native['loaded_skills']},
                 'simulator_image': image, 'original_candidate': str(original.relative_to(root)),
                 'files': {str(p.relative_to(root)): smoke.sha(p) for p in (root/'generation').rglob('*') if p.is_file() and '__pycache__' not in p.parts}}
             generation['model_configuration_sha256'] = smoke.sha(root/'model-config.json')
-            save(root/'generation.json', generation)
-            generated_binding(root)
-            save(root/'submission-intent.json', {'phase': 'prepared-not-posted', 'ci': identity,
-                'archive_sha256': prepared['files']['submission.zip'],
-                'job_tag': 'pyasc-smoke-'+prepared['files']['submission.zip'][:24],
-                'manifest_sha256': smoke.sha(root/'package/manifest.json'),
-                'resume_policy': 'collect/reconcile only; never repeat an uncertain POST'})
+            prepare_qualified(root, generation, queue)
             return
         except Exception as exc:
             feedback = qualification_feedback(iteration, exc)
@@ -519,7 +594,7 @@ def restore_checkpoint(root, origin):
     root.mkdir(parents=True)
     subprocess.run(['gh','run','download',origin,'--repo',repo,'--name',name,'--dir',str(root)],check=True)
     meta = inputs(root)
-    if meta['origin_run_id'] != origin or meta['skill_stack_commit'] != run['head_sha']:
+    if meta['origin_run_id'] != origin or meta.get('orchestration_commit',meta['skill_stack_commit']) != run['head_sha']:
         raise ValueError('Restored checkpoint does not match origin CI revision')
     return run
 
@@ -600,10 +675,12 @@ def publish(root):
     for c in cases:
         if c.get('accuracy', {}).get('passed') is not True or not c.get('op_times',{}).get('device_kernels'):
             raise ValueError('Missing case numerical or device-kernel evidence')
+    generation_ci = meta.get('generation_ci', meta)
     rows = ['# Generated SwiGlu: verified CANNBench result', '',
             f"Model: `{MODEL}`; provider revision: unknown. OpenCode: `{meta['opencode_version']}`.",
             f"Skill stack: `{meta['skill_stack_commit']}`. PyASC: `{PIN['pyasc_commit']}`.",
-            f"[Generation CI]({meta['ci_url']}), attempt {meta['origin_run_attempt']}; model attempt {gen['attempt']}.",
+            f"[Generation CI]({generation_ci['ci_url']}), attempt {generation_ci['origin_run_attempt']}; model attempt {gen['attempt']}.",
+            f"[Evaluation CI]({meta['ci_url']}); orchestration commit `{meta.get('orchestration_commit',meta['skill_stack_commit'])}`.",
             f"CANNBench job: `{job['id']}`, submission `{job['submission_id']}`.",
             f"Correct/measured cases: {report['correct_cases']}/{report['required_cases']}; anti-cheat failures: 0.",
             f"Service performance score (`overall_score`): **{score}**.",
@@ -658,8 +735,8 @@ def publication_outputs(root, archive, meta):
 
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument('action',choices=('initialize','generate','submit','collect','publish'))
-    ap.add_argument('--origin-run',default='');ap.add_argument('--repair-run',default='');ap.add_argument('--wait-seconds',type=int,default=9000)
+    ap=argparse.ArgumentParser();ap.add_argument('action',choices=('initialize','generate','continue','submit','collect','publish'))
+    ap.add_argument('--origin-run',default='');ap.add_argument('--repair-run',default='');ap.add_argument('--qualified-run',default='');ap.add_argument('--wait-seconds',type=int,default=9000)
     args=ap.parse_args();identity=ci_identity();origin=args.origin_run or identity['GITHUB_RUN_ID'];root=run_root(origin)
     if args.action=='initialize':
         if args.origin_run:
@@ -668,6 +745,7 @@ def main():
         with open(os.environ['GITHUB_ENV'],'a') as out: out.write(f'CANNBENCH_RESULTS={root}\nCANNBENCH_ORIGIN_RUN={origin}\n')
         return 0
     if args.action=='generate': generate(root,args.repair_run)
+    elif args.action=='continue': continue_qualified(root,args.qualified_run)
     elif args.action=='submit': submit(root)
     elif args.action=='collect': return collect(root,args.wait_seconds)
     else: publish(root)

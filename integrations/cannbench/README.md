@@ -100,6 +100,8 @@ private remote transport is part of the product path.
 gh workflow run ci.yml --ref <branch> -f cannbench_action=generate
 # Repair a compiled but numerically failed model output, preserving its CI lineage:
 gh workflow run ci.yml --ref <branch> -f cannbench_action=repair -f origin_run=<failed-CI-run-ID>
+# Packaging GET failed after qualification, before any submission intent:
+gh workflow run ci.yml --ref <branch> -f cannbench_action=continue -f origin_run=<qualified-CI-run-ID>
 # If the original submission is still pending or collection was interrupted:
 gh workflow run ci.yml --ref <branch> -f cannbench_action=resume -f origin_run=<original-CI-run-ID>
 ```
@@ -136,6 +138,15 @@ the parent commit, and requires the same task snapshot. It refuses active runs
 or evidence that reached packaging/submission intent: use GET-only `resume`
 for those. A model response that leaves a failed candidate unchanged stops
 instead of starting another identical repair attempt.
+
+`continue` imports the central evidence of a completed run whose candidate
+already passed both qualification gates but whose package preparation failed.
+It verifies candidate hashes and native generation records, retains the entire
+parent, and retries packaging in a new CI run without invoking the model.
+Generation source/model provenance stays attributed to the original CI;
+continuation source and CI identity are recorded separately. A fresh live task
+snapshot must still match. Any submission intent or submission state forbids
+this path: use GET-only `resume` instead. This is not a retry of an upload.
 
 The workflow re-downloads the evaluated submission and verifies its exact hash.
 A successful result includes per-case timings, the service score and the

@@ -49,14 +49,14 @@ jobs:
           set -euo pipefail
           case "$REQUEST_ACTION" in
             generate) test -z "$REQUEST_ORIGIN" ;;
-            repair) [[ "$REQUEST_ORIGIN" =~ ^[0-9]+$ ]] ;;
+            repair|continue) [[ "$REQUEST_ORIGIN" =~ ^[0-9]+$ ]] ;;
             resume)
               [[ "$REQUEST_ORIGIN" =~ ^[0-9]+$ ]]
               revision=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$REQUEST_ORIGIN" --jq '.head_sha')
               git fetch --depth=1 origin "$revision"
               git checkout --detach "$revision"
               ;;
-            *) echo 'Use generate, repair or resume'; exit 1 ;;
+            *) echo 'Use generate, repair, continue or resume'; exit 1 ;;
           esac
           echo 'CANNBENCH_HELPER=integrations/cannbench/ci/single_operator.py' >> "$GITHUB_ENV"
 
@@ -77,17 +77,19 @@ jobs:
             "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" initialize
           fi
 
-      - name: Generate fresh candidate and qualify exact package
-        if: inputs.action == 'generate' || inputs.action == 'repair'
+      - name: Generate or continue qualified candidate and prepare exact package
+        if: inputs.action != 'resume'
         run: |
-          if [ "$REQUEST_ACTION" = repair ]; then
+          if [ "$REQUEST_ACTION" = continue ]; then
+            "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" continue --qualified-run "$REQUEST_ORIGIN"
+          elif [ "$REQUEST_ACTION" = repair ]; then
             "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" generate --repair-run "$REQUEST_ORIGIN"
           else
             "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" generate
           fi
 
       - name: Central checkpoint before possible POST
-        if: inputs.action == 'generate' || inputs.action == 'repair'
+        if: inputs.action != 'resume'
         id: prepared
         uses: actions/upload-artifact@v4
         with:
@@ -98,7 +100,7 @@ jobs:
           include-hidden-files: true
 
       - name: Submit exact qualified candidate once
-        if: inputs.action == 'generate' || inputs.action == 'repair'
+        if: inputs.action != 'resume'
         env:
           PREPARED_ARTIFACT_ID: ${{ steps.prepared.outputs.artifact-id }}
         run: |

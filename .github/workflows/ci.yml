@@ -10,9 +10,9 @@ on:
         description: 'Optional single-model SwiGlu NPU evaluation (uses one credit); resume never submits'
         type: choice
         default: none
-        options: [none, generate, repair, resume]
+        options: [none, generate, repair, continue, resume]
       origin_run:
-        description: 'For repair or resume: original generation CI run ID'
+        description: 'For repair, continue or resume: original CI run ID'
         type: string
         default: ''
 
