@@ -104,9 +104,11 @@ gh workflow run ci.yml --ref <branch> -f cannbench_action=resume -f origin_run=<
 
 The workflow loads selected skills via OpenCode's native skill tool, records
 model/configuration and unavailable provider revisions as `unknown`, and
-preserves each generated/repair output separately. A compact API summary is
+preserves each generated/repair output separately. Session evidence contains
+read-only native OpenCode records for that session, with its actual model ID;
+it does not depend on large JSON surviving the CLI stdout export. A compact API summary is
 extracted from the exact runtime sources; the model is limited to 12 agent
-rounds and 8192 output tokens per response. Timeouts without a candidate stop
+rounds and 24000 output tokens per response (including reasoning). Timeouts without a candidate stop
 the run rather than repeat unproductive exploration. It allows at most three
 local model attempts and one hardware submission per origin run. Qualification
 includes exact-runtime dispatch/lowering of the official case set and separate

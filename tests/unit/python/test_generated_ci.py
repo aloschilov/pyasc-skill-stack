@@ -17,6 +17,26 @@ ci = importlib.util.module_from_spec(spec); spec.loader.exec_module(ci)
 
 
 class GeneratedCI(unittest.TestCase):
+    def test_large_native_session_is_complete_scoped_and_model_checked(self):
+        import sqlite3
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); database=root/'session.db'
+            c=sqlite3.connect(database)
+            c.execute('create table session (id text, model text)')
+            for table in ('message','part'):
+                c.execute(f'create table {table} (id text, session_id text, time_created integer, data text)')
+                c.execute(f'insert into {table} values (?,?,?,?)', ('item','wanted',1,'x'*200000))
+                c.execute(f'insert into {table} values (?,?,?,?)', ('private','other',2,'unrelated-private-data'))
+            c.execute('insert into session values (?,?)',('wanted',json.dumps({'providerID':'gateway','id':'glm-5.3'})))
+            c.commit();c.close()
+            ci.capture_session(database,'wanted',root/'session.json')
+            data=json.loads((root/'session.json').read_text())
+            self.assertEqual(len(data['part'][0]['data']),200000)
+            self.assertNotIn('unrelated-private-data',(root/'session.json').read_text())
+            c=sqlite3.connect(database);c.execute('update session set model=?', (json.dumps({'providerID':'gateway','id':'other'}),));c.commit();c.close()
+            with self.assertRaisesRegex(ValueError,'model differs'):
+                ci.capture_session(database,'wanted',root/'bad.json')
+
     def test_compact_api_contains_public_contracts_not_implementations(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); api=root/'runtime-api/asctile/language';api.mkdir(parents=True)

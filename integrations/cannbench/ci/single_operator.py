@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tarfile
@@ -95,11 +96,35 @@ def trace(stdout, skill_root):
         if event.get('type') == 'tool_use' and part.get('tool') == 'skill' and state.get('status') == 'completed':
             name = (state.get('input') or {}).get('name')
             directory = (state.get('metadata') or {}).get('dir')
-            if name in SKILLS and directory and Path(directory).resolve() == (skill_root / name).resolve():
-                loaded.add(name); reads.append({'name': name, 'directory': directory})
+            if (not isinstance(name,str) or Path(name).name != name or not directory
+                    or Path(directory).resolve() != (skill_root/name).resolve()):
+                raise ValueError('Native skill came from an unpinned source')
+            loaded.add(name); reads.append({'name': name, 'directory': directory})
     if len(sessions) != 1 or not set(SKILLS) <= loaded:
         raise ValueError('Missing unique native session or selected skill-load evidence')
     return {'session_id': next(iter(sessions)), 'loaded_skills': sorted(loaded), 'skill_calls': reads}
+
+
+def capture_session(database, session_id, output):
+    """Capture this native session read-only; CLI stdout export can truncate large JSON."""
+    connection = sqlite3.connect(f'file:{database}?mode=ro', uri=True)
+    connection.row_factory = sqlite3.Row
+    try:
+        connection.execute('BEGIN')
+        row = connection.execute('SELECT * FROM session WHERE id=?', (session_id,)).fetchone()
+        if row is None: raise ValueError('Native session missing')
+        session = dict(row)
+        model = json.loads(session['model'])
+        if model['providerID']+'/'+model['id'] != MODEL:
+            raise ValueError('Native session model differs from configured model')
+        data = {'format':'opencode-sqlite-session-v1', 'session':session}
+        for table in ('message','part'):
+            data[table] = [dict(row) for row in connection.execute(
+                f'SELECT * FROM {table} WHERE session_id=? ORDER BY time_created,id', (session_id,))]
+            if not data[table]: raise ValueError('Incomplete native session '+table)
+        save(output, json.loads(scrub(json.dumps(data))))
+    finally:
+        connection.close()
 
 
 def run_root(origin):
@@ -243,7 +268,7 @@ def generate(root):
     config = load(source / 'integrations/opencode/profiles/cloud-glm-5.3.json')
     config['skills'] = {'paths': [str(context / 'skills')]}
     config['agent'] = {'build': {'steps': 12}}
-    config['provider']['gateway']['models']['glm-5.3']['limit']['output'] = 8192
+    config['provider']['gateway']['models']['glm-5.3']['limit']['output'] = 24000
     config['permission'] = worker_permissions(context)
     config['provider']['gateway']['options']['baseURL'] = os.environ['OPENCODE_BASE_URL']
     save(root / 'model-config.json', config)
@@ -290,8 +315,7 @@ Write the two files and stop.'''
             out = call(['opencode', 'run', '--pure', '--format', 'json', '--dir', str(project), '-m', MODEL, message],
                        iteration / 'events.log', cwd=project, env=env, timeout=1200)
             native = trace(out, context / 'skills'); save(iteration / 'skill-trace.json', native)
-            session = call(['opencode', 'export', native['session_id']], iteration / 'session-export.log', cwd=project, env=env, timeout=60)
-            save(iteration / 'session.json', json.loads(scrub(session)))
+            capture_session(state/'opencode/opencode.db', native['session_id'], iteration/'session.json')
             candidate = project / 'candidate.py'
             if candidate.is_file(): shutil.copy2(candidate, iteration / 'original-candidate.py')
             if not (project / 'design.md').is_file(): raise ValueError('Missing generated design')
@@ -329,7 +353,7 @@ Write the two files and stop.'''
                 raise ValueError('Official task changed during generation')
             generation = {'model': MODEL, 'provider_model_revision': 'unknown', 'opencode_version': version,
                 'attempt': attempt, 'native_trace': native, 'candidate_sha256': smoke.sha(original),
-                'skill_hashes': {name: hashes(context/'skills'/name) for name in SKILLS},
+                'skill_hashes': {name: hashes(context/'skills'/name) for name in native['loaded_skills']},
                 'simulator_image': image, 'original_candidate': str(original.relative_to(root)),
                 'files': {str(p.relative_to(root)): smoke.sha(p) for p in (root/'generation').rglob('*') if p.is_file() and '__pycache__' not in p.parts}}
             generation['model_configuration_sha256'] = smoke.sha(root/'model-config.json')
@@ -351,9 +375,7 @@ Write the two files and stop.'''
                 try:
                     native = trace((iteration/'events.log').read_text(), context/'skills')
                     save(iteration/'skill-trace.json', native)
-                    exported = call(['opencode','export','--pure',native['session_id']], iteration/'session-export.log',
-                                    cwd=project, env=env, timeout=60)
-                    save(iteration/'session.json', json.loads(scrub(exported)))
+                    capture_session(state/'opencode/opencode.db', native['session_id'], iteration/'session.json')
                 except Exception as export_error:
                     save(iteration/'session-export-error.json', {'error':scrub(str(export_error))})
             save(iteration/'failure.json', {'error': feedback})
