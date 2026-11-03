@@ -49,13 +49,14 @@ jobs:
           set -euo pipefail
           case "$REQUEST_ACTION" in
             generate) test -z "$REQUEST_ORIGIN" ;;
+            repair) [[ "$REQUEST_ORIGIN" =~ ^[0-9]+$ ]] ;;
             resume)
               [[ "$REQUEST_ORIGIN" =~ ^[0-9]+$ ]]
               revision=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$REQUEST_ORIGIN" --jq '.head_sha')
               git fetch --depth=1 origin "$revision"
               git checkout --detach "$revision"
               ;;
-            *) echo 'Use generate or resume'; exit 1 ;;
+            *) echo 'Use generate, repair or resume'; exit 1 ;;
           esac
           echo 'CANNBENCH_HELPER=integrations/cannbench/ci/single_operator.py' >> "$GITHUB_ENV"
 
@@ -70,15 +71,23 @@ jobs:
 
       - name: Initialize external run state
         run: |
-          "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" initialize --origin-run "$REQUEST_ORIGIN"
+          if [ "$REQUEST_ACTION" = resume ]; then
+            "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" initialize --origin-run "$REQUEST_ORIGIN"
+          else
+            "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" initialize
+          fi
 
       - name: Generate fresh candidate and qualify exact package
-        if: inputs.action == 'generate'
+        if: inputs.action == 'generate' || inputs.action == 'repair'
         run: |
-          "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" generate
+          if [ "$REQUEST_ACTION" = repair ]; then
+            "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" generate --repair-run "$REQUEST_ORIGIN"
+          else
+            "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" generate
+          fi
 
       - name: Central checkpoint before possible POST
-        if: inputs.action == 'generate'
+        if: inputs.action == 'generate' || inputs.action == 'repair'
         id: prepared
         uses: actions/upload-artifact@v4
         with:
@@ -89,14 +98,14 @@ jobs:
           include-hidden-files: true
 
       - name: Submit exact qualified candidate once
-        if: inputs.action == 'generate'
+        if: inputs.action == 'generate' || inputs.action == 'repair'
         env:
           PREPARED_ARTIFACT_ID: ${{ steps.prepared.outputs.artifact-id }}
         run: |
           "$CANNBENCH_PYTHON" "$CANNBENCH_HELPER" submit
 
       - name: Central checkpoint after submission
-        if: inputs.action == 'generate' && always() && steps.prepared.outcome == 'success'
+        if: inputs.action != 'resume' && always() && steps.prepared.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: generated-swiglu-submitted-${{ github.run_id }}-${{ github.run_attempt }}

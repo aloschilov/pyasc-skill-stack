@@ -98,6 +98,8 @@ private remote transport is part of the product path.
 
 ```bash
 gh workflow run ci.yml --ref <branch> -f cannbench_action=generate
+# Repair a compiled but numerically failed model output, preserving its CI lineage:
+gh workflow run ci.yml --ref <branch> -f cannbench_action=repair -f origin_run=<failed-CI-run-ID>
 # If the original submission is still pending or collection was interrupted:
 gh workflow run ci.yml --ref <branch> -f cannbench_action=resume -f origin_run=<original-CI-run-ID>
 ```
@@ -124,6 +126,13 @@ and performs **GET only**. It can restore an unexpired central checkpoint when
 local state is lost; an unknown delivery never authorizes another POST. If the
 queue exceeds the bounded CI wait, dispatch `resume`, not `generate`. Generation
 failures retain their evidence and consume no submission credit.
+
+`repair` starts a distinct CI run using a compiled candidate from the original
+run's central artifact. It preserves the original records and hashes, records
+the parent commit, and requires the same task snapshot. It refuses active runs
+or evidence that reached packaging/submission intent: use GET-only `resume`
+for those. A model response that leaves a failed candidate unchanged stops
+instead of starting another identical repair attempt.
 
 The workflow re-downloads the evaluated submission and verifies its exact hash.
 A successful result includes per-case timings, the service score and the

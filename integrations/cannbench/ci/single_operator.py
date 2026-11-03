@@ -140,6 +140,10 @@ def inputs(root):
         raise ValueError('Run repository mismatch')
     check_hashes(root / 'source', meta['source_hashes'])
     check_hashes(root / 'context', meta['context_hashes'])
+    if (root/'repair-lineage.json').exists():
+        lineage = load(root/'repair-lineage.json')
+        check_hashes(root/'parent-ci', lineage['parent_files'])
+        check_hashes(root, {lineage['candidate']: lineage['candidate_sha256']})
     return meta
 
 
@@ -230,7 +234,36 @@ def worker_permissions(context):
         'doom_loop': 'deny', 'external_directory': {'*': 'deny', str(context / '*'): 'allow'}}
 
 
-def generate(root):
+def repair_seed(root, origin):
+    """Import the failed CI's central evidence; never repair an uncertain submission."""
+    parent = root/'parent-ci'
+    previous = restore_checkpoint(parent, origin)
+    if previous['status'] != 'completed': raise ValueError('Parent CI is still active')
+    if load(parent/'task.json') != load(root/'task.json') or load(parent/'catalog.json') != load(root/'catalog.json'):
+        raise ValueError('Task changed since failed generation; repair requires the same task snapshot')
+    for name in ('submission-intent.json', 'submission.json', 'package/state.json', 'generation.json'):
+        if (parent/name).exists():
+            raise ValueError('Parent may have reached submission; use GET-only resume, not repair')
+    candidates = []
+    for attempt in (parent/'generation').glob('attempt-*'):
+        if all((attempt/name).is_file() for name in ('original-candidate.py','static.json','lowering.json','failure.json')):
+            if load(attempt/'static.json').get('passed') and load(attempt/'lowering.json').get('status') == 'passed':
+                candidates.append((int(attempt.name.split('-')[-1]),attempt))
+    if not candidates: raise ValueError('No recorded compiled candidate to repair')
+    attempt = max(candidates)[1]
+    candidate = attempt/'original-candidate.py'
+    if load(attempt/'lowering.json').get('candidate_sha256') != smoke.sha(candidate):
+        raise ValueError('Parent candidate does not match its qualification')
+    save(root/'repair-lineage.json', {'origin_run_id': origin, 'parent_commit': load(parent/'run.json')['skill_stack_commit'],
+        'candidate': str(candidate.relative_to(root)), 'candidate_sha256': smoke.sha(candidate),
+        'parent_files': hashes(parent)})
+    feedback = load(attempt/'failure.json')['error'].split('\n',1)[0]
+    log = attempt/'simulator.log'
+    if log.exists(): feedback += '\n'+log.read_text(errors='replace').split('=== STDERR ===')[-1][-5000:]
+    return candidate, feedback
+
+
+def generate(root, repair_origin=''):
     if (root / 'generation.json').exists():
         generated_binding(root)
         return
@@ -285,7 +318,7 @@ The task authority is {task_dir}; read its proto.yaml, cases.yaml, golden.py and
 The exact runtime is PyASC {PIN['pyasc_commit']}. Read {context / 'API.md'} for public signatures and docstrings.
 Do NOT explore asc/runtime, launcher, memory handles, IR or compiler internals. The harness handles these.
 Use at most 8 model/tool rounds to read and write: batch the four skills, then the task files, then API.md.
-Write design.md and candidate.py before round 8; the agent has a hard 12-round limit.
+Write design.md (at most 500 words) and candidate.py before round 8; the agent has a hard 12-round limit.
 Do not keep researching until certainty: CI supplies compiler/numerical feedback for a separately recorded repair.
 Historical campaign pin prose does not override this run's exact runtime. Use public asctile JIT/tile APIs.
 Write design.md and candidate.py in this project. Public callable: swi_glu(input, dim=-1).
@@ -297,17 +330,20 @@ Keep tiling conservative and UB bounded. For this correctness smoke, use at most
 record this as a conservative unprofiled cap, not a queried device resource count. No resource discovery is required.
 Pass tensors directly to public JIT launches, e.g. kernel[cores](input, output, constexpr_arguments); never data_ptr().
 Use stable 1D/2D memory APIs and padded aligned tile widths for short rows. No case-ID or benchmark-answer special cases.
+For short rows, use a 2D global_tensor view with aligned padded column tiles and explicit real_shape for logical bounds.
+Do not transfer single unaligned elements through a 1D tile. Keep the physical column offset independent of tail width:
+the tail starts after completed full tiles, never again at column zero. These are general memory-layout requirements.
 No compiler/runtime hacks. Do not install or execute anything here. CI will run static checks, exact-runtime lowering,
 representative simulator numerical checks, and the full official NPU evaluation. Performance improvement is not required.
 Read performance hints and record chosen/unmeasured options, but do not run an optimization campaign.
 Write the two files and stop.'''
-    feedback = ''
+    seed, feedback = repair_seed(root, repair_origin) if repair_origin else (None, '')
     import driver
     for attempt in range(1, 4):
         iteration = root / 'generation' / f'attempt-{attempt}'; project = iteration / 'project'; project.mkdir(parents=True)
-        if attempt > 1:
-            prior = root / 'generation' / f'attempt-{attempt-1}' / 'project/candidate.py'
-            if prior.is_file(): shutil.copy2(prior, project / 'candidate.py')
+        prior = root/'generation'/f'attempt-{attempt-1}'/'project/candidate.py' if attempt > 1 else seed
+        if prior and prior.is_file(): shutil.copy2(prior, project/'candidate.py')
+        before = smoke.sha(project/'candidate.py') if (project/'candidate.py').exists() else None
         message = prompt + ('\nRepair YOUR previous candidate. Previous qualification feedback:\n' + feedback if feedback else '')
         (iteration / 'prompt.txt').write_text(message)
         save(project / 'opencode.json', config)
@@ -318,6 +354,8 @@ Write the two files and stop.'''
             capture_session(state/'opencode/opencode.db', native['session_id'], iteration/'session.json')
             candidate = project / 'candidate.py'
             if candidate.is_file(): shutil.copy2(candidate, iteration / 'original-candidate.py')
+            if before and candidate.is_file() and smoke.sha(candidate) == before:
+                raise ValueError('Model did not change the failed candidate; no blind repair retry')
             if not (project / 'design.md').is_file(): raise ValueError('Missing generated design')
             problems = driver.static_check(candidate, 'swi_glu', task_dir)
             save(iteration / 'static.json', {'passed': not problems, 'errors': problems})
@@ -380,6 +418,7 @@ Write the two files and stop.'''
                     save(iteration/'session-export-error.json', {'error':scrub(str(export_error))})
             save(iteration/'failure.json', {'error': feedback})
             if not (project/'candidate.py').is_file(): raise  # No candidate means no repairable compiler/numerical feedback.
+            if before and smoke.sha(project/'candidate.py') == before: raise
             if (root/'package').exists(): raise  # A partially staged package must not be silently replaced.
     raise ValueError('Three recorded model attempts failed qualification; see CI artifacts')
 
@@ -441,6 +480,7 @@ def restore_checkpoint(root, origin):
     meta = inputs(root)
     if meta['origin_run_id'] != origin or meta['skill_stack_commit'] != run['head_sha']:
         raise ValueError('Restored checkpoint does not match origin CI revision')
+    return run
 
 
 def reconcile_ledger(root, ledger):
@@ -578,7 +618,7 @@ def publication_outputs(root, archive, meta):
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('action',choices=('initialize','generate','submit','collect','publish'))
-    ap.add_argument('--origin-run',default='');ap.add_argument('--wait-seconds',type=int,default=9000)
+    ap.add_argument('--origin-run',default='');ap.add_argument('--repair-run',default='');ap.add_argument('--wait-seconds',type=int,default=9000)
     args=ap.parse_args();identity=ci_identity();origin=args.origin_run or identity['GITHUB_RUN_ID'];root=run_root(origin)
     if args.action=='initialize':
         if args.origin_run:
@@ -586,7 +626,7 @@ def main():
             inputs(root)
         with open(os.environ['GITHUB_ENV'],'a') as out: out.write(f'CANNBENCH_RESULTS={root}\nCANNBENCH_ORIGIN_RUN={origin}\n')
         return 0
-    if args.action=='generate': generate(root)
+    if args.action=='generate': generate(root,args.repair_run)
     elif args.action=='submit': submit(root)
     elif args.action=='collect': return collect(root,args.wait_seconds)
     else: publish(root)

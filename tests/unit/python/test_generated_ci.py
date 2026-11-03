@@ -17,6 +17,46 @@ ci = importlib.util.module_from_spec(spec); spec.loader.exec_module(ci)
 
 
 class GeneratedCI(unittest.TestCase):
+    def test_repair_imports_exact_failed_candidate_and_preserves_parent_records(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            for name in ('task.json','catalog.json'): ci.save(root/name,{'task':'same'})
+            def restore(parent, origin):
+                attempt=parent/'generation/attempt-1';attempt.mkdir(parents=True)
+                for name in ('task.json','catalog.json'): ci.save(parent/name,{'task':'same'})
+                ci.save(parent/'run.json',{'skill_stack_commit':'original-commit'})
+                candidate=attempt/'original-candidate.py';candidate.write_text('model output')
+                ci.save(attempt/'static.json',{'passed':True})
+                ci.save(attempt/'lowering.json',{'status':'passed','candidate_sha256':ci.smoke.sha(candidate)})
+                ci.save(attempt/'failure.json',{'error':'numerics failed'})
+                (attempt/'simulator.log').write_text('retained noisy stdout\n=== STDERR ===\nactual mismatch')
+                (attempt/'session.json').write_text('native session record')
+                return {'status':'completed'}
+            with patch.object(ci,'restore_checkpoint',side_effect=restore):
+                candidate,feedback=ci.repair_seed(root,'123')
+            lineage=ci.load(root/'repair-lineage.json')
+            self.assertEqual(lineage['candidate_sha256'],ci.smoke.sha(candidate))
+            self.assertEqual(lineage['parent_commit'],'original-commit')
+            self.assertIn('actual mismatch',feedback)
+            self.assertNotIn('noisy stdout',feedback)
+            ci.check_hashes(root/'parent-ci',lineage['parent_files'])
+            (candidate.parent/'session.json').write_text('replaced')
+            with self.assertRaises(ValueError): ci.check_hashes(root/'parent-ci',lineage['parent_files'])
+
+    def test_repair_refuses_active_or_possibly_submitted_parent(self):
+        for marker in ('active','submission-intent.json','submission.json','package/state.json','generation.json'):
+            with self.subTest(marker=marker), tempfile.TemporaryDirectory() as tmp:
+                root=Path(tmp)
+                for name in ('task.json','catalog.json'): ci.save(root/name,{})
+                def restore(parent, origin):
+                    parent.mkdir()
+                    for name in ('task.json','catalog.json'): ci.save(parent/name,{})
+                    if marker!='active':
+                        p=parent/marker;p.parent.mkdir(exist_ok=True);ci.save(p,{})
+                    return {'status':'in_progress' if marker=='active' else 'completed'}
+                with patch.object(ci,'restore_checkpoint',side_effect=restore), self.assertRaises(ValueError):
+                    ci.repair_seed(root,'123')
+
     def test_large_native_session_is_complete_scoped_and_model_checked(self):
         import sqlite3
         with tempfile.TemporaryDirectory() as tmp:
