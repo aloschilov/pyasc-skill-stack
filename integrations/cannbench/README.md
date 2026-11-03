@@ -126,6 +126,8 @@ and performs **GET only**. It can restore an unexpired central checkpoint when
 local state is lost; an unknown delivery never authorizes another POST. If the
 queue exceeds the bounded CI wait, dispatch `resume`, not `generate`. Generation
 failures retain their evidence and consume no submission credit.
+CI JSON GET requests retry temporary HTTP 502/503/504 responses up to four
+times with bounded backoff. Submission POST is never covered by that retry.
 
 `repair` starts a distinct CI run using a candidate with retained qualification
 failure (including a compiler timeout) from the original

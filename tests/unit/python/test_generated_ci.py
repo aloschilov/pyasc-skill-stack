@@ -17,6 +17,25 @@ ci = importlib.util.module_from_spec(spec); spec.loader.exec_module(ci)
 
 
 class GeneratedCI(unittest.TestCase):
+    def test_transient_get_retry_is_bounded_and_does_not_wrap_post(self):
+        class HTTPError(RuntimeError):
+            def __init__(self,status): self.status=status
+        queue=Mock(); get=Mock(side_effect=[HTTPError(503),{'ok':True}]); post=Mock(side_effect=HTTPError(503))
+        queue._client._get_json=get;queue._client._post_json=post
+        with patch.object(ci.smoke,'client',return_value=queue), patch.object(ci.time,'sleep') as sleep:
+            client=ci.ci_client()._client
+            self.assertEqual(client._get_json('/api/catalog'),{'ok':True})
+            sleep.assert_called_once_with(15)
+            self.assertIs(client._post_json,post)
+            with self.assertRaises(HTTPError): client._post_json('/api/submit')
+            self.assertEqual(post.call_count,1)
+        request=Mock(side_effect=HTTPError(503))
+        with patch.object(ci.time,'sleep') as sleep, self.assertRaises(HTTPError): ci.retry_get(request)
+        self.assertEqual(request.call_count,5);self.assertEqual(sleep.call_count,4)
+        request=Mock(side_effect=HTTPError(400))
+        with patch.object(ci.time,'sleep') as sleep, self.assertRaises(HTTPError): ci.retry_get(request)
+        self.assertEqual(request.call_count,1);sleep.assert_not_called()
+
     def test_repair_imports_exact_failed_candidate_and_preserves_parent_records(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)

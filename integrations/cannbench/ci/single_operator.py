@@ -40,6 +40,25 @@ def load(path):
     return json.loads(Path(path).read_text())
 
 
+def retry_get(request):
+    """Bounded retry for transient GET failures only; never wrap submission."""
+    delays = (15, 30, 60, 60)
+    for attempt in range(len(delays)+1):
+        try: return request()
+        except Exception as exc:
+            status = getattr(exc, 'status', getattr(exc, 'code', None))
+            if status not in (502,503,504) or attempt == len(delays): raise
+            print(f'Transient GET HTTP {status}; retry in {delays[attempt]}s', flush=True)
+            time.sleep(delays[attempt])
+
+
+def ci_client():
+    queue = smoke.client(None)
+    get = queue._client._get_json
+    queue._client._get_json = lambda *args, **kwargs: retry_get(lambda: get(*args, **kwargs))
+    return queue
+
+
 def scrub(text):
     for key in ('OPENCODE_API_KEY', 'BENCHSITE_API_TOKEN', 'GH_TOKEN', 'GITHUB_TOKEN'):
         value = os.environ.get(key)
@@ -302,7 +321,7 @@ def generate(root, repair_origin=''):
             if name.startswith(('asctile/', 'asc/')) and name.endswith('.py') and '..' not in Path(name).parts:
                 p = context / 'runtime-api' / name; p.parent.mkdir(parents=True, exist_ok=True); p.write_bytes(z.read(name))
     summarize_api(context)
-    queue = smoke.client(None)
+    queue = ci_client()
     catalog, task = smoke.task_snapshot(queue)
     save(root / 'catalog.json', catalog); save(root / 'task.json', task)
     task_dir = context / 'task'; task_dir.mkdir()
@@ -470,7 +489,7 @@ def submit(root):
     _, _, prepared = generated_binding(root)
     if not os.environ.get('PREPARED_ARTIFACT_ID'): raise ValueError('Central prepared checkpoint required before POST')
     save(root/'prepared-artifact.json', {'id': os.environ['PREPARED_ARTIFACT_ID'], 'ci': ci_identity()})
-    queue = smoke.client(None)
+    queue = ci_client()
     credits = queue._client.get_credits(); save(root/'credits-before.json', credits)
     require_quota(credits)
     ledger = Path.home()/'.local/state/pyasc-cannbench-smoke'; ledger.mkdir(parents=True, exist_ok=True)
@@ -523,7 +542,7 @@ def reconcile_ledger(root, ledger):
 
 def collect(root, seconds):
     generated_binding(root)
-    queue = smoke.client(None); ledger = Path.home()/'.local/state/pyasc-cannbench-smoke'
+    queue = ci_client(); ledger = Path.home()/'.local/state/pyasc-cannbench-smoke'
     ledger.mkdir(parents=True, exist_ok=True)
     archive = root.parent/(root.name+'-qualification.tar.gz')
     if archive.exists():
