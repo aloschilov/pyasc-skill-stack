@@ -66,6 +66,7 @@ def ci_identity():
 
 def call(command, log, *, cwd=ROOT, env=None, timeout=900):
     start = time.monotonic()
+    print(f'CI stage: {log.name} ({command[0]})', flush=True)
     try:
         p = subprocess.run(command, cwd=cwd, env=env, text=True, capture_output=True, timeout=timeout)
         code, out, err = p.returncode, p.stdout, p.stderr
@@ -77,6 +78,7 @@ def call(command, log, *, cwd=ROOT, env=None, timeout=900):
     log.write_text(scrub(out + '\n=== STDERR ===\n' + err))
     save(log.with_suffix(log.suffix + '.meta.json'), {'command': command, 'exit': code,
          'elapsed_seconds': time.monotonic() - start, 'log_sha256': smoke.sha(log)})
+    print(f'CI stage finished: {log.name}, exit={code}, elapsed={time.monotonic()-start:.2f}s', flush=True)
     if code:
         raise ValueError(f'{command[0]} exited {code}; retained {log.name}')
     return out
@@ -115,6 +117,22 @@ def inputs(root):
     return meta
 
 
+def qualified_binding(root, gen, catalog):
+    iteration = root/'generation'/f"attempt-{gen['attempt']}"
+    lowering = load(iteration/'lowering.json'); numerical = load(iteration/'simulator.json')
+    if (lowering.get('status') != 'passed' or lowering.get('compile_passed') != catalog['required_cases']
+            or lowering.get('cases') != catalog['required_cases']
+            or lowering.get('pyasc_commit') != PIN['pyasc_commit']
+            or lowering.get('runtime_bundle_sha256') != PIN['runtime_bundle_sha256']
+            or not lowering.get('runtime_files_verified')
+            or lowering.get('candidate_sha256') != gen['candidate_sha256']):
+        raise ValueError('Exact generated candidate lacks full pinned-runtime lowering')
+    if (numerical.get('passed') is not True or len(numerical.get('cases',[])) != 12
+            or any(c.get('passed') is not True for c in numerical['cases'])
+            or numerical.get('candidate_sha256') != gen['candidate_sha256']):
+        raise ValueError('Exact generated candidate lacks simulator preflight')
+
+
 def generated_binding(root):
     meta = inputs(root); gen = load(root / 'generation.json')
     if smoke.sha(root/'model-config.json') != gen['model_configuration_sha256']:
@@ -124,6 +142,7 @@ def generated_binding(root):
         raise ValueError('Unexpected model attribution')
     if not set(SKILLS) <= set(gen['native_trace']['loaded_skills']):
         raise ValueError('Incomplete native skill evidence')
+    qualified_binding(root, gen, load(root/'catalog.json'))
     staged = smoke.verify(root / 'package')
     if staged['files']['candidate/swi_glu.py'] != gen['candidate_sha256']:
         raise ValueError('Generated/packaged candidate mismatch')
@@ -275,6 +294,7 @@ Write the two files and stop.'''
             return
         except Exception as exc:
             feedback = scrub(str(exc))
+            print(f'Model attempt {attempt} did not qualify: {feedback[:2000]}', flush=True)
             for name in ('lowering.json', 'simulator.log'):
                 p = iteration/name
                 if p.is_file(): feedback += '\n'+p.read_text(errors='replace')[-16000:]
@@ -362,6 +382,10 @@ def collect(root, seconds):
     generated_binding(root)
     queue = smoke.client(None); ledger = Path.home()/'.local/state/pyasc-cannbench-smoke'
     ledger.mkdir(parents=True, exist_ok=True)
+    archive = root.parent/(root.name+'-qualification.tar.gz')
+    if archive.exists():
+        verify_archive(archive, root)
+        return 0  # Publication retry must not mutate the already sealed qualification.
     end = time.monotonic() + seconds
     while True:
         with (ledger/'lock').open('a') as lock:

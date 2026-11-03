@@ -66,6 +66,21 @@ class GeneratedCI(unittest.TestCase):
             (root/'candidate.py').write_text('tampered')
             with self.assertRaises(ValueError): ci.verify_archive(archive,root)
 
+    def test_qualification_for_a_different_candidate_cannot_promote_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); iteration=root/'generation/attempt-1';iteration.mkdir(parents=True)
+            lowering={'status':'passed','compile_passed':20,'cases':20,'pyasc_commit':ci.PIN['pyasc_commit'],
+                'runtime_bundle_sha256':ci.PIN['runtime_bundle_sha256'],'runtime_files_verified':114,
+                'candidate_sha256':'candidate'}
+            numerical={'passed':True,'cases':[{'passed':True} for _ in range(12)],'candidate_sha256':'candidate'}
+            ci.save(iteration/'lowering.json',lowering);ci.save(iteration/'simulator.json',numerical)
+            ci.qualified_binding(root,{'attempt':1,'candidate_sha256':'candidate'},{'required_cases':20})
+            with self.assertRaises(ValueError):
+                ci.qualified_binding(root,{'attempt':1,'candidate_sha256':'replacement'},{'required_cases':20})
+            lowering['compile_passed']=19;ci.save(iteration/'lowering.json',lowering)
+            with self.assertRaises(ValueError):
+                ci.qualified_binding(root,{'attempt':1,'candidate_sha256':'candidate'},{'required_cases':20})
+
     def test_nested_evaluator_wheel_cannot_substitute_another_candidate(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); (root/'package/candidate').mkdir(parents=True)
@@ -85,7 +100,7 @@ class GeneratedCI(unittest.TestCase):
                 z.writestr('cann_bench/swi_glu.py',b'original');z.writestr('cann_bench/_pyasc_runtime.py',b'helper')
             prepared={'files':{'candidate/swi_glu.py':'candidate-digest','candidate/_pyasc_runtime.py':ci.smoke.sha(helper)},
                 'runtime_bundle_sha256':ci.PIN['runtime_bundle_sha256'],'catalog':{},'wheel_sha256':hashlib.sha256(wheel.getvalue()).hexdigest()}
-            with patch.object(ci,'inputs',return_value={}),patch.object(ci.smoke,'verify',return_value=prepared):
+            with patch.object(ci,'inputs',return_value={}),patch.object(ci,'qualified_binding'),patch.object(ci.smoke,'verify',return_value=prepared):
                 with self.assertRaisesRegex(ValueError,'Source/wheel candidate mismatch'): ci.generated_binding(root)
 
 if __name__=='__main__': unittest.main()

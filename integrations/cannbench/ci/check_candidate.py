@@ -1,4 +1,5 @@
 """Numerical preflight in the pinned CI simulator, separate from NPU acceptance."""
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -32,4 +33,5 @@ for dtype in (torch.float16, torch.bfloat16, torch.float32):
         results.append({'shape': list(shape), 'dtype': str(dtype), 'dim': dim, 'passed': True})
         print('PASS', results[-1], flush=True)
 output.write_text(json.dumps({'passed': True, 'cases': results,
+    'candidate_sha256': hashlib.sha256((source/'swi_glu.py').read_bytes()).hexdigest(),
     'scope': 'representative simulator checks with import adapter; exact packaged runtime qualified separately'}, indent=2)+'\n')

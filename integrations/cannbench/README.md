@@ -5,7 +5,9 @@ The minimal supported path checks one **SwiGlu** candidate against the current
 public task contract. It uses the existing service adapter and strict hardware
 result checker; the older full-catalog worker campaign is not required.
 
-This is a manually invoked, credit-consuming check, not a PR CI job. The shipped
+The reference smoke below is manually invoked and credit-consuming, not a PR
+CI job. A separate [manual CI dispatch](#one-fresh-candidate-through-ci) evaluates
+a freshly generated candidate. The shipped
 kernel is a historical PyASC reference, not a newly generated candidate. A pass
 establishes packaged-kernel correctness and timings on the reported runner only.
 It does not qualify fresh generation, all operators, local hardware, or the
