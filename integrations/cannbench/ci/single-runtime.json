@@ -5,5 +5,5 @@
   "compile_image_id": "sha256:afcfbbdff6a668e9e2f6fd72dada34aa5a3218a4877fdabfc3ef917f11ab579b",
   "model": "gateway/glm-5.3",
   "profile": "cloud-glm-5.3",
-  "scope": "One freshly generated SwiGlu candidate; runtime bytes must match the compile image before qualification."
+  "scope": "One generated operator at a time; runtime bytes must match the compile image before qualification."
 }

@@ -40,10 +40,39 @@ class Smoke(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'hash mismatch'):
                 smoke.make_bundle(runtime, '0'*64, root, '2.0.0', root/'wrong.zip')
 
+    def test_selected_operator_drives_task_package_and_submission(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);runtime=root/'runtime-cp312-cp312-linux_x86_64.whl'
+            with zipfile.ZipFile(runtime,'w') as z:
+                for name in ('asc/__init__.py','asctile/__init__.py','pybind11/__init__.py',
+                             'asc/_C/libpyasc.so','old.dist-info/licenses/PYASC-LICENSE'):
+                    z.writestr(name,b'pass\n')
+            for name in ('other.py','_pyasc_runtime.py'): (root/name).write_text('pass\n')
+            spec={'operator':'Other','function_name':'other','rel_path':'level1/other','case_count':1}
+            benchmark={'slug':'official-tasks','submission_version':'2.0.0','accepted_submission_versions':['2.0.0'],'multi_operators':[spec]}
+            task={'benchmark_slug':'official-tasks','operator':'Other','function_name':'other','cases_yaml':[{'case_id':0}]}
+            queue=Mock(target_hardware='950pr',benchmark_slug='official-tasks')
+            queue._client.list_benchmarks.return_value={'benchmarks':[benchmark]}
+            queue._client.get_benchmark_task.return_value=task
+            queue._client._get_json.return_value={'schemes':[{'code':'agg_test'}]}
+            args=SimpleNamespace(operator='Other',function='other',run_dir=root/'run',kernel_dir=root,
+                runtime_bundle=runtime,runtime_sha256=smoke.sha(runtime),aggregation_token='agg_test')
+            manifest=smoke.prepare(args,queue)
+            self.assertIn('candidate/other.py',manifest['files'])
+            with zipfile.ZipFile(root/'run/submission.zip') as archive:
+                self.assertIn('cann_bench/other.py',archive.namelist());self.assertNotIn('cann_bench/swi_glu.py',archive.namelist())
+                self.assertIn(b'from .other import other',archive.read('cann_bench/__init__.py'))
+            ledger=root/'ledger';ledger.mkdir();queue._client.list_jobs.return_value={'jobs':[]}
+            queue._submit_streaming.return_value={'job_id':'job_other'}
+            smoke.submit_once(queue,root/'run',ledger)
+            self.assertEqual(queue._submit_streaming.call_args.args[1],['other'])
+            queue._client.get_benchmark_task.return_value=dict(task,function_name='swi_glu')
+            with self.assertRaisesRegex(ValueError,'task identity'): smoke.task_snapshot(queue,'Other','other')
+
     def prepared(self, root):
         run=root/'run'; run.mkdir(); ledger=root/'ledger'; ledger.mkdir()
         (run/'submission.zip').write_bytes(b'archive')
-        manifest={'files':{'submission.zip':smoke.sha(run/'submission.zip')}, 'catalog':{'benchmark_slug':'official-tasks'}, 'target_hardware':'950pr'}
+        manifest={'files':{'submission.zip':smoke.sha(run/'submission.zip')}, 'catalog':{'benchmark_slug':'official-tasks','operators':[{'operator':'SwiGlu','function_name':'swi_glu'}]}, 'target_hardware':'950pr'}
         smoke.save(run/'manifest.json',manifest)
         state={'phase':'upload-intent', 'run_dir':str(run), 'manifest_sha256':smoke.sha(run/'manifest.json'),
                'archive_sha256':manifest['files']['submission.zip'], 'job_tag':'pyasc-smoke-test',

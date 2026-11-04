@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One external SwiGlu hardware check: prepare, submit once, collect by GET.
+"""One external operator hardware check: prepare, submit once, collect by GET.
 
 No generation campaign, remote shell, automatic retries or in-repo evidence.
 The runtime bundle is supplied separately; never download it implicitly.
@@ -48,16 +48,16 @@ def client(credentials):
     return EvalQueue()
 
 
-def task_snapshot(queue):
+def task_snapshot(queue, operator='SwiGlu', function='swi_glu'):
     before = next(b for b in queue._client.list_benchmarks()['benchmarks']
                   if b['slug'] == queue.benchmark_slug)
     version = before['submission_version']
     if not re.fullmatch(r'\d+\.\d+\.\d+', version) or version not in before['accepted_submission_versions']:
         raise ValueError('Unsupported submission version')
-    spec = next(o for o in before['multi_operators'] if o['operator'] == 'SwiGlu')
-    task = queue._client.get_benchmark_task(queue.benchmark_slug, 'SwiGlu')
-    if (task['benchmark_slug'] != queue.benchmark_slug or task['operator'] != 'SwiGlu'
-            or task['function_name'] != 'swi_glu' or spec['function_name'] != 'swi_glu'):
+    spec = next(o for o in before['multi_operators'] if o['operator'] == operator)
+    task = queue._client.get_benchmark_task(queue.benchmark_slug, operator)
+    if (task['benchmark_slug'] != queue.benchmark_slug or task['operator'] != operator
+            or task['function_name'] != function or spec['function_name'] != function):
         raise ValueError('Unexpected task identity')
     ids = [spec['rel_path'] + '_' + str(c['case_id']) for c in task['cases_yaml']]
     if len(ids) != spec['case_count'] or len(ids) != len(set(ids)) or not ids:
@@ -71,8 +71,10 @@ def task_snapshot(queue):
             'operators': [dict(spec, case_ids=ids)]}, task
 
 
-def make_bundle(runtime, expected_hash, sources, version, destination):
+def make_bundle(runtime, expected_hash, sources, version, destination, function='swi_glu'):
     """Keep only runtime, licenses and the selected kernel; rebuild wheel RECORD."""
+    if not re.fullmatch(r'[a-z][a-z0-9_]*', function):
+        raise ValueError('Invalid operator function')
     if sha(runtime) != expected_hash:
         raise ValueError('Runtime bundle hash mismatch')
     if not runtime.name.endswith('-cp312-cp312-linux_x86_64.whl'):
@@ -93,11 +95,11 @@ def make_bundle(runtime, expected_hash, sources, version, destination):
             or not any(n.startswith('asc/_C/libpyasc') and n.endswith('.so') for n in contents)
             or not any('PYASC-LICENSE' in n for n in contents)):
         raise ValueError('Expected self-contained PyASC runtime, pybind11 and licenses')
-    for name in ('swi_glu.py', '_pyasc_runtime.py'):
+    for name in (function+'.py', '_pyasc_runtime.py'):
         data = (sources / name).read_bytes()
         compile(data, name, 'exec')
         contents['cann_bench/' + name] = data
-    contents['cann_bench/__init__.py'] = b'from .swi_glu import swi_glu\n__all__ = ["swi_glu"]\n'
+    contents['cann_bench/__init__.py'] = f'from .{function} import {function}\n__all__ = ["{function}"]\n'.encode()
     contents[metadata + 'METADATA'] = (f'Metadata-Version: 2.1\nName: cann_bench\nVersion: {version}\n'
                                       'Requires-Python: >=3.12,<3.13\n\n').encode()
     contents[metadata + 'WHEEL'] = b'Wheel-Version: 1.0\nGenerator: pyasc-cannbench-smoke\nRoot-Is-Purelib: false\nTag: cp312-cp312-linux_x86_64\n'
@@ -154,23 +156,24 @@ setup(name="cann_bench", version="{version}", packages=["cann_bench"],
 
 def prepare(args, queue):
     args.run_dir.mkdir(parents=True, exist_ok=False)
-    catalog, task = task_snapshot(queue)
+    operator, function = getattr(args, 'operator', 'SwiGlu'), getattr(args, 'function', 'swi_glu')
+    catalog, task = task_snapshot(queue, operator, function)
     schemes = queue._client._get_json('/api/workspace/aggregation-schemes/options')['schemes']
     if not any(item['code'] == args.aggregation_token for item in schemes):
         raise ValueError('Select an aggregation scheme owned by or shared with this account')
     save(args.run_dir / 'catalog.json', catalog)
     save(args.run_dir / 'task.json', task)
     sources = args.run_dir / 'candidate'; sources.mkdir()
-    for name in ('swi_glu.py', '_pyasc_runtime.py'):
+    for name in (function+'.py', '_pyasc_runtime.py'):
         (sources / name).write_bytes((args.kernel_dir / name).read_bytes())
     wheel_hash = make_bundle(args.runtime_bundle, args.runtime_sha256, sources,
-                             catalog['benchmark_version'], args.run_dir / 'submission.zip')
+                             catalog['benchmark_version'], args.run_dir / 'submission.zip', function)
     manifest = {'prepared_at': now(), 'scope': 'one-operator hardware smoke; generation provenance recorded separately',
                 'target_hardware': queue.target_hardware, 'catalog': catalog,
                 'aggregation_token': args.aggregation_token,
                 'runtime_bundle_sha256': args.runtime_sha256, 'wheel_sha256': wheel_hash,
                 'files': {name: sha(args.run_dir / name) for name in
-                          ('submission.zip', 'catalog.json', 'task.json', 'candidate/swi_glu.py', 'candidate/_pyasc_runtime.py')},
+                          ('submission.zip', 'catalog.json', 'task.json', 'candidate/'+function+'.py', 'candidate/_pyasc_runtime.py')},
                 'source_hashes': {str(p.relative_to(ROOT)): sha(p) for p in
                                  (Path(__file__), HERE/'workers/evalqueue.py', HERE/'ci/hardware_gate.py')},
                 'command': sys.argv}
@@ -213,7 +216,11 @@ def submit_once(queue, run, ledger):
     jobs = queue._client.list_jobs(limit=100).get('jobs', [])
     if any(j.get('status') not in TERMINAL for j in jobs):
         raise ValueError('An account job is active or unknown; collect it first')
-    current, task = task_snapshot(queue)
+    operators = manifest['catalog'].get('operators', [])
+    if len(operators) != 1:
+        raise ValueError('Prepared catalog must select exactly one operator')
+    selected = operators[0]
+    current, task = task_snapshot(queue, selected['operator'], selected['function_name'])
     if current != manifest['catalog'] or task != json.loads((run/'task.json').read_text()):
         raise ValueError('Task/version changed since prepare; prepare a new run')
     state = {'phase': 'upload-intent', 'created_at': now(), 'run_dir': str(run),
@@ -223,7 +230,7 @@ def submit_once(queue, run, ledger):
     save(record, state); save(run/'state.json', state)
     # Intent is durable before POST. Exceptions leave it unresolved; collect uses GET only.
     try:
-        posted = queue._submit_streaming(str(run/'submission.zip'), ['swi_glu'], state['job_tag'],
+        posted = queue._submit_streaming(str(run/'submission.zip'), [selected['function_name']], state['job_tag'],
                                          aggregation_token=manifest['aggregation_token'])
     except Exception as exc:
         from evalqueue import SubmissionRejected

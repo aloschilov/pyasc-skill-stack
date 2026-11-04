@@ -51,9 +51,15 @@ global_tensor -> copy_in -> asctile compute -> copy_out
 ```
 
 Run `python3 -m py_compile` immediately. Then self-review every host route,
-local shape, dtype cast, tail, and output shape. A different worker/model must
-perform acceptance review; it may repair the candidate but must preserve the
-full contract.
+local shape, dtype cast, tail, and output shape. Perform acceptance review in a
+fresh session/worker; the same configured model is allowed. Record actual model
+and session IDs: a fresh session is not an independent-model review. Preserve
+the reviewed candidate hash and findings. A repair creates a new candidate that
+must be reviewed and qualified again. If only self-review ran, record that
+limitation; do not silently count it as the separate review phase.
+
+These phases require a caller to arrange the handoffs. A compile/numerical CI
+job does not by itself execute the review or tuning phases.
 
 For worker provenance record:
 

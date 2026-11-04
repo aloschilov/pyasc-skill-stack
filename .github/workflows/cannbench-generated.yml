@@ -1,10 +1,13 @@
-name: Generated SwiGlu hardware evaluation
+name: Generated operator hardware evaluation
 
 on:
   workflow_call:
     inputs:
       action:
         required: true
+        type: string
+      operator:
+        default: 'swi_glu'
         type: string
       origin_run:
         default: ''
@@ -23,7 +26,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  generated-swiglu:
+  generated-operator:
     if: github.event_name == 'workflow_dispatch' && github.repository == 'aloschilov/pyasc-skill-stack'
     runs-on: cannbench-vm
     timeout-minutes: 240
@@ -38,6 +41,7 @@ jobs:
       BENCHSITE_API_TOKEN: ${{ secrets.BENCHSITE_API_TOKEN }}
       OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
       GH_TOKEN: ${{ github.token }}
+      CANNBENCH_OPERATOR: ${{ inputs.operator }}
       REQUEST_ACTION: ${{ inputs.action }}
       REQUEST_ORIGIN: ${{ inputs.origin_run }}
     steps:
@@ -95,7 +99,7 @@ jobs:
         id: prepared
         uses: actions/upload-artifact@v4
         with:
-          name: generated-swiglu-prepared-${{ github.run_id }}-${{ github.run_attempt }}
+          name: generated-operator-prepared-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ env.CANNBENCH_RESULTS }}
           if-no-files-found: error
           retention-days: 90
@@ -112,7 +116,7 @@ jobs:
         if: inputs.action != 'resume' && always() && steps.prepared.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: generated-swiglu-submitted-${{ github.run_id }}-${{ github.run_attempt }}
+          name: generated-operator-submitted-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ env.CANNBENCH_RESULTS }}
           if-no-files-found: error
           retention-days: 90
@@ -144,7 +148,7 @@ jobs:
           if ! gh release view "$QUALIFICATION_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create "$QUALIFICATION_TAG" --repo "$GITHUB_REPOSITORY" \
               --target "$QUALIFICATION_COMMIT" --prerelease \
-              --title "Generated SwiGlu qualification $CANNBENCH_ORIGIN_RUN" \
+              --title "Generated operator qualification $CANNBENCH_ORIGIN_RUN" \
               --notes-file "$CANNBENCH_RESULTS/RESULT.md"
           fi
           for asset in "$QUALIFICATION_ARCHIVE" "$QUALIFICATION_CHECKSUM" "$CANNBENCH_RESULTS/RESULT.md"; do
@@ -173,7 +177,7 @@ jobs:
         if: always() && env.CANNBENCH_RESULTS != ''
         uses: actions/upload-artifact@v4
         with:
-          name: generated-swiglu-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          name: generated-operator-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ env.CANNBENCH_RESULTS }}
           if-no-files-found: warn
           retention-days: 90

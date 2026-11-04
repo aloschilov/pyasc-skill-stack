@@ -10,8 +10,8 @@ collector also uses the same renderer; its campaign is not a current CI lane.
 
 The default profile requires `OPENCODE_BASE_URL` (an OpenAI-compatible endpoint)
 and `OPENCODE_API_KEY`. Supply both through your existing credential mechanism.
-It selects `gateway/glm-5.3`, with a 32768-token output limit and reasoning
-disabled. The endpoint must actually offer that model; a template does not
+It selects `gateway/glm-5.3`, with a 32768-token output limit and enabled thinking, requesting high reasoning
+effort. The endpoint must actually offer that model; a template does not
 establish provider availability.
 
 ```bash
@@ -32,7 +32,7 @@ logs. Use `--out /dev/null` for a credential-presence check.
 
 | Templates | Configuration |
 |---|---|
-| `cloud-glm-5.3` | Current qualified gateway profile; `OPENCODE_BASE_URL`, `OPENCODE_API_KEY` |
+| `cloud-glm-5.3` | Gateway profile (see qualification scope below); `OPENCODE_BASE_URL`, `OPENCODE_API_KEY` |
 | `cloud-default` and other `cloud-*` templates | Historical DashScope configurations; `DASHSCOPE_API_KEY` |
 | `local-*` templates | Ollama configurations; `OLLAMA_BASE_URL` |
 
@@ -53,9 +53,19 @@ with `--allow-root DIR`; no personal workspace layout is required.
 skills from a user's global configuration and is not, by itself, a controlled
 skills-on/off experiment.
 
-GLM-5.3 uses forced thinking; its profile requests enabled thinking with low
-reasoning effort, not unsupported `thinking.type=disabled`. See the
-[provider's thinking contract](https://docs.z.ai/guides/capabilities/thinking-mode).
-A gateway may translate model options; recorded configuration is the request,
-not proof of an effective internal reasoning budget or model revision. Retain
-actual session/usage evidence alongside it.
+## Reasoning and qualification scope
+
+GLM-5.3 uses [forced thinking](https://docs.z.ai/guides/capabilities/thinking-mode).
+Use only `reasoningEffort: "high"` in this OpenCode profile. OpenCode 1.19.0
+[translates it to wire field `reasoning_effort`](https://github.com/anomalyco/opencode/blob/v1.19.0/packages/llm/src/protocols/openai-chat.ts);
+configuring both names is redundant. A loopback HTTP serialization probe against
+the installed 1.19.0 CLI confirmed enabled thinking and `reasoning_effort=high`;
+it did not invoke a remote model. A gateway may still translate these options,
+so retain actual session/usage evidence rather than infer an internal budget.
+
+The [archived hardware qualification](../../../docs/hardware-lane.md) used the
+then-current low-effort profile. Changing the request to high effort does not
+requalify that configuration or rewrite the archived run. The bounded CANNBench
+CI caller overrides the output cap to 24000 tokens, including reasoning; it
+retains the model response and blocks incomplete candidates instead of treating
+a token-limited response as success.

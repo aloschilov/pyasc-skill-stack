@@ -20,12 +20,77 @@ class GeneratedCI(unittest.TestCase):
     def test_publication_credential_is_scoped_to_release_step(self):
         import yaml
         workflow=yaml.safe_load((ROOT/'.github/workflows/cannbench-generated.yml').read_text())
-        job=workflow['jobs']['generated-swiglu']
+        job=workflow['jobs']['generated-operator']
         self.assertNotIn('QUALIFICATION_PUBLISH_TOKEN',json.dumps(job['env']))
         uses=[step for step in job['steps'] if 'secrets.QUALIFICATION_PUBLISH_TOKEN' in json.dumps(step)]
         self.assertEqual(len(uses),1)
         self.assertEqual(uses[0]['name'],'Publish durable qualification and verify downloaded archive')
         self.assertEqual(uses[0]['env']['GH_TOKEN'],'${{ secrets.QUALIFICATION_PUBLISH_TOKEN || github.token }}')
+
+    def test_checkpoint_recovery_accepts_new_and_historical_names(self):
+        for prefix in ('generated-operator', 'generated-swiglu'):
+            with tempfile.TemporaryDirectory() as tmp, patch.dict('os.environ', {'GITHUB_REPOSITORY':'owner/repo'}):
+                root=Path(tmp)/'restored';name=f'{prefix}-evidence-123-2'
+                responses=[json.dumps({'event':'workflow_dispatch','head_repository':{'full_name':'owner/repo'},'head_sha':'revision'}),
+                    json.dumps({'artifacts':[{'name':name,'expired':False}]})]
+                with patch.object(ci.subprocess,'check_output',side_effect=responses), patch.object(ci.subprocess,'run') as download, \
+                     patch.object(ci,'inputs',return_value={'origin_run_id':'123','skill_stack_commit':'revision'}):
+                    ci.restore_checkpoint(root,'123')
+                    self.assertIn(name,download.call_args.args[0])
+
+    def test_recipe_selection_is_validated_before_generation(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict('os.environ', {'CANNBENCH_OPERATOR':'not_supported'}), \
+             patch.object(ci, 'ci_client') as network, patch.object(ci, 'call') as model:
+            root=Path(tmp)/'new'
+            with self.assertRaisesRegex(ValueError, 'Unsupported operator'): ci.generate(root)
+            self.assertFalse(root.exists());network.assert_not_called();model.assert_not_called()
+        for invalid in ('../swi_glu', '/tmp/swi_glu', 'swi_glu;echo'):
+            with self.assertRaises(ValueError): ci.load_recipe(invalid)
+
+    def test_recipe_uses_snapshot_and_rejects_task_mismatch(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp, patch.dict('os.environ', {'GITHUB_REPOSITORY':'owner/repo', 'CANNBENCH_OPERATOR':'ignored'}):
+            root=Path(tmp);self.qualified_parent(root)
+            directory=root/'source/integrations/cannbench/ci/operators'
+            shutil.copytree(ROOT/'integrations/cannbench/ci/operators', directory)
+            meta=ci.load(root/'run.json');meta.update(operator_recipe='swi_glu',source_hashes=ci.hashes(root/'source'))
+            ci.save(root/'run.json', meta)
+            ci.save(root/'catalog.json', {'operators':[{'operator':'SwiGlu','function_name':'swi_glu'}]})
+            self.assertEqual(ci.inputs(root)['operator_recipe'],'swi_glu')
+            self.assertEqual(ci.run_recipe(root)['numerical_cases'],12)
+            ci.save(root/'catalog.json', {'operators':[{'operator':'Other','function_name':'other'}]})
+            with self.assertRaisesRegex(ValueError,'differs from its operator'): ci.inputs(root)
+
+    def test_other_recipe_has_its_own_numerical_acceptance_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);self.qualified_parent(root)
+            directory=root/'source/integrations/cannbench/ci/operators';directory.mkdir(parents=True)
+            ci.save(directory/'other.json', {'operator':'Other','function':'other','prompt':'prompt.txt',
+                'numerical_probe':'probe.py','numerical_cases':2})
+            (directory/'prompt.txt').write_text('other contract');(directory/'probe.py').write_text('# offline fixture')
+            meta=ci.load(root/'run.json');meta['operator_recipe']='other';ci.save(root/'run.json',meta)
+            attempt=root/'generation/attempt-1';digest=ci.smoke.sha(attempt/'original-candidate.py')
+            gen={'attempt':1,'candidate_sha256':digest}
+            with self.assertRaisesRegex(ValueError,'simulator preflight'): ci.qualified_binding(root,gen,{'required_cases':20})
+            ci.save(attempt/'simulator.json', {'passed':True,'cases':[{'passed':True}]*2,'candidate_sha256':digest})
+            ci.qualified_binding(root,gen,{'required_cases':20})
+
+    def test_compile_coverage_cannot_pass_blocked_or_empty_modules(self):
+        import os, subprocess, yaml
+        workflow=yaml.safe_load((ROOT/'.github/workflows/ci.yml').read_text())
+        step=next(s for s in workflow['jobs']['merge-gate']['steps'] if s.get('name')=='Compile-check the AscTile target suite')
+        script=step['run'].replace('${{ github.run_id }}','offline').replace('${{ env.PYASC_SIM_IMAGE }}','unused')
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);target=root/'reference/asctile/target';target.mkdir(parents=True)
+            binary=root/'bin';binary.mkdir();docker=binary/'docker'
+            docker.write_text('#!/bin/sh\n[ "$1" = rm ] && exit 0\nexit "$PROBE_EXIT"\n');docker.chmod(0o755)
+            env=dict(os.environ, PATH=str(binary)+':'+os.environ['PATH'])
+            for code, files in ((0,True),(2,True),(1,True),(0,False)):
+                test=target/'test_fixture.py'
+                if files: test.touch()
+                elif test.exists(): test.unlink()
+                result=subprocess.run(['bash','-c',script],cwd=root,env=dict(env,PROBE_EXIT=str(code)),capture_output=True,text=True)
+                self.assertEqual(result.returncode==0, code==0 and files, result.stdout+result.stderr)
 
     def qualified_parent(self, parent):
         attempt=parent/'generation/attempt-1';attempt.mkdir(parents=True)

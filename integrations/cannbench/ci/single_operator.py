@@ -29,6 +29,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 sys.path[:0] = [str(HERE.parent), str(HERE.parent / 'workers')]
 import smoke
+from operator_recipe import load_recipe, run_recipe
 from submission import save
 
 PIN = json.loads((HERE / 'single-runtime.json').read_text())
@@ -159,6 +160,12 @@ def inputs(root):
         raise ValueError('Run repository mismatch')
     check_hashes(root / 'source', meta['source_hashes'])
     check_hashes(root / 'context', meta['context_hashes'])
+    if 'operator_recipe' in meta:
+        recipe = run_recipe(root)
+        selected = load(root/'catalog.json')['operators']
+        if (len(selected) != 1 or selected[0]['operator'] != recipe['operator']
+                or selected[0]['function_name'] != recipe['function']):
+            raise ValueError('Run task differs from its operator recipe')
     if (root/'repair-lineage.json').exists():
         lineage = load(root/'repair-lineage.json')
         check_hashes(root/'parent-ci', lineage['parent_files'])
@@ -167,8 +174,8 @@ def inputs(root):
         lineage = load(root/'continuation-lineage.json')
         check_hashes(root/'qualified-parent', lineage['parent_files'])
         parent = load(root/'qualified-parent/run.json')
-        for key in ('skill_stack_commit', 'source_hashes', 'context_hashes', 'opencode_version'):
-            if meta[key] != parent[key]: raise ValueError('Continuation changed generation attribution: '+key)
+        for key in ('skill_stack_commit', 'source_hashes', 'context_hashes', 'opencode_version', 'operator_recipe'):
+            if meta.get(key) != parent.get(key): raise ValueError('Continuation changed generation attribution: '+key)
         check_hashes(root/'orchestration-source', meta['orchestration_source_hashes'])
     return meta
 
@@ -183,7 +190,7 @@ def qualified_binding(root, gen, catalog):
             or not lowering.get('runtime_files_verified')
             or lowering.get('candidate_sha256') != gen['candidate_sha256']):
         raise ValueError('Exact generated candidate lacks full pinned-runtime lowering')
-    if (numerical.get('passed') is not True or len(numerical.get('cases',[])) != 12
+    if (numerical.get('passed') is not True or len(numerical.get('cases',[])) != run_recipe(root)['numerical_cases']
             or any(c.get('passed') is not True for c in numerical['cases'])
             or numerical.get('candidate_sha256') != gen['candidate_sha256']):
         raise ValueError('Exact generated candidate lacks simulator preflight')
@@ -200,7 +207,7 @@ def generated_binding(root):
         raise ValueError('Incomplete native skill evidence')
     qualified_binding(root, gen, load(root/'catalog.json'))
     staged = smoke.verify(root / 'package')
-    if staged['files']['candidate/swi_glu.py'] != gen['candidate_sha256']:
+    if staged['files']['candidate/'+run_recipe(root)['function']+'.py'] != gen['candidate_sha256']:
         raise ValueError('Generated/packaged candidate mismatch')
     if staged['files']['candidate/_pyasc_runtime.py'] != smoke.sha(root / 'source/integrations/cannbench/smoke-kernel/_pyasc_runtime.py'):
         raise ValueError('Runtime helper mismatch')
@@ -213,7 +220,7 @@ def generated_binding(root):
         if hashlib.sha256(wheel).hexdigest() != staged['wheel_sha256']:
             raise ValueError('Packaged wheel mismatch')
         with zipfile.ZipFile(io.BytesIO(wheel)) as w:
-            for name in ('swi_glu.py', '_pyasc_runtime.py'):
+            for name in (run_recipe(root)['function']+'.py', '_pyasc_runtime.py'):
                 b = (root / 'package/candidate' / name).read_bytes()
                 if z.read('cann_bench/' + name) != b or w.read('cann_bench/' + name) != b:
                     raise ValueError('Source/wheel candidate mismatch')
@@ -297,7 +304,7 @@ def repair_seed(root, origin):
         log = attempt/'lowering.log'; meta = load(attempt/'lowering.log.meta.json')
         if not meta.get('exit') or smoke.sha(log) != meta['log_sha256']:
             raise ValueError('Missing exact interrupted-compiler evidence')
-        for path in ('project/candidate.py','candidate/swi_glu.py'):
+        for path in ('project/candidate.py','candidate/'+run_recipe(parent)['function']+'.py'):
             if smoke.sha(attempt/path) != smoke.sha(candidate):
                 raise ValueError('Interrupted compiler candidate mismatch')
     save(root/'repair-lineage.json', {'origin_run_id': origin, 'parent_commit': load(parent/'run.json')['skill_stack_commit'],
@@ -316,7 +323,7 @@ def qualified_generation(root):
     iteration = attempts[-1]
     original = iteration/'original-candidate.py'
     digest = smoke.sha(original)
-    for name in ('project/candidate.py', 'candidate/swi_glu.py'):
+    for name in ('project/candidate.py', 'candidate/'+run_recipe(root)['function']+'.py'):
         if smoke.sha(iteration/name) != digest: raise ValueError('Qualified candidate changed')
     if load(iteration/'static.json').get('passed') is not True: raise ValueError('Static checks did not pass')
     native = trace((iteration/'events.log').read_text(), Path(config['skills']['paths'][0]))
@@ -341,7 +348,8 @@ def qualified_generation(root):
 def prepare_qualified(root, generation, queue):
     runtime = Path(os.environ['CANNBENCH_RUNTIME_BUNDLE']).resolve()
     package_source = root/'generation'/f"attempt-{generation['attempt']}"/'candidate'
-    args = SimpleNamespace(run_dir=root/'package', kernel_dir=package_source, runtime_bundle=runtime,
+    recipe = run_recipe(root)
+    args = SimpleNamespace(operator=recipe['operator'], function=recipe['function'], run_dir=root/'package', kernel_dir=package_source, runtime_bundle=runtime,
         runtime_sha256=PIN['runtime_bundle_sha256'], aggregation_token=os.environ['CANNBENCH_AGGREGATION_TOKEN'])
     prepared = smoke.prepare(args, queue)
     if prepared['catalog'] != load(root/'catalog.json') or load(root/'package/task.json') != load(root/'task.json'):
@@ -392,11 +400,13 @@ def generate(root, repair_origin=''):
         return
     if root.exists():
         raise ValueError('Interrupted generation retained; start a distinct CI run, do not overwrite it')
+    recipe = load_recipe(os.environ.get('CANNBENCH_OPERATOR', 'swi_glu'))
     root.mkdir(parents=True)
     identity = ci_identity()
     source = root / 'source'; source.mkdir()
     archive = subprocess.check_output(['git', 'archive', identity['GITHUB_SHA']], cwd=ROOT)
     with tarfile.open(fileobj=io.BytesIO(archive)) as z: z.extractall(source, filter='data')
+    recipe = load_recipe(os.environ.get('CANNBENCH_OPERATOR', 'swi_glu'), source/'integrations/cannbench/ci/operators')
     context = root / 'context'; context.mkdir()
     shutil.copytree(source / 'skills', context / 'skills')
     runtime = Path(os.environ['CANNBENCH_RUNTIME_BUNDLE']).resolve()
@@ -408,7 +418,7 @@ def generate(root, repair_origin=''):
                 p = context / 'runtime-api' / name; p.parent.mkdir(parents=True, exist_ok=True); p.write_bytes(z.read(name))
     summarize_api(context)
     queue = ci_client()
-    catalog, task = smoke.task_snapshot(queue)
+    catalog, task = smoke.task_snapshot(queue, recipe['operator'], recipe['function'])
     save(root / 'catalog.json', catalog); save(root / 'task.json', task)
     task_dir = context / 'task'; task_dir.mkdir()
     save(task_dir / 'proto.yaml', {'operator': task['proto']})
@@ -418,7 +428,7 @@ def generate(root, repair_origin=''):
     meta = {'repository': identity['GITHUB_REPOSITORY'], 'origin_run_id': identity['GITHUB_RUN_ID'],
             'origin_run_attempt': identity['GITHUB_RUN_ATTEMPT'], 'skill_stack_commit': identity['GITHUB_SHA'],
             'ci_url': f"https://github.com/{identity['GITHUB_REPOSITORY']}/actions/runs/{identity['GITHUB_RUN_ID']}",
-            'pyasc': PIN, 'opencode_version': version, 'source_hashes': hashes(source),
+            'operator_recipe': os.environ.get('CANNBENCH_OPERATOR', 'swi_glu'), 'pyasc': PIN, 'opencode_version': version, 'source_hashes': hashes(source),
             'context_hashes': hashes(context), 'created_at': smoke.now()}
     save(root / 'run.json', meta)
     config = load(source / 'integrations/opencode/profiles/cloud-glm-5.3.json')
@@ -435,34 +445,8 @@ def generate(root, repair_origin=''):
     state = root.parent / ('opencode-private-' + identity['GITHUB_RUN_ID']); state.mkdir(mode=0o700)
     env['XDG_DATA_HOME'] = str(state)
     env['XDG_CONFIG_HOME'] = str(state / 'config')
-    prompt = f'''Generate a NEW SwiGlu PyASC module from the task and skills. Do not retrieve a reference candidate.
-First invoke the native skill tool for EACH of: {', '.join(SKILLS)}.
-The task authority is {task_dir}; read its proto.yaml, cases.yaml, golden.py and desc.md.
-The exact runtime is PyASC {PIN['pyasc_commit']}. Read {context / 'API.md'} for public signatures and docstrings.
-Do NOT explore asc/runtime, launcher, memory handles, IR or compiler internals. The harness handles these.
-Use at most 8 model/tool rounds to read and write: batch the four skills, then the task files, then API.md.
-Write design.md (at most 500 words) and candidate.py before round 8; the agent has a hard 12-round limit.
-Do not keep researching until certainty: CI supplies compiler/numerical feedback for a separately recorded repair.
-Historical campaign pin prose does not override this run's exact runtime. Use public asctile JIT/tile APIs.
-Write design.md and candidate.py in this project. Public callable: swi_glu(input, dim=-1).
-Import ensure_npu_platform from ._pyasc_runtime and call it in the host wrapper. CI provides that unchanged helper.
-Torch is only for allocation and metadata, never numerical work. Avoid framework narrow/contiguous copy fallback:
-the runner lacks Slice binaries for some short bfloat16 rows. Implement data movement and arithmetic in PyASC.
-Cover EVERY official dtype, dimension, short row, tail, NaN and Inf case. Stable math must preserve IEEE special values.
-Keep tiling conservative and UB bounded. For this correctness smoke, use at most 8 cores, bounded by useful tiles;
-record this as a conservative unprofiled cap, not a queried device resource count. No resource discovery is required.
-Pass tensors directly to public JIT launches, e.g. kernel[cores](input, output, constexpr_arguments); never data_ptr().
-Use stable 1D/2D memory APIs and padded aligned tile widths for short rows. No case-ID or benchmark-answer special cases.
-For short rows, use a 2D global_tensor view with aligned padded column tiles and explicit real_shape for logical bounds.
-Do not transfer single unaligned elements through a 1D tile. Keep the physical column offset independent of tail width:
-the tail starts after completed full tiles, never again at column zero. These are general memory-layout requirements.
-For this pinned compiler, prefer host-classified full/tail launches with compile-time valid column lengths;
-avoid a runtime Python if that reassigns a scalar bound inside nested tile loops. This is a conservative
-lowering strategy, not proof of the cause of a prior compiler timeout. Keep full and tail physical offsets correct.
-No compiler/runtime hacks. Do not install or execute anything here. CI will run static checks, exact-runtime lowering,
-representative simulator numerical checks, and the full official NPU evaluation. Performance improvement is not required.
-Read performance hints and record chosen/unmeasured options, but do not run an optimization campaign.
-Write the two files and stop.'''
+    prompt = (source/'integrations/cannbench/ci/operators'/recipe['prompt']).read_text().format(
+        skills=', '.join(SKILLS), task_dir=task_dir, pyasc_commit=PIN['pyasc_commit'], api=context/'API.md')
     seed, feedback = repair_seed(root, repair_origin) if repair_origin else (None, '')
     import driver
     for attempt in range(1, 4):
@@ -483,14 +467,14 @@ Write the two files and stop.'''
             if before and candidate.is_file() and smoke.sha(candidate) == before:
                 raise ValueError('Model did not change the failed candidate; no blind repair retry')
             if not (project / 'design.md').is_file(): raise ValueError('Missing generated design')
-            problems = driver.static_check(candidate, 'swi_glu', task_dir)
+            problems = driver.static_check(candidate, recipe['function'], task_dir)
             save(iteration / 'static.json', {'passed': not problems, 'errors': problems})
             if problems: raise ValueError('; '.join(problems))
             original = iteration / 'original-candidate.py'; shutil.copy2(candidate, original)
             package_source = iteration / 'candidate'; package_source.mkdir()
-            shutil.copy2(candidate, package_source / 'swi_glu.py')
+            shutil.copy2(candidate, package_source / (recipe['function']+'.py'))
             shutil.copy2(source / 'integrations/cannbench/smoke-kernel/_pyasc_runtime.py', package_source / '_pyasc_runtime.py')
-            if smoke.sha(candidate) == smoke.sha(source / 'integrations/cannbench/smoke-kernel/swi_glu.py'):
+            if recipe.get('reference') and smoke.sha(candidate) == smoke.sha(source / 'integrations/cannbench'/recipe['reference']):
                 raise ValueError('Reference candidate substitution rejected')
             actual = subprocess.check_output(['docker', 'image', 'inspect', PIN['compile_image'], '--format', '{{.Id}}'], text=True).strip()
             if actual != PIN['compile_image_id']: raise ValueError('Compiler image differs from qualified image')
@@ -499,8 +483,8 @@ Write the two files and stop.'''
                   '--label', 'pyasc.ci.repository='+identity['GITHUB_REPOSITORY'],
                   '-v', str(source)+':/workspace:ro', '-v', str(root)+':/evidence', '-v', str(runtime)+':/runtime.whl:ro',
                   PIN['compile_image'], '-k', '10', '540', 'python', '-u', 'integrations/cannbench/ci/single_qualify.py',
-                  '--candidate', '/evidence/'+str((package_source/'swi_glu.py').relative_to(root)),
-                  '--task-dir', '/evidence/context/task', '--runtime', '/runtime.whl',
+                  '--candidate', '/evidence/'+str((package_source/(recipe['function']+'.py')).relative_to(root)),
+                  '--function', recipe['function'], '--task-dir', '/evidence/context/task', '--runtime', '/runtime.whl',
                   '--output', '/evidence/'+str((iteration/'lowering.json').relative_to(root))], iteration/'lowering.log', timeout=600)
             image = load(source/'reference/images/ENV.json')['dev_image']['ref']
             call(['docker', 'run', '--rm', '--network', 'none', '--ulimit', 'nofile=65536:65536',
@@ -508,10 +492,10 @@ Write the two files and stop.'''
                   '--label', 'pyasc.ci.repository='+identity['GITHUB_REPOSITORY'],
                   '-v', str(source)+':/workspace:ro', '-v', str(root)+':/evidence', '-w', '/tmp',
                   '-e', 'HOME=/tmp', '-e', 'PYASC_CACHE_DIR=/tmp/cache', '-e', 'PYASC_DUMP_PATH=/tmp/dumps',
-                  image, 'timeout', '300', 'python3.11', '/workspace/integrations/cannbench/ci/check_candidate.py',
+                  image, 'timeout', '300', 'python3.11', '/workspace/integrations/cannbench/ci/operators/'+recipe['numerical_probe'],
                   '/evidence/'+str(package_source.relative_to(root)), '/evidence/'+str((iteration/'simulator.json').relative_to(root))],
                   iteration/'simulator.log', timeout=330)
-            if smoke.sha(original) != smoke.sha(candidate) or smoke.sha(candidate) != smoke.sha(package_source/'swi_glu.py'):
+            if smoke.sha(original) != smoke.sha(candidate) or smoke.sha(candidate) != smoke.sha(package_source/(recipe['function']+'.py')):
                 raise ValueError('Candidate changed during qualification')
             inputs(root)
             generation = {'model': MODEL, 'provider_model_revision': 'unknown', 'opencode_version': version,
@@ -582,7 +566,9 @@ def restore_checkpoint(root, origin):
     if run['event'] != 'workflow_dispatch' or run['head_repository']['full_name'] != repo:
         raise ValueError('Resume origin must be a trusted manual run of this repository')
     payload = json.loads(subprocess.check_output(['gh', 'api', f'repos/{repo}/actions/runs/{origin}/artifacts?per_page=100']))
-    prefixes = {f'generated-swiglu-{phase}-{origin}-': rank for rank, phase in enumerate(('prepared','submitted','evidence'))}
+    prefixes = {f'{kind}-{phase}-{origin}-': rank
+                for kind in ('generated-swiglu', 'generated-operator')
+                for rank, phase in enumerate(('prepared','submitted','evidence'))}
     choices = []
     for artifact in payload['artifacts']:
         for prefix, rank in prefixes.items():
@@ -676,7 +662,7 @@ def publish(root):
         if c.get('accuracy', {}).get('passed') is not True or not c.get('op_times',{}).get('device_kernels'):
             raise ValueError('Missing case numerical or device-kernel evidence')
     generation_ci = meta.get('generation_ci', meta)
-    rows = ['# Generated SwiGlu: verified CANNBench result', '',
+    rows = [f"# Generated {run_recipe(root)['operator']}: verified CANNBench result", '',
             f"Model: `{MODEL}`; provider revision: unknown. OpenCode: `{meta['opencode_version']}`.",
             f"Skill stack: `{meta['skill_stack_commit']}`. PyASC: `{PIN['pyasc_commit']}`.",
             f"[Generation CI]({generation_ci['ci_url']}), attempt {generation_ci['origin_run_attempt']}; model attempt {gen['attempt']}.",
@@ -727,10 +713,11 @@ def verify_archive(archive, root):
 
 
 def publication_outputs(root, archive, meta):
+    operator = meta.get('operator_recipe', 'swiglu')  # Preserve historical release tags.
     checksum=archive.with_suffix(archive.suffix+'.sha256')
     checksum.write_text(smoke.sha(archive)+'  '+archive.name+'\n')
     with open(os.environ['GITHUB_OUTPUT'],'a') as out:
-        out.write(f'archive={archive}\nchecksum={checksum}\ntag=qualification-swiglu-{meta["origin_run_id"]}\ncommit={meta["skill_stack_commit"]}\n')
+        out.write(f'archive={archive}\nchecksum={checksum}\ntag=qualification-{operator}-{meta["origin_run_id"]}\ncommit={meta["skill_stack_commit"]}\n')
     with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as out: out.write((root/'RESULT.md').read_text())
 
 

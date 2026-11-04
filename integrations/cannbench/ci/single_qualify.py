@@ -13,6 +13,7 @@ import local_compile_gate as gate
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument('--function', required=True)
     ap.add_argument('--candidate', type=Path, required=True)
     ap.add_argument('--task-dir', type=Path, required=True)
     ap.add_argument('--runtime', type=Path, required=True)
@@ -37,7 +38,7 @@ def main():
         print('Lowering completed:', jit.fn.__name__, flush=True)
         return result
     gate.compile_specialization = observed_compile
-    report = gate.evaluate(args.candidate, 'swi_glu', args.task_dir / 'cases.yaml',
+    report = gate.evaluate(args.candidate, args.function, args.task_dir / 'cases.yaml',
                            json.loads((args.task_dir / 'proto.yaml').read_text()))
     report.update(runtime_bundle_sha256=pin['runtime_bundle_sha256'], runtime_files_verified=len(names),
                   candidate_sha256=hashlib.sha256(args.candidate.read_bytes()).hexdigest())

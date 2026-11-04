@@ -1,42 +1,23 @@
-# Minimal delivery roadmap
+# Delivery roadmap
 
-Updated 2026-11-04 UTC. The primary workflow is OpenCode plus PyASC skills in the
-execution environment, using a full checkout or skills installed from it.
-Generation needs one available model; hardware evaluation need not involve
-remote-shell access. The archived multi-model campaign is not a prerequisite.
+The supported path is OpenCode with PyASC skills, from a full checkout or linked
+into a project. Use the pinned simulator for local checks and CANNBench for
+external hardware measurements. The [recorded one-operator result](hardware-lane.md)
+closes a bounded generation-to-measurement loop, not a performance campaign.
 
-1. **Stabilize the existing workflow.** Keep installer safety, pinned simulator
-   verification, numerical controls and regression tests. Require real `pr-gate`
-   and `examples-gate` success on the submitted head. No SSH runtime backend.
-2. **Check one operator on hardware through CANNBench.** Prepare a self-contained
-   SwiGlu package, snapshot the live task/version, submit explicitly and retain
-   the exact package and job identity outside checkout. Accept only complete
-   official-case correctness, zero anti-cheat failures and final hardware
-   timings. See [the smoke procedure](../integrations/cannbench/README.md).
-   Completed for the repaired reference at `38951c4`: 20/20 on 2026-11-02;
-   [archived qualification and scope](hardware-lane.md).
-   A reference-kernel smoke is not evidence of fresh model generation.
-3. **Then test one generated candidate.** Use one configured OpenCode model and
-   the current task contract; package its candidate with a compatible runtime.
-   Compare the service's correctness and timing results with the reference.
-   Performance hints guide changes; measured results determine whether they help.
-   Publish the score through a specific CI run only with the complete
-   [generation-to-metric provenance](verification-contract.md#attributing-a-cannbench-score-to-generated-code).
-   The generated GLM-5.3 candidate passed 20/20 in CI-controlled CANNBench
-   evaluation on 2026-11-03, with a measured score and complete provenance.
-   CI published and verified the unchanged qualification archive in a durable
-   Release on 2026-11-04, completing this scoped milestone without another model
-   invocation or hardware run. The measured candidate is slower than baseline;
-   performance improvement remains future work.
-   See [the generated result and scope](hardware-lane.md).
+Next work, in order:
 
-The hardware smoke is manual and quota-consuming, separate from ordinary CI.
-Inspect remaining credits (the working budget is 10/day); do not schedule an
-automatic campaign. Reconcile ambiguous submissions by GET before further work.
-No broad operator sweep, nightly, standalone packaging redesign or remote
-execution backend is needed to close this first loop.
+1. Automate fresh-session review and bounded tuning handoffs without losing the
+   existing caller-managed skill loop; [issue #20](https://github.com/aloschilov/pyasc-skill-stack/issues/20)
+   defines acceptance. Keep actual model/session and candidate provenance.
+2. Add another operator recipe only with a task contract, adversarial numerical
+   preflight and explicit qualification. Shared CI should not gain operator-specific
+   branches. Unsupported recipes must fail before model or hardware use.
+3. Improve measured performance only after correctness. Retain a correct incumbent,
+   change one justified lever, and evaluate an explicitly authorized candidate
+   within available CANNBench quota. A hint in a skill is not a measured speedup.
 
-Store complete manifests, packages, logs and responses outside checkout. Keep
-only checks, small permanent fixtures and a concise qualification link/checksum
-in Git. Preserve historical evidence. Simulator and hardware scopes remain
-separate; a passed smoke does not qualify every generated kernel or runtime.
+Keep software checks independent of hardware availability. Require current-head
+PR gates; retain manifests, logs and candidates outside checkout, with durable
+links/checksums for accepted qualification. No SSH backend, broad nightly sweep
+or automatic credit-consuming retry is required for this path.

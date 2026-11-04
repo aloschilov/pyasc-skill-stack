@@ -12,9 +12,10 @@
         "glm-5.3": {
           "name": "GLM-5.3",
           "options": {
-            "thinking": {"type": "enabled"},
-            "reasoningEffort": "low",
-            "reasoning_effort": "low"
+            "thinking": {
+              "type": "enabled"
+            },
+            "reasoningEffort": "high"
           },
           "limit": {
             "context": 256000,

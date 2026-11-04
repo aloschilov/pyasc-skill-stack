@@ -1,8 +1,9 @@
 # One-operator CANNBench hardware smoke
 
 CANNBench provides external NPU evaluation without access to a hardware host.
-The minimal supported path checks one **SwiGlu** candidate against the current
-public task contract. It uses the existing service adapter and strict hardware
+The shared CI path checks one selected operator recipe against its current
+public task contract. **SwiGlu** is the currently qualified recipe and the
+standalone reference-smoke default. It uses the existing service adapter and strict hardware
 result checker; the older full-catalog worker campaign is not required.
 
 The reference smoke below is manually invoked and credit-consuming, not a PR
@@ -84,7 +85,8 @@ durable archive and publish only a short result, archive checksum and reference.
 ## One fresh candidate through CI
 
 The optional manual **CI** dispatch accepts `cannbench_action=generate` for one
-fresh `gateway/glm-5.3` SwiGlu generation and hardware evaluation. Ordinary PR
+fresh `gateway/glm-5.3` generation and hardware evaluation selected by `operator`
+(default `swi_glu`). Ordinary PR
 checks do not invoke a model or consume CANNBench credits. The old full-catalog
 workflow stays separate; no nightly schedule is needed.
 
@@ -107,7 +109,7 @@ A publication failure retains the sealed archive. Resume the same origin through
 CI after configuring the credential; never regenerate or resubmit for publication.
 
 ```bash
-gh workflow run ci.yml --ref <branch> -f cannbench_action=generate
+gh workflow run ci.yml --ref <branch> -f cannbench_action=generate -f operator=swi_glu
 # Repair a compiled but numerically failed model output, preserving its CI lineage:
 gh workflow run ci.yml --ref <branch> -f cannbench_action=repair -f origin_run=<failed-CI-run-ID>
 # Packaging GET failed after qualification, before any submission intent:
@@ -115,6 +117,21 @@ gh workflow run ci.yml --ref <branch> -f cannbench_action=continue -f origin_run
 # If the original submission is still pending or collection was interrupted:
 gh workflow run ci.yml --ref <branch> -f cannbench_action=resume -f origin_run=<original-CI-run-ID>
 ```
+
+Recipes live in `ci/operators/`: a JSON contract names the official operator and
+public function, prompt, numerical probe and required preflight count. The shared
+driver selects the task, packages that function, qualifies it, and binds evidence
+to the recipe in the generation source snapshot. Unknown recipes fail before
+model invocation or submission. `repair` must select the same task as its parent;
+`continue` and `resume` use the parent's recorded recipe, ignoring dispatch input.
+Checkpoint recovery accepts both current and historical artifact names.
+
+To add an operator, check in its recipe, prompt and adversarial numerical probe,
+exercise offline packaging/task-binding tests, then explicitly qualify it. The
+probe must consume the candidate directory and output report path and record
+`passed`, per-case `passed` values and `candidate_sha256`; the required case count
+comes from the recipe. Offline alternate-operator fixtures test the plumbing,
+not hardware support. Do not generalize the SwiGlu result to another recipe.
 
 The workflow loads selected skills via OpenCode's native skill tool, records
 model/configuration and unavailable provider revisions as `unknown`, and
@@ -124,13 +141,15 @@ it does not depend on large JSON surviving the CLI stdout export. A compact API 
 extracted from the exact runtime sources; the model is limited to 12 agent
 rounds and 24000 output tokens per response (including reasoning). Timeouts without a candidate stop
 the run rather than repeat unproductive exploration. It allows at most three
-local model attempts and one hardware submission per origin run. Qualification
+local model attempts and one hardware submission per origin run. It does not
+automate a separate reviewer or tuning session; see [the skill workflow and
+follow-up](../../docs/ci-gates.md#agent-workflows). Qualification
 includes exact-runtime dispatch/lowering of the official case set and separate
 representative numerical checks in the pinned newer CI simulator. Only the
 complete official CANNBench NPU result establishes hardware acceptance.
 
-`generated-swiglu-prepared-*` is uploaded before POST. Submission state is
-checkpointed afterward; `generated-swiglu-evidence-*` retains final/interrupted
+`generated-operator-prepared-*` is uploaded before POST. Submission state is
+checkpointed afterward; `generated-operator-evidence-*` retains final/interrupted
 work. Run directories live outside checkout under
 `~/.local/state/pyasc-generated-ci`; the shared account ledger remains
 `~/.local/state/pyasc-cannbench-smoke`. Resume uses the original source revision
@@ -162,7 +181,7 @@ The workflow re-downloads the evaluated submission and verifies its exact hash.
 A successful result includes per-case timings, the service score and the
 separately computed baseline/candidate ratio. It publishes a checksum-verified
 qualification archive as a GitHub Release asset under
-`qualification-swiglu-<origin-run-ID>`, beyond normal artifact retention.
+`qualification-<recipe>-<origin-run-ID>` (historical tags remain unchanged), beyond normal artifact retention.
 The [recorded generated result](../../docs/hardware-lane.md) passed 20/20 on
 hardware with complete CI provenance. CI published and verified its unchanged
 archive in the [qualification Release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-41673353296);

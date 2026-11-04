@@ -104,8 +104,10 @@ runtime images; it does not build them.
 | `pyasc-target-operator` | Extend the upstream target suite |
 | `pyasc-cannbench-kernel` | Configure CANNBench operators; performance is a separate lane |
 
-The first eight retain the core skill organization used in July. The two
-specialized skills do not add requirements to the quick start.
+The target-suite and CANNBench skills apply to their respective operator contracts.
+The design → implementation → review → validation → tuning workflow is in
+`pyasc-codegen-workflow`; these are caller-managed phases, not automatically
+spawned agents. See [CI coverage](docs/ci-gates.md#agent-workflows).
 
 `./install.sh` without `--target` links skills globally for Cursor and OpenCode;
 `--claude` or `--agents` adds those destinations. Re-running is idempotent.
