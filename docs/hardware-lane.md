@@ -4,7 +4,7 @@ PR #19 uses one CANNBench SwiGlu evaluation as its minimal hardware check.
 The SSH runtime and direct-device matrix are deferred. Use the
 [submission procedure](../integrations/cannbench/README.md).
 
-## CI-generated candidate: hardware passed, Release publication pending
+## CI-generated candidate: hardware passed and evidence published
 
 On **2026-11-03 UTC**, a fresh OpenCode 1.19.0 / `gateway/glm-5.3` candidate,
 with its model repairs preserved, passed **20/20** official SwiGlu cases in
@@ -41,13 +41,16 @@ Evaluated ZIP SHA256: `e4e1361650737952a9fcd825e0329c14bec227cfeef925e55340afc05
 The sealed CI archive is `run-41673353296-qualification.tar.gz`, SHA256
 `aa86a82a28f4a13edf5858059495119cf083c0df876c81e9641a16b8b3a52d56`.
 Its 5308 recorded member hashes and both 587-file source snapshots were verified.
-It remains on the CI runner under `~/.local/state/pyasc-generated-ci/`, with a
-verified workstation copy under `~/pyasc-qualification-runs/pr19-generated-ci-20261103/`.
-**Durable Release publication is still blocked** by GitHub's workflow-write
-permission requirement; ordinary Actions artifacts expire. The complete
-delivery milestone remains open until CI publishes and verifies that archive.
+On **2026-11-04 UTC**, [publication CI 41893448545](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/41893448545)
+published the unchanged archive, its checksum and `RESULT.md` in the
+[qualification Release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-41673353296),
+then downloaded and verified all three assets. The Release targets the original
+generation commit `195c3dc570d54e9925426ff9418ebadb31c8d623`; it preserves evidence
+beyond ordinary Actions artifact retention. The archive's creation record still
+identifies collection CI 41700044928, attempt 2; the later publication did not
+rewrite it or invoke generation, packaging, submission or another NPU run.
+Verified copies also remain on the CI runner and workstation outside checkout.
 See [publishing credentials](../integrations/cannbench/README.md#one-fresh-candidate-through-ci).
-No further generation or hardware submission is needed for this result.
 
 ## Reference qualification
 

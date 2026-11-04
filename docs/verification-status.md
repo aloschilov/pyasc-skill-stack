@@ -16,11 +16,13 @@ ratio: **0.017450287921005128x** (slower than baseline). Queue: 16478.414 s;
 execution: 303.092 s. Generation, repairs, qualification, submission and
 collection all ran in CI, with exact candidate/package continuity verified.
 
-**Publication remains blocked:** CI sealed and verified the qualification
-archive, but GitHub rejected Release creation because the target modifies
-workflows and the built-in token lacks workflow-write permission. An optional
-repository-scoped publishing secret is supported. This does not invalidate the
-hardware result, but the complete delivery acceptance remains open.
+**Durable publication passed, 2026-11-04 UTC:** [CI 41893448545](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/41893448545)
+published the sealed archive, checksum and per-case result in the
+[qualification Release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-41673353296)
+and verified downloaded copies. A repository-scoped publishing credential
+resolved the earlier permission failure. The resume reused the original archive
+without generation, packaging, submission or another NPU run. This completes
+the scoped CI generation-to-measurement and durable-evidence milestone.
 See [provenance, CI evidence and archive checksum](hardware-lane.md).
 
 ## Local follow-up, 2026-11-02

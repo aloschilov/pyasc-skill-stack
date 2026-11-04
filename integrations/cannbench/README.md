@@ -164,6 +164,7 @@ separately computed baseline/candidate ratio. It publishes a checksum-verified
 qualification archive as a GitHub Release asset under
 `qualification-swiglu-<origin-run-ID>`, beyond normal artifact retention.
 The [recorded generated result](../../docs/hardware-lane.md) passed 20/20 on
-hardware with complete CI provenance. Its durable Release publication remains
-pending; the separate reference qualification is retained with its own scope.
+hardware with complete CI provenance. CI published and verified its unchanged
+archive in the [qualification Release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-41673353296);
+the separate reference qualification is retained with its own scope.
 Implementation or a queued upload alone does not qualify generation.

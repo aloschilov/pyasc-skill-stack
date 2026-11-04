@@ -1,6 +1,6 @@
 # Minimal delivery roadmap
 
-Updated 2026-11-03 UTC. The primary workflow is OpenCode plus PyASC skills in the
+Updated 2026-11-04 UTC. The primary workflow is OpenCode plus PyASC skills in the
 execution environment, using a full checkout or skills installed from it.
 Generation needs one available model; hardware evaluation need not involve
 remote-shell access. The archived multi-model campaign is not a prerequisite.
@@ -24,8 +24,10 @@ remote-shell access. The archived multi-model campaign is not a prerequisite.
    [generation-to-metric provenance](verification-contract.md#attributing-a-cannbench-score-to-generated-code).
    The generated GLM-5.3 candidate passed 20/20 in CI-controlled CANNBench
    evaluation on 2026-11-03, with a measured score and complete provenance.
-   Durable CI Release publication remains blocked on the publishing credential;
-   the sealed result must be published without another model or hardware run.
+   CI published and verified the unchanged qualification archive in a durable
+   Release on 2026-11-04, completing this scoped milestone without another model
+   invocation or hardware run. The measured candidate is slower than baseline;
+   performance improvement remains future work.
    See [the generated result and scope](hardware-lane.md).
 
 The hardware smoke is manual and quota-consuming, separate from ordinary CI.
