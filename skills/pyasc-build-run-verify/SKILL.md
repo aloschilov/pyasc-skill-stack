@@ -46,19 +46,12 @@ Never claim numerics or performance from a QEMU compile-only gate.
 
 ## CANNBench compile gate
 
-From this repository root:
-
-```bash
-integrations/cannbench/workers/run_local_compile_gate.sh \
-  --candidate path/inside/repository/candidate.py --op <operator>
-
-python3 integrations/cannbench/workers/run_local_matrix.py \
-  --candidate-root <bundle>/cann_bench \
-  --output-dir <evidence-dir>
-```
-
-The matrix must cover all current operator task directories, not a hard-coded
-legacy nine-operator list.
+Use `integrations/cannbench/ci/single_qualify.py` in the configured compiler
+environment. It verifies the installed runtime against the selected wheel,
+then replays the selected task's complete case inventory. Read the current
+[local validation contract](../pyasc-cannbench-kernel/references/local-validation.md)
+for scope and limitations. Runtime provisioning is a prerequisite, not an
+implicit worker action. A pass for one recipe does not qualify other operators.
 
 ## Native camodel setup
 

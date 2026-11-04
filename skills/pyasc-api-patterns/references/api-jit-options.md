@@ -1,13 +1,10 @@
 # pyasc v2 AscTile JIT compile options
 
-The CANNBench campaign uses
-`compiler-team/pyasc@0a631f70968c3cb7c33ce45330a85768dd5a6f06` with a matching
-runtime. The API notes below were measured for the historical high-level GeLU
-campaign at `adadd7d66ed0ee16d33d79487bf584899a26ef1e`; treat them as historical
-behavior notes, not as CANNBench runtime authority. Other reports, including
-those at `030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`, retain their original pins. An option failure in one process is not evidence
-that public AscTile JIT is generally broken: test the actual decorator,
-effective options, and caches as described below.
+Use the source/runtime pin in the current run manifest (the checkout's bounded
+CI uses `integrations/cannbench/ci/single-runtime.json`). The option-discovery
+reproductions below were recorded at historical `0a631f70968c3cb7c33ce45330a85768dd5a6f06`
+and GeLU `adadd7d66ed0ee16d33d79487bf584899a26ef1e` pins. Preserve those
+attributions; reproduce on the selected runtime before applying a diagnosis.
 
 ## Decorator syntax
 

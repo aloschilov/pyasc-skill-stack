@@ -4,7 +4,7 @@ CANNBench provides external NPU evaluation without access to a hardware host.
 The shared CI path checks one selected operator recipe against its current
 public task contract. **SwiGlu** is the currently qualified recipe and the
 standalone reference-smoke default. It uses the existing service adapter and strict hardware
-result checker; the older full-catalog worker campaign is not required.
+result checker. There is no scheduled or full-catalog campaign.
 
 The reference smoke below is manually invoked and credit-consuming, not a PR
 CI job. A separate [manual CI dispatch](#one-fresh-candidate-through-ci) evaluates
@@ -76,8 +76,7 @@ the service report. No automatic repair/resubmission occurs.
 To check a generated SwiGlu candidate later, pass `--kernel-dir` containing
 `swi_glu.py` and `_pyasc_runtime.py` to `prepare`. Use the task's callable contract,
 perform numerical work in the PyASC kernel, and record generation provenance
-separately. No second model is required by this smoke path. The legacy campaign's
-multi-model requirement and archived resources remain outside this scope.
+separately. No second model is required by this smoke path.
 
 Keep full evidence privately outside Git. For accepted qualification, retain a
 durable archive and publish only a short result, archive checksum and reference.
@@ -87,8 +86,8 @@ durable archive and publish only a short result, archive checksum and reference.
 The optional manual **CI** dispatch accepts `cannbench_action=generate` for one
 fresh `gateway/glm-5.3` generation and hardware evaluation selected by `operator`
 (default `swi_glu`). Ordinary PR
-checks do not invoke a model or consume CANNBench credits. The old full-catalog
-workflow stays separate; no nightly schedule is needed.
+checks do not invoke a model or consume CANNBench credits. No nightly schedule
+is configured.
 
 A dedicated runner labelled `cannbench-vm` needs OpenCode, Docker, `gh`, the
 compiler image and exact runtime listed in `ci/single-runtime.json`.

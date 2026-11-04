@@ -448,7 +448,7 @@ def generate(root, repair_origin=''):
     prompt = (source/'integrations/cannbench/ci/operators'/recipe['prompt']).read_text().format(
         skills=', '.join(SKILLS), task_dir=task_dir, pyasc_commit=PIN['pyasc_commit'], api=context/'API.md')
     seed, feedback = repair_seed(root, repair_origin) if repair_origin else (None, '')
-    import driver
+    from contracts import static_check
     for attempt in range(1, 4):
         iteration = root / 'generation' / f'attempt-{attempt}'; project = iteration / 'project'; project.mkdir(parents=True)
         prior = root/'generation'/f'attempt-{attempt-1}'/'project/candidate.py' if attempt > 1 else seed
@@ -467,7 +467,7 @@ def generate(root, repair_origin=''):
             if before and candidate.is_file() and smoke.sha(candidate) == before:
                 raise ValueError('Model did not change the failed candidate; no blind repair retry')
             if not (project / 'design.md').is_file(): raise ValueError('Missing generated design')
-            problems = driver.static_check(candidate, recipe['function'], task_dir)
+            problems = static_check(candidate, recipe['function'], task_dir)
             save(iteration / 'static.json', {'passed': not problems, 'errors': problems})
             if problems: raise ValueError('; '.join(problems))
             original = iteration / 'original-candidate.py'; shutil.copy2(candidate, original)

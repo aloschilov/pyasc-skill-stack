@@ -42,8 +42,8 @@ def external(path):
 
 def client(credentials):
     if credentials:
-        from run import load_vm_credentials
-        load_vm_credentials(credentials)
+        from evalqueue import load_credentials
+        load_credentials(credentials)
     from evalqueue import EvalQueue
     return EvalQueue()
 

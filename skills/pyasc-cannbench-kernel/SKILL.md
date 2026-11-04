@@ -34,8 +34,9 @@ from public tile operations is allowed.
 
 ## Non-negotiable contract
 
-- Treat `tasks/<op>/proto.yaml`, `golden.py`, and all 20 entries in
-  `cases.yaml` as one indivisible specification.
+- Treat the selected task's `proto.yaml`, `golden.py`, and every entry in
+  `cases.yaml` as one indivisible specification. CI uses its live task snapshot;
+  `tasks/<op>/` holds reusable local contracts, not a current service catalog.
 - Produce one `candidate.py` with the exact top-level callable and defaults.
 - Use `torch` only for allocation, metadata views, and launches. Numerical work
   belongs in public `@asctile.jit` kernels.
