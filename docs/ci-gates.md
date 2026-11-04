@@ -35,8 +35,9 @@ Accepted qualification requires [durable evidence](verification-contract.md#stor
 
 `merge-gate` recursively discovers `reference/asctile/target/test_*.py`, including
 nested modules, and invokes `run_target_test.py` with backend `Model` and platform
-`Ascend950PR_9599` in the pinned simulator image. This is compile-only; it does not
-claim full numerical execution. The summary separates failed kernels from
+`Ascend950PR_9599` in the pinned simulator image. Modules with a declarative
+case list use a representative case; other modules use their collected cases.
+This is compile-only, not exhaustive specialization or numerical coverage. The summary separates failed kernels from
 resource-blocked checks, but either makes coverage incomplete and the job nonzero.
 No discovered modules also fails. See [manual procedure](review-order.md).
 
