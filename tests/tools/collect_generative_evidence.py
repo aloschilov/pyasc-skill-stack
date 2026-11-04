@@ -230,7 +230,7 @@ def load_prompt_from_capabilities(op: str, dtype: str,
         val = variants.get(variant)
         # Phase 2 Stage 2.3: oracle_guided may be a mapping with
         # ``prompt`` + ``examples_policy``. Normalize to the prompt
-        # string here; the policy is reported by check_capabilities.py
+        # string here; it is metadata, not proof of an isolated experiment.
         # and is consumed by the harness at allowed_context resolution
         # time, not by the agent runtime.
         if isinstance(val, dict):

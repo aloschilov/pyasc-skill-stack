@@ -10,7 +10,7 @@ a skills-only installation consumes an already provisioned environment.
 The intended CANNBot integration is a PyASC-specific step after its existing
 CANN environment check, rather than another CANN installer or image matrix.
 This handoff is the integration contract; PyASC registration in CANNBot's
-installer has not been implemented or qualified in this PR.
+installer is not implemented or qualified by this repository.
 
 CANNBot's [installation guide](https://gitcode.com/cann/cannbot-skills/blob/03cbbb9976901654d1fb27edb923bcd1b771f9bb/docs/installation-guide.md)
 separates full plugin installation (skills, agents, workflows and external

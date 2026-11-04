@@ -134,7 +134,8 @@ incur charges; see [tests](tests/README.md).
   remaining limitations. Simulator success does not close the hardware gate.
 - [Review order](docs/review-order.md): run the upstream target suite.
 - [CANNBench smoke](integrations/cannbench/README.md): one-operator external NPU evaluation.
-- [Roadmap](docs/roadmap.md): the minimal path from generation to measured results.
+- [Review/tuning automation follow-up](https://github.com/aloschilov/pyasc-skill-stack/issues/20):
+  acceptance criteria for the remaining agent handoffs.
 
 Keep run artifacts outside checkout. Git holds checks, regression fixtures and
 short evidence summaries. Preserve historical evidence; older campaign material
