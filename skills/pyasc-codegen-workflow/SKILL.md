@@ -13,13 +13,14 @@ load `pyasc-code-review` for independent review and
 
 ## Phase 0 — pin and inspect
 
-1. Fetch and record the exact `compiler-team/pyasc` v2 commit.
-2. Use a source snapshot and runtime wheel built from that same commit.
-3. Record Python, CANN, compiler, backend, platform, and available model IDs.
-4. Read current `python/asctile`, nearest `python/test/asctile/target` tests,
-   and the full operator contract.
-
-Do not install a differently versioned repository package as a shortcut.
+1. Read `reference/images/ENV.json` and `reference/asctile/PIN.json` from the
+   skill-stack checkout. Reuse the pinned image for the repository workflow.
+2. Record the selected runtime, backend and platform. If using another runtime,
+   identify its exact source revision; do not silently mix versions.
+3. Read the nearest shipped target test and the operator contract. Consult the
+   matching upstream source only when the shipped references are insufficient.
+4. If verification runs in Docker, do not search for or install a host runtime.
+   Use the existing qualification command from the repository README.
 
 ## Phase 1 — design
 
@@ -50,9 +51,15 @@ global_tensor -> copy_in -> asctile compute -> copy_out
 ```
 
 Run `python3 -m py_compile` immediately. Then self-review every host route,
-local shape, dtype cast, tail, and output shape. A different worker/model must
-perform acceptance review; it may repair the candidate but must preserve the
-full contract.
+local shape, dtype cast, tail, and output shape. Perform acceptance review in a
+fresh session/worker; the same configured model is allowed. Record actual model
+and session IDs: a fresh session is not an independent-model review. Preserve
+the reviewed candidate hash and findings. A repair creates a new candidate that
+must be reviewed and qualified again. If only self-review ran, record that
+limitation; do not silently count it as the separate review phase.
+
+These phases require a caller to arrange the handoffs. A compile/numerical CI
+job does not by itself execute the review or tuning phases.
 
 For worker provenance record:
 

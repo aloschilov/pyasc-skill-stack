@@ -1,0 +1,8 @@
+{
+  "operator": "SwiGlu",
+  "function": "swi_glu",
+  "prompt": "swi_glu-prompt.txt",
+  "numerical_probe": "swi_glu-check.py",
+  "numerical_cases": 12,
+  "reference": "smoke-kernel/swi_glu.py"
+}

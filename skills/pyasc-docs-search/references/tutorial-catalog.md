@@ -1,13 +1,14 @@
-# Current pyasc v2 tutorial catalog
+# Optional upstream tutorials
 
-Use `python/tutorials/asctile/` for high-level tile examples. Current notable
-resources include fused softmax and the operator examples under `examples/`:
+The shipped template and pinned target suite are the first resources for
+ordinary kernel development; an additional source checkout is not required.
 
-- `examples/06_gelu/gelu.py`
-- `examples/07_swiglu/swiglu.py`
-- `examples/08_rmsnorm/rmsnorm.py`
+If a tutorial is needed, inspect the source revision named by
+`reference/asctile/PIN.json`. Discover tutorial/example paths in that revision
+with `git ls-tree -r --name-only <revision>`; paths such as
+`python/tutorials/asctile/` were used historically and may have moved.
 
-The numbered `examples/01_add` through `05_matmul_leakyrelu` demonstrate the
-lower-level `asc` API and manual/framework synchronization. They remain useful
-for hardware concepts, but their `GlobalTensor`, `data_copy`, queues, stream
-launch, and sync syntax are not the current `asctile` kernel interface.
+Check the programming model before copying code. Lower-level `asc` examples
+using queues, `data_copy` and explicit synchronization are not direct asctile
+syntax examples. Prefer examples using `@asctile.jit`, `global_tensor`,
+`copy_in` and `copy_out`, and retain the source revision in the design record.

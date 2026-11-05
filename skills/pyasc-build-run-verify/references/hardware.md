@@ -1,25 +1,11 @@
-# Hardware targets and measurement
+# Hardware evaluation
 
-Initial target: **Ascend 950 "David"**, **CANN 9.x.x**. Record the exact tested
-versions (CANN, PyAsc, driver, SoC/board) and the model used. Never infer
-universal compatibility from one environment.
+Use a supported PyASC/CANN environment for direct execution (`host` means the
+current interpreter, including inside a container), or submit a packaged
+operator to CANNBench. A simulator pass is not hardware evidence.
 
-Hardware measurement requires an authorized device run. Until one is performed
-and recorded, the hardware gate is **blocked**, not pending-by-omission. Do not
-POST hardware results automatically; obtain explicit authorization. Report
-measured latency/throughput only when measured; keep queue/compile time separate
-from steady-state execution where possible.
-
-## Simulator is not hardware
-
-`Backend.Model` (`Ascend950PR_9599` camodel) is cycle-accurate but is still a
-simulator. A camodel result may be reported as a numerical pass. It may **never**
-be reported as a hardware performance measurement. The two are separate gates.
-
-## Performance baselines
-
-A latency number alone is not a result. Performance is expressed as a ratio to
-the CANN baseline, and that baseline comes from CANNBench plus the TTK manifest
-— see [`../../pyasc-cannbench-kernel/references/ttk.md`](../../pyasc-cannbench-kernel/references/ttk.md).
-Do not invent a baseline, and do not compare against a previous run of your own
-kernel and call the delta a CANN comparison.
+For an external one-operator smoke, follow `integrations/cannbench/README.md`.
+Retain the exact candidate, runtime and archive hashes, task contract, service
+job identity, runner hardware, complete correctness results and timings outside
+checkout. Report the tested scope and failed cases; do not infer generation
+quality or a performance improvement from one successful hardware smoke.

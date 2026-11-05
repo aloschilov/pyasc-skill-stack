@@ -1,6 +1,7 @@
 """External, append-only run directories. Never archives environment/auth files."""
 from __future__ import annotations
 import hashlib
+import errno
 import json
 import os
 from pathlib import Path
@@ -29,10 +30,18 @@ class RunArtifacts:
         if self.path == ROOT or ROOT in self.path.parents:
             raise ValueError('Results must be outside the checkout')
         self.path.mkdir(parents=True, exist_ok=False)
-        rev = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'],
-                             capture_output=True, text=True)
+        revision = os.environ.get('PYASC_SOURCE_REVISION')
+        if not revision:
+            try:
+                rev = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'],
+                                     capture_output=True, text=True)
+                revision = rev.stdout.strip() if rev.returncode == 0 else None
+            except FileNotFoundError:
+                # Runtime images may contain an exported source tree without Git.
+                # Keep the input hashes and report the unknown revision honestly.
+                revision = None
         self.data = {'schema_version': 1, 'kind': kind,
-                     'revision': os.environ.get('PYASC_SOURCE_REVISION') or rev.stdout.strip() or None,
+                     'revision': revision or None,
                      'input_sha256': input_hashes(), 'image': None,
                      'started_unix': time.time(), 'commands': [], 'status': 'running'}
         self.save()
@@ -67,7 +76,20 @@ class RunArtifacts:
             (self.path / (label+'.json')).write_text(json.dumps(report, indent=2)+'\n')
         except ValueError:
             report = {}
-        record['argv_input_sha256'] = {str(v): sha(v) for v in argv if Path(str(v)).is_file()}
+        record['argv_input_sha256'] = {}
+        for value in argv:
+            candidate = Path(str(value))
+            if not candidate.is_absolute():
+                candidate = Path(cwd) / candidate
+            try:
+                is_file = candidate.is_file()
+            except OSError as exc:
+                # Command strings and prompts are arguments, not necessarily paths.
+                if exc.errno not in (errno.ENAMETOOLONG, errno.EINVAL):
+                    raise
+                continue
+            if is_file:
+                record['argv_input_sha256'][str(value)] = sha(candidate)
         record['stdout_sha256'] = sha(self.path / (label+'.stdout'))
         record['stderr_sha256'] = sha(self.path / (label+'.stderr'))
         self.data['commands'].append(record); self.save()

@@ -157,11 +157,16 @@ def grant_repo_access(cfg: dict, extra_roots: tuple[str, ...] = ()) -> dict:
         granted[f"{resolved}/*"] = "allow"
         granted[str(resolved)] = "allow"
 
-    # Insertion order matters: the allows precede the template's catch-all
-    # deny. update() keeps the position of keys that already exist, so an
-    # explicit template entry overrides the grant without being reordered.
-    granted.update(existing)
-    perms["external_directory"] = granted
+    # OpenCode uses the last matching rule. The catch-all must come before
+    # our scoped grants; explicit template restrictions must come after them.
+    ordered = {"*": existing["*"]} if "*" in existing else {}
+    ordered.update(granted)
+    for pattern, action in existing.items():
+        if pattern != "*":
+            # Reinsert duplicates so their original template precedence wins.
+            ordered.pop(pattern, None)
+            ordered[pattern] = action
+    perms["external_directory"] = ordered
     return cfg
 
 

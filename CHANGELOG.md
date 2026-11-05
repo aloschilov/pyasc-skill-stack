@@ -6,6 +6,31 @@ see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 
 ## Unreleased
 
+- Replace the proposed SSH hardware backend with a manual one-operator CANNBench
+  smoke: immutable packaging, durable upload intent, GET-only reconciliation and
+  strict official-case hardware results. Runtime binaries and run evidence stay
+  outside Git; the reference smoke does not claim fresh generation.
+
+- Recognize same-block named literal size lists in multi-shape scoring without
+  changing the acceptance threshold, legacy detectors or frozen score outcomes.
+  Requalification of the unchanged generated kernel and rejected ambiguous
+  assignment cases are recorded in the verification status and regression tests.
+
+- Remove the unused retired dashboard generator and nightly artifact helpers;
+  preserve historical documentation with links to their Git revision.
+- Evidence collection accepts long command arguments and hashes relative input
+  paths against the command working directory.
+
+- Core skill routing uses the repository runtime/source pins and shipped
+  references; source fetches and historical campaign layouts are no longer
+  prerequisites for ordinary kernel authoring.
+
+- Installer preserves existing links to other locations, including dangling
+  links, instead of replacing another project's skill. Reinstallation of the
+  same links and pruning of owned stale links remain supported.
+- README uses the existing pinned Docker qualification path and separates
+  core skills, host setup and skills-only release limitations.
+
 Close-generation-loop audit fixes (local qualification and PR CI passed; see
 [verification status](docs/verification-status.md) for the tested revision):
 

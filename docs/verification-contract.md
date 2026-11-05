@@ -71,9 +71,35 @@ A local run uses the same schema outside the checkout. For accepted
 qualification, retain a selected archive beyond ordinary Actions retention;
 record its location and SHA256 in the qualification handoff and link the durable
 archive in repository documentation when a durable shared location is available.
-No historical evidence is moved or rewritten by this change.
+Preserve historical evidence without rewriting its inputs or acceptance scope.
 
-Local checks do not prove that a new PR workflow ran. The dated PR run, tested
-revision, full job duration and artifact digest are recorded in
-[verification-status.md](verification-status.md). That run satisfied the
-under-five-minute examples target; later revisions require their own checks.
+Local checks do not prove that a new PR workflow ran. Record the current-head
+Actions run, job durations and artifact verification in the PR handoff. Historical
+runs do not qualify later revisions; [verification status](verification-status.md)
+describes coverage and limitations rather than a changing CI journal.
+
+## Attributing a CANNBench score to generated code
+
+A performance number is a result of one immutable run, not a property of the
+skill name. An attributable generated-kernel result must bind:
+
+- the pyasc-skill-stack commit and loaded skill-file hashes;
+- the PyASC/AscTile source revision, runtime wheel hash, Python/CANN and runner;
+- the actual provider/model identifier, model configuration, OpenCode version,
+  session and prompt hashes (record unavailable model revisions as unknown);
+- the benchmark version, task/case snapshot, generated candidate hash and exact
+  submitted wheel/archive hashes;
+- the CI workflow/run/attempt and hardware submission/job identities, complete
+  correctness and anti-cheat results, per-case timings, score and aggregation rule.
+
+Keep the manifest, source, logs and service response in run artifacts; preserve
+an accepted run in durable external storage before CI artifacts expire. CI must
+reject mismatched hashes, missing provenance or incomplete results rather than
+publish a score copied from a narrative report. Retain failed attempts too.
+
+The standalone reference smoke records no generation model and cannot satisfy
+this generated-code contract. The manually dispatched generated-operator CI lane
+records model/session provenance and has a [qualified one-operator result](hardware-lane.md).
+Ordinary `pr-gate` and `examples-gate` measure repository checks and simulator
+execution, not model-attributed CANNBench performance. Only a completed,
+provenance-bound run supplies that evidence.

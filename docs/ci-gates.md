@@ -1,86 +1,77 @@
 # CI gates
 
-Two gates, plus a release workflow. Both live in
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
+The [CI workflow](../.github/workflows/ci.yml) separates ordinary checks from
+explicit model and hardware work. No nightly schedule is configured.
 
-| Gate | Trigger | Duration | What it checks |
-|---|---|---|---|
-| `pr-gate` | every push and PR | seconds | L1 unit tests and static checks |
-| `merge-gate` | push to `main`, manual dispatch | ~30 min | compile-check of the AscTile target suite on the camodel |
-| release | `v*` tag | minutes | `pr-gate` plus archive build and install verification |
+| Job | Trigger | Acceptance |
+|---|---|---|
+| `pr-gate` | PR, push to `main`, manual dispatch | Offline unit, skill syntax, image-pin and reference-drift checks |
+| `examples-gate` | Same, after `pr-gate`; 20-minute cap | Pinned simulator verification contract and permanent numerical regression fixtures |
+| `merge-gate` | Push to `main`, or manual dispatch with hardware action `none`; 60-minute cap | Every discovered target module compiles; failures **and resource blocks** fail the gate |
+| `generated-hardware` | Explicit manual dispatch with generate/repair/continue/resume | Selected operator recipe, exact package, strict hardware result and durable publication |
+| release | `v*` tag | Fast suite, skills-only archive and install verification |
 
-## `pr-gate`
-
-```bash
-bash tests/ci-gate.sh --tier pr      # what CI runs
-bash tests/run-tests.sh --fast       # the same thing, directly
-```
-
-Deterministic structure and content checks over `skills/` and `agents/`, the
-runtime-backend dispatch logic, and an offline drift check comparing the
-vendored target suite against `reference/asctile/PIN.json`. No Docker, no
-CANN, no network, no provider calls.
-
-This is the gate a release tag must pass.
-
-## `merge-gate`
-
-Pulls the pinned `pyasc-sim` image from ghcr.io and compile-checks every
-module in `reference/asctile/target/` with
-`tests/tools/run_target_test.py --backend Model --platform Ascend950PR_9599`.
-
-Compile-only is deliberate. Each module carries roughly 100 parametrised
-cases and the camodel is slow, so the blocking gate verifies that every case
-generates and compiles; full numerical execution is a manual or nightly run.
-See [review-order.md](review-order.md) for running it by hand.
-
-Runs natively on the self-hosted arm64 runner (no x86 emulation). The image
-tag is version-coupled to an immutable pyasc commit — never point it at a
-mutable tag, because a moving runtime silently invalidates every result
-below it.
-
-`test_add_inplace.py` is skipped: 4 of its 20 cases exceed the 192 KB UB
-budget on large shapes even under `--compile-only`. Pending a shape trim or a
-representative-case selection block.
-
-## Release
-
-Tagging `v*` triggers [`release.yml`](../.github/workflows/release.yml): run
-the fast suite, build `tar.gz` and `zip` of exactly `skills/`, `install.sh`,
-`README.md` and `CHANGELOG.md`, assert the unpacked archive contains those
-four entries and nothing else, assert `install.sh --target` links every skill
-from the unpacked archive, then publish with notes from the tag.
-
-## What is not here any more
-
-The campaign-era `perf-gate`, `nightly-gate`, `local-stability-gate`,
-`cloud-dashscope-gate` and `skills-value-report` jobs read from `evidence/`
-and scored model-written kernels in `golden/`. Both were removed from `main`,
-so the jobs were retired with them; `pages.yml` published a dashboard from a
-directory that was never tracked.
-
-The published site is retired too, not merely unbuilt. Deleting the workflow
-would have left `https://aloschilov.github.io/pyasc-skill-stack/` live and
-frozen, still serving the campaign evidence this repository pruned — an
-orphaned page that nothing could refresh or correct. GitHub Pages is disabled
-for the repository, so there is no stale public claim outliving its source.
-
-All of it is on the `archive/campaign-2026` branch:
+## Ordinary PR checks
 
 ```bash
-git show archive/campaign-2026:.github/workflows/ci.yml
+bash tests/ci-gate.sh --tier pr
+python3 tests/tools/verification_contract.py --results-dir "$RUN_ROOT/contract"
 ```
 
-Restoring any of it means first restoring an evidence source for it to read,
-and that source should be CANNBench rather than checked-in JSON — see
-[evidence-sources.md](evidence-sources.md).
+The first command is offline. The second needs Docker and the pinned image in
+`reference/images/ENV.json`; choose a new directory outside checkout. The matrix
+covers historical kernels, tails, negative and weak-positive fixtures, and skill
+listings. Expected failures must fail for the contracted reason; numerical
+passes require a suppressed-launch control. The separate SwiGlu short-row
+regression protects a known memory-layout bug; it is one fixture in this broader
+suite, not the definition of the CI pipeline.
 
-## Local test tiers
+Both PR jobs must pass on the current head. Artifacts retain the complete
+verification-contract run for 30 days, including failures. Queue time is separate
+from execution time. Neither job qualifies model generation or NPU behavior.
+Accepted qualification requires [durable evidence](verification-contract.md#storage).
 
-```bash
-bash tests/run-tests.sh --fast    # L1 only (what CI gates on)
-bash tests/run-tests.sh --all     # adds L2 behavior and L3 integration
-```
+## Compile coverage
 
-`tests/behavior/` makes real `opencode` provider calls, so `--all` costs
-money and time and is not run in CI.
+`merge-gate` recursively discovers `reference/asctile/target/test_*.py`, including
+nested modules, and invokes `run_target_test.py` with backend `Model` and platform
+`Ascend950PR_9599` in the pinned simulator image. Modules with a declarative
+case list use a representative case; other modules use their collected cases.
+This is compile-only, not exhaustive specialization or numerical coverage. The summary separates failed kernels from
+resource-blocked checks, but either makes coverage incomplete and the job nonzero.
+No discovered modules also fails. See [manual procedure](review-order.md).
+
+## Explicit model and hardware evaluation
+
+The [shared workflow](../.github/workflows/cannbench-generated.yml) accepts an
+operator recipe, currently `swi_glu`. Recipes own operator-specific prompts and
+numerical probes; the driver owns attribution, packaging, submission, collection
+and publication. Unsupported recipe names fail before model invocation or POST.
+Only SwiGlu has recorded hardware qualification. Adding a recipe does not qualify
+it automatically. See [requirements and recovery](../integrations/cannbench/README.md#one-fresh-candidate-through-ci).
+
+Ordinary PR checks never generate candidates or consume CANNBench credits.
+`resume` collects an existing submission and publishes its evidence without
+regeneration or resubmission.
+
+## Agent workflows
+
+`pyasc-codegen-workflow`, `pyasc-code-review` and `pyasc-build-run-verify` retain
+the design → implementation → fresh-session review → validation → tuning loop.
+A caller arranges these handoffs; one model can serve different sessions.
+`tests/run-tests.sh --agentic` exercises provider-backed behavior and integration;
+`--all` also runs the offline units. Both can incur provider charges.
+
+The bounded CANNBench driver currently automates generation/repair and machine
+checks, not a separate reviewer or tuning agent. That automation gap is tracked
+with acceptance criteria in [issue #20](https://github.com/aloschilov/pyasc-skill-stack/issues/20).
+The installer option `--agents` installs into `~/.agents/skills`; it does not
+create an orchestration team. The skill workflow does not depend on the removed
+legacy `teams/` prompts.
+
+## Release archives
+
+[Release CI](../.github/workflows/release.yml) builds and install-checks archives
+containing `skills/`, `install.sh`, `README.md` and `CHANGELOG.md`. Runtime pins,
+references and verification tools require the full checkout. A skills-only
+installation is not end-to-end qualification.

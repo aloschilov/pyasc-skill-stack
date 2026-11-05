@@ -1,63 +1,56 @@
 ---
 name: pyasc-docs-search
-description: Local-first index for current pyasc v2 APIs, target tests, examples, docs, and CANN operator references. Use when verifying an API or finding an implementation reference.
+description: Find pinned PyASC/asctile API documentation, reference kernels and task semantics. Use when checking an API or choosing a correctness reference.
 ---
 
-# Current pyasc v2 resource routing
+# PyASC/asctile resource routing
 
-For a pinned campaign, its exact source snapshot outranks every checkout,
-cached example, and web page. For the current CANNBench work use
-the source snapshot verified at `0a631f70968c3cb7c33ce45330a85768dd5a6f06`.
+Start with the skill-stack checkout that supplied this skill. Resolve paths
+below from that checkout, including when skills are installed through symlinks.
+Do not search unrelated workspaces for an apparently matching runtime.
+
+## Source authority
+
+For the repository workflow, `reference/images/ENV.json` selects the runtime
+and `reference/asctile/PIN.json` identifies the matching upstream source and
+resolved target-suite path. Read these files rather than assuming a branch,
+source layout or historical campaign commit.
+
+An explicitly selected campaign can use another source/runtime pair. Record
+that choice and keep its evidence separate; it does not replace the repository
+pin for ordinary kernel development.
 
 ## Search order
 
-1. Operator `proto.yaml`, `cases.yaml`, and `golden.py`.
-2. `python/asctile/__init__.py` for the exported tile API.
-3. `python/asctile/language/` and `python/asctile/runtime/` for signatures and
-   validation behavior.
-4. `python/test/asctile/target/` for handwritten production-shape patterns.
-5. `python/test/asctile/kernels/` and `python/tutorials/asctile/` for smaller
-   examples.
-6. `docs/python-api/`, `docs/programming-guide/`, and
-   `docs/python_syntax_support.md`.
-7. CANN `ops-*` source for semantic and tiling reference.
+1. The user's operator contract: signature, shapes, dtypes and tolerances.
+2. `pyasc-api-patterns` and `pyasc-syntax-constraints` for the supported surface.
+3. `reference/asctile/target/` for upstream reference kernels and test semantics.
+4. The matching runtime/source when an exact signature remains uncertain.
+5. CANN operator sources when additional semantic or tiling context is needed.
 
-Use `rg` against the exact source. Useful searches:
+Useful local searches, from the skill-stack root:
 
 ```bash
-rg -n "def copy_in|def copy_out|def global_tensor" python/asctile
-rg -n "@asctile.jit|asctile.softmax|asctile.rms_norm" python/test/asctile
-rg -n "reuse_alloc|vf_fusion|insert_sync" python/asctile/runtime
+rg -n 'copy_in|copy_out|global_tensor' skills/pyasc-api-patterns reference/asctile/target
+rg -n 'reduce_sum|softmax|rms_norm' reference/asctile/target
 ```
 
-## Current package distinction
+A source checkout is optional for ordinary authoring. If needed, obtain the
+revision named by the pin and discover its paths there; old `python/asctile`
+paths are not stable across upstream revisions. If the runtime is in Docker,
+inspect it there instead of attempting imports on the host.
 
-- `asctile`: high-level tile API used by current v2 kernels.
-- `asc`: shared dtypes, addresses, runtime configuration, and lower-level API.
+## Package and evidence rules
 
-Do not translate a current kernel to `asc2`; that package was renamed away.
-Do not translate `global_tensor/copy_in/copy_out` back to
-`tensor/load/store`; those names are from older snapshots.
+The published runtime uses `from asc.experimental import asctile`. Older source
+builds may expose top-level `asctile`. Match the chosen runtime; do not translate
+new tile kernels to the obsolete `asc2` or `tensor/load/store` interface.
+Generated kernels are test subjects, never correctness references. Cite the
+source path and revision for consequential API decisions; compilation or
+simulator results establish only the tested behavior.
 
-## CANN references
+## Focused references
 
-- `https://gitcode.com/cann/ops-math` — elementwise, reductions, movement
-- `https://gitcode.com/cann/ops-nn` — normalization, matmul, neural-network ops
-- `https://gitcode.com/cann/ops-transformer` — transformer-specific ops
-- `https://gitcode.com/cann/ops-cv` — vision ops
-- `https://gitee.com/ascend/samples` — AscendC examples
-
-Use the CANN implementation to understand semantics, tiling, buffering, and
-hardware assumptions. The deliverable remains pyasc/asctile code.
-
-## Evidence rule
-
-When an API or workaround matters, cite the exact source file and commit.
-Treat behavior copied from a different v2 snapshot as a hypothesis until the
-pinned compile/runtime gate confirms it.
-
-## References
-
-- [API index](references/api-index.md)
-- [Example catalog](references/example-catalog.md)
-- [Tutorial catalog](references/tutorial-catalog.md)
+- [API index](references/api-index.md): operations to look up.
+- [Example catalog](references/example-catalog.md): shipped reference kernels.
+- [Tutorial catalog](references/tutorial-catalog.md): optional upstream tutorials.

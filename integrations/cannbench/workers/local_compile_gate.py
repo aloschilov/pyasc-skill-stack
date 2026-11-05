@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Compile every CANNBench case dispatch against the submitted pyasc v2 runtime.
 
-The gate runs in the amd64/QEMU image built by ``run_local_compile_gate.sh``.
+The caller supplies the runtime. ``ci/single_qualify.py`` attests its bytes
+against the selected pinned wheel before invoking this helper.
 It imports an operator module with a tiny fake ``torch`` host API, records the
 JIT launches selected by each benchmark case, and lowers every unique launch
 specialization through pyasc to generated AscendC.  No CANNBench credit, NPU,
@@ -30,7 +31,7 @@ import yaml
 from contracts import case_arguments, load_contract
 
 
-PYASC_COMMIT = "0a631f70968c3cb7c33ce45330a85768dd5a6f06"
+PYASC_COMMIT = None  # Only the attesting caller may supply a revision.
 PLATFORM = "Ascend950PR_9599"
 
 
@@ -508,11 +509,11 @@ def evaluate(candidate: Path, op: str, cases_path: Path, proto: dict | None = No
         "schema_version": 1,
         "operator": op,
         "candidate": str(candidate),
-        "pyasc_source": "https://gitcode.com/compiler-team/pyasc/tree/v2",
+        "pyasc_source": "https://github.com/compiler-team-ru/pyasc",
         "pyasc_commit": PYASC_COMMIT,
-        "runtime": "self-contained CANNBench wheel with repository overlays",
+        "runtime": "caller-provided runtime; see caller attestation",
         "platform": PLATFORM,
-        "method": "QEMU host dispatch + pyasc codegen/passes/AscendC translation",
+        "method": "metadata host dispatch + pyasc codegen/passes/AscendC translation",
         "limitations": [
             "does not execute numerical code",
             "does not estimate camodel ticks or NPU performance",
@@ -523,7 +524,7 @@ def evaluate(candidate: Path, op: str, cases_path: Path, proto: dict | None = No
         "compile_passed": compile_passed,
         "unique_specializations": len(compiled),
         "unique_specializations_passed": unique_passed,
-        "status": "passed" if dispatch_passed == len(cases)
+        "status": "passed" if cases and dispatch_passed == len(cases)
                   and compile_passed == len(cases) else "failed",
         "case_results": case_results,
         "specializations": list(compiled.values()),

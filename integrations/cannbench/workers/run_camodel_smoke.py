@@ -206,13 +206,15 @@ def run_adversarial_case(op: str, package) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--candidate-root", required=True, type=Path)
-    parser.add_argument("--ops", default=",".join(ALL_OPS))
+    parser.add_argument("--ops", required=True, help="Comma-separated selected operators")
     parser.add_argument(
         "--suite", choices=("basic", "critical", "adversarial"),
         default="basic")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     ops = tuple(value.strip() for value in args.ops.split(",") if value.strip())
+    if not ops or any(op not in ALL_OPS for op in ops):
+        parser.error("Select at least one supported operator")
     sys.path.insert(0, str(args.candidate_root.parent.resolve()))
 
     config.set_platform(config.Backend.Model, config.Platform.Ascend950PR_9599)
@@ -263,7 +265,7 @@ def main() -> int:
                     else "simulator-sized adversarial routes, not full shapes"
                 )
             ),
-            "not the official 180-case matrix",
+            "not the complete official task case set",
             "camodel ticks are not silicon performance",
         ],
     }

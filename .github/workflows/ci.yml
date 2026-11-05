@@ -5,10 +5,23 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      cannbench_action:
+        description: 'Optional single-model operator NPU evaluation (uses one credit); resume never submits'
+        type: choice
+        default: none
+        options: [none, generate, repair, continue, resume]
+      operator:
+        description: 'Checked-in operator recipe; ignored for continue/resume'
+        type: string
+        default: swi_glu
+      origin_run:
+        description: 'For repair, continue or resume: original CI run ID'
+        type: string
+        default: ''
 
 permissions:
   contents: read
-  packages: read
 
 env:
   # Pinned by digest, not by tag: a moving runtime silently invalidates every
@@ -116,6 +129,16 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: CANNBench candidate short-row simulator regressions
+        run: |
+          docker run --rm --name "pyasc-smoke-${{ github.run_id }}" \
+            --network none --ulimit nofile=65536:65536 \
+            -v "$PWD":/workspace:ro -w /tmp \
+            -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
+            -e PYASC_CACHE_DIR=/tmp/pyasc-cache -e PYASC_DUMP_PATH=/tmp/pyasc-dumps \
+            "${{ env.PYASC_SIM_IMAGE }}" \
+            timeout 180 python3.11 /workspace/tests/integration/check-cannbench-smoke.py
+
 
   # ==========================================================================
   # Merge gate: compile-check the upstream AscTile target suite in Docker
@@ -123,7 +146,7 @@ jobs:
   # This is the correctness reference (see reference/README.md). Compile-only:
   # each module carries ~100 parametrised cases and the camodel is slow, so the
   # blocking gate verifies COMPILE and leaves full numerical execution to a
-  # manual or nightly run.
+  # separate explicit run.
   #
   # The Docker image is built, smoke-tested and published upstream by
   # compiler-team-ru/pyasc-images. This repo never builds it; CI only pulls
@@ -135,8 +158,7 @@ jobs:
     needs: [pr-gate]
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'workflow_dispatch' && (inputs.cannbench_action == 'none' || inputs.cannbench_action == ''))
     steps:
       - uses: actions/checkout@v4
 
@@ -166,7 +188,8 @@ jobs:
           FAILED=0; BLOCKED=0; ran=0
           # Container-leak guard: --rm only fires on a clean exit, which a hung
           # simulator never gives, so the trap is the actual guarantee.
-          CTR_NAME="pyasc-target-${{ github.run_id }}"
+          CTR_PREFIX="pyasc-target-${{ github.run_id }}"
+          CTR_NAME="$CTR_PREFIX"
           trap 'docker rm -f "$CTR_NAME" 2>/dev/null || true' EXIT INT TERM
           # Recursive: upstream groups some cases into subpackages (matmul_v3/,
           # kimi_k3/) and moves them in and out between versions. A flat glob
@@ -175,6 +198,7 @@ jobs:
             [ -f "$t" ] || continue
             rel="${t#reference/asctile/target/}"
             slug="$(echo "${rel%.py}" | tr '/' '-')"
+            CTR_NAME="${CTR_PREFIX}-${slug}"
             start=$(date +%s)
             # HOME, cache and dump paths are upstream's documented run recipe
             # for these images. They matter here because /workspace is mounted
@@ -182,7 +206,7 @@ jobs:
             # or into a home directory the container does not have, fails in a
             # way that looks like a compile error. PYTHONDONTWRITEBYTECODE
             # stops __pycache__ from being attempted in the read-only mount.
-            docker run --rm --name "${CTR_NAME}-${slug}" \
+            docker run --rm --name "$CTR_NAME" \
               --ulimit nofile=65536:65536 \
               -v "$PWD":/workspace:ro -w /workspace \
               -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
@@ -211,10 +235,23 @@ jobs:
             exit 1
           fi
           if [ "$BLOCKED" -gt 0 ]; then
-            echo "NOTE: $BLOCKED module(s) blocked on runner resources, not"
-            echo "      compile errors. Tracked in docs/verification-status.md."
+            echo "ERROR: $BLOCKED module(s) blocked; compile coverage is incomplete"
+            exit 2
           fi
           if [ "$FAILED" -gt 0 ]; then
             echo "ERROR: $FAILED target module(s) failed the compile check"
             exit 1
           fi
+
+  generated-hardware:
+    needs: [pr-gate, examples-gate]
+    if: github.event_name == 'workflow_dispatch' && inputs.cannbench_action != 'none' && inputs.cannbench_action != ''
+    uses: ./.github/workflows/cannbench-generated.yml
+    permissions:
+      contents: write
+      actions: read
+    with:
+      action: ${{ inputs.cannbench_action }}
+      operator: ${{ inputs.operator }}
+      origin_run: ${{ inputs.origin_run }}
+    secrets: inherit

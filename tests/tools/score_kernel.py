@@ -198,10 +198,38 @@ def _has_literal_shape_checks(tree: ast.AST) -> bool:
         return dimension(node) or (isinstance(node, (ast.Tuple, ast.List))
                                   and bool(node.elts) and all(dimension(n) for n in node.elts))
 
+    def literal_iterable(loop):
+        if not isinstance(loop.iter, ast.Name):
+            return loop.iter
+        name = loop.iter.id
+        # Resolve only a direct assignment in this statement block. Any use,
+        # reassignment or possible mutation before the loop invalidates it.
+        for parent in ast.walk(tree):
+            for _, block in ast.iter_fields(parent):
+                if not isinstance(block, list) or loop not in block:
+                    continue
+                value = None
+                for statement in block[:block.index(loop)]:
+                    if (isinstance(statement, ast.Assign) and len(statement.targets) == 1
+                            and isinstance(statement.targets[0], ast.Name)
+                            and statement.targets[0].id == name):
+                        value = statement.value
+                    elif any(isinstance(n, ast.Name) and n.id == name
+                             for n in ast.walk(statement)):
+                        value = None
+                if any(isinstance(n, ast.Name) and n.id == name
+                       for statement in loop.body for n in ast.walk(statement)):
+                    return None
+                return value
+        return None
+
     for node in ast.walk(tree):
-        if not isinstance(node, ast.For) or not isinstance(node.iter, (ast.Tuple, ast.List)):
+        if not isinstance(node, ast.For):
             continue
-        sizes = node.iter.elts
+        iterable = literal_iterable(node)
+        if not isinstance(iterable, (ast.Tuple, ast.List)):
+            continue
+        sizes = iterable.elts
         if len(sizes) < 2 or not all(shape(n) for n in sizes):
             continue
         if len({ast.dump(n) for n in sizes}) < 2:

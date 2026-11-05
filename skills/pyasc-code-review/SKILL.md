@@ -11,7 +11,7 @@ Review against the exact selected source and task contract, using
 Check that the kernel imports `asctile` in a form valid for the runtime it
 will actually run on: `from asc.experimental import asctile` for the published
 `pyasc-dev` wheel, top-level `import asctile` for older source builds such as
-the CANNBench campaign pin `pyasc v2@0a631f70968c3cb7c33ce45330a85768dd5a6f06`.
+the runtime selected by `integrations/cannbench/ci/single-runtime.json`.
 A try/except covering both is acceptable and is what the workflow template
 generates.
 

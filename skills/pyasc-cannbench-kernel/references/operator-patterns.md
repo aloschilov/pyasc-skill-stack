@@ -62,7 +62,8 @@ about limits or precision must be checked against executed reference results.
 The following NR/Horner and low-level routes are retained as historical
 evidence at their original pins (for example `030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`).
 They belong to the historical high-level GeLU era; `0a631f70968c3cb7c33ce45330a85768dd5a6f06`
-is the current CANNBench runtime authority, not a historical GeLU pin.
+was the archived full-catalog campaign's runtime. The current run manifest,
+not these historical notes, determines runtime authority.
 Their successful cases do not qualify them for the new high-level campaign.
 The historical 950PR-verified 20/20 recipe was:
 
@@ -123,7 +124,7 @@ formula.
 
 Older snapshots required LocalTensor branches for `asctile.where`; the later
 historical GeLU snapshot `adadd7d6` added numeric scalar operands. Verify the
-actually supported operand kinds against the CANNBench runtime pin `0a631f70`
+actually supported operand kinds against the current run's pinned runtime
 before relying on either form, and do not require
 extra full tiles solely to reproduce an older API restriction. Alignment
 and measured compare/select lowering limitations still need verification.
@@ -143,10 +144,14 @@ Split the selected even-sized dimension and compute `silu(x0) * x1`. Map the
 contiguous N-D tensor to `[outer, 2 * half_cols]` without materializing aligned
 halves. Two-dimensional copy operations require a 32-byte-aligned final tile
 dimension. Degenerate `half_cols` therefore needs a separately evidenced path.
-The current official result is 18/20: case 9 is an NPU runtime failure around
-the host narrow/contiguous fallback and case 12 is a bf16 NaN-position
-mismatch. Treat both roots as suspected until reproduced on hardware; a prior
-replacement fallback regressed to 0/20 and must not be copied.
+The first reference smoke passed 18/20: case 9 failed around a host
+narrow/contiguous copy and case 12 had a bf16 NaN-position mismatch. A repaired
+reference using direct padded 2D PyASC loads/stores passed all 20 cases on
+2026-11-02 at runtime `030e9b2c`; see the [recorded qualification](../../../docs/hardware-lane.md).
+This supports that memory-access pattern for that runtime, not arbitrary
+generated candidates. The passing repair does not isolate the original NaN
+mismatch's cause. Avoid host copy fallbacks; independently qualify short rows,
+tails and NaN/Inf positions for every new candidate.
 
 ## ForeachAddcdivScalar
 

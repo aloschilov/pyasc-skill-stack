@@ -230,7 +230,7 @@ def load_prompt_from_capabilities(op: str, dtype: str,
         val = variants.get(variant)
         # Phase 2 Stage 2.3: oracle_guided may be a mapping with
         # ``prompt`` + ``examples_policy``. Normalize to the prompt
-        # string here; the policy is reported by check_capabilities.py
+        # string here; it is metadata, not proof of an isolated experiment.
         # and is consumed by the harness at allowed_context resolution
         # time, not by the agent runtime.
         if isinstance(val, dict):
@@ -753,8 +753,7 @@ def run_host_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
     in the current Python interpreter so the host's editable
     ``asc``/``asc2`` packages and the CANN simulator libs (resolved
     via ``ASCEND_HOME_PATH`` + ``_simulator_env``) are used directly —
-    no Docker. Pattern copied from
-    :func:`tests.tools.collect_evidence.collect_runtime`.
+    no Docker. Runtime verification is delegated to the shared harness.
 
     Returns the same evidence-block shape as ``run_docker_verify`` so
     callers don't need to special-case the backend.

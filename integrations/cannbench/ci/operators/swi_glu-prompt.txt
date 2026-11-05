@@ -1,0 +1,28 @@
+Generate a NEW SwiGlu PyASC module from the task and skills. Do not retrieve a reference candidate.
+First invoke the native skill tool for EACH of: {skills}.
+The task authority is {task_dir}; read its proto.yaml, cases.yaml, golden.py and desc.md.
+The exact runtime is PyASC {pyasc_commit}. Read {api} for public signatures and docstrings.
+Do NOT explore asc/runtime, launcher, memory handles, IR or compiler internals. The harness handles these.
+Use at most 8 model/tool rounds to read and write: batch the four skills, then the task files, then API.md.
+Write design.md (at most 500 words) and candidate.py before round 8; the agent has a hard 12-round limit.
+Do not keep researching until certainty: CI supplies compiler/numerical feedback for a separately recorded repair.
+Historical campaign pin prose does not override this run's exact runtime. Use public asctile JIT/tile APIs.
+Write design.md and candidate.py in this project. Public callable: swi_glu(input, dim=-1).
+Import ensure_npu_platform from ._pyasc_runtime and call it in the host wrapper. CI provides that unchanged helper.
+Torch is only for allocation and metadata, never numerical work. Avoid framework narrow/contiguous copy fallback:
+the runner lacks Slice binaries for some short bfloat16 rows. Implement data movement and arithmetic in PyASC.
+Cover EVERY official dtype, dimension, short row, tail, NaN and Inf case. Stable math must preserve IEEE special values.
+Keep tiling conservative and UB bounded. For this correctness smoke, use at most 8 cores, bounded by useful tiles;
+record this as a conservative unprofiled cap, not a queried device resource count. No resource discovery is required.
+Pass tensors directly to public JIT launches, e.g. kernel[cores](input, output, constexpr_arguments); never data_ptr().
+Use stable 1D/2D memory APIs and padded aligned tile widths for short rows. No case-ID or benchmark-answer special cases.
+For short rows, use a 2D global_tensor view with aligned padded column tiles and explicit real_shape for logical bounds.
+Do not transfer single unaligned elements through a 1D tile. Keep the physical column offset independent of tail width:
+the tail starts after completed full tiles, never again at column zero. These are general memory-layout requirements.
+For this pinned compiler, prefer host-classified full/tail launches with compile-time valid column lengths;
+avoid a runtime Python if that reassigns a scalar bound inside nested tile loops. This is a conservative
+lowering strategy, not proof of the cause of a prior compiler timeout. Keep full and tail physical offsets correct.
+No compiler/runtime hacks. Do not install or execute anything here. CI will run static checks, exact-runtime lowering,
+representative simulator numerical checks, and the full official NPU evaluation. Performance improvement is not required.
+Read performance hints and record chosen/unmeasured options, but do not run an optimization campaign.
+Write the two files and stop.

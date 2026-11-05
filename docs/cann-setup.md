@@ -1,205 +1,70 @@
-# CANN Setup for pyasc-skill-stack
+# Execution environment and CANNBot integration
 
-## Required Software
+Installing PyASC skills installs agent instructions, not CANN or a Python
+runtime. OpenCode runs the skills in the execution environment selected by the
+user. A checkout supplies the verifier and runtime pins as well as the skills;
+a skills-only installation consumes an already provisioned environment.
 
-| Component | Version | Notes |
-|-----------|---------|-------|
-| CANN Toolkit | 9.0.0 or 9.2.0 | Ascend computing backend; the two the upstream image matrix builds against |
-| Python | 3.10 - 3.12 | pyasc and torch are installed here |
-| pyasc | >= 1.1.1 | Python JIT for Ascend C |
-| pytest | >= 7.0 | Required for pyasc kernel integration tests |
-| numpy | < 2.0 | Required by pyasc |
-| torch | any | For tensor management and verification; **not** a pyasc dependency |
+## Reuse CANNBot's environment procedure
 
-The simulator image this repository pins carries CANN 9.2.0 — see
-[`../reference/images/ENV.json`](../reference/images/ENV.json). If you only
-need the simulator, use that image instead of installing CANN by hand; this
-guide is for host installs and for hardware.
+The intended CANNBot integration is a PyASC-specific step after its existing
+CANN environment check, rather than another CANN installer or image matrix.
+This handoff is the integration contract; PyASC registration in CANNBot's
+installer is not implemented or qualified by this repository.
 
-## Architecture support
+CANNBot's [installation guide](https://gitcode.com/cann/cannbot-skills/blob/03cbbb9976901654d1fb27edb923bcd1b771f9bb/docs/installation-guide.md)
+separates full plugin installation (skills, agents, workflows and external
+repositories) from individual skill installation. Follow that guide to install
+CANNBot; installing its skills alone does not establish runtime readiness.
+Its [ascendc-env-check](https://gitcode.com/cann/cannbot-skills/tree/03cbbb9976901654d1fb27edb923bcd1b771f9bb/ops/ascendc-env-check)
+provides `scripts/check_env.sh` for CANN paths, Toolkit/Ops and dependencies,
+and `scripts/get_npu_arch.py --json` for actual device architecture. Source the
+selected CANN `set_env.sh` in the same shell before using that environment.
 
-The stack is verified on Ubuntu 22.04 and 24.04, on both `x86_64` and
-`aarch64`. CANN ships a separate installer per architecture; pick the one
-matching `uname -m`:
+The handoff to PyASC should be:
 
-- `Ascend-cann-toolkit_<version>_linux-x86_64.run`
-- `Ascend-cann-toolkit_<version>_linux-aarch64.run`
+1. **Existing environment.** Reuse CANNBot's CANN check in the selected container
+   or host environment. Retain Toolkit/Ops versions, `ASCEND_HOME_PATH`, host
+   architecture and, for NPU work, the reported full SoC and device visibility.
+   A CANN environment check does not demonstrate PyASC compilation or execution.
+2. **PyASC runtime.** Select one Python executable and a compatible, pinned PyASC
+   wheel for its Python ABI, CPU architecture and CANN installation. Record the
+   wheel SHA256 and source revision. Reuse a matching installation; otherwise
+   install the selected wheel into an isolated environment. Do not upgrade CANN,
+   replace drivers or select an unpinned latest wheel as part of loading a skill.
+3. **PyASC qualification.** Verify imports and the public tile API, then compile
+   and numerically check a small kernel with that same interpreter. Report
+   `blocked` if a dependency is missing; do not fall back from NPU to simulator
+   and report hardware success.
+4. **Agent execution.** Run OpenCode with the installed PyASC skills and that
+   environment. One configured model suffices. Record the actual model and
+   runtime identities with each generated candidate and measured result.
 
-The upstream image matrix records the exact installer it used for each cell,
-including a sha256, which is the most reliable way to get a known-good pair of
-URL and checksum rather than guessing at a download page:
-
-```bash
-curl -fsSL https://github.com/compiler-team-ru/pyasc-images/releases/latest/download/matrix.json \
-  | jq -r '[.cells[].environment.cann_installer] | unique_by(.url)[] | "\(.sha256)  \(.url)"'
-```
-
-Both installers lay out the same directory tree under the install prefix,
-so every command in this guide is arch-agnostic once `CANN_HOME` is set.
-The `Ascend910B1` / `Ascend950PR_9599` simulator libraries are part of the
-toolkit and ship pre-compiled for the matching arch — no extra step is
-needed.
-
-Quick consistency check after a fresh install:
-
-```bash
-arch                                              # x86_64 or aarch64
-file "$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib/libpem_davinci.so" | head -1
-```
-
-The reported ELF class should match the host: `ELF 64-bit LSB shared
-object, x86-64, …` on x86_64 hosts and `ELF 64-bit LSB shared object,
-ARM aarch64, …` on aarch64 hosts.
-
-## Locating your CANN install
-
-CANN can be installed in several places depending on how you obtained it. This guide uses a `CANN_HOME` environment variable so the commands below work regardless of where CANN lives on your machine. Common locations:
-
-- `$HOME/Ascend/cann` (default user install)
-- `$HOME/Ascend/ascend-toolkit/latest`
-- `$HOME/Ascend/cann-<version>` (e.g. `cann-9.0.0` or `cann-9.2.0`)
-- `/usr/local/Ascend/ascend-toolkit/latest` (system-wide; also the location used inside the pinned simulator image)
-
-Export it once per shell (replace the default if your install lives elsewhere):
+For a compatible wheel using the repository's current module layout:
 
 ```bash
-export CANN_HOME="${CANN_HOME:-$HOME/Ascend/cann}"
+export PYTHON=/absolute/path/to/venv/bin/python
+"$PYTHON" -c 'import asc; from asc.experimental import asctile; print(asc.__file__, asctile.__file__); assert callable(asctile.jit)'
+"$PYTHON" tests/tools/run_and_verify.py /absolute/path/to/kernel.py \
+  --runtime-backend host --mode execute --backend NPU --platform "$FULL_SOC" --json
 ```
 
-Similarly, if you build `pyasc` from source or reference its tutorials/tests, point `PYASC_SRC` at your checkout:
+`FULL_SOC` is the runtime's actual supported SoC, not a machine-name guess.
+Historical runtimes may expose top-level `asctile`; use their matching API and
+record that runtime rather than rewriting imports silently. `host` means the
+current interpreter, including inside a container. Use that interpreter's
+`-m pip` and `-m pytest`, not an assumed global `python3.10` installation.
 
-```bash
-export PYASC_SRC="${PYASC_SRC:-$HOME/workspace/pyasc}"
-```
+## Repository CI and external evaluation
 
-## Environment Setup
+For development without an NPU, use the digest-pinned simulator image in
+[ENV.json](../reference/images/ENV.json) and the [README workflow](../README.md).
+This is the reproducible repository CI environment, not an additional CANNBot
+installation requirement. Upstream wheel/image availability does not qualify
+all architecture, CANN and SoC combinations; see [verification status](verification-status.md).
 
-### 1. Source CANN environment
-
-```bash
-source "$CANN_HOME/set_env.sh"
-```
-
-This sets `ASCEND_HOME_PATH` and adds CANN binaries to `PATH`.
-
-### 2. Set simulator library path
-
-```bash
-export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
-```
-
-This is required for the Model backend (simulator). Without it, pyasc kernels will fail with missing library errors.
-
-### 3. Verify setup
-
-```bash
-# Check CANN version
-grep '^Version=' "$ASCEND_HOME_PATH/compiler/version.info"
-
-# Check simulator libs exist
-ls "$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib/"
-
-# Run a pyasc tutorial to verify end-to-end
-cd "$PYASC_SRC"
-python3.10 python/tutorials/asctile/01-vector-add.py
-```
-
-Success criteria: The tutorial prints "Sample add run success." with no ISA errors.
-
-## Getting the pyasc runtime
-
-Install the published wheel into a clean virtualenv:
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install --pre pyasc-dev
-```
-
-`asctile` is compiled into the wheel. Verify you got a usable one:
-
-```bash
-.venv/bin/python -c "from asc.experimental import asctile; print(asctile.__file__)"
-```
-
-A legacy source build exposes the module top-level as `import asctile`
-instead; both layouts are handled by the skills and by
-`reference/asctile/conftest.py`.
-
-> **Watch for shadowing.** A stale editable checkout can leave an `asctile/`
-> directory with no `__init__.py` on `sys.path`. Python imports that as an
-> empty namespace package, so `import asctile` *succeeds* with
-> `__file__ is None` and nothing in it works. If you see
-> `module 'asctile' has no attribute 'jit'`, this is why — use a clean venv.
-
-Each published wheel records its own source commit in its PyPI metadata,
-because the build tracks the upstream default branch. Read that rather than
-assuming a fixed revision; `scripts/sync-target-suite.sh` uses it as the
-default ref when re-vendoring the target suite.
-
-## Running pyasc Kernels
-
-Always use `python3.10` (not `python` or `python3`) since pyasc and torch are installed under Python 3.10.
-
-```bash
-export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
-python3.10 kernel.py -r Model -v Ascend950PR_9599
-```
-
-- `-r Model` selects the simulator backend
-- `-v Ascend950PR_9599` specifies the platform (the only platform the stack targets)
-
-## Running pyasc Tests
-
-```bash
-# Unit tests (mocked launcher, no simulator needed)
-cd "$PYASC_SRC"
-python3.10 -m pytest python/test/unit/ -v
-
-# Kernel integration tests (requires simulator)
-source "$CANN_HOME/set_env.sh"
-export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:$LD_LIBRARY_PATH"
-python3.10 -m pytest python/test/kernels/test_vadd.py -v
-```
-
-## Troubleshooting
-
-### ISA/DMA errors during kernel execution
-
-If the simulator initializes ("PEM MODEL Init Success!") but produces ISA errors like `get_scalar_opcode_type not supporting this op1`, check:
-
-1. `LD_LIBRARY_PATH` includes the correct simulator path
-2. `source set_env.sh` was run in the current shell
-3. The `-v Ascend950PR_9599` platform flag is specified (not `-v Ascend950PR`)
-
-### `Too many open files` during simulator run (Docker only)
-
-If running inside Docker and you see many lines like:
-
-```
-[ERROR] pem_log.cc:... Failed opening file /tmp/pyasc_camodel_*/core*.dump for writing: Too many open files
-```
-
-the CANN simulator is being throttled by the container's default `nofile`
-limit. Restart the container with a higher limit:
-
-```bash
-docker run --rm -it --ulimit nofile=1048576:1048576 \
-    -v "$(pwd)":/workspace -w /workspace pyasc-sim:latest
-```
-
-### pytest collection errors
-
-If `pytest.Parser` is not found, upgrade pytest:
-
-```bash
-pip3.10 install "pytest>=7.0"
-```
-
-### Module not found: torch or asc
-
-Ensure you're using `python3.10`:
-
-```bash
-python3.10 -c "import asc; print(asc.__version__)"
-python3.10 -c "import torch; print(torch.__version__)"
-```
+For external hardware evaluation, [CANNBench](../integrations/cannbench/README.md)
+runs the submitted package in its own runner environment. The submitter needs
+service access and a compatible packaged runtime, not a local NPU or CANN
+installation. Record the service's actual environment and exact package hash;
+a local simulator pass is a separate claim.

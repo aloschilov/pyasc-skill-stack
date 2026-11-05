@@ -8,5 +8,5 @@
 - [ ] `python3 -m py_compile` and static contract checks pass
 - [ ] Every case dispatch and unique specialization passes exact-v2 lowering
 - [ ] Ordinary and adversarial camodel routes are compared to the golden
-- [ ] Independent reviewer used a different model/session
+- [ ] Reviewer used a fresh session/worker; actual model/session IDs recorded without claiming a different model unless used
 - [ ] CANNBench job URL/result is recorded when remote execution completes

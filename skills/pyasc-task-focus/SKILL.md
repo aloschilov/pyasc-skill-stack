@@ -1,6 +1,6 @@
 ---
 name: pyasc-task-focus
-description: Task focus and attention management skill for pyasc kernel development. Avoids the "lost in the middle" problem in long tasks by maintaining todo.md files. Trigger — task requires more than 5 steps, complex multi-step kernel development, long context conversations, or user explicitly requests a plan.
+description: Task focus and attention management skill for pyasc kernel development. Avoids the "lost in the middle" problem in long tasks by maintaining todo.md files. Trigger — task requires more than 5 steps, complex multi-step kernel development, long context conversations, user explicitly requests a plan, or reviewing delivery readiness of this skill stack.
 ---
 
 # Task Focus and Attention Management
@@ -77,3 +77,9 @@ See [assets/template_simple.md](assets/template_simple.md)
 ## References
 
 - [Best Practices](references/best-practices.md)
+
+## Skill-stack delivery readiness
+
+When maintaining this repository or preparing its PR for review, apply
+[the delivery consistency checks](references/delivery-readiness.md). This is a
+repository-maintenance check, not an extra prerequisite for writing a kernel.

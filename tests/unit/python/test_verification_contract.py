@@ -248,6 +248,25 @@ class Contract(unittest.TestCase):
         ):
             self.assertFalse(_has_literal_shape_checks(ast.parse(source)))
 
+    def test_named_literal_shape_loop_scoring(self):
+        import ast
+        from score_kernel import _has_literal_shape_checks
+        body = 'for size in test_sizes:\n    assert torch.allclose(run(size), expected(size))\n'
+        for prefix in ('test_sizes = [1024, 1025]\n',
+                       'test_sizes = ((4, 128), (4, 129))\nseed = 2026\n'):
+            self.assertTrue(_has_literal_shape_checks(ast.parse(prefix + body)))
+        for prefix in ('test_sizes = [1024]\n', 'test_sizes = [1024, 1024]\n',
+                       'test_sizes = unknown()\n',
+                       'test_sizes = [1024, 1025]\ntest_sizes.clear()\n',
+                       'test_sizes = [1024, 1025]\nmutate(test_sizes)\n',
+                       'test_sizes = [1024, 1025]\nalias = test_sizes\n',
+                       'test_sizes = [1024, 1025]\nif flag:\n    test_sizes = [1]\n'):
+            self.assertFalse(_has_literal_shape_checks(ast.parse(prefix + body)))
+        self.assertFalse(_has_literal_shape_checks(ast.parse(
+            'test_sizes = [1024, 1025]\n' + body + '    test_sizes.clear()\n')))
+        self.assertFalse(_has_literal_shape_checks(ast.parse(
+            'def other():\n    test_sizes = [1024, 1025]\n' + body)))
+
     def test_artifacts_outside_checkout(self):
         with self.assertRaises(ValueError): RunArtifacts(ROOT/'should-not-exist','test')
         with tempfile.TemporaryDirectory() as tmp:

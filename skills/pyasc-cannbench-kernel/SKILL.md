@@ -11,18 +11,17 @@ standalone-kernel workflow.
 
 ## Current v2 snapshot
 
-The CANNBench campaign runtime/source authority is
-`compiler-team/pyasc@0a631f70968c3cb7c33ce45330a85768dd5a6f06`. The vendored
-catalog, evaluator, overlay, and the local compile/CaModel gates are bound to
-this pin; a scope's runner launch records it via `--expect-pyasc-source`. When a
-review checks runtime provenance, compare against this pin — do not demand a
-different one. `adadd7d66ed0ee16d33d79487bf584899a26ef1e` is the historical
-high-level GeLU campaign pin and is **not** CANNBench runtime authority; treat
-GeLU-pin prose as historical GeLU guidance, not as the current contract.
+Use the runtime/source pin recorded by the current run's manifest. The manual
+single-operator CI path pins its runtime in
+`integrations/cannbench/ci/single-runtime.json` and verifies the compiler's
+runtime bytes against the packaged wheel before lowering. Its task authority
+is a live, hashed CANNBench snapshot. Do not replace either with stale prose.
 
-Runs kept under other pins (for example `030e9b2c0ce44cbc5f9523e03e131f4a23c23a2d`)
-remain evidence for those revisions; do not relabel them, and never demand that
-the runtime be changed to satisfy stale pin prose.
+The archived full-catalog campaign used
+`compiler-team/pyasc@0a631f70968c3cb7c33ce45330a85768dd5a6f06`; the historical
+GeLU campaign used `adadd7d66ed0ee16d33d79487bf584899a26ef1e`.
+Those pins apply only to their recorded runs. Evidence under another pin must
+retain that provenance; never relabel it or change runtime to satisfy old text.
 
 Author new high-level candidates like `python/test/asctile/target/`: public
 `asctile` types, `@asctile.jit`, tile math, `global_tensor`, `copy_in`/
@@ -35,8 +34,9 @@ from public tile operations is allowed.
 
 ## Non-negotiable contract
 
-- Treat `tasks/<op>/proto.yaml`, `golden.py`, and all 20 entries in
-  `cases.yaml` as one indivisible specification.
+- Treat the selected task's `proto.yaml`, `golden.py`, and every entry in
+  `cases.yaml` as one indivisible specification. CI uses its live task snapshot;
+  `tasks/<op>/` holds reusable local contracts, not a current service catalog.
 - Produce one `candidate.py` with the exact top-level callable and defaults.
 - Use `torch` only for allocation, metadata views, and launches. Numerical work
   belongs in public `@asctile.jit` kernels.
@@ -82,15 +82,17 @@ from public tile operations is allowed.
 5. Run the exact-v2 local compile gate for that operator as described in
    [local validation](references/local-validation.md). A compile failure is
    measured feedback; repair it and re-run all 20 cases within the assigned
-   validation budget. Confirm the runtime and gate actually use the campaign
+   validation budget. Confirm the runtime and gate actually use the recorded
    pin and public decorator before counting a pass.
 6. For numerically sensitive formulas, run the adversarial camodel smoke when
    the native runtime is available. It must exercise both ordinary and
    special-value routes using the task's dtype-specific tolerances. Treat a
    small all-finite smoke as insufficient for promotion.
-7. Have a different available model review the task, design, candidate, and
-   local report. Record both model IDs, OpenCode session IDs, loaded skill
-   source hashes, prompt/design/candidate hashes, and gate results.
+7. Review the task, design, candidate and measured report in a fresh session.
+   One configured model is sufficient; a second model is optional. Record the
+   actual model/session IDs and do not describe same-model review as independent
+   model evidence. Retain skill-source, prompt/design/candidate hashes and gate
+   results; compilation and numerical checks determine acceptance.
 
 Local compilation and CaModel are available in the project environment.
 Workers use only preconfigured commands within their time/tool budget, without

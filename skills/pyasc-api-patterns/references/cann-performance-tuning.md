@@ -59,6 +59,22 @@ reproduced implementations. Read their specific contracts before using them.
    control. Then hardware validates the candidate; model ticks are not NPU us.
    Do not run new hardware jobs or restart schedules without task authorization.
 
+## Simulator timing protocol
+
+- Keep simulator ticks, simulator host wall time and measured NPU microseconds
+  as separate metrics. Do not convert ticks to hardware latency using an assumed
+  clock rate or treat JIT/import wall time as kernel time.
+- For a per-launch comparison, run one kernel/shape per fresh process, or use
+  per-launch trace boundaries. A process-wide cumulative counter cannot identify
+  individual launch costs without those boundaries.
+- Hold runtime/image digest, platform, inputs, dtype, geometry and counter scope
+  fixed across baseline and candidate. Record warm-up/cache policy and repeated
+  samples; retain failures and report dispersion rather than selecting the best.
+- Keep numerical verification separate from the timed interval. Compare complete
+  logical outputs under the task tolerances before accepting a timing result.
+- Record raw counters and exact collection commands outside checkout. API/JIT
+  compatibility belongs to the pinned API references, not to this timing protocol.
+
 ## Read the metrics without overclaiming
 
 - Engine busy ratios can overlap. Do not add vec/scalar/MTE ratios to obtain

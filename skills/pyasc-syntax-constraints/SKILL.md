@@ -5,10 +5,10 @@ description: Current pyasc v2 syntax, typing, ConstExpr, loop, and kernel/device
 
 # Current pyasc v2 syntax constraints
 
-Use the syntax implementation and tests from the exact selected `v2` commit.
-For the current CANNBench campaign that is
-`0a631f70968c3cb7c33ce45330a85768dd5a6f06`. New tile kernels use
-`@asctile.jit`; `@asc2.jit` is obsolete.
+Use the syntax implementation and tests matching the repository runtime pin
+in `reference/images/ENV.json` and source pin in `reference/asctile/PIN.json`.
+An explicitly selected campaign must identify its own matching source/runtime.
+New tile kernels use `@asctile.jit`; `@asc2.jit` is obsolete.
 
 ## Supported core constructs
 
