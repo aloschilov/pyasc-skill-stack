@@ -119,9 +119,58 @@ API must be classified as a candidate failure, not an unavailable simulator.
 `examples-gate` retains these reports in a separate artifact. This is verification
 of the adapters/executor, **not** newly generated-kernel or hardware qualification.
 
-Remaining #22 work: compatible baseline comparisons/regression policy, and
-explicitly approved schedule plus end-to-end scheduled acceptance. #23 skills-effect comparisons and #24 model diversity should
+Remaining #22 work: selected compatible baselines and explicitly approved
+schedule plus end-to-end scheduled acceptance. #23 skills-effect comparisons and #24 model diversity should
 reuse these contracts; #20 owns separate reviewer/tuner handoffs.
+
+## Offline regression policy
+
+`generation-no-lost-pass-v1` compares two retained runs without model, Docker or
+network calls. Select a reviewed, complete PASS baseline explicitly by the SHA256
+of its `files.json`; do not automatically promote the newest run. Store its archive,
+archive checksum, index checksum and locator durably outside Git. A failed candidate
+never replaces the baseline. Hashes establish integrity, not independent authenticity.
+
+```bash
+python3 tests/tools/generation_compare.py \
+  --baseline /outside-checkout/accepted-run \
+  --baseline-sha256 <reviewed-files.json-sha256> \
+  --candidate /outside-checkout/new-run \
+  --report /outside-checkout/comparison.json
+```
+
+Both bundles must have indexed, matching public files and source snapshots. PASS
+cells additionally need unchanged candidate bytes, command/cleanup receipts,
+native session and model/skill attribution, known provider usage, numerical checks
+and a rejecting suppressed-launch control. Missing evidence fails closed. Private
+wire responses are unnecessary and must remain excluded. Reusing the baseline or
+one of its successful sessions is not a fresh comparison.
+
+Compatibility requires the same ordered inventory/case anchors, model/profile,
+provider response revision, OpenCode version, runtime digest, budgets, required
+gates and non-skill input hashes. Only skill contents and checkout revision may
+change; changed skill files are listed. The offline comparison tool itself is
+excluded from execution compatibility. All other executor, adapter, verifier,
+profile or task changes require a new baseline, even when apparently harmless.
+An incompatible run is reported explicitly and receives no comparative score.
+
+The denominator is always every planned cell in the baseline. One prior PASS
+becoming `failed` emits `lost-pass` and exit **1**; there is no percentage threshold.
+`blocked`/`not-run` cells remain coverage gaps, with exit **2**, never disappearing
+from the denominator. A regression with additional gaps lists both. Complete
+compatible runs without alerts exit **0**. This is a deterministic regression
+signal from one trial per configured attempt, not a statistical skills-effect or
+performance claim; repeated/paired measurement belongs to #23.
+
+New executor receipts include UTC `started_at` and `finished_at`. The reporter
+emits `stale-coverage` when completion is older than 36 hours by default
+(`--max-age-hours` is explicit in the report); missing/future/naive timestamps
+emit `unknown-coverage-time`. File modification time is never evidence of fresh
+coverage. Legacy runs can be inspected or selected explicitly, but cannot prove
+fresh coverage without recorded completion time. This tool produces alert records
+and nonzero exits; it does not itself monitor a schedule, send notifications or
+prove that a scheduled job ran. Scheduled failure/staleness alert delivery and
+scheduled acceptance remain unimplemented while scheduling is disabled.
 
 ## Manual pilot, 2026-11-06
 

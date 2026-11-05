@@ -1,6 +1,7 @@
 """Explicit, serial generation executor. No schedule, hardware or automatic resume."""
 import argparse
 from contextlib import contextmanager
+from datetime import datetime, timezone
 import fcntl
 import json
 import os
@@ -231,7 +232,8 @@ def execute(plan, output, state_dir):
         output.mkdir(parents=True)
         save(output/'plan.json', plan)
         revision = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], capture_output=True, text=True)
-        state = {'status': 'running', 'checkout_revision': revision.stdout.strip() if revision.returncode == 0 else None,
+        state = {'status': 'running', 'started_at': datetime.now(timezone.utc).isoformat(),
+            'checkout_revision': revision.stdout.strip() if revision.returncode == 0 else None,
             'plan_sha256': plan['plan_sha256'], 'cells': [
             {'id': c['id'], 'status': 'not-run', 'attempts': []} for c in plan['cells']],
             'reserved_output_tokens': 0, 'observed_output_tokens': 0, 'reserved_execution_seconds': 0}
@@ -296,6 +298,7 @@ def execute(plan, output, state_dir):
             state.update(status='blocked', error=type(exc).__name__ + ': ' + str(exc))
             # Keep the latch: do not assume interrupted/unknown provider work is safe to replay.
         finally:
+            state['finished_at'] = datetime.now(timezone.utc).isoformat()
             checkpoint()
             save(output/'files.json', {str(p.relative_to(output)): digest(p.read_bytes()) for p in output.rglob('*')
                 if p.is_file() and not p.is_symlink() and 'private' not in p.parts and p.name != 'files.json'})

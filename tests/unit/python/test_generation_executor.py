@@ -1,5 +1,6 @@
 """Offline executor contracts. Provider/qualification doubles never claim real generation."""
 import copy
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
@@ -129,6 +130,8 @@ class ExecutorContracts(unittest.TestCase):
         self.assertEqual(result['observed_output_tokens'], 30)
         self.assertEqual(result['reserved_execution_seconds'], 1800)
         self.assertEqual([c['status'] for c in result['cells']], ['passed']*3)
+        self.assertLessEqual(datetime.fromisoformat(result['started_at']), datetime.fromisoformat(result['finished_at']))
+        self.assertIsNotNone(datetime.fromisoformat(result['finished_at']).utcoffset())
         self.assertFalse((self.path/'state/active.json').exists())
         self.assertTrue((self.path/'run/files.json').is_file())
         with self.assertRaisesRegex(ValueError, 'never replayed'): self.run_double()
@@ -137,6 +140,7 @@ class ExecutorContracts(unittest.TestCase):
         result = self.run_double(generation=lambda *args: (_ for _ in ()).throw(executor.Blocked('Unknown delivery')))
         self.assertEqual(result['status'], 'blocked')
         self.assertEqual([c['status'] for c in result['cells']], ['blocked', 'not-run', 'not-run'])
+        self.assertIn('finished_at', result)
         self.assertEqual(result['reserved_output_tokens'], 65536)
         self.assertTrue((self.path/'state/active.json').exists())
 

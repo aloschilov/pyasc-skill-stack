@@ -13,6 +13,7 @@ prerequisites or resource blocks do not count as successful coverage.
 | Separate reviewer / tuner automation | **Not-run** in the recorded generated CI qualification. Skills retain these phases; [issue #20](https://github.com/aloschilov/pyasc-skill-stack/issues/20) tracks automatic handoffs. |
 | Full upstream target suite | No complete numerical pass claimed. `merge-gate` is compile-only and now requires every discovered module to complete; resource blocks fail coverage. |
 | Nightly generation | **Not-run**; no automatic campaign or nightly schedule. |
+| Generation regression comparison | Offline policy implemented: compatible, explicitly pinned complete baseline; no lost PASS; fixed denominator and coverage-age checks. Unit doubles and retained-run integrity checks only; no new compatible generation pair or scheduled alert delivery qualified. [Policy](../tests/generation/README.md#offline-regression-policy). |
 
 The checkout and installed-skill workflows also have earlier simulator-only
 qualifications. Their source hashes, results, archive locations and checksums
