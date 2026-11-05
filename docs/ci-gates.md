@@ -12,7 +12,7 @@ or qualified.
 |---|---|---|
 | `pr-gate` | PR, push to `main`, manual dispatch | Offline unit, skill syntax, image-pin and reference-drift checks |
 | `examples-gate` | Same, after `pr-gate`; 20-minute cap | Pinned simulator verification contract and permanent numerical regression fixtures |
-| `merge-gate` | Push to `main`, or manual dispatch with hardware action `none`; 60-minute cap | Every discovered target module compiles; failures **and resource blocks** fail the gate |
+| `merge-gate` | Push to `main`, or manual dispatch with both hardware and generation actions `none`; 60-minute cap | Every discovered target module compiles; failures **and resource blocks** fail the gate |
 | `generated-hardware` | Explicit manual dispatch with generate/repair/continue/resume | Selected operator recipe, exact package, strict hardware result and durable publication |
 | `generation-simulator` | Explicit manual `generation_action=plan|execute`; default `none` | Offline plan, or hash-approved fresh simulator qualification and optional compatible-baseline comparison; no NPU |
 | release | `v*` tag | Fast suite, skills-only archive and install verification |

@@ -41,7 +41,7 @@ container without credentials or device mounts.
 
 ## Explicit execution, budgets and evidence
 
-A future authorized manual run uses `--execute --approve-plan <exact plan_sha256>
+An authorized manual run uses `--execute --approve-plan <exact plan_sha256>
 --results-dir /outside-checkout/new-run`. It needs OpenCode, the locally available
 digest-pinned simulator, and `OPENCODE_BASE_URL` / `OPENCODE_API_KEY`. The executor
 never pulls an image, submits to CANNBench, or selects an NPU backend. No schedule
@@ -263,3 +263,24 @@ Private application state/raw provider responses are excluded. The separate
 SHA256 `2854eb3b1068fd3d8878177849a6b7ee9882fe22a104a79f2e8d514259da1ffa`.
 Archive locations and CI verification belong in the PR handoff; no run artifacts
 are committed to Git.
+
+## Manual CI qualification, 2026-11-06
+
+[Dispatch 42126948369](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42126948369)
+on `53ef52e6d592d06400e1351effa44c8b9776b20d` qualified **3/3 fresh candidates**
+with OpenCode 1.19.0 / `gateway/glm-5.3` (reported `glm-5-3-260814`).
+Add, reduce-sum and broadcast passed unchanged-byte static/JIT/Model numerics:
+three patterns each, nine real simulator launches, 21 output/input comparisons,
+and three rejecting suppressed-launch controls. All containers were removed.
+Executor wall time was **278.08 s**; the complete qualification job took **336 s**
+including provisioning/collection. Usage was **15 requests, 11,323 completion
+tokens and 155,935 input tokens**; provider cost was unavailable. Limits were unchanged.
+This is `qualified`, without baseline comparison or promotion, NPU/performance
+measurement, or scheduled/nightly acceptance.
+
+The public archive has 216 hash-verified members and 87 source hashes checked
+against that commit. Maintainer copies outside checkout on the development host
+and Linux VM: `~/pyasc-qualification-runs/issue22-ci-20261106/generation-ci-42126948369.tar.gz`.
+SHA256: `bb574ef974083bc1352c9c5d347a67047203b5a7aea6998ecd4730125e8f3d67`.
+Private response/application state is excluded. The earlier pilot and failed
+attempts remain intact; this run does not replace their records.
