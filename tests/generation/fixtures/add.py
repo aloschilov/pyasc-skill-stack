@@ -3,7 +3,7 @@ import asc
 from asc.experimental import asctile
 
 
-@asctile.jit(always_compile=True)
+@asctile.jit
 def add_kernel(x: asc.GlobalAddress, y: asc.GlobalAddress, out: asc.GlobalAddress):
     a = asctile.global_tensor(x, [199])
     b = asctile.global_tensor(y, [199])

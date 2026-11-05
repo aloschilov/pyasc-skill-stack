@@ -73,8 +73,10 @@ def static_check(source, contract):
             launch = node
         else:
             decorators = node.decorator_list
-            if (len(decorators) != 1 or not isinstance(decorators[0], ast.Call)
-                    or ast.unparse(decorators[0].func) != 'asctile.jit'):
+            if len(decorators) != 1:
+                raise ValueError('Device functions must use asctile.jit')
+            decorator = decorators[0].func if isinstance(decorators[0], ast.Call) else decorators[0]
+            if ast.unparse(decorator) != 'asctile.jit':
                 raise ValueError('Device functions must use asctile.jit')
             if node.name in kernels: raise ValueError('Duplicate kernel')
             kernels[node.name] = node

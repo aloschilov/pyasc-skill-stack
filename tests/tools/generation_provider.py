@@ -2,8 +2,8 @@
 
 Reserve before dispatch, forbid retries after an uncertain response, and check
 usage before allowing another request. OpenCode's agent step limit alone is not
-such a gate (it can ask for a final summary). No provider response text or key is
-persisted here. This is a budget boundary, not an OS/network sandbox.
+such a gate (it can ask for a final summary). Raw response capture is delegated to a private evidence callback; public
+records contain hashes and safe diagnostics, never credentials. This is a budget boundary, not an OS/network sandbox.
 """
 from contextlib import contextmanager
 import hashlib
@@ -37,7 +37,7 @@ def response_usage(raw, streaming, model):
     if models != {model}: raise BudgetError('Missing or different observed model')
     endings = [c for p in parts for c in p.get('choices', []) if c.get('finish_reason')]
     if (len(endings) != 1 or endings[0].get('index') != 0
-            or endings[0]['finish_reason'] not in ('stop', 'tool_calls')):
+            or endings[0]['finish_reason'] not in ('stop', 'tool_calls', 'length')):
         raise BudgetError('Incomplete/truncated model completion')
     usages = [p['usage'] for p in parts if p.get('usage')]
     if len(usages) != 1: raise BudgetError('Missing/ambiguous provider usage')
@@ -50,7 +50,7 @@ def response_usage(raw, streaming, model):
     reasoning = (usage.get('completion_tokens_details') or {}).get('reasoning_tokens', 0)
     if type(reasoning) is not int or not 0 <= reasoning <= usage['completion_tokens']:
         raise BudgetError('Invalid reasoning usage')
-    return dict(usage, observed_model=model)
+    return dict(usage, observed_model=model, finish_reason=endings[0]['finish_reason'])
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -76,7 +76,7 @@ class BudgetGate:
         return {'requests': list(self.records), 'error': self.error,
                 'reserved_output_tokens': len(self.records) * self.limits['output_tokens_per_response'],
                 'observed_output_tokens': sum(r.get('usage', {}).get('completion_tokens', 0) for r in self.records),
-                'provider_cost': None, 'usage_complete': bool(self.records) and all(r['status']=='complete' for r in self.records)}
+                'provider_cost': None, 'usage_complete': bool(self.records) and all(r['status'] in ('complete', 'rejected') and 'usage' in r for r in self.records)}
 
     def dispatch(self, body):
         with self.lock:
@@ -114,11 +114,12 @@ class BudgetGate:
                 usage = response_usage(raw, bool(body.get('stream')), self.response_model)
                 record['usage'] = usage
                 if usage['completion_tokens'] > cap: raise BudgetError('Provider exceeded output-token cap')
+                if usage['finish_reason'] == 'length': raise BudgetError('Model completion truncated at output-token cap')
                 record['status'] = 'complete'
                 self.save(self.snapshot())
                 return raw, content_type
             except Exception as exc:
-                record['status'] = 'unknown'
+                record['status'] = 'rejected' if 'usage' in record else 'unknown'
                 # Only our fixed validation messages are safe to persist. External
                 # exception strings can contain credentials, URLs or response text.
                 if isinstance(exc, urllib.error.HTTPError):

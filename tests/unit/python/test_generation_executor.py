@@ -43,6 +43,7 @@ class ExecutorContracts(unittest.TestCase):
             contract = adapters.task_contract(ROOT, cell)
             source = (ROOT/'tests/generation/fixtures'/name).read_text()
             self.assertEqual(adapters.static_check(source, contract)['status'], 'passed')
+            self.assertEqual(adapters.static_check(source.replace('@asctile.jit(always_compile=True)', '@asctile.jit'), contract)['status'], 'passed')
             compile(adapters.wrapper(contract), 'probe.py', 'exec')
             for addition in ('\nimport torch', '\nopen("secret")', '\nfrom asc.runtime import config'):
                 with self.assertRaises(ValueError): adapters.static_check(source+addition, contract)
@@ -187,7 +188,7 @@ class ProviderContracts(unittest.TestCase):
                 with self.assertRaises(BudgetError): self.gate.dispatch({'model':'test-model'})
                 with self.assertRaises(BudgetError): self.gate.dispatch({'model':'test-model'})
                 self.assertEqual(len(self.requests), before+1)
-                self.assertFalse(self.gate.snapshot()['usage_complete'])
+                self.assertEqual(self.gate.snapshot()['usage_complete'], 'usage' in payload)
                 self.assertEqual(self.gate.snapshot()['reserved_output_tokens'], 16)
 
     def test_rejected_response_retains_private_bytes_hash_and_safe_reason(self):
@@ -197,9 +198,11 @@ class ProviderContracts(unittest.TestCase):
         with self.assertRaisesRegex(BudgetError, 'truncated'):
             self.gate.dispatch({'model':'test-model', 'stream':True})
         record = self.gate.records[0]
-        self.assertEqual(record['status'], 'unknown')
+        self.assertEqual(record['status'], 'rejected')
         self.assertEqual(record['http_status'], 200)
-        self.assertEqual(record['validation_error'], 'Incomplete/truncated model completion')
+        self.assertEqual(record['validation_error'], 'Model completion truncated at output-token cap')
+        self.assertTrue(self.gate.snapshot()['usage_complete'])
+        self.assertEqual(self.gate.snapshot()['observed_output_tokens'], 7)
         self.assertEqual(record['response_sha256'], planner.digest(captured[0][1]))
         self.assertEqual(captured[0][0], 1)
         self.assertNotIn('fixture-key', json.dumps(self.saves))
@@ -224,9 +227,12 @@ class ProviderContracts(unittest.TestCase):
                 if name.startswith('skills/'):
                     dest = context/name; dest.parent.mkdir(parents=True, exist_ok=True); dest.write_bytes((ROOT/name).read_bytes())
             self.payload['model'] = plan['model']['expected_response']
+            real_command = executor.command
             def fake_client(argv, directory, name, seconds, env=None, abort=None, cwd=None):
-                if name=='project-init': return {'exit_code':0}
+                if name=='project-init': return real_command(argv, directory, name, seconds)
                 self.assertEqual(cwd, attempt/'project')
+                worktree = subprocess.check_output(['git', '-C', str(cwd), 'rev-parse', '--show-toplevel'], text=True).strip()
+                self.assertEqual(Path(worktree).resolve(), cwd.resolve())
                 self.assertEqual(argv[:4], ['opencode','run','--pure','--format'])
                 self.assertNotIn('OPENCODE_API_KEY', env)
                 config = json.loads(env['OPENCODE_CONFIG_CONTENT'])
@@ -269,7 +275,7 @@ class ProviderContracts(unittest.TestCase):
         self.assertEqual(response_usage(json.dumps(self.payload).encode(),False,'test-model')['completion_tokens'],7)
         changes = [lambda p:p.update(model='fallback'), lambda p:p['usage'].update(completion_tokens=True),
                    lambda p:p['usage'].update(total_tokens=11), lambda p:p.pop('usage'),
-                   lambda p:p['choices'][0].update(finish_reason='length')]
+                   lambda p:p['choices'][0].update(finish_reason='unexpected')]
         for change in changes:
             data=copy.deepcopy(self.payload); change(data)
             with self.assertRaises(BudgetError): response_usage(json.dumps(data).encode(),False,'test-model')

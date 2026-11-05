@@ -163,9 +163,18 @@ def generate(attempt, plan, contract, context):
         try:
             result = command(['opencode', 'run', '--pure', '--format', 'json', '--dir', str(project), '-m', model, prompt],
                              attempt, 'generation', max(.01, deadline-time.monotonic()), env, abort=lambda: gate.error, cwd=project)
+        except Blocked:
+            usage = gate.snapshot()
+            if usage['usage_complete'] and (gate.error == 'Request budget exhausted' or
+                    any(r.get('usage', {}).get('finish_reason') == 'length' for r in usage['requests'])):
+                raise ValueError('Generation budget exhausted; complete provider usage retained') from None
+            raise
         finally:
             save(attempt/'usage.json', gate.snapshot())
     usage = gate.snapshot()
+    if usage['usage_complete'] and (gate.error == 'Request budget exhausted' or
+            any(r.get('usage', {}).get('finish_reason') == 'length' for r in usage['requests'])):
+        raise ValueError('Generation budget exhausted; complete provider usage retained')
     if result['exit_code'] or gate.error or not usage['usage_complete']:
         raise Blocked('Generation or provider usage incomplete; inspect retained evidence')
     for name, sha in plan['source_sha256'].items():
