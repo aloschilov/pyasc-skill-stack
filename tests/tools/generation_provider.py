@@ -10,9 +10,11 @@ import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import secrets
+import re
 import threading
 import time
 import urllib.request
+import urllib.error
 from urllib.parse import urlsplit
 
 MAX_BODY = 8 * 1024 * 1024
@@ -57,12 +59,13 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class BudgetGate:
-    def __init__(self, base_url, api_key, model, limits, save, deadline):
+    def __init__(self, base_url, api_key, model, limits, save, deadline, capture_response=None):
         url = urlsplit(base_url)
         if url.scheme not in ('https', 'http') or not url.netloc or url.username or url.password or url.query or url.fragment:
             raise BudgetError('Invalid provider endpoint')
         self.url = base_url.rstrip('/') + '/chat/completions'
         self.key, self.model, self.limits, self.save, self.deadline = api_key, model, limits, save, deadline
+        self.capture_response = capture_response
         self.records = []
         self.error = None
         self.lock = threading.Lock()
@@ -97,8 +100,15 @@ class BudgetGate:
                 request = urllib.request.Request(self.url, data=payload,
                     headers={'Authorization': 'Bearer '+self.key, 'Content-Type': 'application/json'})
                 with urllib.request.build_opener(NoRedirect).open(request, timeout=max(.01, self.deadline-time.monotonic())) as response:
+                    record['http_status'] = response.status
+                    record['response_ids'] = {name: value for name in ('x-request-id', 'x-requestid', 'x-tt-logid')
+                        if (value := response.headers.get(name)) and re.fullmatch(r'[A-Za-z0-9_.:-]{1,256}', value)}
                     raw = response.read(MAX_RESPONSE + 1)
                     content_type = response.headers.get('Content-Type', 'application/json')
+                record['response_sha256'] = hashlib.sha256(raw).hexdigest()
+                record['response_bytes'] = len(raw)
+                if self.capture_response:
+                    self.capture_response(len(self.records), raw)
                 if len(raw) > MAX_RESPONSE: raise BudgetError('Provider response too large')
                 usage = response_usage(raw, bool(body.get('stream')), self.model)
                 record['usage'] = usage
@@ -108,8 +118,12 @@ class BudgetGate:
                 return raw, content_type
             except Exception as exc:
                 record['status'] = 'unknown'
-                # Exception strings can contain URLs or server response text.
-                self.error = type(exc).__name__ + ': provider response/usage not accepted'
+                # Only our fixed validation messages are safe to persist. External
+                # exception strings can contain credentials, URLs or response text.
+                if isinstance(exc, urllib.error.HTTPError):
+                    record['http_status'] = exc.code
+                record['validation_error'] = str(exc) if isinstance(exc, BudgetError) else type(exc).__name__
+                self.error = type(exc).__name__ + ': ' + record['validation_error']
                 self.save(self.snapshot())
                 raise BudgetError(self.error) from None
 
@@ -128,7 +142,13 @@ def budget_server(gate):
                 self.send_response(200); self.send_header('Content-Type', kind)
                 self.send_header('Content-Length', str(len(raw))); self.end_headers(); self.wfile.write(raw)
             except Exception:
-                self.send_error(429, 'Generation budget gate rejected request')
+                # A retryable 429 makes OpenCode sleep/retry after a permanent
+                # rejection. The executor also watches gate.error and cancels it.
+                raw = b'{"error":{"type":"budget_gate_rejected","message":"Generation budget gate rejected request; inspect usage.json"}}'
+                self.send_response(400); self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(raw))); self.end_headers()
+                try: self.wfile.write(raw)
+                except (BrokenPipeError, ConnectionResetError): pass
     server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
     server.daemon_threads = True
     thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()

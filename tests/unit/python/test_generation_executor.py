@@ -78,6 +78,15 @@ class ExecutorContracts(unittest.TestCase):
         with self.assertRaisesRegex(executor.Blocked, 'Unresolved'):
             with executor.exclusive(state, self.path/'another'): pass
 
+    def test_permanent_provider_error_stops_client_without_waiting_for_timeout(self):
+        with self.assertRaisesRegex(executor.Blocked, 'Provider gate'):
+            executor.command([sys.executable, '-c', 'import time;time.sleep(30)'],
+                             self.path, 'abort', 30, abort=lambda: True)
+        record = json.loads((self.path/'abort.command.json').read_text())
+        self.assertEqual(record['status'], 'blocked')
+        self.assertLess(record['duration_seconds'], 3)
+        self.assertNotEqual(record['exit_code'], 0)
+
     def test_timeout_kills_child_group_and_records_partial_command(self):
         child = self.path/'child-done'
         script = 'import subprocess,sys,time; subprocess.Popen([sys.executable,"-c",'+repr(
@@ -181,6 +190,29 @@ class ProviderContracts(unittest.TestCase):
                 self.assertFalse(self.gate.snapshot()['usage_complete'])
                 self.assertEqual(self.gate.snapshot()['reserved_output_tokens'], 16)
 
+    def test_rejected_response_retains_private_bytes_hash_and_safe_reason(self):
+        self.payload['choices'][0]['finish_reason'] = 'length'
+        captured = []
+        self.gate.capture_response = lambda number, raw: captured.append((number, raw))
+        with self.assertRaisesRegex(BudgetError, 'truncated'):
+            self.gate.dispatch({'model':'test-model', 'stream':True})
+        record = self.gate.records[0]
+        self.assertEqual(record['status'], 'unknown')
+        self.assertEqual(record['http_status'], 200)
+        self.assertEqual(record['validation_error'], 'Incomplete/truncated model completion')
+        self.assertEqual(record['response_sha256'], planner.digest(captured[0][1]))
+        self.assertEqual(captured[0][0], 1)
+        self.assertNotIn('fixture-key', json.dumps(self.saves))
+        with budget_server(self.gate) as endpoint:
+            request = urllib.request.Request(endpoint+'/chat/completions',
+                data=json.dumps({'model':'test-model'}).encode(),
+                headers={'Authorization':'Bearer '+self.gate.token})
+            with self.assertRaises(urllib.error.HTTPError) as exc:
+                urllib.request.urlopen(request)
+            self.assertEqual(exc.exception.code,400)
+            exc.exception.close()
+        self.assertEqual(len(self.requests),1)  # No retry reaches the provider.
+
     def test_opencode_adapter_uses_isolated_config_gate_and_native_trace(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); attempt = root/'attempt'; attempt.mkdir()
@@ -192,7 +224,9 @@ class ProviderContracts(unittest.TestCase):
                 if name.startswith('skills/'):
                     dest = context/name; dest.parent.mkdir(parents=True, exist_ok=True); dest.write_bytes((ROOT/name).read_bytes())
             self.payload['model'] = plan['model']['requested'].split('/')[1]
-            def fake_client(argv, directory, name, seconds, env):
+            def fake_client(argv, directory, name, seconds, env=None, abort=None, cwd=None):
+                if name=='project-init': return {'exit_code':0}
+                self.assertEqual(cwd, attempt/'project')
                 self.assertEqual(argv[:4], ['opencode','run','--pure','--format'])
                 self.assertNotIn('OPENCODE_API_KEY', env)
                 config = json.loads(env['OPENCODE_CONFIG_CONTENT'])

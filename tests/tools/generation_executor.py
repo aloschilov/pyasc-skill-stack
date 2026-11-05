@@ -58,7 +58,7 @@ def exclusive(state_dir, run):
         yield active
 
 
-def command(argv, directory, name, seconds, env=None):
+def command(argv, directory, name, seconds, env=None, abort=None, cwd=None):
     """Kill the whole local process group on timeout/cancellation, including children."""
     if seconds <= 0: raise Blocked('Execution deadline exhausted')
     directory = Path(directory); start = time.monotonic()
@@ -67,9 +67,10 @@ def command(argv, directory, name, seconds, env=None):
     proc = None
     try:
         with (directory/(name+'.stdout')).open('wb') as out, (directory/(name+'.stderr')).open('wb') as err:
-            proc = subprocess.Popen(argv, cwd=directory, env=env, stdout=out, stderr=err, start_new_session=True)
+            proc = subprocess.Popen(argv, cwd=cwd or directory, env=env, stdout=out, stderr=err, start_new_session=True)
             record.update(pid=proc.pid, status='running'); save(meta, record)
             while proc.poll() is None:
+                if abort and abort(): raise Blocked('Provider gate rejected the request; inspect usage.json')
                 if time.monotonic()-start >= seconds: raise TimeoutError(name+' exceeded deadline')
                 if out.tell()+err.tell() > 32*1024*1024: raise Blocked('Command output limit exceeded')
                 time.sleep(.05)
@@ -137,8 +138,19 @@ def generate(attempt, plan, contract, context):
         'Do not copy a reference kernel. Do not run commands. Write only candidate.py.')
     (attempt/'prompt.txt').write_text(prompt)
     deadline = time.monotonic() + limits['generation_seconds_per_attempt']
+    # OpenCode 1.19 resolves edit rules against its VCS worktree. Without a
+    # repository it can use '/', so candidate.py never matches the allow rule.
+    initialized = command(['git', '-c', 'init.templateDir=', 'init', '--quiet', str(project)],
+                          attempt, 'project-init', min(20, limits['generation_seconds_per_attempt']))
+    if initialized['exit_code']: raise Blocked('Could not initialize isolated OpenCode project')
+    def capture_response(number, raw):
+        # Private wire evidence permits reconciliation without another POST.
+        path = state/f'provider-response-{number}.bin'
+        with path.open('xb') as handle: handle.write(raw)
+        path.chmod(0o600)
     gate = BudgetGate(os.environ['OPENCODE_BASE_URL'], os.environ['OPENCODE_API_KEY'], model_id,
-                      limits, lambda value: save(attempt/'usage.json', value), deadline)
+                      limits, lambda value: save(attempt/'usage.json', value), deadline, capture_response)
+    save(attempt/'usage.json', gate.snapshot())
     # No inherited credentials/config/plugins: only the gate knows the provider key.
     env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
     env.update(HOME=str(state), XDG_DATA_HOME=str(state/'data'), XDG_CONFIG_HOME=str(state/'config'),
@@ -148,9 +160,12 @@ def generate(attempt, plan, contract, context):
         config['provider'][provider]['options'] = {'baseURL': endpoint, 'apiKey': '{env:PYASC_GATE_TOKEN}'}
         save(attempt/'model-config.json', config)
         env.update(PYASC_GATE_TOKEN=gate.token, OPENCODE_CONFIG_CONTENT=json.dumps(config))
-        result = command(['opencode', 'run', '--pure', '--format', 'json', '--dir', str(project), '-m', model, prompt],
-                         attempt, 'generation', max(.01, deadline-time.monotonic()), env)
-    usage = gate.snapshot(); save(attempt/'usage.json', usage)
+        try:
+            result = command(['opencode', 'run', '--pure', '--format', 'json', '--dir', str(project), '-m', model, prompt],
+                             attempt, 'generation', max(.01, deadline-time.monotonic()), env, abort=lambda: gate.error, cwd=project)
+        finally:
+            save(attempt/'usage.json', gate.snapshot())
+    usage = gate.snapshot()
     if result['exit_code'] or gate.error or not usage['usage_complete']:
         raise Blocked('Generation or provider usage incomplete; inspect retained evidence')
     for name, sha in plan['source_sha256'].items():
