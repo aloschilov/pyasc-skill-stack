@@ -149,7 +149,7 @@ def generate(attempt, plan, contract, context):
         with path.open('xb') as handle: handle.write(raw)
         path.chmod(0o600)
     gate = BudgetGate(os.environ['OPENCODE_BASE_URL'], os.environ['OPENCODE_API_KEY'], model_id,
-                      limits, lambda value: save(attempt/'usage.json', value), deadline, capture_response)
+                      limits, lambda value: save(attempt/'usage.json', value), deadline, capture_response, response_model=plan['model']['expected_response'])
     save(attempt/'usage.json', gate.snapshot())
     # No inherited credentials/config/plugins: only the gate knows the provider key.
     env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
@@ -172,7 +172,10 @@ def generate(attempt, plan, contract, context):
         if name.startswith(('skills/', 'integrations/opencode/profiles/')) and digest(resource(context, name)) != sha:
             raise Blocked('Generation context changed')
     trace = native_trace((attempt/'generation.stdout').read_text(), skills)
-    trace.update(requested_model=model, observed_model=model_id, provider_model_revision='unknown')
+    observed = {r['usage']['observed_model'] for r in usage['requests']}
+    if observed != {plan['model']['expected_response']}: raise Blocked('Provider model attribution mismatch')
+    trace.update(requested_model=model, observed_model=plan['model']['expected_response'],
+                 provider_model_revision=plan['model']['expected_response'])
     save(attempt/'attribution.json', trace)
     candidate = project/'candidate.py'
     if candidate.is_symlink() or not candidate.is_file(): raise ValueError('Missing regular candidate.py')

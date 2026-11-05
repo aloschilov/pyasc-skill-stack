@@ -59,12 +59,13 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class BudgetGate:
-    def __init__(self, base_url, api_key, model, limits, save, deadline, capture_response=None):
+    def __init__(self, base_url, api_key, model, limits, save, deadline, capture_response=None, response_model=None):
         url = urlsplit(base_url)
         if url.scheme not in ('https', 'http') or not url.netloc or url.username or url.password or url.query or url.fragment:
             raise BudgetError('Invalid provider endpoint')
         self.url = base_url.rstrip('/') + '/chat/completions'
         self.key, self.model, self.limits, self.save, self.deadline = api_key, model, limits, save, deadline
+        self.response_model = response_model or model
         self.capture_response = capture_response
         self.records = []
         self.error = None
@@ -110,7 +111,7 @@ class BudgetGate:
                 if self.capture_response:
                     self.capture_response(len(self.records), raw)
                 if len(raw) > MAX_RESPONSE: raise BudgetError('Provider response too large')
-                usage = response_usage(raw, bool(body.get('stream')), self.model)
+                usage = response_usage(raw, bool(body.get('stream')), self.response_model)
                 record['usage'] = usage
                 if usage['completion_tokens'] > cap: raise BudgetError('Provider exceeded output-token cap')
                 record['status'] = 'complete'

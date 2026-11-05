@@ -70,9 +70,12 @@ def build_plan(root=ROOT, matrix=DEFAULT_MATRIX):
         inputs[name] = digest(data)
         return data
     spec = json.loads(read(matrix))
-    exact_keys(spec, ('schema_version', 'profile', 'skills', 'limits', 'cells'), 'matrix')
-    if type(spec['schema_version']) is not int or spec['schema_version'] != 1:
+    exact_keys(spec, ('schema_version', 'profile', 'response_model', 'skills', 'limits', 'cells'), 'matrix')
+    if type(spec['schema_version']) is not int or spec['schema_version'] != 2:
         raise ValueError('Unsupported matrix schema')
+    response_model = spec['response_model']
+    if not isinstance(response_model, str) or not re.fullmatch(r'[A-Za-z0-9_.:/-]{1,128}', response_model):
+        raise ValueError('Explicit expected provider response model required')
     limits = spec['limits']; exact_keys(limits, LIMITS, 'limits')
     for name, ceiling in LIMITS.items():
         if type(limits[name]) is not int or not 1 <= limits[name] <= ceiling:
@@ -144,9 +147,9 @@ def build_plan(root=ROOT, matrix=DEFAULT_MATRIX):
     for path in sorted((root/'tests/tools').glob('*.py')):
         read(path.relative_to(root).as_posix())
     return {
-        'schema_version': 1, 'kind': 'generation-plan', 'status': 'not-run',
+        'schema_version': 2, 'kind': 'generation-plan', 'status': 'not-run',
         'execution_enabled': False, 'schedule_enabled': False,
-        'model': {'requested': model, 'observed': None, 'profile': profile},
+        'model': {'requested': model, 'observed': None, 'expected_response': response_model, 'profile': profile},
         'runtime': {'backend': 'Model', 'image': ref, 'source_revision': image['source_sha']},
         'skills': skills, 'cells': planned, 'limits': limits,
         'maximum_work': {'model_attempts': attempts, 'output_tokens': tokens, 'execution_seconds': seconds},

@@ -223,7 +223,7 @@ class ProviderContracts(unittest.TestCase):
             for name in plan['source_sha256']:
                 if name.startswith('skills/'):
                     dest = context/name; dest.parent.mkdir(parents=True, exist_ok=True); dest.write_bytes((ROOT/name).read_bytes())
-            self.payload['model'] = plan['model']['requested'].split('/')[1]
+            self.payload['model'] = plan['model']['expected_response']
             def fake_client(argv, directory, name, seconds, env=None, abort=None, cwd=None):
                 if name=='project-init': return {'exit_code':0}
                 self.assertEqual(cwd, attempt/'project')
@@ -233,7 +233,7 @@ class ProviderContracts(unittest.TestCase):
                 options = config['provider']['gateway']['options']
                 self.assertEqual(options['apiKey'], '{env:PYASC_GATE_TOKEN}')
                 request = urllib.request.Request(options['baseURL']+'/chat/completions',
-                    data=json.dumps({'model':self.payload['model'], 'stream':True}).encode(),
+                    data=json.dumps({'model':plan['model']['requested'].split('/')[1], 'stream':True}).encode(),
                     headers={'Authorization':'Bearer '+env['PYASC_GATE_TOKEN']})
                 with urllib.request.urlopen(request) as response: response.read()
                 events = [{'sessionID':'fresh-session', 'type':'tool_use', 'part':{'tool':'skill',
@@ -251,6 +251,19 @@ class ProviderContracts(unittest.TestCase):
             self.assertEqual(json.loads((attempt/'attribution.json').read_text())['session_id'],'fresh-session')
             self.assertNotIn('never-pass-this-key', (attempt/'model-config.json').read_text())
             self.assertEqual((attempt/'candidate.py').read_bytes(), (attempt/'project/candidate.py').read_bytes())
+
+    def test_request_alias_requires_explicit_response_revision_binding(self):
+        self.payload['model'] = 'test-model-revision-20261106'
+        with self.assertRaisesRegex(BudgetError, 'different observed model'):
+            self.gate.dispatch({'model':'test-model'})
+        self.gate.records = []; self.gate.error = None
+        self.gate.response_model = 'test-model-revision-20261106'
+        self.gate.dispatch({'model':'test-model'})
+        self.assertEqual(self.requests[-1]['model'],'test-model')
+        self.assertEqual(self.gate.records[-1]['usage']['observed_model'],'test-model-revision-20261106')
+        self.payload['model'] = 'unapproved-revision'
+        with self.assertRaisesRegex(BudgetError,'different observed model'):
+            self.gate.dispatch({'model':'test-model'})
 
     def test_usage_requires_model_completion_integer_counts_and_consistency(self):
         self.assertEqual(response_usage(json.dumps(self.payload).encode(),False,'test-model')['completion_tokens'],7)

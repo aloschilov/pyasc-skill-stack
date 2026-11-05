@@ -55,6 +55,8 @@ class GenerationPlanning(unittest.TestCase):
             lambda x: x.update(skills=[]),
             lambda x: x['skills'].append(x['skills'][0]),
             lambda x: x.update(schema_version=True),
+            lambda x: x.update(response_model=''),
+            lambda x: x.update(response_model=None),
             lambda x: x['limits'].update(attempts_per_cell=True),
             lambda x: x['limits'].update(rounds_per_attempt=0),
             lambda x: x['limits'].update(attempts_per_cell=2),
