@@ -45,8 +45,8 @@ A future authorized manual run uses `--execute --approve-plan <exact plan_sha256
 --results-dir /outside-checkout/new-run`. It needs OpenCode, the locally available
 digest-pinned simulator, and `OPENCODE_BASE_URL` / `OPENCODE_API_KEY`. The executor
 never pulls an image, submits to CANNBench, or selects an NPU backend. No schedule
-or generation CI trigger is added. Actual provider-backed qualification remains
-pending; ordinary PR checks use fixed fixtures and local provider doubles only.
+or generation CI trigger is added. A manual provider-backed simulator pilot is recorded below; ordinary PR checks
+continue to use fixed fixtures and local provider doubles only.
 
 The executor runs serially, reserves the full worst-case output and execution
 budget **before** each attempt, and never recycles unused reservations to enlarge
@@ -119,7 +119,36 @@ API must be classified as a candidate failure, not an unavailable simulator.
 `examples-gate` retains these reports in a separate artifact. This is verification
 of the adapters/executor, **not** newly generated-kernel or hardware qualification.
 
-Remaining #22 work: provider-backed manual qualification, compatible baseline
-comparisons/regression policy, and explicitly approved schedule plus end-to-end
-scheduled acceptance. #23 skills-effect comparisons and #24 model diversity should
+Remaining #22 work: compatible baseline comparisons/regression policy, and
+explicitly approved schedule plus end-to-end scheduled acceptance. #23 skills-effect comparisons and #24 model diversity should
 reuse these contracts; #20 owns separate reviewer/tuner handoffs.
+
+## Manual pilot, 2026-11-06
+
+Commit `651233ebd5db074ef25eb810a07891fcce4941a9`, OpenCode 1.19.0,
+requested `gateway/glm-5.3`, observed `glm-5-3-260814`: **3/3 fresh candidates**
+passed static/JIT/Model numerical checks and rejecting suppressed-launch controls.
+Candidate bytes were not edited or replaced between generation and qualification.
+The three cells used 15 provider requests and 12,851 completion tokens (including
+reasoning); summed cell execution was 312.58 s. Each task used the three input
+patterns above. This does not establish general generation quality, performance,
+NPU coverage, a baseline regression policy or scheduled/nightly acceptance.
+
+The initial 4096-token pilot exposed incomplete rejection diagnostics, a provider
+alias/revision mismatch, an OpenCode worktree permission mismatch, rejection of
+bare JIT decorators, an incorrect reduction API call, and reasoning-only token
+exhaustion. Failed attempts and their original candidates remain separate. One
+original request has unknown usage because its response was not retained by the
+old gate; later responses were reconciled from private wire evidence. The final
+pilot used the explicitly increased 8192-token response limit, not the old cap.
+
+Maintainer archive `manual-simulator-651233e.tar.gz` is retained outside checkout
+on both the development host and Linux VM. SHA256:
+`f030e4981d4a60117b3c96ccd292a65002ffde25341ea08c5e4ca1b175cce410`.
+It contains 210 hash-verified members including the plan, source snapshot,
+candidates, sessions/skill attribution, usage, commands and numerical reports.
+Private application state/raw provider responses are excluded. The separate
+`development-attempts-20261106.tar.gz` preserves failed attempts and reconciliation;
+SHA256 `2854eb3b1068fd3d8878177849a6b7ee9882fe22a104a79f2e8d514259da1ffa`.
+Archive locations and CI verification belong in the PR handoff; no run artifacts
+are committed to Git.

@@ -30,7 +30,9 @@ passes require a suppressed-launch control. The separate SwiGlu short-row
 regression protects a known memory-layout bug; it is one fixture in this broader
 suite, not the definition of the CI pipeline. Generation adapters additionally
 check three fixed add/reduce/broadcast kernels and three wrong-result variants;
-each correct result requires a rejecting suppressed-launch control.
+each correct result requires a rejecting suppressed-launch control. A seventh
+negative fixture requires an unknown public API to fail as a candidate defect,
+not be excused as a broken simulator environment.
 
 Both PR jobs must pass on the current head. Artifacts retain the complete
 verification-contract and generation-adapter runs for 30 days, including failures. Queue time is separate
