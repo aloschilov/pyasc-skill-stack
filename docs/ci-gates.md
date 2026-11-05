@@ -2,6 +2,9 @@
 
 The [CI workflow](../.github/workflows/ci.yml) separates ordinary checks from
 explicit model and hardware work. No nightly schedule is configured.
+An [offline generation planner](../tests/generation/README.md) validates the
+proposed multi-operator inventory and budgets; it performs no generation and
+does not qualify or enable a nightly lane.
 
 | Job | Trigger | Acceptance |
 |---|---|---|
