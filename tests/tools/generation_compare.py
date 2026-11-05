@@ -13,6 +13,15 @@ POLICY = 'generation-no-lost-pass-v1'
 SHA256 = re.compile(r'[0-9a-f]{64}')
 
 
+def compatibility(plan, version):
+    # Skills are the changed treatment. Other execution/verifier/profile/task
+    # bytes must match; even harmless executor edits require a new baseline.
+    return {key: plan[key] for key in ('schema_version', 'model', 'runtime', 'cells', 'skills', 'limits', 'required_gates')} | {
+        'opencode_version': version,
+        'source_sha256': {name: sha for name, sha in plan['source_sha256'].items()
+            if not name.startswith('skills/') and name != 'tests/tools/generation_compare.py'}}
+
+
 def require(condition, message):
     if not condition:
         raise ValueError(message)
@@ -127,13 +136,7 @@ class Bundle:
             require(request['status'] == 'complete' and request['usage']['observed_model'] == self.plan['model']['expected_response'], 'Unknown/different response model')
 
     def compatibility(self):
-        # Skills are the changed treatment, not a reason to discard a comparison.
-        # Exclude only this offline reporter; all execution/verifier/profile/task
-        # bytes must match. Even harmless executor edits require a new baseline.
-        return {key: self.plan[key] for key in ('schema_version', 'model', 'runtime', 'cells', 'skills', 'limits', 'required_gates')} | {
-            'opencode_version': self.version,
-            'source_sha256': {name: sha for name, sha in self.plan['source_sha256'].items()
-                if not name.startswith('skills/') and name != 'tests/tools/generation_compare.py'}}
+        return compatibility(self.plan, self.version)
 
 
 def compare(baseline, candidate, now=None, max_age_hours=36):

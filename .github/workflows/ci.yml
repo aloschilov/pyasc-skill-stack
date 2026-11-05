@@ -19,6 +19,23 @@ on:
         description: 'For repair, continue or resume: original CI run ID'
         type: string
         default: ''
+      generation_action:
+        description: 'Simulator generation only: offline plan or approved execution'
+        type: choice
+        default: none
+        options: [none, plan, execute]
+      generation_plan_sha256:
+        description: 'Exact reviewed plan digest; required for execute'
+        type: string
+        default: ''
+      generation_baseline:
+        description: 'Reviewed baseline RUN_ID/ATTEMPT or release/TAG; never latest'
+        type: string
+        default: ''
+      generation_baseline_sha256:
+        description: 'SHA256 of the selected generation.tar.gz baseline archive'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -66,6 +83,18 @@ jobs:
 
       - name: Install dependencies
         run: pip install pyyaml
+
+      - name: Validate manual dispatch selection
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          HARDWARE_ACTION: ${{ inputs.cannbench_action }}
+          GENERATION_ACTION: ${{ inputs.generation_action }}
+        run: |
+          python3 - <<'PY'
+          import os
+          if os.environ['HARDWARE_ACTION'] not in ('', 'none') and os.environ['GENERATION_ACTION'] not in ('', 'none'):
+              raise SystemExit('Choose either simulator generation or hardware evaluation, never both')
+          PY
 
       - name: Run PR gate
         run: bash tests/ci-gate.sh --tier pr
@@ -172,7 +201,8 @@ jobs:
     needs: [pr-gate]
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
-      (github.event_name == 'workflow_dispatch' && (inputs.cannbench_action == 'none' || inputs.cannbench_action == ''))
+      (github.event_name == 'workflow_dispatch' && (inputs.cannbench_action == 'none' || inputs.cannbench_action == '') &&
+       (inputs.generation_action == 'none' || inputs.generation_action == ''))
     steps:
       - uses: actions/checkout@v4
 
@@ -268,4 +298,18 @@ jobs:
       action: ${{ inputs.cannbench_action }}
       operator: ${{ inputs.operator }}
       origin_run: ${{ inputs.origin_run }}
+    secrets: inherit
+
+  generation-simulator:
+    needs: [pr-gate, examples-gate]
+    if: github.event_name == 'workflow_dispatch' && inputs.generation_action != 'none' && inputs.generation_action != ''
+    uses: ./.github/workflows/generation-simulator.yml
+    permissions:
+      contents: read
+      actions: read
+    with:
+      action: ${{ inputs.generation_action }}
+      approve_plan: ${{ inputs.generation_plan_sha256 }}
+      baseline_ref: ${{ inputs.generation_baseline }}
+      baseline_sha256: ${{ inputs.generation_baseline_sha256 }}
     secrets: inherit

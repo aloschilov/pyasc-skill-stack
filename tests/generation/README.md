@@ -45,7 +45,7 @@ A future authorized manual run uses `--execute --approve-plan <exact plan_sha256
 --results-dir /outside-checkout/new-run`. It needs OpenCode, the locally available
 digest-pinned simulator, and `OPENCODE_BASE_URL` / `OPENCODE_API_KEY`. The executor
 never pulls an image, submits to CANNBench, or selects an NPU backend. No schedule
-or generation CI trigger is added. A manual provider-backed simulator pilot is recorded below; ordinary PR checks
+is added. Manual CI dispatch is described below. A provider-backed simulator pilot is recorded below; ordinary PR checks
 continue to use fixed fixtures and local provider doubles only.
 
 The executor runs serially, reserves the full worst-case output and execution
@@ -122,6 +122,62 @@ of the adapters/executor, **not** newly generated-kernel or hardware qualificati
 Remaining #22 work: selected compatible baselines and explicitly approved
 schedule plus end-to-end scheduled acceptance. #23 skills-effect comparisons and #24 model diversity should
 reuse these contracts; #20 owns separate reviewer/tuner handoffs.
+
+## Manual CI dispatch
+
+The existing `CI` workflow routes explicit `generation_action=plan|execute` to
+`generation-simulator.yml` after the normal PR checks. Its default is `none`;
+pushes and pull requests never invoke a model. Hardware and simulator generation
+cannot be selected in the same dispatch. There is no schedule trigger.
+
+```bash
+gh workflow run ci.yml --ref <reviewed-branch> -f generation_action=plan
+# Inspect plan/plan.json and SUMMARY.md in generation-evidence-<run>-<attempt>.
+gh workflow run ci.yml --ref <same-branch> -f generation_action=execute \
+  -f generation_plan_sha256=<exact-reviewed-plan-sha256>
+```
+
+The runner must already provide OpenCode and the pinned simulator image; the
+normal examples gate pulls that image. The execution step alone receives
+`OPENCODE_API_KEY` and the repository's `OPENCODE_BASE_URL` variable. Its child
+OpenCode process still receives only the local gate credential. No CANNBench
+credential or NPU backend is passed. Plan-only runs need no provider credential.
+The approval digest binds the commit and complete plan: advancing the branch
+requires a new plan. Merely dispatching `execute` does not approve a changed plan.
+
+The first successful execution is **qualified**, not automatically accepted as
+a baseline or a passing regression comparison. Review its full evidence, retain
+the selected archive durably, then pass both baseline inputs on a later execute:
+
+```bash
+-f generation_baseline=<RUN_ID/ATTEMPT-or-release/TAG> \
+-f generation_baseline_sha256=<SHA256-of-generation.tar.gz>
+```
+
+Run references download that exact named Actions artifact; `release/TAG`
+downloads `generation.tar.gz` from that exact Release in the same repository.
+No `latest` lookup or automatic baseline promotion is used. Archive checksum,
+safe extraction, origin and baseline qualification are checked; incompatible
+plans/clients stop **before** provider dispatch. The comparison's baseline index
+digest is derived from this verified archive. A missing/expired artifact stops
+the job; do not silently substitute another run. Actions evidence lasts 90 days,
+so an accepted baseline must also live in a durable archive (for example a
+reviewed Release asset) with its checksum and locator recorded outside Git.
+
+CI retains raw evidence in the runner's persistent
+`~/pyasc-qualification-runs/github-generation/<run>-<attempt>/`, outside checkout
+and runner temp. Only a public `generation.tar.gz`, checksum and summary are
+uploaded. The archive excludes every `private/` tree and symlinks; unpacking
+rejects links, traversal, duplicate files, missing hashes and oversized payloads.
+Failed/partial evidence is collected with `always()` when the runner is still
+available. Hard termination or runner loss may prevent upload; inspect the
+persistent directory and shared executor latch before taking further action.
+Re-running a CI job creates a new directory but cannot bypass that latch.
+
+Comparison alerts appear in the job summary and cause a failing check; a
+qualification-only result cannot claim regression coverage. This is a manual
+lane, not a periodic monitor: independent scheduled failure/staleness alert
+delivery and scheduled acceptance still require implementation and authorization.
 
 ## Offline regression policy
 

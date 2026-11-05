@@ -1,0 +1,82 @@
+name: Manual generation simulator qualification
+
+on:
+  workflow_call:
+    inputs:
+      action:
+        required: true
+        type: string
+      approve_plan:
+        default: ''
+        type: string
+      baseline_ref:
+        default: ''
+        type: string
+      baseline_sha256:
+        default: ''
+        type: string
+    secrets:
+      OPENCODE_API_KEY:
+        required: false
+
+# No schedule or PR model calls. A rerun gets a new directory but still obeys
+# the same durable executor latch; cancellation never authorizes another POST.
+concurrency:
+  group: generation-simulator
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'aloschilov/pyasc-skill-stack'
+    runs-on: [self-hosted, arm64]
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      actions: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      GENERATION_ACTION: ${{ inputs.action }}
+      APPROVE_PLAN: ${{ inputs.approve_plan }}
+      BASELINE_REF: ${{ inputs.baseline_ref }}
+      BASELINE_SHA256: ${{ inputs.baseline_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Select persistent external evidence directory
+        run: |
+          echo "GENERATION_ROOT=$HOME/pyasc-qualification-runs/github-generation/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+
+      - name: Prepare and verify the reviewed plan
+        run: python3 tests/tools/generation_ci.py prepare --root "$GENERATION_ROOT"
+
+      - name: Retrieve explicit baseline (GET only)
+        if: inputs.action == 'execute' && inputs.baseline_ref != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tests/tools/generation_ci.py fetch --root "$GENERATION_ROOT"
+
+      - name: Execute approved plan and compare when a baseline is selected
+        if: inputs.action == 'execute'
+        env:
+          OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: python3 tests/tools/generation_ci.py execute --root "$GENERATION_ROOT"
+
+      - name: Collect public evidence and write job summary
+        if: always() && env.GENERATION_ROOT != ''
+        run: python3 tests/tools/generation_ci.py collect --root "$GENERATION_ROOT"
+
+      - name: Preserve public evidence including failures
+        if: always() && env.GENERATION_ROOT != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: generation-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.GENERATION_ROOT }}/public/
+          if-no-files-found: error
+          retention-days: 90

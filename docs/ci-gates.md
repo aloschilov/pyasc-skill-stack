@@ -4,8 +4,9 @@ The [CI workflow](../.github/workflows/ci.yml) separates ordinary checks from
 explicit model and hardware work. No nightly schedule is configured.
 The [generation planner and explicit executor](../tests/generation/README.md)
 validate a bounded multi-operator inventory. Ordinary CI exercises only local
-provider doubles and fixed numerical fixtures; the executor is not invoked and
-no nightly lane is enabled or qualified.
+provider doubles and fixed numerical fixtures. An explicit manual generation
+dispatch can invoke the executor after plan approval; no nightly lane is enabled
+or qualified.
 
 | Job | Trigger | Acceptance |
 |---|---|---|
@@ -13,6 +14,7 @@ no nightly lane is enabled or qualified.
 | `examples-gate` | Same, after `pr-gate`; 20-minute cap | Pinned simulator verification contract and permanent numerical regression fixtures |
 | `merge-gate` | Push to `main`, or manual dispatch with hardware action `none`; 60-minute cap | Every discovered target module compiles; failures **and resource blocks** fail the gate |
 | `generated-hardware` | Explicit manual dispatch with generate/repair/continue/resume | Selected operator recipe, exact package, strict hardware result and durable publication |
+| `generation-simulator` | Explicit manual `generation_action=plan|execute`; default `none` | Offline plan, or hash-approved fresh simulator qualification and optional compatible-baseline comparison; no NPU |
 | release | `v*` tag | Fast suite, skills-only archive and install verification |
 
 ## Ordinary PR checks
