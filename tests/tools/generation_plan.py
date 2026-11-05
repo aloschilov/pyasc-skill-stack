@@ -56,7 +56,13 @@ def declared_cases(data):
         if not isinstance(name, str) or name in result:
             raise ValueError('Invalid or duplicate declared case')
         # Bind every parameter, including shape/dtype/attrs/tiling, without eval.
-        result[name] = digest(ast.dump(row, include_attributes=False).encode())
+        # Python 3.13+ omits empty optional fields unless explicitly requested;
+        # preserve the Python 3.10 representation across planner/CI hosts.
+        try:
+            representation = ast.dump(row, include_attributes=False, show_empty=True)
+        except TypeError:  # show_empty is unavailable on Python 3.10-3.12.
+            representation = ast.dump(row, include_attributes=False)
+        result[name] = digest(representation.encode())
     if not result:
         raise ValueError('Empty declared case inventory')
     return result
@@ -146,6 +152,10 @@ def build_plan(root=ROOT, matrix=DEFAULT_MATRIX):
     # Bind the complete verifier/executor dependency closure copied into runs.
     for path in sorted((root/'tests/tools').glob('*.py')):
         read(path.relative_to(root).as_posix())
+    # CI provisioning (including the pinned client asset) is part of the plan,
+    # not an untracked way to change generation while keeping the same version string.
+    for name in ('.github/workflows/ci.yml', '.github/workflows/generation-simulator.yml'):
+        read(name)
     return {
         'schema_version': 2, 'kind': 'generation-plan', 'status': 'not-run',
         'execution_enabled': False, 'schedule_enabled': False,

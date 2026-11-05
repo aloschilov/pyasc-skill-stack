@@ -22,6 +22,7 @@ class GenerationCI(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)/'ci'
         self.env = {'GENERATION_ACTION': 'plan', 'APPROVE_PLAN': '', 'BASELINE_REF': '', 'BASELINE_SHA256': '',
+            'GENERATION_STATE_DIR': str(self.root.parent/'shared-state'),
             'GITHUB_RUN_ID': '123', 'GITHUB_RUN_ATTEMPT': '1', 'GITHUB_REPOSITORY': 'owner/repo',
             'GITHUB_SHA': 'synthetic-offline-fixture',
             'GITHUB_EVENT_NAME': 'workflow_dispatch'}
@@ -57,6 +58,7 @@ class GenerationCI(unittest.TestCase):
     def test_approved_execution_qualifies_but_never_promotes_a_baseline(self):
         self.prepare(execute=True); source = self.fixture()
         def execute(plan, run, state_dir):
+            self.assertEqual(state_dir, (self.root.parent/'shared-state').resolve())
             shutil.copytree(source, run)
             return ci.read(run/'state.json')
         with patch.object(ci, 'execute', side_effect=execute) as invoked, \
@@ -169,6 +171,10 @@ class GenerationCI(unittest.TestCase):
         self.assertEqual(ci_workflow[True]['workflow_dispatch']['inputs']['generation_action']['default'], 'none')
         self.assertIn('workflow_dispatch', ci_workflow['jobs']['generation-simulator']['if'])
         self.assertIn('generation_action', ci_workflow['jobs']['merge-gate']['if'])
+        storage = next(s for s in steps if s.get('name') == 'Select persistent external evidence directory')['run']
+        self.assertIn('RUNNER_WORKSPACE', storage)
+        self.assertIn('GENERATION_STATE_DIR=$base/state', storage)
+        self.assertNotIn('GENERATION_ROOT=$HOME', storage)
         dispatch = next(s for s in ci_workflow['jobs']['pr-gate']['steps'] if s.get('name') == 'Validate manual dispatch selection')
         import subprocess
         for hardware, generation, success in [('none', 'execute', True), ('generate', 'none', True), ('generate', 'execute', False)]:

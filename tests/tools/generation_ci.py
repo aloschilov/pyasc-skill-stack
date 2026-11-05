@@ -30,6 +30,7 @@ def prepare(root):
         'approve_plan': os.environ.get('APPROVE_PLAN', ''),
         'baseline_ref': os.environ.get('BASELINE_REF', ''),
         'baseline_sha256': os.environ.get('BASELINE_SHA256', ''),
+        'state_dir': str(external(os.environ.get('GENERATION_STATE_DIR', str(Path.home()/'.local/state/pyasc-generation')))),
         'context': {key: os.environ.get(key) for key in ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT',
             'GITHUB_REPOSITORY', 'GITHUB_SHA', 'GITHUB_WORKFLOW_REF', 'GITHUB_EVENT_NAME')},
         'created_at': datetime.now(timezone.utc).isoformat()}
@@ -116,7 +117,7 @@ def run(root):
         require(baseline.state['status'] == 'passed', 'Baseline is incomplete')
         # A comparison must be possible before spending on a fresh candidate.
         require(baseline.compatibility() == compatibility(plan, version), 'Baseline is incompatible with the approved plan/client')
-    state = execute(plan, root/'run', Path.home()/'.local/state/pyasc-generation')
+    state = execute(plan, root/'run', external(request['state_dir']))
     attempts = [a for c in state['cells'] for a in c['attempts']]
     observed_request = any(a.get('usage', {}).get('requests') for a in attempts)
     result = {'status': state['status'], 'model_invoked': True if observed_request else None if attempts else False,

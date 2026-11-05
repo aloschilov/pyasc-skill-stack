@@ -49,8 +49,12 @@ jobs:
 
       - name: Select persistent external evidence directory
         run: |
-          echo "GENERATION_ROOT=$HOME/pyasc-qualification-runs/github-generation/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
-          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+          # The runner is a container. Its work volume is shared at the same
+          # absolute path with Docker; HOME and runner temp are not durable state.
+          test ! -e "$HOME/.local/state/pyasc-generation/active.json"
+          base="$(dirname "$RUNNER_WORKSPACE")/.pyasc-generation"
+          echo "GENERATION_ROOT=$base/results/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+          echo "GENERATION_STATE_DIR=$base/state" >> "$GITHUB_ENV"
 
       - name: Prepare and verify the reviewed plan
         run: python3 tests/tools/generation_ci.py prepare --root "$GENERATION_ROOT"
@@ -60,6 +64,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 tests/tools/generation_ci.py fetch --root "$GENERATION_ROOT"
+
+      - name: Provision pinned OpenCode CLI (no model request)
+        if: inputs.action == 'execute'
+        run: |
+          tool_dir="$RUNNER_TEMP/pyasc-opencode-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p "$tool_dir"
+          curl --fail --location --max-time 180 \
+            https://github.com/anomalyco/opencode/releases/download/v1.19.0/opencode-linux-arm64.tar.gz \
+            --output "$tool_dir/opencode.tar.gz"
+          echo "e9841d43d3e1a8f36ed2691592d3b8b4fb097e606c8b559a277a1b845840e26b  $tool_dir/opencode.tar.gz" | sha256sum --check
+          tar -xzf "$tool_dir/opencode.tar.gz" -C "$tool_dir" opencode
+          "$tool_dir/opencode" --version
+          echo "$tool_dir" >> "$GITHUB_PATH"
 
       - name: Execute approved plan and compare when a baseline is selected
         if: inputs.action == 'execute'

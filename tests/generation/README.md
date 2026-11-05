@@ -137,8 +137,9 @@ gh workflow run ci.yml --ref <same-branch> -f generation_action=execute \
   -f generation_plan_sha256=<exact-reviewed-plan-sha256>
 ```
 
-The runner must already provide OpenCode and the pinned simulator image; the
-normal examples gate pulls that image. The execution step alone receives
+The runner must provide Docker and the pinned simulator image; the normal
+examples gate pulls that image. Execute mode installs OpenCode 1.19.0 for Linux
+arm64 from its official release asset with a pinned SHA256. The execution step alone receives
 `OPENCODE_API_KEY` and the repository's `OPENCODE_BASE_URL` variable. Its child
 OpenCode process still receives only the local gate credential. No CANNBench
 credential or NPU backend is passed. Plan-only runs need no provider credential.
@@ -164,9 +165,14 @@ the job; do not silently substitute another run. Actions evidence lasts 90 days,
 so an accepted baseline must also live in a durable archive (for example a
 reviewed Release asset) with its checksum and locator recorded outside Git.
 
-CI retains raw evidence in the runner's persistent
-`~/pyasc-qualification-runs/github-generation/<run>-<attempt>/`, outside checkout
-and runner temp. Only a public `generation.tar.gz`, checksum and summary are
+CI retains raw evidence under the runner's persistent shared work volume:
+`$(dirname "$RUNNER_WORKSPACE")/.pyasc-generation/results/<run>-<attempt>/`,
+with its stable executor latch in the adjacent `state/` directory. This volume
+must be mounted at the same absolute path in the runner and its Docker daemon;
+the runner container's `HOME` must not hold the only copy of evidence or the latch.
+Local jobs sharing this runner must use that same state directory. CI refuses an
+existing default-HOME latch instead of silently switching away from it. Only a
+public `generation.tar.gz`, checksum and summary are
 uploaded. The archive excludes every `private/` tree and symlinks; unpacking
 rejects links, traversal, duplicate files, missing hashes and oversized payloads.
 Failed/partial evidence is collected with `always()` when the runner is still

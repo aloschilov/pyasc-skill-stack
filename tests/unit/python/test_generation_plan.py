@@ -18,7 +18,7 @@ class GenerationPlanning(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)/'checkout'; self.root.mkdir()
-        for name in ('skills', 'reference/asctile', 'reference/images', 'integrations/opencode/profiles', 'tests/generation'):
+        for name in ('skills', 'reference/asctile', 'reference/images', 'integrations/opencode/profiles', 'tests/generation', '.github/workflows'):
             shutil.copytree(ROOT/name, self.root/name, ignore=shutil.ignore_patterns('__pycache__'))
         (self.root/'tests/tools').mkdir()
         for path in (ROOT/'tests/tools').glob('*.py'):
@@ -94,6 +94,12 @@ class GenerationPlanning(unittest.TestCase):
         path.write_text(path.read_text()+'\n# changed budget gate\n')
         self.assertNotEqual(before, planner.digest(planner.canonical(self.plan())))
 
+    def test_client_provisioning_workflow_changes_plan_identity(self):
+        before = planner.digest(planner.canonical(self.plan()))
+        path = self.root/'.github/workflows/generation-simulator.yml'
+        path.write_text(path.read_text().replace('v1.19.0', 'v1.20.0'))
+        self.assertNotEqual(before, planner.digest(planner.canonical(self.plan())))
+
     def test_profile_budget_and_external_symlink_fail(self):
         path=self.root/'integrations/opencode/profiles/cloud-glm-5.3.json'
         data=json.loads(path.read_text());data['provider']['gateway']['models']['glm-5.3']['limit']['output']=1
@@ -107,6 +113,11 @@ class GenerationPlanning(unittest.TestCase):
         self.assertEqual(list(planner.declared_cases(source)), ['x'])
         for data in (b'no cases', source.replace(b'("x", side_effect()),', b'("x", 1), ("x", 2),')):
             with self.assertRaises(ValueError):planner.declared_cases(data)
+
+    def test_empty_ast_fields_have_the_same_identity_on_python_310_and_newer(self):
+        source = b'# PYASC_TESTS_BEGIN\n("case", f()),\n# PYASC_TESTS_END\n'
+        stable = "Tuple(elts=[Constant(value='case'), Call(func=Name(id='f', ctx=Load()), args=[], keywords=[])], ctx=Load())"
+        self.assertEqual(planner.declared_cases(source), {'case': hashlib.sha256(stable.encode()).hexdigest()})
 
     def test_output_is_external_new_and_hash_bound(self):
         plan=self.plan();out=Path(self.tmp.name)/'result'
