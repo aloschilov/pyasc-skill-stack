@@ -119,7 +119,7 @@ API must be classified as a candidate failure, not an unavailable simulator.
 `examples-gate` retains these reports in a separate artifact. This is verification
 of the adapters/executor, **not** newly generated-kernel or hardware qualification.
 
-Remaining #22 work: selected compatible baselines and explicitly approved
+Remaining #22 work: scheduled failure/staleness alert delivery and an explicitly approved
 schedule plus end-to-end scheduled acceptance. #23 skills-effect comparisons and #24 model diversity should
 reuse these contracts; #20 owns separate reviewer/tuner handoffs.
 
@@ -284,3 +284,27 @@ and Linux VM: `~/pyasc-qualification-runs/issue22-ci-20261106/generation-ci-4212
 SHA256: `bb574ef974083bc1352c9c5d347a67047203b5a7aea6998ecd4730125e8f3d67`.
 Private response/application state is excluded. The earlier pilot and failed
 attempts remain intact; this run does not replace their records.
+
+## Selected baseline and compatible comparison
+
+The reviewed `42126948369/1` run was explicitly selected and published in a
+[durable qualification Release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-42126948369)
+before the independent comparison. Its `generation.tar.gz` retains the checksum
+above; it is never a moving `latest` reference or an automatically promoted run.
+
+[Comparison dispatch 42129712051](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42129712051)
+on `6a2e82756247f6865b5f1930680ddcbd8895cc33` fetched that Release and passed
+`generation-no-lost-pass-v1`: **3/3**, compatible inputs, no reused sessions,
+regressions or coverage gaps. All three new candidates passed Model numerics and
+suppressed-launch controls. Executor wall time: **246.42 s**; qualification job:
+**305 s**. Usage: **15 requests / 7,671 completion / 154,866 input tokens**;
+provider cost unavailable. This single same-skills comparison validates the
+comparison path and repeatability for these cells, not a skills-effect estimate
+or scheduled coverage. The selected baseline remains unchanged.
+
+The same Release retains `comparison-42129712051.tar.gz` (217 checked members),
+SHA256 `125a6119a3cb14eb6c430a224db9da4c1b7e0771a898827cf42066d9ac289408`.
+Copies also remain outside checkout on Mac and Linux VM under
+`~/pyasc-qualification-runs/issue22-comparison-20261106/`. Both public archives
+exclude private response/application state; their source hashes and attribution
+were independently verified after download.

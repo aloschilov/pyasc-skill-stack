@@ -14,7 +14,7 @@ prerequisites or resource blocks do not count as successful coverage.
 | Full upstream target suite | No complete numerical pass claimed. `merge-gate` is compile-only and now requires every discovered module to complete; resource blocks fail coverage. |
 | Nightly generation | **Not-run**; no automatic campaign or nightly schedule. |
 | Manual generation CI | **Passed** on `53ef52e`: 3/3 fresh GLM-5.3 candidates, unchanged-byte Model numerics and negative controls. [Dispatch, usage, timing and retained archive](../tests/generation/README.md#manual-ci-qualification-2026-11-06). Status `qualified`; no baseline comparison or automatic promotion. |
-| Generation regression comparison | Offline policy implemented: compatible, explicitly pinned complete baseline; no lost PASS; fixed denominator and coverage-age checks. Unit doubles and retained-run integrity checks only; no new compatible generation pair or scheduled alert delivery qualified. [Policy](../tests/generation/README.md#offline-regression-policy). |
+| Generation regression comparison | **Passed** for one independent same-skills pair: explicit durable baseline, compatible inputs, 3/3 fresh candidates and no lost PASS or coverage gaps. [Selected baseline, run and checksums](../tests/generation/README.md#selected-baseline-and-compatible-comparison). This validates the comparison path; skills-effect measurement and scheduled alert delivery remain unqualified. |
 
 The checkout and installed-skill workflows also have earlier simulator-only
 qualifications. Their source hashes, results, archive locations and checksums
