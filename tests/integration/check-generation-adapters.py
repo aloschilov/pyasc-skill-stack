@@ -23,12 +23,16 @@ def main():
     start = time.monotonic()
     for cell, filename in zip(plan['cells'], ('add.py', 'reduce.py', 'broadcast.py')):
         contract = task_contract(ROOT, cell)
-        for wrong in (False, True):
-            directory = root/(cell['id']+('-wrong' if wrong else '')); directory.mkdir()
+        variants = ['valid', 'wrong'] + (['missing-api'] if filename == 'add.py' else [])
+        for variant in variants:
+            wrong = variant == 'wrong'
+            directory = root/(cell['id']+('-'+variant if variant != 'valid' else '')); directory.mkdir()
             source = (ROOT/'tests/generation/fixtures'/filename).read_text()
             if wrong:
                 # Still launches a real kernel: wrong result must fail numerics.
                 source = source.replace('ax+bx', 'ax-bx').replace('reduced, b', 'reduced+1, b').replace('row, b', 'row+1, b')
+            if variant == 'missing-api':
+                source = source.replace('ax+bx', 'asctile.this_function_does_not_exist(ax)')
             (directory/'candidate.py').write_text(source)
             try:
                 report = qualify(directory, plan, contract, ROOT)
@@ -40,7 +44,13 @@ def main():
             real = report.get('phases', {}).get('execution', {}).get('report', {})
             rejected_numerics = bool(real.get('launcher_calls', 0)>0 and real.get('numerical_failure'))
             passed = accepted if not wrong else not accepted and rejected_numerics
-            cases.append({'case': directory.name, 'passed': passed, 'expected': 'numerical-rejection' if wrong else 'numerically_verified',
+            expected = 'numerical-rejection' if wrong else 'numerically_verified'
+            if variant == 'missing-api':
+                jit = report.get('phases', {}).get('jit', {})
+                passed = (not accepted and report.get('status')=='failed' and jit.get('exit_code')==1
+                    and 'this_function_does_not_exist' in jit.get('report', {}).get('error', ''))
+                expected = 'candidate-api-failure'
+            cases.append({'case': directory.name, 'passed': passed, 'expected': expected,
                           'candidate_sha256': digest((directory/'candidate.py').read_bytes()), 'error': failure})
             print(json.dumps(cases[-1]), flush=True)
     save(root/'report.json', {'kind': 'fixed-fixture-adapter-regression', 'cases': cases,

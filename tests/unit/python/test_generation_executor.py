@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import types
 import time
 import unittest
 from unittest.mock import patch
@@ -55,6 +56,15 @@ class ExecutorContracts(unittest.TestCase):
                     '    out.copy_(x)'), contract)
         bad = dict(self.plan['cells'][0], cases=['vadd_test_1'])
         with self.assertRaisesRegex(ValueError, 'Unsupported'): adapters.task_contract(ROOT, bad)
+
+    def test_unknown_public_api_inside_lowering_is_a_candidate_failure(self):
+        from pytest_verify_kernel import _is_provisioning_error
+        namespace = {}
+        exec(compile("def resolve(module): return module.this_function_does_not_exist", "/fake/asc/codegen/visitor.py", "exec"), namespace)
+        for module_name, provisioning in [('asc.experimental.asctile', False), ('asctile', False), ('asc.lib.native', True)]:
+            try: namespace['resolve'](types.ModuleType(module_name))
+            except AttributeError as exc:
+                self.assertEqual(_is_provisioning_error(exc, '/fake/asc'), provisioning)
 
     def test_adapter_detects_upstream_contract_change_without_importing(self):
         task = self.path/'reference/asctile/target/test_vadd.py'; task.parent.mkdir(parents=True)
@@ -115,7 +125,7 @@ class ExecutorContracts(unittest.TestCase):
     def test_serial_execution_reserves_all_attempts_and_preserves_evidence(self):
         result = self.run_double()
         self.assertEqual(result['status'], 'passed')
-        self.assertEqual(result['reserved_output_tokens'], 98304)
+        self.assertEqual(result['reserved_output_tokens'], 196608)
         self.assertEqual(result['observed_output_tokens'], 30)
         self.assertEqual(result['reserved_execution_seconds'], 1800)
         self.assertEqual([c['status'] for c in result['cells']], ['passed']*3)
@@ -127,7 +137,7 @@ class ExecutorContracts(unittest.TestCase):
         result = self.run_double(generation=lambda *args: (_ for _ in ()).throw(executor.Blocked('Unknown delivery')))
         self.assertEqual(result['status'], 'blocked')
         self.assertEqual([c['status'] for c in result['cells']], ['blocked', 'not-run', 'not-run'])
-        self.assertEqual(result['reserved_output_tokens'], 32768)
+        self.assertEqual(result['reserved_output_tokens'], 65536)
         self.assertTrue((self.path/'state/active.json').exists())
 
     def test_failed_numerics_never_silently_passes(self):
@@ -137,7 +147,7 @@ class ExecutorContracts(unittest.TestCase):
         self.assertFalse((self.path/'state/active.json').exists())
 
     def test_aggregate_cap_is_enforced_before_dispatch(self):
-        self.plan['limits']['max_output_tokens'] = 32768
+        self.plan['limits']['max_output_tokens'] = 65536
         result = self.run_double()
         self.assertEqual([c['status'] for c in result['cells']], ['passed', 'not-run', 'not-run'])
         self.assertEqual(result['status'], 'blocked')

@@ -35,7 +35,7 @@ class GenerationPlanning(unittest.TestCase):
             result = self.plan()
             self.assertEqual(result, self.plan())
         self.assertEqual(len(result['cells']), 3)
-        self.assertEqual(result['maximum_work'], {'model_attempts': 3, 'output_tokens': 98304, 'execution_seconds': 1800})
+        self.assertEqual(result['maximum_work'], {'model_attempts': 3, 'output_tokens': 196608, 'execution_seconds': 1800})
         self.assertFalse(result['execution_enabled']); self.assertFalse(result['schedule_enabled'])
         self.assertEqual(result['status'], 'not-run')
         self.assertIsNone(result['model']['observed'])
@@ -60,7 +60,7 @@ class GenerationPlanning(unittest.TestCase):
             lambda x: x['limits'].update(attempts_per_cell=True),
             lambda x: x['limits'].update(rounds_per_attempt=0),
             lambda x: x['limits'].update(attempts_per_cell=2),
-            lambda x: x['limits'].update(max_output_tokens=98303),
+            lambda x: x['limits'].update(max_output_tokens=196607),
             lambda x: x['limits'].update(max_execution_seconds=1799),
         ]
         for modify in modifications:
