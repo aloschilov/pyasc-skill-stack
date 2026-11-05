@@ -129,6 +129,20 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Generation adapter fixed-fixture regressions (no model calls)
+        run: |
+          python3 tests/integration/check-generation-adapters.py \
+            --results-dir "${{ runner.temp }}/pyasc-adapters-${{ github.run_id }}-${{ github.run_attempt }}"
+
+      - name: Preserve generation adapter evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generation-adapters-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pyasc-adapters-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 30
+
       - name: CANNBench candidate short-row simulator regressions
         run: |
           docker run --rm --name "pyasc-smoke-${{ github.run_id }}" \

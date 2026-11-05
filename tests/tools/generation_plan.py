@@ -140,7 +140,9 @@ def build_plan(root=ROOT, matrix=DEFAULT_MATRIX):
         if digest(read('reference/asctile/target/' + module)) != expected:
             raise ValueError('Pinned task source drift: ' + module)
     read('reference/asctile/conftest.py')
-    read('tests/tools/generation_plan.py')
+    # Bind the complete verifier/executor dependency closure copied into runs.
+    for path in sorted((root/'tests/tools').glob('*.py')):
+        read(path.relative_to(root).as_posix())
     return {
         'schema_version': 1, 'kind': 'generation-plan', 'status': 'not-run',
         'execution_enabled': False, 'schedule_enabled': False,
@@ -152,7 +154,7 @@ def build_plan(root=ROOT, matrix=DEFAULT_MATRIX):
         'source_sha256': inputs,
         'limitations': ['Planning only; no provider, runtime, NPU or service calls.',
             'Declared case groups are task anchors, not collected pytest instances or numerical coverage.',
-            'Candidate-specific oracle/probe adapters and runtime enforcement are not implemented.',
+            'Execution requires separate explicit plan approval; this plan does not call the executor.',
             'Token bound covers output including reasoning, not input tokens, price or provider charges.',
             'Execution bound excludes setup, queue and archival overhead; schedule approval is separate.'],
     }

@@ -21,7 +21,8 @@ class GenerationPlanning(unittest.TestCase):
         for name in ('skills', 'reference/asctile', 'reference/images', 'integrations/opencode/profiles', 'tests/generation'):
             shutil.copytree(ROOT/name, self.root/name, ignore=shutil.ignore_patterns('__pycache__'))
         (self.root/'tests/tools').mkdir()
-        shutil.copyfile(ROOT/'tests/tools/generation_plan.py', self.root/'tests/tools/generation_plan.py')
+        for path in (ROOT/'tests/tools').glob('*.py'):
+            shutil.copyfile(path, self.root/'tests/tools'/path.name)
         self.matrix = json.loads((self.root/planner.DEFAULT_MATRIX).read_text())
 
     def plan(self, matrix=None):
@@ -84,6 +85,12 @@ class GenerationPlanning(unittest.TestCase):
         path=self.root/'skills/pyasc-api-patterns/references/api-jit-options.md'
         path.write_text(path.read_text()+'\nChanged instruction.\n')
         self.assertNotEqual(before,planner.digest(planner.canonical(self.plan())))
+
+    def test_executor_dependency_change_changes_plan_identity(self):
+        before = planner.digest(planner.canonical(self.plan()))
+        path = self.root/'tests/tools/generation_provider.py'
+        path.write_text(path.read_text()+'\n# changed budget gate\n')
+        self.assertNotEqual(before, planner.digest(planner.canonical(self.plan())))
 
     def test_profile_budget_and_external_symlink_fail(self):
         path=self.root/'integrations/opencode/profiles/cloud-glm-5.3.json'

@@ -1,34 +1,111 @@
-# Generation experiment planning
+# Bounded generation experiments
 
-This is the first implementation slice of [nightly coverage #22](https://github.com/aloschilov/pyasc-skill-stack/issues/22).
-It creates an offline, bounded inventory before an executor or schedule is enabled:
+This is the executor slice of [nightly coverage #22](https://github.com/aloschilov/pyasc-skill-stack/issues/22).
+The default commands are offline and do not invoke OpenCode, Docker or a provider:
 
 ```bash
-python3 tests/tools/generation_plan.py \
-  --results-dir /absolute/path/outside-checkout/generation-plan
+python3 tests/tools/generation_plan.py --results-dir /outside-checkout/plan
+python3 tests/tools/generation_executor.py --plan /outside-checkout/plan/plan.json
 ```
 
-The directory must be new. No credentials, model, Docker, simulator or CANNBench
-connection is needed. The command writes a hash-bound `plan.json`; every cell
-is `not-run`. It does not submit anything or enable a schedule.
+Planning verifies pinned task/runtime agreement and source drift, and binds case
+ASTs, skills, profile, image digest and the executor/verifier source closure.
+Validation rejects modified plans, even if someone recomputes the plan checksum.
+A plan is `not-run`, not spending authorization or numerical evidence.
 
-`matrix.json` selects three small upstream case groups: vector addition with a
-tail, reduction and broadcast. The planner verifies the pinned source inventory,
-checks that the simulator and task revisions agree, and binds selected case ASTs,
-skill sources, profile template and image digest. These case groups are task
-anchors; static/dynamic pytest expansion and candidate-specific oracle/probe
-adapters remain to be implemented. No numerical coverage is claimed.
+## Numerical contract
 
-The proposed per-cell attempt/round/response/time caps are checked against a
-serial aggregate budget. Output-token bounds include all bounded responses
-(including reasoning), but do not bound input tokens or provider prices.
-Execution seconds exclude setup, queue and archival overhead. These are planned
-ceilings, not observed usage or spending authorization; a future executor must
-enforce them and record provider-effective settings. There is no executable
-command in the matrix and no `--execute` switch.
+The inventory has three explicit upstream task anchors. It does not run every
+pytest parametrization or reproduce the upstream random-input distribution.
 
-Remaining work in #22: task-aware generation and numerical adapters; process,
-usage and concurrency enforcement; interruption/partial-result handling;
-compatible baseline comparisons; explicit budget approval and qualification of
-manual and scheduled runs. Skills-effect comparisons (#23), reviewer handoffs
-(#20), and model diversity (#24) should reuse these inputs and budgets.
+| Task | Shape and dtype | Oracle | Probe acceptance |
+|---|---|---|---|
+| `vadd_test_2` | 199 elements, float32 | x + y | rtol 1e-5, atol 1e-6; tail |
+| `reduce_sum_test_1` | 61 elements to [1], int32 | sum(axis=0, keepdim=True) | exact; padded input |
+| `broadcast_test_2` | [1,5,8] to [4,5,8], float32 | broadcast | exact; four cores |
+
+Adapters check shape/dtype/block/operation attributes against the pinned rows
+without importing them. Each uses three deterministic input patterns, poisoned
+output, and checks both results and unchanged inputs. Candidate code provides a
+`launch` function with one JIT kernel call; host arithmetic, Torch fallbacks,
+runtime reconfiguration and arbitrary imports are rejected. This intentionally
+restricted candidate interface is described in each generated prompt.
+
+The same candidate bytes pass static checks, JIT lowering with suppressed
+launches, real **Model simulator** execution, and a separate suppressed-launch
+negative control. Comparisons belong to trusted probes, not candidate self-tests.
+Missing launches, missing comparisons, wrong results, inconclusive controls,
+changed bytes or unavailable runtime cannot pass. These guards do not constitute
+a sandbox against deliberately hostile Python; execution uses a networkless
+container without credentials or device mounts.
+
+## Explicit execution, budgets and evidence
+
+A future authorized manual run uses `--execute --approve-plan <exact plan_sha256>
+--results-dir /outside-checkout/new-run`. It needs OpenCode, the locally available
+digest-pinned simulator, and `OPENCODE_BASE_URL` / `OPENCODE_API_KEY`. The executor
+never pulls an image, submits to CANNBench, or selects an NPU backend. No schedule
+or generation CI trigger is added. Actual provider-backed qualification remains
+pending; ordinary PR checks use fixed fixtures and local provider doubles only.
+
+The executor runs serially, reserves the full worst-case output and execution
+budget **before** each attempt, and never recycles unused reservations to enlarge
+the matrix. Current maxima are 3 attempts total, 8 provider requests per attempt,
+4096 completion tokens per request, 300 s generation + 300 s qualification per
+attempt: 98,304 output tokens and 1800 execution seconds. Input tokens, provider
+prices, setup, cleanup and archival overhead are outside these ceilings. Cleanup
+has a separate 20 s timeout. OpenCode/SDK/protocol compatibility is checked during
+execution; an unavailable client/provider becomes `blocked`, not a mock success.
+
+OpenCode receives selected skills in a fresh project/private state directory,
+with shell, delegation, web access and unrelated edits denied. Native session and
+skill-load events plus provider-observed model/usage bind attribution. The source
+model revision is `unknown` unless the provider supplies one; no model fallback is
+accepted. A local Chat Completions gate replaces the provider URL/key for this
+process and reserves each request before forwarding it. It sets `max_tokens`,
+requires complete usage (including reasoning), and rejects additional requests
+at the round cap. OpenCode's step setting alone is insufficient because it may
+request a final summary. The gate currently supports only
+`@ai-sdk/openai-compatible` providers with complete Chat Completions usage and an
+exact matching model ID. It buffers each bounded response to verify usage before
+allowing the next request. It cannot cancel remote computation or guarantee a
+provider's billing behavior; missing/over-limit usage is retained as unknown and
+stops subsequent work. No blind request retries or automatic recovery are allowed.
+
+The process-group watchdog kills local children on deadline or cancellation;
+Docker cleanup is separately confirmed. All attempts, failed candidates, usage
+reservations, commands, hashes, timings and partial cell states stay outside Git.
+An unfinished attempt leaves subsequent cells `not-run` and retains a durable
+`active.json` latch under `~/.local/state/pyasc-generation`, in addition to an OS
+lock preventing concurrent executors. Do not bypass it with another state directory.
+Inspect the referenced run's provider usage, commands and container cleanup before
+manually reconciling the latch. A new execution requires a new directory and explicit
+approval; there is no automatic `resume` or replay of an interrupted attempt.
+
+Keep `private/` (OpenCode's local application state) private and out of published
+archives. `files.json` deliberately excludes it. Provider credentials are not
+passed to OpenCode or written into model configuration, request records or logs.
+Execution is not isolated from a hostile local user; permissions and the budget
+gate protect the ordinary agent workflow, not adversarial credential theft.
+
+## Model-free checks
+
+```bash
+python3 -m unittest discover -s tests/unit/python -p 'test_generation*.py'
+python3 tests/integration/check-generation-adapters.py \
+  --results-dir /outside-checkout/adapter-fixtures
+```
+
+The first command covers planning, native attribution, process deadlines/child
+cleanup, serial reservations, partial outcomes, locking and usage enforcement
+against a loopback fake provider. It needs neither credentials nor Docker.
+The second uses the pinned simulator with three correct permanent fixtures and
+three deliberately incorrect variants. Each correct fixture must reject suppressed
+launches; each incorrect variant must fail an actual post-launch comparison.
+`examples-gate` retains these reports in a separate artifact. This is verification
+of the adapters/executor, **not** newly generated-kernel or hardware qualification.
+
+Remaining #22 work: provider-backed manual qualification, compatible baseline
+comparisons/regression policy, and explicitly approved schedule plus end-to-end
+scheduled acceptance. #23 skills-effect comparisons and #24 model diversity should
+reuse these contracts; #20 owns separate reviewer/tuner handoffs.

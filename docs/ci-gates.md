@@ -2,9 +2,10 @@
 
 The [CI workflow](../.github/workflows/ci.yml) separates ordinary checks from
 explicit model and hardware work. No nightly schedule is configured.
-An [offline generation planner](../tests/generation/README.md) validates the
-proposed multi-operator inventory and budgets; it performs no generation and
-does not qualify or enable a nightly lane.
+The [generation planner and explicit executor](../tests/generation/README.md)
+validate a bounded multi-operator inventory. Ordinary CI exercises only local
+provider doubles and fixed numerical fixtures; the executor is not invoked and
+no nightly lane is enabled or qualified.
 
 | Job | Trigger | Acceptance |
 |---|---|---|
@@ -27,10 +28,12 @@ covers historical kernels, tails, negative and weak-positive fixtures, and skill
 listings. Expected failures must fail for the contracted reason; numerical
 passes require a suppressed-launch control. The separate SwiGlu short-row
 regression protects a known memory-layout bug; it is one fixture in this broader
-suite, not the definition of the CI pipeline.
+suite, not the definition of the CI pipeline. Generation adapters additionally
+check three fixed add/reduce/broadcast kernels and three wrong-result variants;
+each correct result requires a rejecting suppressed-launch control.
 
 Both PR jobs must pass on the current head. Artifacts retain the complete
-verification-contract run for 30 days, including failures. Queue time is separate
+verification-contract and generation-adapter runs for 30 days, including failures. Queue time is separate
 from execution time. Neither job qualifies model generation or NPU behavior.
 Accepted qualification requires [durable evidence](verification-contract.md#storage).
 
