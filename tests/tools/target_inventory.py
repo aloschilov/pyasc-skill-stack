@@ -47,7 +47,7 @@ def sources(root=ROOT):
     require(modules == {n for n in pin['files'] if PurePosixPath(n).name.startswith('test_')},
             'Pinned module inventory differs from checkout')
     paths = list((root/'reference/asctile').rglob('*.py'))
-    paths += [root/'reference/asctile/PIN.json', root/'reference/images/ENV.json']
+    paths += [root/'reference/__init__.py', root/'reference/asctile/PIN.json', root/'reference/images/ENV.json']
     require(all(not p.is_symlink() for p in paths), 'Symlink in target inputs')
     return {p.relative_to(root).as_posix(): digest(p.read_bytes()) for p in sorted(paths)}
 
@@ -105,7 +105,7 @@ def collect(directory, root=ROOT):
         '--cpus', '1', '--memory', '2g', '--ulimit', 'nofile=65536:65536',
         '-v', str(root)+':/repo:ro', '-w', '/repo', '-e', 'HOME=/tmp',
         '-e', 'PYTHONDONTWRITEBYTECODE=1', '-e', 'PYTEST_DISABLE_PLUGIN_AUTOLOAD=1',
-        image, env['image']['python_bin'], '-m', 'pytest', PREFIX.rstrip('/'), '--collect-only',
+        image, env['image']['python_bin'], '-m', 'pytest', '-c', '/dev/null', '--rootdir', '/repo', PREFIX.rstrip('/'), '--collect-only',
         '-q', '-p', 'no:cacheprovider', '--backend', 'Model', '--platform', env['image']['simulator']]
     result = {'schema_version': 1, 'kind': 'target-collection', 'status': 'running', 'command': argv,
         'source_sha256': inputs, 'runtime_image': image, 'started_unix': time.time(),

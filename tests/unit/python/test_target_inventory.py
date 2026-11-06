@@ -23,6 +23,7 @@ class Inventory(unittest.TestCase):
         upstream = {n: inventory.digest((self.root/inventory.PREFIX/n).read_bytes())
                     for n in ('test_add.py', 'nested/test_reduce.py')}
         self.write('reference/asctile/PIN.json', {'commit': 'a'*40, 'files': upstream})
+        (self.root/'reference/__init__.py').write_text('')
         self.write('reference/images/ENV.json', {'source_sha': 'a'*40,
             'dev_image': {'ref': 'ghcr.io/example/simulator@sha256:'+'b'*64},
             'image': {'simulator': 'Ascend950PR_9599', 'python_bin': 'python3.11'}})

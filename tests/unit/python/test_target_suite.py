@@ -100,5 +100,18 @@ class Suite(unittest.TestCase):
         self.assertTrue(result['all_selected_qualified']);self.assertFalse(result['full_suite_qualified'])
         self.assertEqual(result['counts'],{'excluded':2,'qualified':1})
 
+    def test_package_parents_are_exported_and_collection_errors_stop_shard(self):
+        self.plan=suite.build_plan(self.collection,shard_size=3,root=self.root)
+        self.assertIn('reference/__init__.py',self.plan['source_sha256'])
+        def bad_collection(directory,plan,source,nodeid,mode):
+            self.assertTrue((source/'reference/__init__.py').is_file())
+            suite.save(directory/(mode+'.json'),{'phases':{},'collected':[],'exit_code':4})
+            cmd={'status':'completed','exit_code':4,'cleanup_confirmed':True}
+            suite.save(directory/(mode+'.command.json'),cmd);return cmd
+        with patch.object(suite,'phase',side_effect=bad_collection) as mocked:
+            result=suite.run_shard(self.plan,self.run,0,root=self.root)
+        self.assertEqual(mocked.call_count,1)
+        self.assertEqual(result['counts'],{'blocked':1,'not-run':2})
+
 
 if __name__ == '__main__':unittest.main()

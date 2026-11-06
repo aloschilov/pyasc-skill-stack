@@ -131,7 +131,7 @@ def execute(nodeid, output, suppress=False, root=ROOT):
     try:
         Launcher.run = audit.launcher(original_launch)
         torch.testing.assert_close = audit.assertion(original_assertion)
-        result['exit_code'] = int(pytest.main([PREFIX+nodeid, '-q', '-p', 'no:cacheprovider',
+        result['exit_code'] = int(pytest.main(['-c', '/dev/null', '--rootdir', str(root), PREFIX+nodeid, '-q', '-p', 'no:cacheprovider',
             '--backend', 'Model', '--platform', result['platform'], '--torch-seed', '0'], plugins=[Plugin()]))
         result['status'] = 'completed'
     finally:

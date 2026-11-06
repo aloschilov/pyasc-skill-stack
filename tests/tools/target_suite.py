@@ -134,7 +134,9 @@ def run_case(directory, plan, source, nodeid):
             if unsupported:
                 result.update(status='unsupported', reason=receipt['phases']); break
             if mode == 'real' and cmd['exit_code'] != 0:
-                result.update(status='failed', reason=receipt['phases']); break
+                call_failed = cmd['exit_code'] == 1 and receipt['phases'].get('call', {}).get('outcome') == 'failed'
+                result.update(status='failed' if call_failed else 'blocked',
+                              reason={'pytest_exit_code': cmd['exit_code'], 'phases': receipt['phases']}); break
         else:
             proves_case(read(directory/'real.json'), read(directory/'control.json'))
             result.update(status='qualified', reason='Official numerical assertions and rejecting suppressed-launch control')
@@ -172,6 +174,7 @@ def run_shard(plan, directory, number, root=ROOT):
             require(time.monotonic()+2*(plan['limits']['case_phase_seconds']+20) <= deadline, 'Shard budget exhausted before next case')
             result = run_case(attempt, plan, directory/'source', node)
             require(all(c.get('cleanup_confirmed') for c in result['phases'].values()), 'Cannot continue with unresolved container')
+            if result['status'] == 'blocked': break
     return report(directory)
 
 
