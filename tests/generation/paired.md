@@ -68,6 +68,9 @@ in their readable context. Read permissions name only the candidate and selected
 context files; commands, networking and external directories remain denied.
 The audit checks native accesses, rejects automatic instruction loads, verifies
 full skill/baseline content, and records what reached actual provider requests.
+Prompt hashes bind both the supplied text and the exact single-argument quoting
+performed by the pinned [OpenCode 1.19 CLI](https://github.com/anomalyco/opencode/blob/v1.19.0/packages/opencode/src/cli/cmd/run.ts#L288).
+The audit does not broadly normalize whitespace or remove arbitrary escaping.
 Native permission denials are retained as attempted accesses, not as loaded
 context; a successful access outside the declared context still invalidates a trial.
 Tool names/argument-schema hashes must match across the experiment. This audits

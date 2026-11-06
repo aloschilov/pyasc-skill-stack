@@ -127,10 +127,12 @@ class PairedDesign(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             context = Path(d); p = context/protocols.BASELINE;p.parent.mkdir(parents=True);p.write_text('First\nSecond\n')
             (context/'skills/demo').mkdir(parents=True);(context/'skills/demo/SKILL.md').write_text('---\nname: demo\n---\nPinned skill body')
-            body = {'messages': [{'role': 'user', 'content': [{'type': 'text', 'text': 'task "with quotes"\nline'}]}],
+            body = {'messages': [{'role': 'user', 'content': [{'type': 'text', 'text': '"task \\"with quotes\\"\nline"'}]}],
                 'tools': [{'type': 'function', 'function': {'name': 'read', 'parameters': {'type': 'object'}}}]}
             a = protocols.request_audit(body, 'task "with quotes"\nline', 'P2', ['demo'], context)
             self.assertTrue(a['prompt_present']);self.assertFalse(a['visible_skills'])
+            self.assertFalse(protocols.request_audit(body, 'task "changed"\nline', 'P2', ['demo'], context)['prompt_present'])
+            self.assertEqual(a['provider_prompt_sha256'], digest('"task \\"with quotes\\"\nline"'.encode()))
             body['messages'].append({'role': 'tool', 'content': '1: First\n2: Second'})
             self.assertTrue(protocols.request_audit(body, 'task', 'P4', ['demo'], context)['baseline_visible'])
             body['messages'].append({'role': 'tool', 'content': '<skill_content name="demo">Pinned skill body</skill_content>'})
@@ -225,6 +227,8 @@ class PairedReceipts(unittest.TestCase):
         usage = {'usage_complete': True, 'error': None, 'observed_output_tokens': 10, 'provider_cost': None, 'requests': [
             {'status': 'complete', 'usage': {'observed_model': plan['model']['expected_response'], 'prompt_tokens': 20,
                 'completion_tokens': 10, 'total_tokens': 30}, 'audit': {'protocol': t['protocol'], 'prompt_present': True,
+                'prompt_encoding': 'opencode-1.19-single-argument', 'provided_prompt_sha256': digest(text.encode()),
+                'provider_prompt_sha256': digest(protocols.provider_prompt(text).encode()),
                 'tool_schema_sha256': 'e'*64, 'visible_skills': plan['skills'], 'baseline_visible': t['protocol'] == 'P4'}}]}
         receipts.write(p/'usage.json', usage);state['cells'][0]['attempts'][0].update(usage=usage, duration_seconds=5)
         receipts.write(root/'state.json', state);receipts.seal(root)

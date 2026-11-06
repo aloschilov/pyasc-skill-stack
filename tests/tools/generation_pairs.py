@@ -13,7 +13,7 @@ import time
 from generation_compare import Bundle, require
 from generation_executor import Blocked, configure, execute, exclusive, external, save
 from generation_plan import ROOT, build_plan, canonical, digest, exact_keys, resource, write_plan
-from generation_protocols import BASELINE, CONTRASTS, PROTOCOLS, audit_trace, context_files, prompt
+from generation_protocols import BASELINE, CONTRASTS, PROTOCOLS, audit_trace, context_files, prompt, provider_prompt
 from generation_provider import known_budget_exhaustion
 
 SPEC = 'tests/generation/paired.json'
@@ -189,6 +189,9 @@ def inspect_trial(root, expected, status):
                 and req['usage'].get('finish_reason') == 'length')
                 and req['usage']['observed_model'] == expected['model']['expected_response'], 'Request model/outcome mismatch')
             require(req['audit']['protocol'] == expected['intervention']['id'], 'Request protocol mismatch')
+            require(req['audit']['prompt_encoding'] == 'opencode-1.19-single-argument'
+                and req['audit']['provided_prompt_sha256'] == digest(expected_prompt.encode())
+                and req['audit']['provider_prompt_sha256'] == digest(provider_prompt(expected_prompt).encode()), 'Provider prompt encoding drift')
             if req['audit']['tool_schema_sha256']: schemas.add(req['audit']['tool_schema_sha256'])
             for field in ('prompt_tokens', 'completion_tokens', 'total_tokens'):
                 require(type(req['usage'][field]) is int and req['usage'][field] >= 0, 'Invalid measured token usage')

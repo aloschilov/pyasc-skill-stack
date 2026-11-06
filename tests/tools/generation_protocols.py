@@ -57,6 +57,12 @@ def skill_body(text):
     return text.split('---', 2)[-1].strip() if text.startswith('---\n') else text.strip()
 
 
+def provider_prompt(text):
+    # OpenCode v1.19.0 cli/cmd/run.ts:288-290 renders each message argument.
+    # Match this exact lossless representation, not fuzzy/unescaped substrings.
+    return '"'+text.replace('"', '\\"')+'"' if ' ' in text else text
+
+
 def request_audit(body, text, protocol, selected_skills, context):
     """Record actual provider inputs without publishing messages or credentials."""
     messages = json.dumps(body.get('messages', []), ensure_ascii=False)
@@ -81,7 +87,10 @@ def request_audit(body, text, protocol, selected_skills, context):
     if protocol == 'P4':
         numbered = '\n'.join(f'{i}: {line}' for i, line in enumerate((context/BASELINE).read_text().splitlines(), 1))
         baseline = numbered in contents
-    return {'protocol': protocol, 'prompt_present': text in user,
+    rendered = provider_prompt(text)
+    return {'protocol': protocol, 'prompt_present': rendered in user,
+        'prompt_encoding': 'opencode-1.19-single-argument',
+        'provided_prompt_sha256': digest(text.encode()), 'provider_prompt_sha256': digest(rendered.encode()),
         'visible_skills': visible, 'baseline_visible': baseline,
         'messages_sha256': digest(canonical(body.get('messages', []))),
         'tool_schema_sha256': digest(canonical(schemas)) if schemas else None,
