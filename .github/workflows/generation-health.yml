@@ -11,7 +11,7 @@ on:
       experiment:
         description: 'Observe one explicit run or the selected coverage policy; no model calls'
         type: choice
-        options: [single, paired]
+        options: [single, paired, models]
         default: single
       notify:
         description: 'Update the preconfigured marked alert issue; requires enabled policy'
@@ -35,7 +35,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        experiment: ${{ fromJSON(github.event_name == 'schedule' && '["single","paired"]' || inputs.experiment == 'paired' && '["paired"]' || '["single"]') }}
+        experiment: ${{ fromJSON(github.event_name == 'schedule' && '["single","paired","models"]' || inputs.experiment == 'models' && '["models"]' || inputs.experiment == 'paired' && '["paired"]' || '["single"]') }}
     env:
       EXPERIMENT: ${{ matrix.experiment }}
     steps:
@@ -56,6 +56,7 @@ jobs:
           args=()
           if [ -n "$INSPECT_RUN" ]; then args+=(--inspect-run "$INSPECT_RUN"); fi
           if [ "$EXPERIMENT" = paired ]; then args+=(--paired); fi
+          if [ "$EXPERIMENT" = models ]; then args+=(--models); fi
           python3 scripts/generation_operations.py monitor --root "$HEALTH_ROOT" "${args[@]}"
       - name: Update configured alert issue
         if: (github.event_name == 'schedule' || inputs.notify) && inputs.inspect_run == ''
@@ -64,12 +65,13 @@ jobs:
         run: |
           args=()
           if [ "$EXPERIMENT" = paired ]; then args+=(--paired); fi
+          if [ "$EXPERIMENT" = models ]; then args+=(--models); fi
           python3 scripts/generation_operations.py notify --root "$HEALTH_ROOT" "${args[@]}"
       - name: Retain observation and delivery receipts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: generation-health${{ matrix.experiment == 'paired' && '-paired' || '' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: generation-health${{ matrix.experiment == 'models' && '-models' || matrix.experiment == 'paired' && '-paired' || '' }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ env.HEALTH_ROOT }}/health.json
             ${{ env.HEALTH_ROOT }}/history.json

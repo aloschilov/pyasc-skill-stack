@@ -24,8 +24,8 @@ from generation_plan import canonical, digest
 import test_generation_compare as receipts
 
 
-def signed_plan():
-    p = pairs.build_pairs(); p['checkout_revision'] = 'synthetic-paired-fixture'
+def signed_plan(experiment='paired'):
+    p = pairs.build_pairs(experiment=experiment); p['checkout_revision'] = 'synthetic-paired-fixture'
     return dict(p, plan_sha256=digest(canonical(p)))
 
 
@@ -257,10 +257,12 @@ class PairedDesign(unittest.TestCase):
 
 
 class PairedReceipts(unittest.TestCase):
+    experiment = 'paired'
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)/'experiment';self.root.mkdir()
-        self.plan = signed_plan();receipts.write(self.root/'plan.json', self.plan)
+        self.plan = signed_plan(self.experiment);receipts.write(self.root/'plan.json', self.plan)
         self.fixture = receipts.Comparisons();self.fixture.setUp();self.addCleanup(self.fixture.doCleanups)
         for t in self.plan['trials']: self.make_trial(t)
         receipts.write(self.root/'state.json', {'status': 'completed', 'plan_sha256': self.plan['plan_sha256'],
@@ -320,7 +322,10 @@ class PairedReceipts(unittest.TestCase):
                 'tool_schema_sha256': 'e'*64, 'visible_skills': plan['skills'], 'baseline_visible': t['protocol'] == 'P4'}}]}
         from generation_provider import request_settings
         cap = plan['limits']['output_tokens_per_response']
-        usage['requests'][0].update(max_tokens=cap, request_settings=request_settings({'max_tokens': cap}))
+        wire = {'max_tokens': cap}
+        if plan['intervention'].get('model_comparison'):
+            wire.update(reasoning_effort='high', thinking={'type':'enabled'})
+        usage['requests'][0].update(max_tokens=cap, request_settings=request_settings(wire))
         receipts.write(p/'usage.json', usage);state['cells'][0]['attempts'][0].update(usage=usage, duration_seconds=5)
         receipts.write(root/'state.json', state);receipts.seal(root)
 

@@ -30,15 +30,16 @@ concurrency:
 
 jobs:
   qualify:
-    if: github.repository == 'aloschilov/pyasc-skill-stack' && (inputs.experiment == 'single' || inputs.experiment == 'paired' || inputs.experiment == 'review') && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && inputs.experiment != 'review' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && inputs.experiment == 'paired' && inputs.action == 'plan'))
+    if: github.repository == 'aloschilov/pyasc-skill-stack' && (inputs.experiment == 'single' || (inputs.experiment == 'paired' || inputs.experiment == 'models') || inputs.experiment == 'review') && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && inputs.experiment != 'review' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && (inputs.experiment == 'paired' || inputs.experiment == 'models') && inputs.action == 'plan'))
     runs-on: [self-hosted, arm64]
-    timeout-minutes: ${{ inputs.experiment == 'paired' && 600 || inputs.experiment == 'review' && 120 || 40 }}
+    timeout-minutes: ${{ (inputs.experiment == 'paired' || inputs.experiment == 'models') && 600 || inputs.experiment == 'review' && 120 || 40 }}
     permissions:
       contents: read
       actions: read
     env:
-      GENERATION_HELPER: ${{ inputs.experiment == 'paired' && 'tests/tools/generation_pairs_ci.py' || inputs.experiment == 'review' && 'tests/tools/generation_review.py' || 'tests/tools/generation_ci.py' }}
+      GENERATION_HELPER: ${{ (inputs.experiment == 'paired' || inputs.experiment == 'models') && 'tests/tools/generation_pairs_ci.py' || inputs.experiment == 'review' && 'tests/tools/generation_review.py' || 'tests/tools/generation_ci.py' }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      GENERATION_EXPERIMENT: ${{ inputs.experiment }}
       GENERATION_ACTION: ${{ inputs.action }}
       APPROVE_PLAN: ${{ inputs.approve_plan }}
       BASELINE_REF: ${{ inputs.baseline_ref }}

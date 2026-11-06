@@ -1,0 +1,35 @@
+{
+  "schema_version": 3,
+  "matrix": "tests/generation/matrix.json",
+  "context_path_format": "relative-read-call-v1",
+  "protocols": [
+    "P3",
+    "P6"
+  ],
+  "repetitions": 2,
+  "order_seed": 20261106,
+  "generation_seconds_per_attempt": 900,
+  "max_output_tokens": 4608000,
+  "max_execution_seconds": 28800,
+  "periodic": {
+    "enabled": false,
+    "enabled_since": null,
+    "min_interval_hours": 168,
+    "max_age_hours": 192,
+    "max_run_hours": 10,
+    "alert_issue": null
+  },
+  "models": [
+    {
+      "id": "glm52",
+      "profile": "cloud-glm-5.2-gateway",
+      "response_model": "glm-5.2"
+    },
+    {
+      "id": "glm53",
+      "profile": "cloud-glm-5.3",
+      "response_model": "glm-5-3-260814"
+    }
+  ],
+  "output_tokens_per_response": 24000
+}

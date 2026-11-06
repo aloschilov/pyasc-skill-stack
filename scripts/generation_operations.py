@@ -25,6 +25,8 @@ WORKFLOW = '.github/workflows/generation-nightly.yml'
 POLICY = ROOT/'tests/generation/nightly.json'
 PAIRED_WORKFLOW = '.github/workflows/generation-paired.yml'
 PAIRED_POLICY = ROOT/'tests/generation/paired.json'
+MODELS_WORKFLOW = '.github/workflows/generation-models.yml'
+MODELS_POLICY = ROOT/'tests/generation/models.json'
 MARKER = '<!-- pyasc-generation-health:v1 -->'
 
 
@@ -32,14 +34,25 @@ def read(path):
     return json.loads(Path(path).read_text())
 
 
+def experiment_name(paired=False):
+    # Preserve the existing boolean API; the new model lane uses its own
+    # controller, cadence history, observer policy and notification marker.
+    require(paired is False or paired is True or paired == 'models', 'Unknown coverage lane')
+    return 'models' if paired == 'models' else 'paired' if paired else 'single'
+
+
+def workflow_path(paired=False):
+    return {'single': WORKFLOW, 'paired': PAIRED_WORKFLOW, 'models': MODELS_WORKFLOW}[experiment_name(paired)]
+
+
 def policy_path(paired=False):
-    return PAIRED_POLICY if paired else POLICY
+    return {'single': POLICY, 'paired': PAIRED_POLICY, 'models': MODELS_POLICY}[experiment_name(paired)]
 
 
 def policy(now, paired=False):
     value = read(policy_path(paired))
     if paired:
-        require(type(value['schema_version']) is int and value['schema_version'] in (1, 2), 'Invalid paired policy version')
+        require(type(value['schema_version']) is int and value['schema_version'] in ((3,) if paired == 'models' else (1, 2)), 'Invalid paired policy version')
         value = value['periodic']
         require(set(value) == {'enabled', 'enabled_since', 'min_interval_hours', 'max_age_hours',
             'max_run_hours', 'alert_issue'}, 'Unexpected paired periodic policy fields')
@@ -78,21 +91,21 @@ def deferred_paired_run(run):
     return len(rows) == 2 and names == {'prepare': 'success', 'paired': 'skipped'}, receipt
 
 
-def paired_due(config, now):
+def paired_due(config, now, paired=True):
     """GET-only cadence guard. Failed/cancelled attempts also consume the interval."""
     require(os.environ.get('GITHUB_RUN_ATTEMPT') == '1', 'Scheduled paired reruns require a new explicit manual plan')
     current = os.environ.get('GITHUB_RUN_ID', '')
     require(re.fullmatch(r'[1-9][0-9]*', current), 'Scheduled run identity required')
     cutoff = max(utc(config['enabled_since']), now-timedelta(hours=config['min_interval_hours']))
     since = cutoff.replace(microsecond=0)  # GitHub's created filter is second-granular.
-    query = f'repos/{REPO}/actions/workflows/generation-paired.yml/runs?'+urlencode({
+    query = f'repos/{REPO}/actions/workflows/{Path(workflow_path(paired)).name}/runs?'+urlencode({
         'event': 'schedule', 'branch': 'main', 'per_page': 100, 'created': '>='+since.strftime('%Y-%m-%dT%H:%M:%SZ')})
     history = api(query); runs = history['workflow_runs']
     require(type(history['total_count']) is int and history['total_count'] == len(runs), 'Incomplete paired cadence history')
     ids = [str(run['id']) for run in runs]
     require(len(ids) == len(set(ids)) and ids.count(current) == 1, 'Current run absent/duplicated in cadence history')
     for run in runs:
-        require(run['event'] == 'schedule' and run['path'] == PAIRED_WORKFLOW and run['head_branch'] == 'main'
+        require(run['event'] == 'schedule' and run['path'] == workflow_path(paired) and run['head_branch'] == 'main'
             and since <= utc(run['created_at']) <= now, 'Unexpected paired cadence history')
     recent = [run for run in runs if str(run['id']) != current and utc(run['created_at']) > cutoff]
     require(len(recent) <= 20, 'Paired cadence inspection limit exceeded')
@@ -107,7 +120,7 @@ def paired_due(config, now):
 
 def plan(root, config, mode, approval, paired=False, now=None):
     now = now or datetime.now(timezone.utc)
-    workflow = PAIRED_WORKFLOW if paired else WORKFLOW
+    workflow = workflow_path(paired)
     skip_reason = None
     event = os.environ.get('GITHUB_EVENT_NAME', 'workflow_dispatch')
     repository = os.environ.get('GITHUB_REPOSITORY', REPO)
@@ -121,11 +134,11 @@ def plan(root, config, mode, approval, paired=False, now=None):
         mode = 'execute' if config['enabled'] else 'none'
         if mode == 'none': skip_reason = 'policy-disabled'
         if paired and config['enabled']:
-            due, history = paired_due(config, now); save(root/'cadence-history.json', history)
+            due, history = paired_due(config, now, paired=paired); save(root/'cadence-history.json', history)
             if not due: mode = 'none'; skip_reason = 'interval-not-elapsed'
     if paired:
         from generation_pairs import build_pairs
-        value = build_pairs()
+        value = build_pairs(experiment=experiment_name(paired))
     else: value = build_plan()
     value['checkout_revision'] = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
     require(not os.environ.get('GITHUB_SHA') or os.environ['GITHUB_SHA'] == value['checkout_revision'], 'Checkout/CI revision mismatch')
@@ -137,7 +150,7 @@ def plan(root, config, mode, approval, paired=False, now=None):
         'approve_plan': value['plan_sha256'] if mode == 'execute' else '',
         'baseline_ref': config['baseline_ref'] if mode == 'execute' and not paired else '',
         'baseline_sha256': config['baseline_sha256'] if mode == 'execute' and not paired else '',
-        'experiment': 'paired' if paired else 'single',
+        'experiment': experiment_name(paired),
         'event': event, 'nightly_enabled': config['enabled'], 'model_invoked': False,
         'policy': config, 'policy_sha256': digest(policy_path(paired).read_bytes()),
         'controller_sha256': digest(Path(__file__).read_bytes())}
@@ -171,8 +184,8 @@ def download(root, config, run=None):
 def observation(run, evidence, baseline, config, now, manual=False, paired=False):
     ci, result = read(evidence/'ci.json'), read(evidence/'result.json')
     context = ci['context']; event = 'workflow_dispatch' if manual else 'schedule'
-    path = run['path'] if manual else PAIRED_WORKFLOW if paired else WORKFLOW
-    allowed = (PAIRED_WORKFLOW,) if paired else ('.github/workflows/ci.yml', WORKFLOW)
+    path = run['path'] if manual else workflow_path(paired)
+    allowed = (workflow_path(paired),) if paired else ('.github/workflows/ci.yml', WORKFLOW)
     require(path in allowed, 'Unexpected generation workflow')
     require(run['event'] == event and run['path'] == path, 'Unexpected workflow origin')
     require(manual or run['head_branch'] == 'main', 'Scheduled coverage must be on main')
@@ -182,9 +195,10 @@ def observation(run, evidence, baseline, config, now, manual=False, paired=False
     if paired:
         from generation_pairs import report_pairs
         plan = read(evidence/'run/plan.json'); state = read(evidence/'run/state.json')
-        require(ci.get('experiment') == 'paired' and ci['action'] == 'execute'
+        require(ci.get('experiment') == experiment_name(paired) and ci['action'] == 'execute'
             and result['status'] == 'complete' and result['model_invoked'] is True
             and result['hardware_invoked'] is False, 'Not a completed paired experiment')
+        require((plan['schema_version'] == 2) == (paired == 'models'), 'Comparison lane does not match the retained plan')
         require(ci['approve_plan'] == plan['plan_sha256'] == result['plan_sha256'], 'Paired approval mismatch')
         require(context['GITHUB_SHA'] == run['head_sha'] == plan['checkout_revision'], 'Paired revision mismatch')
         require(utc(run['created_at']) <= utc(state['started_at']) <= utc(state['finished_at']) <= now,
@@ -192,7 +206,7 @@ def observation(run, evidence, baseline, config, now, manual=False, paired=False
         report = report_pairs(evidence/'run')
         require(report['status'] == 'complete' and result['trial_denominator'] == report['trial_denominator']
             and result['cells'] == {k: v['outcome'] for k, v in report['observations'].items()}, 'Incomplete/inconsistent paired result')
-        return {'status': 'passed', 'kind': 'paired-context',
+        return {'status': 'passed', 'kind': 'model-comparison' if paired == 'models' else 'paired-context',
             'plan_sha256': report['plan_sha256'], 'reporter_sha256': report['reporter_sha256'],
             'alerts': ['stale-coverage'] if now-utc(state['finished_at']) > timedelta(hours=config['max_age_hours']) else [],
             'trial_denominator': report['trial_denominator'], 'comparisons': report['comparisons'],
@@ -210,9 +224,9 @@ def observation(run, evidence, baseline, config, now, manual=False, paired=False
 
 
 def monitor(root, config, now, inspect_run=None, paired=False):
-    workflow = PAIRED_WORKFLOW if paired else WORKFLOW
+    workflow = workflow_path(paired)
     report = {'status': 'disabled', 'scope': 'manual-inspection' if inspect_run else 'scheduled-coverage',
-        'experiment': 'paired' if paired else 'single',
+        'experiment': experiment_name(paired),
         'checked_at': now.isoformat(), 'policy': config, 'policy_sha256': digest(policy_path(paired).read_bytes()),
         'controller_sha256': digest(Path(__file__).read_bytes()),
         'alerts': [], 'latest_run': None, 'last_qualified': None, 'observations': [], 'model_invoked': False}
@@ -277,8 +291,8 @@ def monitor(root, config, now, inspect_run=None, paired=False):
 
 def notify(report, config, now=None):
     now = now or datetime.now(timezone.utc)
-    paired = report.get('experiment') == 'paired'
-    marker = MARKER.replace(':v1', ':paired:v1') if paired else MARKER
+    paired = 'models' if report.get('experiment') == 'models' else report.get('experiment') == 'paired'
+    marker = MARKER.replace(':v1', ':'+experiment_name(paired)+':v1') if paired else MARKER
     require(report['scope'] == 'scheduled-coverage', 'Manual inspection cannot send a schedule alert')
     require(report['policy'] == config and report['policy_sha256'] == digest(policy_path(paired).read_bytes()), 'Observation policy changed')
     if not config['enabled']: return {'status': 'disabled'}
@@ -291,7 +305,7 @@ def notify(report, config, now=None):
     # Do not include observation time/age in the fingerprint: unchanged findings
     # must not produce hourly edits. Issue body updates are idempotent PATCHes.
     value = {key: report[key] for key in ('status', 'alerts')}
-    value['experiment'] = 'paired' if paired else 'single'
+    value['experiment'] = experiment_name(paired)
     for key in ('latest_run', 'last_qualified'):
         run = report[key]
         value[key] = {k: run.get(k) for k in ('id', 'run_attempt', 'head_sha', 'conclusion', 'finished_at')} if run else None
@@ -317,24 +331,27 @@ def main():
     parser.add_argument('--mode', choices=('plan', 'execute'), default='plan')
     parser.add_argument('--approve-plan', default='')
     parser.add_argument('--inspect-run', help='GET-only inspection of RUN_ID/ATTEMPT; never scheduled acceptance or notification')
-    parser.add_argument('--paired', action='store_true', help='Use the paired controller/observation policy, disabled by default')
+    lanes = parser.add_mutually_exclusive_group()
+    lanes.add_argument('--paired', action='store_true', help='Use the paired context policy')
+    lanes.add_argument('--models', action='store_true', help='Use the paired model policy')
     args = parser.parse_args()
+    lane = 'models' if args.models else args.paired
     root = external(args.root)
     if args.action != 'notify': root.mkdir(parents=True, exist_ok=False)
     now = datetime.now(timezone.utc)
     config = None
     try:
-        config = policy(now, paired=args.paired)
-        if args.action == 'plan': result = plan(root, config, args.mode, args.approve_plan, paired=args.paired, now=now)
+        config = policy(now, paired=lane)
+        if args.action == 'plan': result = plan(root, config, args.mode, args.approve_plan, paired=lane, now=now)
         elif args.action == 'notify': result = notify(read(root/'health.json'), config)
-        else: result = monitor(root, config, now, args.inspect_run, paired=args.paired)
+        else: result = monitor(root, config, now, args.inspect_run, paired=lane)
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
         result = {'status': 'alert', 'scope': 'manual-inspection' if args.inspect_run else 'scheduled-coverage',
             'checked_at': now.isoformat(),
             'alerts': ['observation-unavailable'], 'error_type': type(exc).__name__,
             'latest_run': None, 'last_qualified': None, 'model_invoked': False}
-        if config is not None: result.update(experiment='paired' if args.paired else 'single',
-            policy=config, policy_sha256=digest(policy_path(args.paired).read_bytes()))
+        if config is not None: result.update(experiment=experiment_name(lane),
+            policy=config, policy_sha256=digest(policy_path(lane).read_bytes()))
         if args.action != 'monitor':
             save(root/'error.json', result); print(json.dumps(result)); return 2
     if args.action == 'monitor': save(root/'health.json', result)

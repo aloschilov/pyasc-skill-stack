@@ -1,0 +1,68 @@
+name: Model generation comparison
+
+# PRs plan only. Periodic activation is a separate reviewed change: no cron.
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Plan only by default; execute all predeclared pairs'
+        type: choice
+        options: [plan, execute]
+        default: plan
+      approve_plan:
+        description: 'Exact reviewed paired plan digest required to execute'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: generation-models
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.repository == 'aloschilov/pyasc-skill-stack'
+    runs-on: [self-hosted, arm64]
+    timeout-minutes: 10
+    outputs:
+      action: ${{ steps.decision.outputs.action }}
+      approve_plan: ${{ steps.decision.outputs.approve_plan }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Select external control evidence
+        run: echo "CONTROL_ROOT=$(dirname "$RUNNER_WORKSPACE")/.pyasc-generation/models-control/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+      - name: Validate policy and prepare plan (no provider credentials)
+        id: decision
+        env:
+          MODE: ${{ inputs.mode || 'plan' }}
+          APPROVAL: ${{ inputs.approve_plan }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/generation_operations.py plan --models --root "$CONTROL_ROOT" --mode "$MODE" --approve-plan "$APPROVAL"
+      - name: Preserve control decision including failures
+        if: always() && env.CONTROL_ROOT != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: models-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.CONTROL_ROOT }}/
+          if-no-files-found: error
+          retention-days: 90
+
+  paired:
+    needs: prepare
+    if: github.event_name != 'pull_request' && needs.prepare.outputs.action != 'none'
+    uses: ./.github/workflows/generation-simulator.yml
+    with:
+      experiment: models
+      action: ${{ needs.prepare.outputs.action }}
+      approve_plan: ${{ needs.prepare.outputs.approve_plan }}
+    secrets:
+      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}

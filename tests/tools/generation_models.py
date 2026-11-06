@@ -131,3 +131,21 @@ def inspect_request_settings(request, cap, required):
     require(type(cap) is int and cap > 0 and type(value.get('max_tokens')) is int and type(request.get('max_tokens')) is int
         and request['max_tokens'] == cap and value == request_settings(body), 'Recorded wire settings/cap mismatch')
     return value
+
+
+def inspect_comparison_settings(model, wire):
+    """Bind supported OpenCode model options to the actual request allowlist.
+
+    This proves serialization, not that the provider obeyed a setting or that
+    equally named reasoning levels have equal semantics across models.
+    """
+    aliases = {'reasoningEffort': 'reasoning_effort', 'thinking': 'thinking',
+               'temperature': 'temperature', 'topP': 'top_p', 'topK': 'top_k',
+               'seed': 'seed', 'presencePenalty': 'presence_penalty', 'frequencyPenalty': 'frequency_penalty'}
+    options = model['configuration']['model_options']
+    require(set(options) <= set(aliases), 'Unsupported comparison model option')
+    recorded = dict(wire['sampling'], **wire['reasoning'])
+    for name, value in options.items():
+        field = aliases[name]
+        require(field in wire['present_fields'] and recorded.get(field) == value,
+                'Requested model option not serialized: '+name)
