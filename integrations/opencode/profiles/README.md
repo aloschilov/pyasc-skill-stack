@@ -33,6 +33,7 @@ logs. Use `--out /dev/null` for a credential-presence check.
 | Templates | Configuration |
 |---|---|
 | `cloud-glm-5.3` | Gateway profile (see qualification scope below); `OPENCODE_BASE_URL`, `OPENCODE_API_KEY` |
+| `cloud-glm-5.3-low` | Explicit low-reasoning paired experiment; same gateway variables, separate unqualified configuration |
 | `cloud-default` and other `cloud-*` templates | Historical DashScope configurations; `DASHSCOPE_API_KEY` |
 | `local-*` templates | Ollama configurations; `OLLAMA_BASE_URL` |
 
