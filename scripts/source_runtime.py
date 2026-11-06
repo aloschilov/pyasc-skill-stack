@@ -139,12 +139,24 @@ def build(root, revision):
     print(json.dumps({'status': 'built', 'runtime_sha256': sha(runtime), 'output': str(output)}))
 
 
+def check_build(root):
+    output = root/'output'
+    intent = json.loads((root/'intent.json').read_text())
+    for filename, checksum in intent['stack_files'].items():
+        if not (ROOT/filename).resolve().is_relative_to(ROOT) or sha(ROOT/filename) != checksum:
+            raise ValueError('Qualification code differs from build intent: '+filename)
+    for filename, checksum in json.loads((output/'files.json').read_text()).items():
+        if not (output/filename).resolve().is_relative_to(output.resolve()) or sha(output/filename) != checksum:
+            raise ValueError('Build artifact changed: '+filename)
+    manifest = json.loads((output/'bundle-manifest.json').read_text())
+    if manifest['source_sha'] != intent['source_sha'] or manifest['recipe_commit'] != intent['recipe_commit']:
+        raise ValueError('Bundle source/recipe differs from build intent')
+    return output
+
+
 def qualify(root):
     native()
-    output = root/'output'
-    for filename, checksum in json.loads((output/'files.json').read_text()).items():
-        if (output/filename).resolve().is_relative_to(output.resolve()) is False or sha(output/filename) != checksum:
-            raise ValueError('Build artifact changed: '+filename)
+    output = check_build(root)
     destination = root/'qualification'; destination.mkdir(exist_ok=False)
     # Exercise the ordinary submission packager without live task GET or POST.
     import smoke

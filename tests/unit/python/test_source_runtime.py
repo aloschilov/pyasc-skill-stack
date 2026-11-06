@@ -112,6 +112,24 @@ class SourceRuntime(unittest.TestCase):
                 source.container(['docker', 'run'], 'pyasc-source-owned', Path('/unused'), 1)
             self.assertEqual(cleanup.call_args.args[0], ['docker', 'rm', '-f', 'pyasc-source-owned'])
 
+    def test_qualification_refuses_changed_artifact_code_or_lineage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); output=root/'output'; output.mkdir()
+            filename='scripts/source_runtime.py'
+            intent={'stack_files': {filename:source.sha(ROOT/filename)},
+                    'source_sha':source.SOURCE, 'recipe_commit':source.RECIPE}
+            source.save(root/'intent.json', intent)
+            source.save(output/'bundle-manifest.json', {'source_sha':source.SOURCE, 'recipe_commit':source.RECIPE})
+            source.save(output/'files.json', {'bundle-manifest.json':source.sha(output/'bundle-manifest.json')})
+            self.assertEqual(source.check_build(root), output)
+            with patch.object(source, 'sha', return_value='changed'):
+                with self.assertRaisesRegex(ValueError, 'code differs'): source.check_build(root)
+            (output/'bundle-manifest.json').write_text('{}')
+            with self.assertRaisesRegex(ValueError, 'artifact changed'): source.check_build(root)
+            source.save(output/'bundle-manifest.json', {'source_sha':'other', 'recipe_commit':source.RECIPE})
+            source.save(output/'files.json', {'bundle-manifest.json':source.sha(output/'bundle-manifest.json')})
+            with self.assertRaisesRegex(ValueError, 'source/recipe'): source.check_build(root)
+
 
 if __name__ == '__main__':
     unittest.main()
