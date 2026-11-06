@@ -100,6 +100,11 @@ class Comparisons(unittest.TestCase):
         helper = 'tests/tools/generation_models.py'
         plan['source_sha256'].pop(helper); (self.base/'source'/helper).unlink()
         write(self.base/'plan.json', plan); seal(self.base)
+        with self.assertRaisesRegex(ValueError, 'source closure'): Bundle(self.base)
+        planner = 'tests/tools/generation_plan.py'
+        source = b'# Synthetic pre-binding planner source, not live evidence.\n'
+        (self.base/'source'/planner).write_bytes(source); plan['source_sha256'][planner] = digest(source)
+        write(self.base/'plan.json', plan); seal(self.base)
         self.assertIsNone(Bundle(self.base).model_binding_schema_version)
 
     def test_one_lost_pass_is_regression_not_an_arbitrary_aggregate_threshold(self):

@@ -299,6 +299,13 @@ class ReviewReceipts(unittest.TestCase):
         helper = 'tests/tools/generation_models.py'
         plan['common']['source_sha256'].pop(helper); (self.run/'source'/helper).unlink()
         self.reseal_plan(plan)
+        with self.assertRaisesRegex(ValueError, 'source closure'): receipts.report_review(self.run)
+        # A legacy source closure also predates the planner's binding import.
+        # Snapshot code is never executed by the reporter, including this double.
+        planner = 'tests/tools/generation_plan.py'
+        source = b'# Synthetic pre-binding planner source, not live evidence.\n'
+        (self.run/'source'/planner).write_bytes(source)
+        plan['common']['source_sha256'][planner] = digest(source); self.reseal_plan(plan)
         report = receipts.report_review(self.run)
         self.assertTrue(report['validated_acceptance']); self.assertIsNone(report['model_binding_schema_version'])
         with self.assertRaisesRegex(ValueError, 'inputs changed'): review.validate_plan(self.run/'plan.json')

@@ -4,6 +4,7 @@ No network discovery or model fallback. Resolve only the endpoint/credential
 references selected by the hashed profile, never unrelated ambient variables.
 """
 from copy import deepcopy
+import ast
 import json
 import re
 from urllib.parse import urlsplit
@@ -81,7 +82,12 @@ def inspect_binding(model, sources, read):
     from generation_plan import digest
     fields = {'profile_sha256', 'configuration'}
     present = fields.intersection(model)
-    if 'tests/tools/generation_models.py' not in sources:
+    # The hashed planner independently declares the binding dependency. Removing
+    # just the helper and metadata cannot disguise a new receipt as a legacy one.
+    planner = ast.parse(read('tests/tools/generation_plan.py'))
+    uses_binding = any(isinstance(node, ast.ImportFrom) and node.module == 'generation_models' for node in ast.walk(planner))
+    require(uses_binding == ('tests/tools/generation_models.py' in sources), 'Incomplete model binding source closure')
+    if not uses_binding:
         require(not present, 'Model binding lacks its source implementation')
         return None
     require(present == fields, 'Missing model profile binding')
