@@ -53,7 +53,7 @@ def policy(now, paired=False):
         require(re.fullmatch(r'[0-9a-f]{64}', value['baseline_sha256']), 'Invalid baseline checksum')
     require(type(value['enabled']) is bool, 'Invalid policy enable flag')
     for field, minimum, maximum in [('max_age_hours', interval if paired else 1, interval+72 if paired else 168),
-                                    ('max_run_hours', 5 if paired else 1, 24)]:
+                                    ('max_run_hours', 10 if paired else 1, 24)]:
         require(type(value[field]) is int and minimum <= value[field] <= maximum, 'Invalid '+field)
     issue = value['alert_issue']
     require(issue is None or type(issue) is int and issue > 0, 'Invalid alert issue')

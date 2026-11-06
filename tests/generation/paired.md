@@ -53,11 +53,19 @@ provider sampling has no qualified deterministic seed.
 
 The model/profile/revision, runtime digest, task snapshot, evaluator, tool schemas
 and per-trial limits remain equal. Default worst-case reservations are 24 model
-attempts, 1,572,864 output tokens and 14,400 execution seconds. Actual input/output
+attempts, 1,572,864 output tokens and 28,800 execution seconds. Each leg has the
+same 900-second generation deadline and 300-second qualification deadline. The
+single-run matrix retains its existing limits. Actual input/output
 usage and time are recorded separately; input tokens and monetary charges are not
 bounded by the output-token cap. No automatic model fallback or hidden repair is
 allowed. Additional attempts, if configured, are fresh restarts; reviewer/tuner
 repairs belong to #20 and are currently zero.
+
+The earlier 300-second paired generation deadline interrupted a provider response
+in pilot `42161942577`. Its response usage remains unknown and its experiment
+incomplete; changing this deadline does not reinterpret or pool those observations.
+A new cohort needs a new plan and prior-latch reconciliation. A timeout remains
+unresolved infrastructure, never a measured zero qualification outcome.
 
 ## Isolation and evidence
 
@@ -146,7 +154,7 @@ The **Paired generation experiment** workflow plans on PRs and defaults to plan
 on manual dispatch. To execute, choose `mode=execute` and provide the exact
 reviewed `approve_plan` for that revision. It reuses the generation simulator
 worker, pinned OpenCode/runtime provisioning, shared latch and public archive;
-the 300-minute job limit includes the four-hour maximum execution reservation.
+the 600-minute job limit includes the eight-hour maximum execution reservation.
 An incomplete experiment fails the CI job. A complete experiment may contain
 candidate failures; inspect its paired report rather than interpreting green CI
 as a skills benefit. This workflow has no cron; its periodic policy is disabled.
@@ -168,7 +176,7 @@ python3 scripts/generation_operations.py monitor --paired \
 
 The `periodic` policy in `paired.json` reuses the controller, shared executor latch
 and health monitor. It defaults to disabled, a 168-hour minimum interval, a
-192-hour freshness window and a five-hour stalled-run threshold. PRs only plan;
+192-hour freshness window and a ten-hour stalled-run threshold. PRs only plan;
 manual execution still requires the exact reviewed digest regardless of policy.
 
 Future scheduled execution is main-only and must be enabled explicitly, with an

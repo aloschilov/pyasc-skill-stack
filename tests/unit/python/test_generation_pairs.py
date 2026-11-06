@@ -47,12 +47,25 @@ class PairedDesign(unittest.TestCase):
     def test_plan_is_predeclared_bounded_and_counterbalances_each_task(self):
         self.assertEqual(self.plan, signed_plan())
         self.assertEqual(len(self.plan['trials']), 24)
-        self.assertEqual(self.plan['maximum_work'], {'model_attempts': 24, 'output_tokens': 1572864, 'execution_seconds': 14400})
+        self.assertEqual(self.plan['maximum_work'], {'model_attempts': 24, 'output_tokens': 1572864, 'execution_seconds': 28800})
+        self.assertEqual(pairs.build_plan()['limits']['generation_seconds_per_attempt'], 300)
+        self.assertTrue(all(pairs.trial_plan(self.plan,t)['limits']['generation_seconds_per_attempt']==900 for t in self.plan['trials']))
         self.assertIsNone(self.plan['generation_seed'])
         for cell in self.plan['common']['cells']:
             orders = [[t['protocol'] for t in self.plan['trials'] if t['cell'] == cell['id'] and t['repetition'] == rep] for rep in (1, 2)]
             self.assertEqual(orders[0], list(reversed(orders[1])))
             self.assertEqual(set(orders[0]), set(protocols.PROTOCOLS))
+
+    def test_paired_deadline_is_bounded_and_aggregate_budget_covers_every_leg(self):
+        original=pairs.resource
+        for deadline,cap,message in [(0,28800,'deadline'),(901,28800,'deadline'),(900,14400,'budget')]:
+            def changed(root,name):
+                data=original(root,name)
+                if name!=pairs.SPEC:return data
+                spec=json.loads(data);spec.update(generation_seconds_per_attempt=deadline,max_execution_seconds=cap)
+                return canonical(spec)
+            with patch.object(pairs,'resource',side_effect=changed),self.assertRaisesRegex(ValueError,message):
+                pairs.build_pairs()
 
     def test_only_the_declared_intervention_changes_between_legs(self):
         plans = [pairs.trial_plan(self.plan, t) for t in self.plan['trials'][:4]]
