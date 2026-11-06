@@ -57,6 +57,13 @@ Alternatively manually dispatch **Source runtime qualification** on the desired
 branch. PRs run only offline tests. Its build and simulator jobs use separate
 fresh hosted x86_64 runners and retain artifacts for 90 days. There is no cron,
 model generation, NPU call, CANNBench submission or automatic publication.
+The optional `build_run` input qualifies an existing build artifact without
+rebuilding it. Its recorded source revision takes precedence over the `source`
+input, which applies only to new builds. Every output hash and all five bound
+build/packaging/probe source files must still match; changed qualification code
+cannot silently reuse a previous build receipt. Container-owned evidence is
+exported as a tar archive so private dump-directory permissions do not prevent
+retention. A failed export is not an accepted qualification.
 
 The build retains the upstream wheel, source export, build passport, dependency
 wheels and a file hash inventory. Upstream performs ABI/license checks and two
