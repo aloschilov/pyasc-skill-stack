@@ -17,6 +17,17 @@ ci = importlib.util.module_from_spec(spec); spec.loader.exec_module(ci)
 
 
 class GeneratedCI(unittest.TestCase):
+    def test_product_release_tags_do_not_publish_verification_archives(self):
+        import fnmatch, yaml
+        workflow = yaml.safe_load((ROOT/'.github/workflows/release.yml').read_text())
+        patterns = workflow[True]['push']['tags']
+        for tag, expected in [('v0.3.0', True), ('v12.0.1-rc1', True),
+                              ('verification-integration-c4cf8f5', False),
+                              ('qualification-generation-123', False),
+                              ('archive-campaign-2026', False), ('v', False)]:
+            with self.subTest(tag=tag):
+                self.assertEqual(any(fnmatch.fnmatchcase(tag, p) for p in patterns), expected)
+
     def test_publication_credential_is_scoped_to_release_step(self):
         import yaml
         workflow=yaml.safe_load((ROOT/'.github/workflows/cannbench-generated.yml').read_text())
