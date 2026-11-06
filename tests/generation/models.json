@@ -21,9 +21,9 @@
   },
   "models": [
     {
-      "id": "glm52",
-      "profile": "cloud-glm-5.2-gateway",
-      "response_model": "glm-5-2-260617"
+      "id": "deepseek41",
+      "profile": "cloud-deepseek-v4.1-flash-gateway",
+      "response_model": "deepseek-v4-1-flash-261017"
     },
     {
       "id": "glm53",

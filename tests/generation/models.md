@@ -5,26 +5,32 @@ credential binding, session/context audit and numerical adapters. It is not a
 second campaign runner. The manual comparative run is **not yet qualified**;
 the policy is disabled and the workflows execute only when explicitly dispatched.
 
-The first cohort [42189411115](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42189411115)
-stopped after one candidate failure and one blocked session; 22 trials were not
-run. Its source `89bb606` expected the alias returned by an identity-only request.
-A title call returned `glm-5.2`, but the main tool call returned
-`glm-5-2-260617`; the gate correctly rejected the different identity. No numerical
-pass or model comparison was established. The blocked archive is retained
-externally as `model-42189411115-blocked.tar.gz`, SHA256
-`807ecc9bdce1dfd6b757a9c206d6b3bc7aace86588d9629f575f04f0d747f72b`.
-Its original unknown usage and reserved budget remain unchanged; cleanup and
-completed delivery were reconciled before releasing the executor lease.
+Two GLM-5.2 cohorts stopped on response-identity drift before a comparison was
+possible. Each retained one candidate failure, one unresolved request and 22
+unrun trials. The second, with auxiliary agents disabled, still received the
+short alias instead of the expected dated ID. These are gaps, not model or
+skills scores. Completed delivery and cleanup were reconciled; original
+UNKNOWN accounting and 24,000-token reservations remain unchanged.
+
+| Incomplete cohort | External archive | SHA256 |
+| --- | --- | --- |
+| [42189411115](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42189411115) | `model-42189411115-blocked.tar.gz` | `807ecc9bdce1dfd6b757a9c206d6b3bc7aace86588d9629f575f04f0d747f72b` |
+| [42192207099](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42192207099) | `model-42192207099-blocked.tar.gz` | `736f35a8ee975566254c0903dd6e15c7a91610edfeafd8d07320e078e9af9a68` |
+
+Both archives are retained outside the checkout on the qualification Mac and VM.
+The current plan selects the separately configured DeepSeek model instead of
+relaxing identity checks or pooling the incomplete cohorts. A small tool request
+observed its response ID below; that is discovery, not OpenCode qualification.
 
 `models.json` selects two distinct requested and expected response identities:
 
 | Arm | Profile | Requested | Expected response |
 | --- | --- | --- | --- |
-| glm52 | cloud-glm-5.2-gateway | gateway/glm-5.2 | glm-5-2-260617 |
+| deepseek41 | cloud-deepseek-v4.1-flash-gateway | gateway/deepseek-v4.1-flash | deepseek-v4-1-flash-261017 |
 | glm53 | cloud-glm-5.3 | gateway/glm-5.3 | glm-5-3-260814 |
 
 Both use the same gateway transport, not independent providers. The separately
-named gateway profile does not change the existing DashScope template.
+named gateway profile does not change existing provider templates.
 Immutable provider/weights revisions are unknown; a response alias is not one.
 
 The fixed matrix is add, reduction and broadcast × P3/P6 × two models × two
@@ -47,7 +53,7 @@ Temperature, top-p and seed are unspecified. Public evidence records the actual
 serialized allowlist and unknown defaults; it does not claim provider compliance.
 The reporter rejects dropped requested options or different serialized settings
 between arms. The new plan disables auxiliary title/summary agents in both arms
-and requires a tool schema on every request; generation uses the exact main
+and requires a tool schema on every request; generation uses the exact per-arm
 response ID above, never an alias allowlist. This is supported by the pinned
 [OpenCode 1.19 agent configuration](https://github.com/anomalyco/opencode/blob/v1.19.0/packages/opencode/src/agent/agent.ts).
 A gateway repeating identical cumulative usage on the final choice and the

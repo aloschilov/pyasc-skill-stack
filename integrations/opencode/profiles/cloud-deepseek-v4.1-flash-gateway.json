@@ -9,8 +9,8 @@
         "apiKey": "{env:OPENCODE_API_KEY}"
       },
       "models": {
-        "glm-5.2": {
-          "name": "GLM-5.2",
+        "deepseek-v4.1-flash": {
+          "name": "DeepSeek V4.1 Flash",
           "options": {
             "thinking": {
               "type": "enabled"
@@ -25,7 +25,7 @@
       }
     }
   },
-  "model": "gateway/glm-5.2",
+  "model": "gateway/deepseek-v4.1-flash",
   "permission": {
     "read": "allow",
     "edit": "allow",

@@ -30,7 +30,7 @@ class ModelDesign(unittest.TestCase):
             orders = [[(t['model_arm'], t['protocol']) for t in p['trials']
                        if t['cell'] == cell['id'] and t['repetition'] == rep] for rep in (1, 2)]
             self.assertEqual(orders[0], list(reversed(orders[1])))
-            self.assertEqual(set(orders[0]), {(m, c) for m in ('glm52','glm53') for c in ('P3','P6')})
+            self.assertEqual(set(orders[0]), {(m, c) for m in ('deepseek41','glm53') for c in ('P3','P6')})
         for trial in p['trials']:
             value = pairs.trial_plan(p, trial)
             self.assertEqual(value['model'], p['models'][trial['model_arm']])
@@ -43,9 +43,9 @@ class ModelDesign(unittest.TestCase):
 
     def test_duplicate_models_unknown_arms_budgets_and_changed_settings_rejected(self):
         original = pairs.resource
-        mutations = [lambda s: s['models'][1].update(id='glm52'),
-            lambda s: s['models'][1].update(profile='cloud-glm-5.2-gateway',response_model='glm-5.2'),
-            lambda s: s['models'][1].update(response_model='glm-5-2-260617'),
+        mutations = [lambda s: s['models'][1].update(id='deepseek41'),
+            lambda s: s['models'][1].update(profile='cloud-deepseek-v4.1-flash-gateway',response_model='deepseek-v4-1-flash-261017'),
+            lambda s: s['models'][1].update(response_model='deepseek-v4-1-flash-261017'),
             lambda s: s['models'][0].update(profile='cloud-glm-5.3-low'),
             lambda s: s.update(max_output_tokens=4607999), lambda s: s.update(max_execution_seconds=28799),
             lambda s: s.update(output_tokens_per_response=True), lambda s: s.update(protocols=['P3','P4']),
@@ -66,7 +66,7 @@ class ModelDesign(unittest.TestCase):
             path = Path(d)/'plan.json'; receipts.write(path, self.plan)
             self.assertEqual(canonical(pairs.validate_pairs(path, 'models')), canonical(self.plan))
             with self.assertRaisesRegex(ValueError, 'current inputs'): pairs.validate_pairs(path)
-            altered = deepcopy(self.plan); altered['models']['glm52']['expected_response']='glm-5.3'
+            altered = deepcopy(self.plan); altered['models']['deepseek41']['expected_response']='glm-5.3'
             altered.pop('plan_sha256'); altered['plan_sha256']=digest(canonical(altered)); receipts.write(path, altered)
             with self.assertRaisesRegex(ValueError, 'current inputs'): pairs.validate_pairs(path, 'models')
 
@@ -75,17 +75,17 @@ class ModelDesign(unittest.TestCase):
             'outcome':'qualified' if t['model_arm']=='glm53' and t['protocol']=='P6' else 'candidate-failed',
             'attempts':1,'seconds':2,'output_tokens':3,'input_tokens':4,'cost':None} for t in self.plan['trials']}
         report = pairs.summarize(self.plan, observations)
-        self.assertEqual(set(report['comparisons']), {'glm52:P6-P3','glm53:P6-P3','P3:glm53-glm52','P6:glm53-glm52'})
+        self.assertEqual(set(report['comparisons']), {'deepseek41:P6-P3','glm53:P6-P3','P3:glm53-deepseek41','P6:glm53-deepseek41'})
         self.assertEqual(report['comparisons']['glm53:P6-P3']['qualification_delta'], 1)
-        self.assertEqual(report['comparisons']['glm52:P6-P3']['qualification_delta'], 0)
+        self.assertEqual(report['comparisons']['deepseek41:P6-P3']['qualification_delta'], 0)
         for item in report['comparisons'].values(): self.assertEqual(item['denominator'], 6)
-        trial = next(t for t in self.plan['trials'] if t['model_arm']=='glm52' and t['protocol']=='P3')
+        trial = next(t for t in self.plan['trials'] if t['model_arm']=='deepseek41' and t['protocol']=='P3')
         observations[trial['id']]={'status':'blocked','outcome':'unresolved-infrastructure'}
         report=pairs.summarize(self.plan, observations)
         self.assertEqual(report['status'],'incomplete')
-        self.assertIsNone(report['comparisons']['glm52:P6-P3']['qualification_delta'])
-        self.assertEqual(report['models']['glm52']['protocols']['P3']['coverage_gaps'],1)
-        self.assertEqual(report['models']['glm52']['protocols']['P3']['candidate_failed'],5)
+        self.assertIsNone(report['comparisons']['deepseek41:P6-P3']['qualification_delta'])
+        self.assertEqual(report['models']['deepseek41']['protocols']['P3']['coverage_gaps'],1)
+        self.assertEqual(report['models']['deepseek41']['protocols']['P3']['candidate_failed'],5)
 
     def test_auxiliary_requests_are_disabled_equally_without_changing_old_protocols(self):
         for trial in self.plan['trials']:
@@ -116,7 +116,7 @@ class ModelEvidence(unittest.TestCase):
             self.assertEqual(len(value['candidate_sha256']),1)
 
     def test_rehashed_envelope_cannot_change_an_arm(self):
-        altered=deepcopy(self.plan);altered['models']['glm52']['requested']='gateway/substitute'
+        altered=deepcopy(self.plan);altered['models']['deepseek41']['requested']='gateway/substitute'
         altered.pop('plan_sha256');altered['plan_sha256']=digest(canonical(altered));receipts.write(self.root/'plan.json',altered)
         state=pairs.read(self.root/'state.json');state['plan_sha256']=altered['plan_sha256'];receipts.write(self.root/'state.json',state)
         pairs.seal(self.root)
@@ -137,7 +137,7 @@ class ModelEvidence(unittest.TestCase):
     def test_equal_missing_reasoning_settings_do_not_prove_requested_options(self):
         from generation_models import inspect_comparison_settings
         from generation_provider import request_settings
-        model=self.plan['models']['glm52']
+        model=self.plan['models']['deepseek41']
         with self.assertRaisesRegex(ValueError,'not serialized'):
             inspect_comparison_settings(model,request_settings({'max_tokens':24000}))
         with self.assertRaisesRegex(ValueError,'not serialized'):
