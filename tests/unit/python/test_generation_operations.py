@@ -162,6 +162,30 @@ class GenerationOperations(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'unmarked'): ops.notify(report, self.config, NOW+timedelta(minutes=1))
         with self.assertRaisesRegex(ValueError, 'too old'): ops.notify(report, self.config, NOW+timedelta(minutes=30))
 
+    def test_explicit_manual_delivery_never_claims_cron_and_cannot_disable_stale_alerts(self):
+        self.run.update(event='workflow_dispatch', path=ops.WORKFLOW); self.origin()
+        report = self.monitor(inspect_run='99/1')
+        self.assertEqual(report['status'], 'verified-manual')
+        scheduled_stale = self.monitor([])
+        issue = {'body': ops.MARKER, 'state': 'open', 'html_url': 'https://github.com/'+ops.REPO+'/issues/123'}
+        writes = []
+        def api(endpoint, payload=None):
+            if payload is not None: writes.append(payload); issue.update(payload)
+            return deepcopy(issue)
+        with patch.object(ops, 'api', side_effect=api):
+            self.assertEqual(ops.notify(report, self.config, NOW, notify_inspection=True)['status'], 'confirmed')
+            self.assertEqual(issue['state'], 'closed')
+            self.assertIn('manual qualification: **verified-manual**', issue['body'])
+            self.assertIn('not cron delivery', issue['body'])
+            self.assertEqual(ops.notify(report, self.config, NOW, notify_inspection=True)['status'], 'unchanged')
+            self.assertEqual(ops.notify(dict(report, status='pending'), self.config, NOW, notify_inspection=True)['status'], 'not-needed')
+            with self.assertRaisesRegex(ValueError, 'Manual inspection'):
+                ops.notify(scheduled_stale, self.config, NOW, notify_inspection=True)
+            self.assertEqual(ops.notify(scheduled_stale, self.config, NOW)['status'], 'confirmed')
+            self.assertEqual(issue['state'], 'open')
+            self.assertIn('stale-coverage', issue['body'])
+        self.assertEqual(len(writes), 2)
+
     def test_unknown_patch_is_reconciled_once_without_replay(self):
         report = self.monitor([])
         for applied in (False, True):
@@ -197,7 +221,8 @@ class GenerationOperations(unittest.TestCase):
         self.assertFalse(health[True]['workflow_dispatch']['inputs']['notify']['default'])
         delivery = next(s for s in health['jobs']['observe']['steps'] if s.get('name') == 'Update configured alert issue')
         self.assertIn("github.event_name == 'schedule' || inputs.notify", delivery['if'])
-        self.assertIn("inputs.inspect_run == ''", delivery['if'])
+        self.assertEqual(delivery['env']['INSPECT_RUN'], '${{ inputs.inspect_run }}')
+        self.assertIn('if [ -n "$INSPECT_RUN" ]; then args+=(--notify-inspection); fi', delivery['run'])
         self.assertNotIn('OPENCODE', str(health)); self.assertNotIn('BENCHSITE', str(health))
 
 

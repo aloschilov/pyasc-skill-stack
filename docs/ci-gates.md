@@ -49,6 +49,9 @@ Accepted qualification requires [durable evidence](verification-contract.md#stor
 The [controller and observer](../tests/generation/README.md#inactive-nightly-controller-and-health-observer)
 retain control/health records separately. Their planning/manual green checks do
 not establish scheduled coverage or successful notification delivery.
+The [accepted manual controller runs and live failure/recovery receipts](../tests/generation/README.md#manual-controller-acceptance-2026-11-06)
+were verified separately under the user-approved substitute for cron. Schedules
+are enabled; actual cron delivery remains unverified.
 
 ## Compile coverage
 

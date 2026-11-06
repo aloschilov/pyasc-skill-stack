@@ -3,7 +3,7 @@
 This is the model axis of the [paired experiment](paired.md), using its executor,
 credential binding, session/context audit and numerical adapters. One complete
 manual comparison is qualified below. The periodic policy is enabled after authorization on 2026-11-06;
-workflows execute only when explicitly dispatched.
+the controller checks cadence daily and explicit manual execution requires plan approval.
 
 ## Manual qualification, 2026-11-06
 
@@ -27,7 +27,8 @@ plan preparation was 3 s. There were 88 provider requests (47 DeepSeek, 41 GLM),
 All 100 source hashes and the archived report were independently rechecked;
 the local GET-only observer returned `verified-manual`. All 118 own process
 groups and 22 qualification containers were absent, and the executor lease
-was released. Hosted/scheduled observation and alerts remain unqualified.
+was released. This cohort did not qualify hosted observation or alerts; subsequent manual
+controller acceptance is recorded below. Actual cron delivery remains unverified.
 
 Each contrast has six fixed task/repetition pairs. P6−P3 is +1.0 for DeepSeek
 (conditional 95% interval −0.1089 to 1) and +0.8333 for GLM (−0.2756 to 1).
@@ -69,8 +70,8 @@ reinterpret missing bytes or relax identity checks in earlier attempts.
 
 | Arm | Profile | Requested | Expected response |
 | --- | --- | --- | --- |
-| deepseek41 | cloud-deepseek-v4.1-flash-gateway | gateway/deepseek-v4.1-flash | deepseek-v4-1-flash-261017 |
-| glm53 | cloud-glm-5.3 | gateway/glm-5.3 | glm-5-3-260814 |
+| deepseek41 | cloud-deepseek-v4.1-flash-gateway-low | gateway/deepseek-v4.1-flash | deepseek-v4-1-flash-261017 |
+| glm53 | cloud-glm-5.3-low | gateway/glm-5.3 | glm-5-3-260814 |
 
 Both use the same gateway transport, not independent providers. The separately
 named gateway profile does not change existing provider templates.
@@ -89,8 +90,13 @@ are 4,608,000 output tokens and 28,800 execution seconds. Input tokens are measu
 not capped; provider cost stays null when unavailable. Queue/setup/collection
 are outside the execution bound. The CI job has a 600-minute deadline.
 
-Both profiles configure `thinking=enabled`, `reasoningEffort=high` and a 256,000
-token OpenCode context window. This is client configuration, not a verified
+The periodic profiles configure `thinking=enabled`, `reasoningEffort=low` and a 256,000
+token OpenCode context window. The earlier qualified cohort above used high reasoning; its results are not pooled
+with this operational profile. Two subsequent high-reasoning controller attempts
+stopped on incomplete GLM streams; low reasoning is a new explicit condition for
+both arms, not a claim that the transport fault is fixed. Existing high profiles
+remain available. Task inventory, repetitions, token/time budgets and qualification
+criteria are unchanged. This is client configuration, not a verified
 provider capacity or a promise that reasoning levels have identical semantics.
 Temperature, top-p and seed are unspecified. Public evidence records the actual
 serialized allowlist and unknown defaults; it does not claim provider compliance.
@@ -146,3 +152,10 @@ lease. Its daily cadence check runs at 18:47 UTC (21:47 Moscow), with a
 coverage use separate histories and cannot satisfy each other's observers.
 `generation-health.yml` accepts `experiment=models` for manual inspection.
 Hosted/scheduled observation is not qualified merely by these offline tests.
+
+## Integrated controller acceptance
+
+The current integrated manual run and hosted failure/recovery receipts are
+recorded in the [shared acceptance result](README.md#manual-controller-acceptance-2026-11-06).
+The user accepted manual dispatch instead of cron for closure. The earlier
+cohort above keeps its original scope; actual cron delivery remains unverified.

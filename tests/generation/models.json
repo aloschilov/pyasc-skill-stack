@@ -22,12 +22,12 @@
   "models": [
     {
       "id": "deepseek41",
-      "profile": "cloud-deepseek-v4.1-flash-gateway",
+      "profile": "cloud-deepseek-v4.1-flash-gateway-low",
       "response_model": "deepseek-v4-1-flash-261017"
     },
     {
       "id": "glm53",
-      "profile": "cloud-glm-5.3",
+      "profile": "cloud-glm-5.3-low",
       "response_model": "glm-5-3-260814"
     }
   ],

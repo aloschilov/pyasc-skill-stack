@@ -289,16 +289,18 @@ def monitor(root, config, now, inspect_run=None, paired=False):
     return report
 
 
-def notify(report, config, now=None):
+def notify(report, config, now=None, notify_inspection=False):
     now = now or datetime.now(timezone.utc)
     paired = 'models' if report.get('experiment') == 'models' else report.get('experiment') == 'paired'
     marker = MARKER.replace(':v1', ':'+experiment_name(paired)+':v1') if paired else MARKER
-    require(report['scope'] == 'scheduled-coverage', 'Manual inspection cannot send a schedule alert')
+    expected_scope = 'manual-inspection' if notify_inspection else 'scheduled-coverage'
+    require(report['scope'] == expected_scope, 'Manual inspection requires explicit notification; it cannot send a schedule alert')
     require(report['policy'] == config and report['policy_sha256'] == digest(policy_path(paired).read_bytes()), 'Observation policy changed')
     if not config['enabled']: return {'status': 'disabled'}
     require(config['alert_issue'] is not None, 'Notification is not configured/enabled')
     require(timedelta(0) <= now-utc(report['checked_at']) <= timedelta(minutes=15), 'Observation too old for delivery')
-    if report['status'] not in ('healthy', 'alert'): return {'status': 'not-needed'}
+    accepted = ('verified-manual', 'alert') if notify_inspection else ('healthy', 'alert')
+    if report['status'] not in accepted: return {'status': 'not-needed'}
     endpoint = f'repos/{REPO}/issues/{config["alert_issue"]}'
     issue = api(endpoint)
     require(not issue.get('pull_request') and (issue.get('body') or '').startswith(marker), 'Refusing an unmarked alert issue')
@@ -306,11 +308,15 @@ def notify(report, config, now=None):
     # must not produce hourly edits. Issue body updates are idempotent PATCHes.
     value = {key: report[key] for key in ('status', 'alerts')}
     value['experiment'] = experiment_name(paired)
+    value['scope'] = report['scope']
     for key in ('latest_run', 'last_qualified'):
         run = report[key]
         value[key] = {k: run.get(k) for k in ('id', 'run_attempt', 'head_sha', 'conclusion', 'finished_at')} if run else None
     fingerprint = digest(canonical(value))
-    body = marker+'\n<!-- observation:'+fingerprint+' -->\n\n'+('Paired experiment' if paired else 'Generation')+' coverage: **'+report['status']+'**.\n\n'
+    label = {'single': 'Generation', 'paired': 'Paired experiment', 'models': 'Model comparison'}[experiment_name(paired)]
+    body = marker+'\n<!-- observation:'+fingerprint+' -->\n\n'+label+(' manual qualification' if notify_inspection else ' coverage')+': **'+report['status']+'**.\n\n'
+    if notify_inspection:
+        body += 'This verifies the explicitly inspected manual run, not cron delivery. Scheduled freshness checks remain active.\n\n'
     body += 'Alerts: '+(', '.join(report['alerts']) or 'none')+'.\n\n'
     for key in ('latest_run', 'last_qualified'):
         if report[key]: body += key.replace('_', ' ').capitalize()+': '+report[key]['html_url']+'\n\n'
@@ -330,11 +336,13 @@ def main():
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--mode', choices=('plan', 'execute'), default='plan')
     parser.add_argument('--approve-plan', default='')
-    parser.add_argument('--inspect-run', help='GET-only inspection of RUN_ID/ATTEMPT; never scheduled acceptance or notification')
+    parser.add_argument('--inspect-run', help='GET-only inspection of RUN_ID/ATTEMPT; delivery needs separate notify --notify-inspection')
+    parser.add_argument('--notify-inspection', action='store_true', help='Explicitly deliver a verified manual inspection; never claim cron delivery')
     lanes = parser.add_mutually_exclusive_group()
     lanes.add_argument('--paired', action='store_true', help='Use the paired context policy')
     lanes.add_argument('--models', action='store_true', help='Use the paired model policy')
     args = parser.parse_args()
+    require(not args.notify_inspection or args.action == 'notify', 'Inspection delivery is notify-only')
     lane = 'models' if args.models else args.paired
     root = external(args.root)
     if args.action != 'notify': root.mkdir(parents=True, exist_ok=False)
@@ -343,10 +351,10 @@ def main():
     try:
         config = policy(now, paired=lane)
         if args.action == 'plan': result = plan(root, config, args.mode, args.approve_plan, paired=lane, now=now)
-        elif args.action == 'notify': result = notify(read(root/'health.json'), config)
+        elif args.action == 'notify': result = notify(read(root/'health.json'), config, notify_inspection=args.notify_inspection)
         else: result = monitor(root, config, now, args.inspect_run, paired=lane)
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
-        result = {'status': 'alert', 'scope': 'manual-inspection' if args.inspect_run else 'scheduled-coverage',
+        result = {'status': 'alert', 'scope': 'manual-inspection' if args.inspect_run or args.notify_inspection else 'scheduled-coverage',
             'checked_at': now.isoformat(),
             'alerts': ['observation-unavailable'], 'error_type': type(exc).__name__,
             'latest_run': None, 'last_qualified': None, 'model_invoked': False}

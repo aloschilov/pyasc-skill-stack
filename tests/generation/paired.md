@@ -51,10 +51,11 @@ Private provider payloads are excluded. All recorded process groups and simulato
 containers were absent after execution, and the executor released its shared latch.
 
 The GET-only local observer independently returned `verified-manual` without
-alerts. Hosted observer dispatch returned HTTP 404 because its workflow is not yet
-on the default branch; no hosted job was created. Hosted and scheduled observer
-qualification remain pending. No schedule, NPU run or automatic baseline promotion
-was enabled.
+alerts. Hosted observer dispatch returned HTTP 404 because its workflow was not yet
+on the default branch; no hosted job was created. That historical cohort did not
+qualify hosted or scheduled observation. No
+schedule, NPU run or automatic baseline promotion was enabled by that pilot;
+subsequent controller acceptance is recorded below.
 
 ## What the surviving scripts establish
 
@@ -265,7 +266,14 @@ It cannot overwrite the single-run alert channel. Both policies and workflow cro
 triggers are enabled; the hourly scheduled health workflow selects all three policies,
 and an inactive policy stays disabled without sending notifications.
 
-The manual experiment and local evidence observer are qualified above. Hosted
-observer and scheduled-run qualification remain pending until verified artifacts
-and alert/recovery receipts exist. Offline
-controller tests do not establish scheduled coverage. No NPU spending is implicit.
+The historical experiment is qualified above. Subsequent hosted manual
+controller and alert/recovery acceptance is recorded below. Actual cron delivery
+remains unverified; offline tests do not establish scheduled coverage. No NPU
+spending is implicit.
+
+## Integrated controller acceptance
+
+The current integrated manual run and hosted failure/recovery receipts are
+recorded in the [shared acceptance result](README.md#manual-controller-acceptance-2026-11-06).
+The user accepted manual dispatch instead of cron for closure. The earlier
+cohort above keeps its original scope; actual cron delivery remains unverified.
