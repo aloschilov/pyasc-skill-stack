@@ -3,13 +3,24 @@
 This is the model axis of the [paired experiment](paired.md), using its executor,
 credential binding, session/context audit and numerical adapters. It is not a
 second campaign runner. The manual comparative run is **not yet qualified**;
-the policy and workflows are planning-only until explicitly dispatched.
+the policy is disabled and the workflows execute only when explicitly dispatched.
+
+The first cohort [42189411115](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42189411115)
+stopped after one candidate failure and one blocked session; 22 trials were not
+run. Its source `89bb606` expected the alias returned by an identity-only request.
+A title call returned `glm-5.2`, but the main tool call returned
+`glm-5-2-260617`; the gate correctly rejected the different identity. No numerical
+pass or model comparison was established. The blocked archive is retained
+externally as `model-42189411115-blocked.tar.gz`, SHA256
+`807ecc9bdce1dfd6b757a9c206d6b3bc7aace86588d9629f575f04f0d747f72b`.
+Its original unknown usage and reserved budget remain unchanged; cleanup and
+completed delivery were reconciled before releasing the executor lease.
 
 `models.json` selects two distinct requested and expected response identities:
 
 | Arm | Profile | Requested | Expected response |
 | --- | --- | --- | --- |
-| glm52 | cloud-glm-5.2-gateway | gateway/glm-5.2 | glm-5.2 |
+| glm52 | cloud-glm-5.2-gateway | gateway/glm-5.2 | glm-5-2-260617 |
 | glm53 | cloud-glm-5.3 | gateway/glm-5.3 | glm-5-3-260814 |
 
 Both use the same gateway transport, not independent providers. The separately
@@ -35,7 +46,14 @@ provider capacity or a promise that reasoning levels have identical semantics.
 Temperature, top-p and seed are unspecified. Public evidence records the actual
 serialized allowlist and unknown defaults; it does not claim provider compliance.
 The reporter rejects dropped requested options or different serialized settings
-between arms. No fallback model, alternate credentials, or hidden repair is used.
+between arms. The new plan disables auxiliary title/summary agents in both arms
+and requires a tool schema on every request; generation uses the exact main
+response ID above, never an alias allowlist. This is supported by the pinned
+[OpenCode 1.19 agent configuration](https://github.com/anomalyco/opencode/blob/v1.19.0/packages/opencode/src/agent/agent.ts).
+A gateway repeating identical cumulative usage on the final choice and the
+following usage-only chunk is counted once, only with one response ID, one
+finish event and matching counters. Conflicting counters remain unresolved.
+No fallback model, alternate credentials, or hidden repair is used.
 
 Each unchanged candidate must pass static validation, JIT, actual Model execution
 with numerical output/input checks, and a rejecting suppressed-launch control.

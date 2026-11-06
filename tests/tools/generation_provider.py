@@ -55,7 +55,21 @@ def response_usage(raw, streaming, model):
             or endings[0]['finish_reason'] not in ('stop', 'tool_calls', 'length')):
         raise BudgetError('Incomplete/truncated model completion')
     usages = [p['usage'] for p in parts if p.get('usage')]
-    if len(usages) != 1: raise BudgetError('Missing/ambiguous provider usage')
+    if len(usages) != 1:
+        # Some Chat Completions gateways repeat the same cumulative counters
+        # on the finishing choice and on the following usage-only chunk. Count
+        # that one completion once; conflicting, interleaved or different-ID
+        # counters remain ambiguous. This never relaxes model identity checks.
+        repeated_final = (streaming and len(usages) == 2 and len(parts) >= 2
+            and all(p.get('usage') is None for p in parts[:-2])
+            and all(p.get('usage') for p in parts[-2:])
+            and json.dumps(usages[0], sort_keys=True) == json.dumps(usages[1], sort_keys=True)
+            and isinstance(parts[-1].get('id'), str) and bool(parts[-1]['id'])
+            and all(p.get('id') == parts[-1]['id'] for p in parts)
+            and parts[-1].get('choices') == []
+            and len(parts[-2].get('choices', [])) == 1
+            and bool(parts[-2]['choices'][0].get('finish_reason')))
+        if not repeated_final: raise BudgetError('Missing/ambiguous provider usage')
     usage = usages[0]
     for key in ('prompt_tokens', 'completion_tokens', 'total_tokens'):
         if type(usage.get(key)) is not int or usage[key] < 0: raise BudgetError('Invalid token usage')

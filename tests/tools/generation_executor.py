@@ -118,6 +118,11 @@ def configure(config, plan, context, project):
     config['small_model'] = model  # Auxiliary/title calls share the same gate and budget.
     config['skills'] = {'paths': [str(context/'skills')]}
     config['agent'] = {'build': {'steps': limits['rounds_per_attempt']}}
+    if plan.get('intervention', {}).get('auxiliary_agents') is False:
+        # A versioned experiment choice, equal in all model/context arms.
+        # These calls are not kernel generation and can have different response
+        # aliases. Disable them rather than accepting an alias allowlist.
+        config['agent'].update(title={'disable': True}, summary={'disable': True})
     config['compaction'] = {'auto': False}
     config['permission'] = {'*': 'deny', 'read': 'allow', 'glob': 'allow', 'grep': 'allow', 'skill': 'allow',
         'edit': {'*': 'deny', 'candidate.py': 'allow', str(project/'candidate.py'): 'allow'},

@@ -45,7 +45,7 @@ class ModelDesign(unittest.TestCase):
         original = pairs.resource
         mutations = [lambda s: s['models'][1].update(id='glm52'),
             lambda s: s['models'][1].update(profile='cloud-glm-5.2-gateway',response_model='glm-5.2'),
-            lambda s: s['models'][1].update(response_model='glm-5.2'),
+            lambda s: s['models'][1].update(response_model='glm-5-2-260617'),
             lambda s: s['models'][0].update(profile='cloud-glm-5.3-low'),
             lambda s: s.update(max_output_tokens=4607999), lambda s: s.update(max_execution_seconds=28799),
             lambda s: s.update(output_tokens_per_response=True), lambda s: s.update(protocols=['P3','P4']),
@@ -86,6 +86,17 @@ class ModelDesign(unittest.TestCase):
         self.assertIsNone(report['comparisons']['glm52:P6-P3']['qualification_delta'])
         self.assertEqual(report['models']['glm52']['protocols']['P3']['coverage_gaps'],1)
         self.assertEqual(report['models']['glm52']['protocols']['P3']['candidate_failed'],5)
+
+    def test_auxiliary_requests_are_disabled_equally_without_changing_old_protocols(self):
+        for trial in self.plan['trials']:
+            plan=pairs.trial_plan(self.plan,trial)
+            config=json.loads((ROOT/'integrations/opencode/profiles'/str(plan['model']['profile']+'.json')).read_text())
+            actual=fixtures.configure(config,plan,Path('/context'),Path('/project'))
+            self.assertEqual(actual['agent']['title'],{'disable':True})
+            self.assertEqual(actual['agent']['summary'],{'disable':True})
+        old=signed_plan();plan=pairs.trial_plan(old,old['trials'][0])
+        config=json.loads((ROOT/'integrations/opencode/profiles'/str(plan['model']['profile']+'.json')).read_text())
+        self.assertNotIn('title',fixtures.configure(config,plan,Path('/context'),Path('/project'))['agent'])
 
 
 class ModelEvidence(unittest.TestCase):

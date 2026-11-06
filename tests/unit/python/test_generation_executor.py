@@ -360,5 +360,28 @@ class ProviderContracts(unittest.TestCase):
         with self.assertRaises(BudgetError): self.gate.dispatch({'model': 'test-model'})
         self.assertEqual(len(self.requests), 1)
 
+    def test_identical_final_usage_only_chunk_is_counted_once(self):
+        # Minimal protocol fixture for the two final frames captured in
+        # cohort42189411115, not a retained run payload or qualification.
+        ending = dict(copy.deepcopy(self.payload), id='response-1')
+        ending['choices'][0]['finish_reason'] = 'tool_calls'
+        usage_only = dict(copy.deepcopy(ending), choices=[])
+        def encode(parts):
+            return ('\n\n'.join('data: '+json.dumps(p) for p in parts)+'\n\ndata: [DONE]\n').encode()
+        parsed = response_usage(encode([ending, usage_only]), True, 'test-model')
+        self.assertEqual((parsed['completion_tokens'], parsed['total_tokens'], parsed['finish_reason']), (7, 10, 'tool_calls'))
+        with self.assertRaisesRegex(BudgetError, 'different observed model'):
+            response_usage(encode([ending, usage_only]), True, 'another-model')
+        mutations = [lambda p:p[-1]['usage'].update(completion_tokens=8,total_tokens=11),
+            lambda p:p[-1].update(id='response-2'), lambda p:p[-1].pop('id'),
+            lambda p:p[-1].update(choices=[{'index':0,'finish_reason':'tool_calls'}]),
+            lambda p:p.insert(1,dict(id='response-1',model='test-model',choices=[])),
+            lambda p:p.append(copy.deepcopy(p[-1])),
+            lambda p:p.insert(0,dict(id='another-response',model='test-model',choices=[]))]
+        for mutate in mutations:
+            rows=copy.deepcopy([ending,usage_only]);mutate(rows)
+            with self.subTest(mutation=mutations.index(mutate)), self.assertRaises(BudgetError):
+                response_usage(encode(rows),True,'test-model')
+
 
 if __name__ == '__main__': unittest.main()

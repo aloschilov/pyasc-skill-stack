@@ -65,6 +65,9 @@ def build_pairs(root=ROOT, experiment='paired'):
     keys = ('schema_version', 'matrix', 'protocols', 'repetitions', 'order_seed',
             'generation_seconds_per_attempt', 'max_output_tokens', 'max_execution_seconds', 'periodic')
     if spec['schema_version'] >= 2 and 'context_path_format' in spec: keys += ('context_path_format',)
+    if models and 'auxiliary_agents' in spec:
+        keys += ('auxiliary_agents',)
+        require(spec['auxiliary_agents'] is False, 'Explicitly disable comparison auxiliary agents')
     exact_keys(spec, keys + (('models', 'output_tokens_per_response') if models else
                            ('model',) if spec['schema_version'] == 2 else ()), 'paired specification')
     if spec['schema_version'] == 2: exact_keys(spec['model'], ('profile', 'response_model'), 'paired model')
@@ -147,6 +150,8 @@ def trial_plan(plan, trial):
     if 'context_path_format' in plan['spec']:
         common['intervention']['context_path_format'] = plan['spec']['context_path_format']
     if plan['schema_version'] == 2: common['intervention']['model_comparison'] = True
+    if 'auxiliary_agents' in plan['spec']:
+        common['intervention']['auxiliary_agents'] = plan['spec']['auxiliary_agents']
     common['checkout_revision'] = plan.get('checkout_revision')
     limits = common['limits']; attempts = limits['attempts_per_cell']
     common['maximum_work'] = {'model_attempts': attempts,
@@ -264,6 +269,8 @@ def inspect_trial(root, expected, status):
                 and req['usage'].get('finish_reason') == 'length')
                 and req['usage']['observed_model'] == expected['model']['expected_response'], 'Request model/outcome mismatch')
             require(req['audit']['protocol'] == expected['intervention']['id'], 'Request protocol mismatch')
+            if expected['intervention'].get('auxiliary_agents') is False:
+                require(req['audit']['tool_schema_sha256'], 'Unexpected auxiliary request in model comparison')
             require(req['audit']['prompt_encoding'] == 'opencode-1.19-single-argument'
                 and req['audit']['provided_prompt_sha256'] == digest(expected_prompt.encode())
                 and req['audit']['provider_prompt_sha256'] == digest(provider_prompt(expected_prompt).encode()), 'Provider prompt encoding drift')

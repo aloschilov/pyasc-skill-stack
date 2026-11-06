@@ -23,7 +23,7 @@
     {
       "id": "glm52",
       "profile": "cloud-glm-5.2-gateway",
-      "response_model": "glm-5.2"
+      "response_model": "glm-5-2-260617"
     },
     {
       "id": "glm53",
@@ -31,5 +31,6 @@
       "response_model": "glm-5-3-260814"
     }
   ],
-  "output_tokens_per_response": 24000
+  "output_tokens_per_response": 24000,
+  "auxiliary_agents": false
 }
