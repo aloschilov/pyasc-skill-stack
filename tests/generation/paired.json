@@ -2,6 +2,7 @@
   "schema_version": 2,
   "matrix": "tests/generation/matrix.json",
   "model": {"profile": "cloud-glm-5.3-low", "response_model": "glm-5-3-260814"},
+  "context_path_format": "relative-read-call-v1",
   "protocols": ["P2", "P3", "P4", "P6"],
   "repetitions": 2,
   "order_seed": 20261106,

@@ -1,5 +1,6 @@
 """Explicit paired interventions. Historical P-labels do not imply old evidence."""
 import json
+import os
 from pathlib import Path
 
 from generation_plan import canonical, digest
@@ -34,12 +35,17 @@ def common_prompt(contract):
         'Read only explicitly provided context files or candidate.py. Write only candidate.py.')
 
 
-def prompt(contract, protocol, skills, context):
+def prompt(contract, protocol, skills, context, *, project=None):
     definition = PROTOCOLS[protocol]
     parts = [common_prompt(contract)]
     if definition['guidance']: parts.append(GUIDANCE)
     if definition['baseline_context']:
-        parts.append('Read the complete pinned baseline notes with the read tool before writing: '+str(context/BASELINE))
+        if project is None:
+            parts.append('Read the complete pinned baseline notes with the read tool before writing: '+str(context/BASELINE))
+        else:
+            args = json.dumps({'filePath': os.path.relpath(context/BASELINE, project)})
+            parts.append('Read the complete pinned baseline notes before writing. Call the read tool with exactly these arguments: '+args+
+                '. The path is relative to the project directory. If reading fails, correct the path before writing.')
     if definition['skills']:
         parts.append('Load these pinned skills with the skill tool before writing: '+', '.join(skills)+'.')
     return '\n\n'.join(parts)
