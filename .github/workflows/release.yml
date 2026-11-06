@@ -5,7 +5,8 @@ name: Release
 # folder is a copy that drifts from the thing it copied.
 on:
   push:
-    tags: ['v*']
+    # Version tags only; verification-* archives have their own publisher.
+    tags: ['v[0-9]*']
 
 permissions:
   contents: write
