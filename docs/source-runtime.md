@@ -3,8 +3,30 @@
 The normal skill and CI paths continue to consume their existing upstream image
 digests. This optional path for [#26](https://github.com/aloschilov/pyasc-skill-stack/issues/26)
 builds a separate development runtime; it does not replace a qualified runtime.
-Initial implementation has offline tests. A clean build and simulator result must
-be retained before this path is called qualified.
+One clean source build and its installed submission-runtime simulator probe are
+qualified below. This does not qualify arbitrary alternate source revisions.
+
+## Recorded qualification
+
+[Build 42219705227](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42219705227)
+built the selected source in **1850.97 seconds**, with two clean import checks.
+Its first simulator probe passed, but evidence export failed on container-owned
+directory permissions; that overall run remains failed. The workflow-only repair
+at `c453ad6` exported the evidence and reused the unchanged build in
+[qualification 42224219419](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42224219419).
+All five bound build/package/probe source hashes remained unchanged.
+
+The successful probe took **18.72 seconds** (whole simulator job **92 seconds**):
+one compile, one Model launch, three numerical checks and one suppressed-launch
+rejection for float32 add[128]. All **959 runtime payload files** matched the
+installed submission wheel. Runtime SHA256:
+`055c7d844a825f73388fcb78bc7d81fe7402c0baeb858663dee7861819d0c65d`.
+
+[Durable qualification archive](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-source-42224219419/qualification-source-42224219419.tar.gz)
+retains source, recipe, wheels/licenses, receipts, logs and 168 indexed files.
+Archive SHA256: `686df9f95438025322e32ad3dd86f12787c8761f3722b11d29295b16e4bcdc66`.
+This is a fixed simulator fixture, with no model generation, official-task
+acceptance, performance or NPU claim. Existing runtime pins remain unchanged.
 
 ## Ownership and inputs
 
