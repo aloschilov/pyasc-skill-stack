@@ -1,9 +1,60 @@
 # Paired context experiment
 
 Work for [#23](https://github.com/aloschilov/pyasc-skill-stack/issues/23) uses the
-shared bounded executor and numerical adapters. No paired live result is yet
-qualified. Scheduling remains disabled. A complete experiment is not necessarily
+shared bounded executor and numerical adapters. The manual experiment below has
+24 auditable trials. Scheduling remains disabled. A complete experiment is not necessarily
 a successful kernel in every trial, nor evidence that skills improve results.
+
+## Manual qualification, 2026-11-06
+
+[Run 42175778880](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42175778880)
+on `82f2110e9d00e78f7fcfefdaf704788fed122095` completed all **24 trials**,
+with six valid pairs per contrast and no unknown requests or coverage gaps.
+Plan SHA256: `cea0ec3ee85610af8c31df3992b58ac109f4341a9337a01317379bfc10b5856d`.
+The model was GLM-5.3 (`glm-5-3-260814`), low reasoning, through OpenCode 1.19.0.
+
+| Protocol | Qualified | Candidate rejected | Known budget exhausted |
+|---|---:|---:|---:|
+| P2 | 0/6 | 4 | 2 |
+| P3 | 0/6 | 4 | 2 |
+| P4 | 0/6 | 5 | 1 |
+| P6 | 5/6 | 1 | 0 |
+
+The five accepted candidates made **15 Model launches**, passed 33 output/input
+checks and rejected all five suppressed-launch controls. Candidate bytes remained
+unchanged. The P6 rejection was the second add trial's JIT failure; reduction and
+broadcast passed twice each. A known budget failure is an observed failed attempt,
+not a numerical pass. All 95 execution-source hashes matched the submitted commit.
+
+Executor wall time was **1,983.08 s (33m03s)**; the preceding **648.65 s (10m49s)**
+includes workflow queue and setup. The 91 provider requests used **88,958 output**
+and **467,615 input tokens**; monetary cost is unknown. A post-run audit of retained
+private requests matched their public hashes and found `max_tokens=8192`,
+`reasoning_effort=low` and enabled thinking in all 91 requests. Other sampling
+settings and seed were unspecified. This does not prove that the provider honored
+those settings or identify an immutable weights revision.
+
+P6-P3's observed qualification difference was **+0.8333**, with a conditional 95%
+Hoeffding interval **[-0.2756, 1]**. P3-P2 and P4-P3 were zero, with intervals
+[-1, 1]. P6-P4 was +0.8333 with the same wide interval, but replaces context
+packages rather than isolating skills. These six-pair results include zero within
+their intervals; they do not establish a general benefit, performance improvement,
+other-model coverage or NPU qualification.
+
+The [durable Release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-paired-42175778880)
+retains `qualification-42175778880.tar.gz`, SHA256
+`0ae0f6b13c06ff1f06abff2ad44b665677439f4d4b6556fd8e087e411c2acb74`.
+It contains the original public CI archive, strict report, timing, cleanup,
+wire-setting audit and observer receipts. Its downloaded bytes and all indexed
+members were checked; copies also remain outside checkout on the workstation and VM.
+Private provider payloads are excluded. All recorded process groups and simulator
+containers were absent after execution, and the executor released its shared latch.
+
+The GET-only local observer independently returned `verified-manual` without
+alerts. Hosted observer dispatch returned HTTP 404 because its workflow is not yet
+on the default branch; no hosted job was created. Hosted and scheduled observer
+qualification remain pending. No schedule, NPU run or automatic baseline promotion
+was enabled.
 
 ## What the surviving scripts establish
 
@@ -69,37 +120,17 @@ matrix keeps `cloud-glm-5.3`. The new profile keeps thinking enabled and request
 [provider API](https://docs.z.ai/api-reference/llm/chat-completion). An observed
 response ID does not establish an immutable provider weights revision.
 
-The preceding high-reasoning cohort
-[42167095606](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42167095606)
-finished incomplete after 39m04s: 3 qualified candidates, 10 candidate failures,
-7 measured budget failures, one invalid-usage response and 3 not-run trials.
-Its complete retained response reported `completion_tokens=8192` and
-`reasoning_tokens=8195`. The usage validator rejected that contradiction; all
-aggregate effects remain suppressed. Archive SHA256:
-`37be0c024cf293223a38ec3dce2c205596d13e8d44f43df436861d19b292dce6`.
-It is retained in the external qualification directory under `pilot-42167095606/`.
-The low-reasoning configuration is a new predeclared experiment intended to
-reduce cap exhaustion. It does not repair provider accounting. Counter checks
-remain strict, and old cohorts are neither reclassified nor pooled with it.
-
-The first low-reasoning cohort
-[42173378734](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42173378734)
-stopped after its first P4 trial: the model reconstructed the absolute baseline
-path incorrectly, its read was denied, and the full-context audit blocked the
-trial. All four responses and usage are known (680 output tokens, 21.10 seconds);
-no numerical verification ran. Its archive SHA256 is
-`5b86c8be7bf3ff38ca107667fa71450411363b50b96be48d40dad5ddc46126c5`.
-The new `context_path_format=relative-read-call-v1` instruction supplies the exact
-short project-relative `read` arguments. Context files and permissions stay the
-same; the full baseline must still be observed. Older plans retain their original
-absolute prompt format and incomplete results. This prompt change requires a new
-cohort, not a continuation or pooling of that failed trial.
-
-The earlier 300-second paired generation deadline interrupted a provider response
-in pilot `42161942577`. Its response usage remains unknown and its experiment
-incomplete; changing this deadline does not reinterpret or pool those observations.
-A new cohort needs a new plan and prior-latch reconciliation. A timeout remains
-unresolved infrastructure, never a measured zero qualification outcome.
+The `context_path_format=relative-read-call-v1` instruction supplies exact short
+project-relative `read` arguments. Context files and permissions stay the same;
+the full baseline must still be observed. Older plans retain their original
+absolute prompt format and incomplete results. Earlier incomplete cohorts remain
+archived outside checkout: an interrupted response with unknown usage
+(`42161942577`), a high-reasoning response with contradictory usage counters
+(`42167095606`), and a denied incorrectly reconstructed P4 path (`42173378734`).
+None is reclassified or pooled with the accepted cohort. Low reasoning does not
+repair provider accounting; strict counter checks remain. A changed prompt,
+profile or deadline needs a new predeclared cohort after prior-latch reconciliation.
+A timeout remains unresolved infrastructure, never a measured zero outcome.
 
 ## Isolation and evidence
 
@@ -233,8 +264,7 @@ It cannot overwrite the single-run alert channel. Both policies and workflow cro
 triggers remain off; the future scheduled health workflow selects both policies,
 and an inactive policy stays disabled without sending notifications.
 
-Remaining qualification: complete and archive the authorized manual experiment,
-verify it through the observer, and retain final CI evidence. Actual periodic
-activation and scheduled-run qualification require a separately reviewed change;
-offline controller tests do not establish scheduled coverage. No NPU spending is
-implicit.
+The manual experiment and local evidence observer are qualified above. Hosted
+observer qualification, actual periodic activation and scheduled-run qualification
+remain separate work; activation requires a separately reviewed change. Offline
+controller tests do not establish scheduled coverage. No NPU spending is implicit.
