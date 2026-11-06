@@ -162,6 +162,15 @@ verification requiring the checkout described above. A wheel distributor can
 copy the `skills/` tree to `experimental/asctile/skills`; this repository does
 not modify or publish an upstream wheel as part of skill installation.
 
+The rename at `0423963` was checked through installation from a skills-only
+archive and native OpenCode 1.19.0 discovery (10/10 skills). CI
+[42221103276](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42221103276)
+passed 72 Python tests, the 18-case verifier contract and six short-row simulator
+regressions. [Retained delivery evidence](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-delivery-0423963):
+`qualification-delivery-0423963.tar.gz`, SHA256
+`ee32fb799cae5c5bc36f4eb0ad6c2a55e378b9983623f5a089f8250a75779b31`.
+This does not establish new generation quality, performance or NPU coverage.
+
 ## Release archives
 
 The current tag workflow publishes **skills-only** archives: `skills/`,
