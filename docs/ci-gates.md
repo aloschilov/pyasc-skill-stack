@@ -2,13 +2,21 @@
 
 The [CI workflow](../.github/workflows/ci.yml) separates ordinary checks from
 explicit model and hardware work. No nightly schedule is configured.
+The [generation planner and explicit executor](../tests/generation/README.md)
+validate a bounded multi-operator inventory. Ordinary CI exercises only local
+provider doubles and fixed numerical fixtures. An explicit manual generation
+dispatch can invoke the executor after plan approval; no nightly lane is enabled
+or qualified.
 
 | Job | Trigger | Acceptance |
 |---|---|---|
 | `pr-gate` | PR, push to `main`, manual dispatch | Offline unit, skill syntax, image-pin and reference-drift checks |
 | `examples-gate` | Same, after `pr-gate`; 20-minute cap | Pinned simulator verification contract and permanent numerical regression fixtures |
-| `merge-gate` | Push to `main`, or manual dispatch with hardware action `none`; 60-minute cap | Every discovered target module compiles; failures **and resource blocks** fail the gate |
+| `merge-gate` | Push to `main`, or manual dispatch with both hardware and generation actions `none`; 60-minute cap | Every discovered target module compiles; failures **and resource blocks** fail the gate |
 | `generated-hardware` | Explicit manual dispatch with generate/repair/continue/resume | Selected operator recipe, exact package, strict hardware result and durable publication |
+| `generation-simulator` | Explicit manual `generation_action=plan|execute`; default `none` | Offline plan, or hash-approved fresh simulator qualification and optional compatible-baseline comparison; no NPU |
+| `Opt-in generation` | PR planning only, or explicit manual plan/execute; scheduling disabled | Shared executor and pinned policy baseline; PRs never call a provider |
+| `Generation coverage observation` | Explicit manual dispatch; scheduling disabled | GET-only archive/freshness inspection; issue updates require separate opt-in and a marked destination |
 | release | `v*` tag | Fast suite, skills-only archive and install verification |
 
 ## Ordinary PR checks
@@ -24,12 +32,19 @@ covers historical kernels, tails, negative and weak-positive fixtures, and skill
 listings. Expected failures must fail for the contracted reason; numerical
 passes require a suppressed-launch control. The separate SwiGlu short-row
 regression protects a known memory-layout bug; it is one fixture in this broader
-suite, not the definition of the CI pipeline.
+suite, not the definition of the CI pipeline. Generation adapters additionally
+check three fixed add/reduce/broadcast kernels and three wrong-result variants;
+each correct result requires a rejecting suppressed-launch control. A seventh
+negative fixture requires an unknown public API to fail as a candidate defect,
+not be excused as a broken simulator environment.
 
 Both PR jobs must pass on the current head. Artifacts retain the complete
-verification-contract run for 30 days, including failures. Queue time is separate
+verification-contract and generation-adapter runs for 30 days, including failures. Queue time is separate
 from execution time. Neither job qualifies model generation or NPU behavior.
 Accepted qualification requires [durable evidence](verification-contract.md#storage).
+The [inactive controller and observer](../tests/generation/README.md#inactive-nightly-controller-and-health-observer)
+retain control/health records separately. Their disabled/manual green checks do
+not establish scheduled coverage or successful notification delivery.
 
 ## Compile coverage
 

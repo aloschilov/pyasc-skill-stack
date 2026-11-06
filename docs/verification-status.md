@@ -6,12 +6,15 @@ prerequisites or resource blocks do not count as successful coverage.
 | Scope | Evidence and limit |
 |---|---|
 | Offline checks and shipped simulator fixtures | Required on each PR head by `pr-gate` and `examples-gate`; inspect that head's Actions results. These do not invoke a model or NPU. |
+| Fresh multi-operator generation in simulator | **Passed** for three GLM-5.3 candidates (add/reduce/broadcast), three deterministic patterns each, unchanged bytes and suppressed-launch controls. [Manual pilot, limits and archive checksum](../tests/generation/README.md#manual-pilot-2026-11-06). No NPU, performance or nightly claim. |
 | Fresh generation and hardware measurement | **Passed** for one GLM-5.3 SwiGlu candidate: 20/20 official cases, zero reported anti-cheat failures, device timings. [Durable result, revisions and checksum](hardware-lane.md). |
 | Performance improvement | **Not established**: the generated candidate's baseline/candidate geometric timing ratio is 0.017450287921005128x (slower). Service score is a separate metric. |
-| New profile and recipe plumbing | Offline regression scope only. The high-effort profile and shared recipe driver have no new generation/hardware qualification. Historical results retain their original configurations. |
+| Other profile and recipe combinations | Offline regression scope only. The shared CANNBench recipe driver has no new hardware qualification; the manual simulator pilot above qualifies only its recorded executor/configuration. Historical results retain their original configurations. |
 | Separate reviewer / tuner automation | **Not-run** in the recorded generated CI qualification. Skills retain these phases; [issue #20](https://github.com/aloschilov/pyasc-skill-stack/issues/20) tracks automatic handoffs. |
 | Full upstream target suite | No complete numerical pass claimed. `merge-gate` is compile-only and now requires every discovered module to complete; resource blocks fail coverage. |
-| Other operators or nightly generation | **Not-run** by the bounded hardware lane; no automatic campaign or nightly schedule. |
+| Nightly generation | **Not-run**; opt-in controller/health observer implemented but inactive, with no cron triggers. Policy is disabled and has no alert destination. Actual scheduled generation and live alert/recovery delivery are unqualified. [Controls and activation criteria](../tests/generation/README.md#inactive-nightly-controller-and-health-observer). |
+| Manual generation CI | **Passed** on `53ef52e`: 3/3 fresh GLM-5.3 candidates, unchanged-byte Model numerics and negative controls. [Dispatch, usage, timing and retained archive](../tests/generation/README.md#manual-ci-qualification-2026-11-06). Status `qualified`; no baseline comparison or automatic promotion. |
+| Generation regression comparison | **Passed** for one independent same-skills pair: explicit durable baseline, compatible inputs, 3/3 fresh candidates and no lost PASS or coverage gaps. [Selected baseline, run and checksums](../tests/generation/README.md#selected-baseline-and-compatible-comparison). This validates the comparison path; skills-effect measurement and scheduled alert delivery remain unqualified. |
 
 The checkout and installed-skill workflows also have earlier simulator-only
 qualifications. Their source hashes, results, archive locations and checksums
