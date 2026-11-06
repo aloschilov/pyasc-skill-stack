@@ -201,6 +201,8 @@ def inspect_trial(root, expected, status):
             and (usage['error'] is None or budget_failure), 'Unknown trial usage')
         require(0 < len(usage['requests']) <= expected['limits']['rounds_per_attempt'], 'Missing/excess provider requests')
         for req in usage['requests']:
+            from generation_models import inspect_request_settings
+            inspect_request_settings(req, expected['limits']['output_tokens_per_response'], bundle.wire_settings_required)
             require((req['status'] == 'complete' or budget_failure and req['status'] == 'rejected'
                 and req['usage'].get('finish_reason') == 'length')
                 and req['usage']['observed_model'] == expected['model']['expected_response'], 'Request model/outcome mismatch')

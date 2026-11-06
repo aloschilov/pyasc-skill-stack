@@ -264,6 +264,9 @@ class ReviewReceipts(unittest.TestCase):
         usage = {'requests': [{'audit': audit, 'status': 'complete', 'usage': {'observed_model': plan['model']['expected_response'],
             'prompt_tokens': 100, 'completion_tokens': 20, 'total_tokens': 120}}],
             'usage_complete': True, 'error': None, 'observed_output_tokens': 20}
+        from generation_provider import request_settings
+        cap = plan['limits']['output_tokens_per_response']
+        usage['requests'][0].update(max_tokens=cap, request_settings=request_settings({'max_tokens': cap}))
         review.save(attempt/'usage.json', usage)
         out = '\n'.join(json.dumps({'sessionID': 'session-'+str(self.phase), 'part': p}) for p in parts)
         cmd = self.receipt(attempt, 'generation', ['opencode', 'run', '--pure', '--format', 'json', '--dir', str(project), '-m', plan['model']['requested'], message], out)

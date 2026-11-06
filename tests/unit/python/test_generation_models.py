@@ -17,6 +17,7 @@ import generation_models as models
 import generation_executor as executor
 import generation_review as review
 from generation_plan import build_plan, canonical, digest
+from generation_provider import request_settings
 
 
 def profile(provider='selected', key='${SELECTED_API_KEY}', url='${SELECTED_BASE_URL}'):
@@ -30,6 +31,35 @@ def planned(config):
 
 
 class ProfileBindings(unittest.TestCase):
+    def test_wire_settings_distinguish_omitted_and_explicit_null_without_guessing_defaults(self):
+        for body in ({'max_tokens': 8192}, {'max_tokens': 8192, 'temperature': None},
+                {'max_tokens': 8192, 'temperature': 0.2, 'seed': 123, 'reasoning_effort': 'low'}):
+            value = request_settings(body)
+            self.assertEqual(models.inspect_request_settings({'max_tokens': 8192, 'request_settings': value}, 8192, True), value)
+            self.assertEqual('temperature' in value['present_fields'], 'temperature' in body)
+
+    def test_wire_settings_reject_missing_changed_cap_and_inconsistent_metadata(self):
+        original = {'max_tokens': 8192, 'request_settings': request_settings({'max_tokens': 8192, 'reasoning_effort': 'low'})}
+        changes = [lambda r: r.pop('request_settings'), lambda r: r.update(max_tokens=4096),
+            lambda r: r['request_settings'].update(max_tokens=4096),
+            lambda r: r['request_settings'].update(schema_version=True),
+            lambda r: r['request_settings']['present_fields'].append('reasoning_effort'),
+            lambda r: r['request_settings']['sampling'].update(seed=7),
+            lambda r: r['request_settings'].update(messages='private-value')]
+        for mutate in changes:
+            with self.subTest(mutation=changes.index(mutate)):
+                row = deepcopy(original); mutate(row)
+                with self.assertRaises(ValueError) as error: models.inspect_request_settings(row, 8192, True)
+                self.assertNotIn('private-value', str(error.exception))
+
+    def test_legacy_provider_source_never_acquires_wire_settings_proof(self):
+        old = b'def dispatch(): pass\n'
+        new = (ROOT/'tests/tools/generation_provider.py').read_bytes()
+        self.assertFalse(models.records_wire_settings(old)); self.assertTrue(models.records_wire_settings(new))
+        self.assertIsNone(models.inspect_request_settings({}, 8192, False))
+        with self.assertRaisesRegex(ValueError, 'source implementation'):
+            models.inspect_request_settings({'request_settings': request_settings({'max_tokens': 8192})}, 8192, False)
+
     def test_plan_binds_profile_settings_and_does_not_invent_provider_revision(self):
         plan = build_plan(); model = plan['model']
         raw = (ROOT/'integrations/opencode/profiles'/str(model['profile']+'.json')).read_bytes()

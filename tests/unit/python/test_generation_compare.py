@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT/'tests/tools'))
 from generation_compare import Bundle, compare
 from generation_plan import build_plan, canonical, digest
+from generation_provider import request_settings
 
 NOW = datetime(2026, 11, 6, 6, tzinfo=timezone.utc)
 
@@ -65,7 +66,9 @@ class Comparisons(unittest.TestCase):
             write(p/'attribution.json', {'session_id': 'baseline-'+name, 'loaded_skills': plan['skills'],
                 'requested_model': plan['model']['requested'], 'observed_model': plan['model']['expected_response']})
             usage = {'usage_complete': True, 'error': None, 'requests': [
-                {'status': 'complete', 'usage': {'observed_model': plan['model']['expected_response']}}]}
+                {'status': 'complete', 'max_tokens': plan['limits']['output_tokens_per_response'],
+                 'request_settings': request_settings({'max_tokens': plan['limits']['output_tokens_per_response']}),
+                 'usage': {'observed_model': plan['model']['expected_response']}}]}
             write(p/'usage.json', usage)
             state['cells'].append({'id': name, 'status': 'passed', 'attempts': [
                 {'number': 1, 'status': 'passed', 'candidate_sha256': sha, 'usage': usage}]})
@@ -91,6 +94,14 @@ class Comparisons(unittest.TestCase):
         result = self.compare()
         self.assertEqual((result['status'], result['passed'], result['denominator']), ('passed', 3, 3))
         self.assertEqual(result['alerts'], [])
+
+    def test_resealed_new_receipt_cannot_drop_request_settings(self):
+        state = json.loads((self.new/'state.json').read_text())
+        cell = state['cells'][0]; usage = cell['attempts'][0]['usage']
+        usage['requests'][0].pop('request_settings')
+        write(self.new/cell['id']/'attempt-1/usage.json', usage)
+        write(self.new/'state.json', state); seal(self.new)
+        with self.assertRaisesRegex(ValueError, 'Missing recorded wire settings'): Bundle(self.new)
 
     def test_new_binding_cannot_be_removed_but_legacy_receipts_remain_readable(self):
         plan = json.loads((self.base/'plan.json').read_text())

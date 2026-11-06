@@ -318,6 +318,9 @@ class PairedReceipts(unittest.TestCase):
                 'prompt_encoding': 'opencode-1.19-single-argument', 'provided_prompt_sha256': digest(text.encode()),
                 'provider_prompt_sha256': digest(protocols.provider_prompt(text).encode()),
                 'tool_schema_sha256': 'e'*64, 'visible_skills': plan['skills'], 'baseline_visible': t['protocol'] == 'P4'}}]}
+        from generation_provider import request_settings
+        cap = plan['limits']['output_tokens_per_response']
+        usage['requests'][0].update(max_tokens=cap, request_settings=request_settings({'max_tokens': cap}))
         receipts.write(p/'usage.json', usage);state['cells'][0]['attempts'][0].update(usage=usage, duration_seconds=5)
         receipts.write(root/'state.json', state);receipts.seal(root)
 

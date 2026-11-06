@@ -65,7 +65,10 @@ def inspect_role(evidence, prefix, plan, role, contract, inputs):
     usage = evidence.json(prefix+'usage.json')
     require(usage['usage_complete'] is True and usage['error'] is None, 'Incomplete role usage')
     requests = usage['requests']; require(0 < len(requests) <= limits['rounds_per_attempt'], 'Role request budget/provenance missing')
+    from generation_models import inspect_request_settings, records_wire_settings
+    settings_required = records_wire_settings(evidence.bytes('source/tests/tools/generation_provider.py'))
     for request in requests:
+        inspect_request_settings(request, limits['output_tokens_per_response'], settings_required)
         row = request['usage']; audit = request['audit']
         require(request['status'] == 'complete' and row['observed_model'] == selected['model']['expected_response'], 'Different/unknown role response model')
         require(audit['role'] == role and audit['provided_prompt_sha256'] == digest(message.encode())

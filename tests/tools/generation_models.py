@@ -102,3 +102,32 @@ def inspect_binding(model, sources, read):
     require(config['model'] == model['requested'] and configuration(config) == model['configuration'],
         'Model profile binding configuration mismatch')
     return 1
+
+
+def records_wire_settings(provider_source):
+    """The hashed provider implementation declares whether legacy receipts need settings."""
+    return any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == 'request_settings'
+        for node in ast.walk(ast.parse(provider_source)))
+
+
+def inspect_request_settings(request, cap, required):
+    """Validate the public allowlist; never infer settings for historical requests."""
+    from generation_provider import request_settings
+    if not required:
+        require('request_settings' not in request, 'Wire settings lack their source implementation')
+        return None
+    value = request.get('request_settings')
+    require(isinstance(value, dict), 'Missing recorded wire settings')
+    require(type(value.get('schema_version')) is int and value['schema_version'] == 1, 'Unknown wire settings schema')
+    fields = value.get('present_fields')
+    require(isinstance(fields, list) and all(isinstance(n, str) for n in fields)
+        and fields == sorted(set(fields)), 'Invalid recorded setting fields')
+    sampling, reasoning = value.get('sampling'), value.get('reasoning')
+    require(isinstance(sampling, dict) and isinstance(reasoning, dict), 'Invalid recorded settings')
+    values = dict(sampling, **reasoning)
+    require(set(fields) <= set(values), 'Unknown recorded setting field')
+    body = {n: values[n] for n in fields}
+    body['max_tokens'] = cap
+    require(type(cap) is int and cap > 0 and type(value.get('max_tokens')) is int and type(request.get('max_tokens')) is int
+        and request['max_tokens'] == cap and value == request_settings(body), 'Recorded wire settings/cap mismatch')
+    return value
