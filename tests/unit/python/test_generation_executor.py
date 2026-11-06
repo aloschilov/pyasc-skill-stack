@@ -308,5 +308,21 @@ class ProviderContracts(unittest.TestCase):
         with self.assertRaises(BudgetError): self.gate.dispatch({'model':'fallback'})
         self.assertFalse(self.requests)
 
+    def test_captured_counter_contradiction_is_not_a_valid_budget_failure(self):
+        # Redacted counters from cohort42167095606: keep strict accounting.
+        self.payload['usage'] = {'prompt_tokens': 3721, 'completion_tokens': 8192, 'total_tokens': 11913,
+            'completion_tokens_details': {'reasoning_tokens': 8195}}
+        self.payload['choices'][0]['finish_reason'] = 'length'
+        self.gate.limits['output_tokens_per_response'] = 8192
+        captured = []; self.gate.capture_response = lambda number, raw: captured.append(raw)
+        with self.assertRaisesRegex(BudgetError, 'Invalid reasoning usage'):
+            self.gate.dispatch({'model': 'test-model', 'stream': True})
+        self.assertEqual(len(self.requests), 1); self.assertEqual(len(captured), 1)
+        self.assertTrue(captured[0].decode().strip().endswith('data: [DONE]'))
+        self.assertFalse(self.gate.snapshot()['usage_complete'])
+        self.assertIsNone(known_budget_exhaustion(self.gate.snapshot(), self.gate.limits))
+        with self.assertRaises(BudgetError): self.gate.dispatch({'model': 'test-model'})
+        self.assertEqual(len(self.requests), 1)
+
 
 if __name__ == '__main__': unittest.main()

@@ -67,6 +67,25 @@ class PairedDesign(unittest.TestCase):
             with patch.object(pairs,'resource',side_effect=changed),self.assertRaisesRegex(ValueError,message):
                 pairs.build_pairs()
 
+    def test_paired_model_is_explicit_equal_in_all_legs_and_keeps_single_profile(self):
+        self.assertEqual(pairs.build_plan()['model']['profile'], 'cloud-glm-5.3')
+        self.assertEqual(self.plan['spec']['schema_version'], 2)
+        self.assertEqual(self.plan['common']['model']['profile'], 'cloud-glm-5.3-low')
+        self.assertEqual(self.plan['common']['cells'], pairs.build_plan()['cells'])
+        for trial in self.plan['trials']:
+            model = pairs.trial_plan(self.plan, trial)['model']
+            self.assertEqual(model, self.plan['common']['model'])
+            config = pairs.read(ROOT/'integrations/opencode/profiles'/str(model['profile']+'.json'))
+            self.assertEqual(config['provider']['gateway']['models']['glm-5.3']['options']['reasoningEffort'], 'low')
+        original = pairs.resource
+        for invalid in (None, {'profile': 'cloud-glm-5.3-low'}, {'profile': 'cloud-glm-5.3-low', 'response_model': 'observed', 'cells': []}):
+            def changed(root, name):
+                data = original(root, name)
+                if name != pairs.SPEC: return data
+                spec = json.loads(data); spec['model'] = invalid; return canonical(spec)
+            with patch.object(pairs, 'resource', side_effect=changed), self.assertRaisesRegex(ValueError, 'paired model'):
+                pairs.build_pairs()
+
     def test_only_the_declared_intervention_changes_between_legs(self):
         plans = [pairs.trial_plan(self.plan, t) for t in self.plan['trials'][:4]]
         for p in plans:
@@ -85,7 +104,7 @@ class PairedDesign(unittest.TestCase):
             project = Path(d)/'cell/attempt/project';context = Path(d)/'context'
             for t in self.plan['trials'][:4]:
                 plan = pairs.trial_plan(self.plan, t)
-                config = configure(pairs.read(ROOT/'integrations/opencode/profiles/cloud-glm-5.3.json'), plan, context, project)
+                config = configure(pairs.read(ROOT/'integrations/opencode/profiles'/str(plan['model']['profile']+'.json')), plan, context, project)
                 rules = config['permission']['read']
                 for name in protocols.context_files(plan):
                     relative = os.path.relpath(context/name, project)

@@ -61,6 +61,27 @@ bounded by the output-token cap. No automatic model fallback or hidden repair is
 allowed. Additional attempts, if configured, are fresh restarts; reviewer/tuner
 repairs belong to #20 and are currently zero.
 
+Specification version 2 explicitly selects `cloud-glm-5.3-low` and the expected
+response ID `glm-5-3-260814` for every leg. It inherits tasks/runtime/budgets from
+the seed matrix and binds its own profile in the plan. The qualified single-run
+matrix keeps `cloud-glm-5.3`. The new profile keeps thinking enabled and requests
+`reasoning_effort=low`, a supported GLM-5.3 setting in the
+[provider API](https://docs.z.ai/api-reference/llm/chat-completion). An observed
+response ID does not establish an immutable provider weights revision.
+
+The preceding high-reasoning cohort
+[42167095606](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42167095606)
+finished incomplete after 39m04s: 3 qualified candidates, 10 candidate failures,
+7 measured budget failures, one invalid-usage response and 3 not-run trials.
+Its complete retained response reported `completion_tokens=8192` and
+`reasoning_tokens=8195`. The usage validator rejected that contradiction; all
+aggregate effects remain suppressed. Archive SHA256:
+`37be0c024cf293223a38ec3dce2c205596d13e8d44f43df436861d19b292dce6`.
+It is retained in the external qualification directory under `pilot-42167095606/`.
+The low-reasoning configuration is a new predeclared experiment intended to
+reduce cap exhaustion. It does not repair provider accounting. Counter checks
+remain strict, and old cohorts are neither reclassified nor pooled with it.
+
 The earlier 300-second paired generation deadline interrupted a provider response
 in pilot `42161942577`. Its response usage remains unknown and its experiment
 incomplete; changing this deadline does not reinterpret or pool those observations.
