@@ -25,7 +25,10 @@ simulator's suppressed-launch numerical-control contract.
 - `BENCHSITE_API_TOKEN` in the environment, or an existing private environment
   file passed as `--credentials-file`. Never commit or print it.
 - A self-contained PyASC runtime wheel for **CPython 3.12 / Linux x86_64**, with
-  `asc`, `asctile`, `pybind11` and their licenses. Supply its SHA256 explicitly.
+  `asc`, `asctile` (legacy) or `asc.experimental.asctile` (modern), `pybind11`
+  and their licenses. The optional [source-build path](../../docs/source-runtime.md)
+  assembles the modern layout with numpy and typing_extensions as well.
+  Supply its SHA256 explicitly.
   Runtime binaries are external inputs, not checked into this repository.
   The packager copies only runtime/license files; it replaces candidate code,
   wheel metadata and RECORD. The ZIP contains the candidate sources, `setup.py`

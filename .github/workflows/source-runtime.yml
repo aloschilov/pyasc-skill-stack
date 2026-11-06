@@ -1,0 +1,78 @@
+name: Source runtime qualification
+
+# Builds are explicit; PR checks consume no compiler build, model or hardware.
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/source-runtime.yml'
+      - 'scripts/source_runtime.py'
+      - 'integrations/cannbench/runtime_bundle.py'
+      - 'tests/unit/python/test_source_runtime.py'
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Exact public PyASC source commit; build and simulator only'
+        type: string
+        default: d0f64a63c432761aa57648e67be7582780a17561
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests/unit/python -p test_source_runtime.py -v
+
+  build:
+    if: github.event_name == 'workflow_dispatch'
+    needs: offline
+    runs-on: ubuntu-22.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build using the exact upstream recipe
+        env:
+          SOURCE: ${{ inputs.source }}
+        run: python3 scripts/source_runtime.py build --source "$SOURCE" --root "$RUNNER_TEMP/source-runtime"
+      - name: Preserve build output and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-runtime-build-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/source-runtime/output/
+            ${{ runner.temp }}/source-runtime/*.json
+            ${{ runner.temp }}/source-runtime/*.log
+            ${{ runner.temp }}/source-runtime/builder-image.txt
+          if-no-files-found: error
+          retention-days: 90
+
+  simulator:
+    needs: build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: source-runtime-build-${{ github.run_id }}
+          path: ${{ runner.temp }}/source-runtime
+      - name: Qualify exact installed submission runtime without network or NPU
+        run: python3 scripts/source_runtime.py qualify --root "$RUNNER_TEMP/source-runtime"
+      - name: Preserve simulator and package evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-runtime-simulator-${{ github.run_id }}
+          path: ${{ runner.temp }}/source-runtime/qualification/
+          if-no-files-found: error
+          retention-days: 90
