@@ -127,7 +127,8 @@ class ModelEvidence(unittest.TestCase):
         usage=pairs.read(path)
         from generation_provider import request_settings
         usage['requests'][0]['request_settings']=request_settings({'max_tokens':24000,'temperature':0.3,
-            'reasoning_effort':'high','thinking':{'type':'enabled'}})
+            'reasoning_effort':self.plan['models'][trial['model_arm']]['configuration']['model_options']['reasoningEffort'],
+            'thinking':{'type':'enabled'}})
         receipts.write(path,usage);state=pairs.read(directory/'state.json');state['cells'][0]['attempts'][0]['usage']=usage
         receipts.write(directory/'state.json',state);receipts.seal(directory);pairs.seal(self.root)
         report=pairs.report_pairs(self.root)
@@ -141,7 +142,8 @@ class ModelEvidence(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'not serialized'):
             inspect_comparison_settings(model,request_settings({'max_tokens':24000}))
         with self.assertRaisesRegex(ValueError,'not serialized'):
-            inspect_comparison_settings(model,request_settings({'max_tokens':24000,'reasoning_effort':'low','thinking':{'type':'enabled'}}))
+            wrong_effort = 'high' if model['configuration']['model_options']['reasoningEffort']=='low' else 'low'
+            inspect_comparison_settings(model,request_settings({'max_tokens':24000,'reasoning_effort':wrong_effort,'thinking':{'type':'enabled'}}))
 
 
 class ModelController(unittest.TestCase):

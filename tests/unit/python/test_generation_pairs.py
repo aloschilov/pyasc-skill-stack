@@ -324,7 +324,8 @@ class PairedReceipts(unittest.TestCase):
         cap = plan['limits']['output_tokens_per_response']
         wire = {'max_tokens': cap}
         if plan['intervention'].get('model_comparison'):
-            wire.update(reasoning_effort='high', thinking={'type':'enabled'})
+            options = plan['model']['configuration']['model_options']
+            wire.update(reasoning_effort=options['reasoningEffort'], thinking=options['thinking'])
         usage['requests'][0].update(max_tokens=cap, request_settings=request_settings(wire))
         receipts.write(p/'usage.json', usage);state['cells'][0]['attempts'][0].update(usage=usage, duration_seconds=5)
         receipts.write(root/'state.json', state);receipts.seal(root)

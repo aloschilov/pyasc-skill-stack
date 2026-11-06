@@ -3,7 +3,7 @@
 This is the model axis of the [paired experiment](paired.md), using its executor,
 credential binding, session/context audit and numerical adapters. One complete
 manual comparison is qualified below. The periodic policy is enabled after authorization on 2026-11-06;
-workflows execute only when explicitly dispatched.
+the controller checks cadence daily and explicit manual execution requires plan approval.
 
 ## Manual qualification, 2026-11-06
 
@@ -69,8 +69,8 @@ reinterpret missing bytes or relax identity checks in earlier attempts.
 
 | Arm | Profile | Requested | Expected response |
 | --- | --- | --- | --- |
-| deepseek41 | cloud-deepseek-v4.1-flash-gateway | gateway/deepseek-v4.1-flash | deepseek-v4-1-flash-261017 |
-| glm53 | cloud-glm-5.3 | gateway/glm-5.3 | glm-5-3-260814 |
+| deepseek41 | cloud-deepseek-v4.1-flash-gateway-low | gateway/deepseek-v4.1-flash | deepseek-v4-1-flash-261017 |
+| glm53 | cloud-glm-5.3-low | gateway/glm-5.3 | glm-5-3-260814 |
 
 Both use the same gateway transport, not independent providers. The separately
 named gateway profile does not change existing provider templates.
@@ -89,8 +89,13 @@ are 4,608,000 output tokens and 28,800 execution seconds. Input tokens are measu
 not capped; provider cost stays null when unavailable. Queue/setup/collection
 are outside the execution bound. The CI job has a 600-minute deadline.
 
-Both profiles configure `thinking=enabled`, `reasoningEffort=high` and a 256,000
-token OpenCode context window. This is client configuration, not a verified
+The periodic profiles configure `thinking=enabled`, `reasoningEffort=low` and a 256,000
+token OpenCode context window. The earlier qualified cohort above used high reasoning; its results are not pooled
+with this operational profile. Two subsequent high-reasoning controller attempts
+stopped on incomplete GLM streams; low reasoning is a new explicit condition for
+both arms, not a claim that the transport fault is fixed. Existing high profiles
+remain available. Task inventory, repetitions, token/time budgets and qualification
+criteria are unchanged. This is client configuration, not a verified
 provider capacity or a promise that reasoning levels have identical semantics.
 Temperature, top-p and seed are unspecified. Public evidence records the actual
 serialized allowlist and unknown defaults; it does not claim provider compliance.
