@@ -9,6 +9,7 @@ from contextlib import contextmanager
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import math
 import secrets
 import re
 import threading
@@ -72,6 +73,42 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise BudgetError('Provider redirect rejected')
 
 
+def request_settings(body):
+    """Public wire settings only; omitted values mean unknown provider defaults.
+
+    Never copy arbitrary request fields, prompts, tool arguments or metadata.
+    This describes what was sent, not whether a provider honored each setting.
+    """
+    sampling = {}
+    for name in ('temperature', 'top_p', 'top_k', 'min_p', 'seed', 'frequency_penalty', 'presence_penalty', 'repetition_penalty'):
+        value = body.get(name)
+        if value is not None and (type(value) not in (int, float) or not math.isfinite(value)):
+            raise BudgetError('Invalid public sampling setting')
+        if name == 'seed' and value is not None and type(value) is not int:
+            raise BudgetError('Invalid public sampling seed')
+        sampling[name] = value
+    reasoning = {}
+    value = body.get('reasoning_effort')
+    if value is not None and value not in ('none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'auto'):
+        raise BudgetError('Unsupported public reasoning setting')
+    reasoning['reasoning_effort'] = value
+    value = body.get('enable_thinking')
+    if value is not None and type(value) is not bool: raise BudgetError('Invalid public thinking setting')
+    reasoning['enable_thinking'] = value
+    value = body.get('thinking')
+    if value is not None:
+        if not isinstance(value, dict) or not set(value) <= {'type', 'budget_tokens'} or value.get('type') not in ('enabled', 'disabled', 'adaptive'):
+            raise BudgetError('Unsupported public thinking settings')
+        budget = value.get('budget_tokens')
+        if budget is not None and (type(budget) is not int or budget < 0): raise BudgetError('Invalid public thinking budget')
+        value = dict(value)
+    reasoning['thinking'] = value
+    return {'schema_version': 1, 'sampling': sampling, 'reasoning': reasoning,
+        'present_fields': sorted(set(body).intersection(set(sampling) | set(reasoning))),
+        'max_tokens': body['max_tokens'],
+        'interpretation': 'Absent settings use unobserved provider defaults; provider compliance is not asserted.'}
+
+
 class BudgetGate:
     def __init__(self, base_url, api_key, model, limits, save, deadline, capture_response=None, response_model=None,
                  observe_request=None):
@@ -115,6 +152,7 @@ class BudgetGate:
             self.save(self.snapshot())  # durable reservation BEFORE network input
             try:
                 record['dispatch_started'] = False
+                record['request_settings'] = request_settings(body)
                 if self.observe_request:
                     record['audit'] = self.observe_request(len(self.records), body, payload)
                     self.save(self.snapshot())

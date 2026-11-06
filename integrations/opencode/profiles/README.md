@@ -57,6 +57,13 @@ that their credential binding was validated. New-source receipts require the
 binding fields; removing them is an error. Execution always requires a plan
 rebuilt and approved against the current source, including its profile binding.
 
+Each new request also retains an allowlisted public `request_settings` record:
+the effective token cap, explicitly supplied sampling/seed and reasoning fields,
+and the names of fields present on the wire. Omitted fields stay `null` with no
+claim about provider defaults; these are sent settings, not evidence that the
+provider honored them. Raw prompts, tool arguments and arbitrary request metadata
+are excluded. Older receipts lacking this record do not establish those settings.
+
 ## Profile families
 
 | Templates | Configuration |

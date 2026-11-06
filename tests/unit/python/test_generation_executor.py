@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT/'tests/tools'))
 import generation_adapters as adapters
 import generation_executor as executor
 import generation_plan as planner
-from generation_provider import BudgetError, BudgetGate, budget_server, response_usage, known_budget_exhaustion
+from generation_provider import BudgetError, BudgetGate, budget_server, response_usage, known_budget_exhaustion, request_settings
 
 
 class ExecutorContracts(unittest.TestCase):
@@ -158,6 +158,27 @@ class ExecutorContracts(unittest.TestCase):
 
 
 class ProviderContracts(unittest.TestCase):
+    def test_public_wire_settings_distinguish_explicit_values_and_unknown_defaults(self):
+        body = {'max_tokens': 8192, 'temperature': 0, 'seed': 0, 'reasoning_effort': 'high',
+            'thinking': {'type': 'enabled'}, 'enable_thinking': False, 'messages': [{'content': 'private prompt'}],
+            'metadata': {'api_key': 'private-secret'}, 'tools': [{'description': 'private tool content'}]}
+        value = request_settings(body)
+        self.assertEqual(value['sampling']['temperature'], 0); self.assertEqual(value['sampling']['seed'], 0)
+        self.assertIsNone(value['sampling']['top_p']); self.assertNotIn('top_p', value['present_fields'])
+        self.assertEqual(value['reasoning']['thinking'], {'type': 'enabled'})
+        self.assertFalse(value['reasoning']['enable_thinking']); self.assertEqual(value['max_tokens'], 8192)
+        self.assertNotIn('private', json.dumps(value))
+        value['reasoning']['thinking']['type'] = 'disabled'
+        self.assertEqual(body['thinking']['type'], 'enabled')
+
+    def test_unsafe_or_nonfinite_wire_settings_are_rejected_without_echoing_values(self):
+        for extra in ({'temperature': float('nan')}, {'seed': True}, {'seed': 1.5}, {'top_p': 'private-secret'},
+                      {'reasoning_effort': 'private-secret'}, {'thinking': {'type': 'enabled', 'secret': 'private-secret'}},
+                      {'thinking': {'type': 'enabled', 'budget_tokens': -1}}, {'enable_thinking': 'private-secret'}):
+            with self.subTest(extra=extra), self.assertRaises(BudgetError) as error:
+                request_settings(dict(max_tokens=10, **extra))
+            self.assertNotIn('private-secret', str(error.exception))
+
     def setUp(self):
         self.requests, self.saves = [], []
         self.payload = {'model':'test-model', 'choices':[{'index':0, 'finish_reason':'stop'}], 'usage': {'prompt_tokens':3, 'completion_tokens':7,
@@ -204,6 +225,21 @@ class ProviderContracts(unittest.TestCase):
         record = self.gate.snapshot()['requests'][0]
         self.assertEqual(record['status'], 'not-sent');self.assertFalse(record['dispatch_started'])
         self.assertIsNotNone(self.gate.error)
+
+    def test_actual_gate_retains_capped_wire_settings_before_provider_dispatch(self):
+        body = {'model': 'test-model', 'temperature': 0.2, 'reasoning_effort': 'high',
+            'thinking': {'type': 'enabled', 'budget_tokens': 8}, 'max_tokens': 10000}
+        self.gate.dispatch(body)
+        value = self.gate.snapshot()['requests'][0]['request_settings']
+        self.assertEqual(value, request_settings(self.requests[0])); self.assertEqual(value['max_tokens'], 16)
+        before = [s['requests'][0] for s in self.saves if s['requests'] and s['requests'][0].get('dispatch_started')]
+        self.assertEqual(before[0]['request_settings'], value); self.assertNotIn('usage', before[0])
+
+    def test_invalid_wire_settings_stop_before_any_provider_request(self):
+        with self.assertRaises(BudgetError): self.gate.dispatch({'model': 'test-model', 'temperature': 'private-secret'})
+        record = self.gate.snapshot()['requests'][0]
+        self.assertEqual(self.requests, []); self.assertEqual(record['status'], 'not-sent')
+        self.assertFalse(record['dispatch_started']); self.assertNotIn('private-secret', json.dumps(self.saves))
 
     def test_missing_usage_or_excess_tokens_blocks_retry(self):
         for payload in ({'model':'test-model'}, {'model':'test-model','choices':[{'index':0,'finish_reason':'stop'}],'usage':{'prompt_tokens':3,'completion_tokens':17,'total_tokens':20}}):
