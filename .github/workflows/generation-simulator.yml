@@ -86,11 +86,20 @@ jobs:
         if: inputs.action == 'execute'
         run: |
           tool_dir="$RUNNER_TEMP/pyasc-opencode-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          mkdir -p "$tool_dir"
-          curl --fail --location --max-time 180 \
-            https://github.com/anomalyco/opencode/releases/download/v1.19.0/opencode-linux-arm64.tar.gz \
-            --output "$tool_dir/opencode.tar.gz"
-          echo "e9841d43d3e1a8f36ed2691592d3b8b4fb097e606c8b559a277a1b845840e26b  $tool_dir/opencode.tar.gz" | sha256sum --check
+          checksum=e9841d43d3e1a8f36ed2691592d3b8b4fb097e606c8b559a277a1b845840e26b
+          cache_dir="$(dirname "$RUNNER_WORKSPACE")/.pyasc-generation/tools"
+          archive="$cache_dir/opencode-$checksum.tar.gz"
+          mkdir -p "$tool_dir" "$cache_dir"
+          if ! echo "$checksum  $archive" | sha256sum --check --status; then
+            curl --fail --location --connect-timeout 20 --max-time 600 \
+              https://github.com/anomalyco/opencode/releases/download/v1.19.0/opencode-linux-arm64.tar.gz \
+              --output "$tool_dir/opencode.tar.gz"
+            echo "$checksum  $tool_dir/opencode.tar.gz" | sha256sum --check
+            cp "$tool_dir/opencode.tar.gz" "$archive.$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.tmp"
+            mv "$archive.$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.tmp" "$archive"
+          fi
+          cp "$archive" "$tool_dir/opencode.tar.gz"
+          echo "$checksum  $tool_dir/opencode.tar.gz" | sha256sum --check
           tar -xzf "$tool_dir/opencode.tar.gz" -C "$tool_dir" opencode
           "$tool_dir/opencode" --version
           echo "$tool_dir" >> "$GITHUB_PATH"
