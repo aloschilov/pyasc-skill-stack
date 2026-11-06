@@ -62,6 +62,55 @@ class Dashboard(unittest.TestCase):
         self.assertEqual(record['level'],'simulator-numerical');self.assertIsNone(record['service_score'])
         text=(self.root/'out/data.json').read_text();self.assertNotIn('NEVER-PUBLISH',text);self.assertNotIn('arbitrary.py',text)
 
+    def source_archive(self, raw=b"raise RuntimeError('DISPLAY ONLY')\n", sha=None, path='cycle-1/writer/candidate.py', twin=None):
+        sha = sha or dash.digest(raw)
+        plan = {'checkout_revision':'b'*40}
+        plan['plan_sha256'] = dash.digest(json.dumps(plan,sort_keys=True,separators=(',',':')).encode())
+        files = {'run/plan.json':plan, 'run/report.json':{'candidate_sha256':sha},
+            'run/state.json':{'accepted_candidate_sha256':sha,'cycles':[{'status':'accepted','candidate_sha256':sha,'candidate':path}]},
+            'run/'+path:raw, 'run/cycle-1/verification/candidate.py':raw if twin is None else twin,
+            'run/private/credential.json':{'secret':'NEVER-PUBLISH'}, 'run/arbitrary.py':b'PRIVATE'}
+        return dash.Archive(archive({'result/generation.tar.gz':archive(files)}))
+
+    def test_kernel_source_is_exact_hash_bound_text_without_archive_execution(self):
+        result=dash.kernel_sources(self.source_archive(),{'kind':'review'})
+        self.assertEqual(result['status'],'available')
+        self.assertEqual(result['files'][0]['text'],"raise RuntimeError('DISPLAY ONLY')\n")
+        self.assertEqual(result['files'][0]['sha256'],dash.digest(result['files'][0]['text'].encode()))
+        self.assertNotIn('PRIVATE',json.dumps(result))
+        raw=self.reviewed();row=dash.build(self.catalog,self.root/'legacy-source',loader=lambda _:raw,now=self.now)['records'][0]
+        self.assertEqual(row['availability'],'available');self.assertEqual(row['qualified'],1)
+        self.assertEqual(row['kernel_sources']['status'],'unavailable')
+
+    def test_kernel_source_rejects_changed_twin_private_path_binary_and_oversize(self):
+        for kwargs in ({'sha':'a'*64}, {'twin':b'changed'}, {'path':'private/candidate.py'},
+                       {'raw':b'\xff'}, {'raw':b'a\x00b'}, {'raw':b'x'*(dash.MAX_KERNEL_SOURCE+1)}):
+            with self.subTest(kwargs=list(kwargs)):
+                result=dash.kernel_sources(self.source_archive(**kwargs),{'kind':'review'})
+                self.assertEqual(result['status'],'unavailable');self.assertEqual(result['files'],[])
+                self.assertNotIn('PRIVATE',json.dumps(result))
+
+    def test_trial_sources_keep_failed_candidates_and_explicit_missing_attempts(self):
+        def seal(plan):
+            plan['plan_sha256']=dash.digest(json.dumps(plan,sort_keys=True,separators=(',',':')).encode());return plan
+        plan=seal({'checkout_revision':'b'*40,'trials':[{'id':'trial','cell':'add'}]})
+        child=seal({'checkout_revision':'b'*40})
+        raw=b'# Failed candidate, display only\n';sha=dash.digest(raw)
+        state={'plan_sha256':child['plan_sha256'],'cells':[{'id':'add','attempts':[
+            {'number':1,'status':'failed','candidate_sha256':sha},{'number':2,'status':'failed'}]}]}
+        files={'run/plan.json':plan,'run/report.json':{},'run/trial/plan.json':child,'run/trial/state.json':state,
+            'run/trial/add/attempt-1/candidate.py':raw,'run/trial/add/attempt-1/project/candidate.py':raw}
+        def project():return dash.kernel_sources(dash.Archive(archive({'result/generation.tar.gz':archive(files)})),{'kind':'models'})
+        result=project();self.assertEqual(result['status'],'partial')
+        self.assertEqual(result['files'][0]['outcome'],'failed');self.assertEqual(result['missing'][0]['id'],'trial/attempt-2')
+        state['plan_sha256']='a'*64
+        self.assertEqual(project()['files'],[])
+
+    def test_fixture_source_is_not_generated_and_unknown_hardware_path_is_unavailable(self):
+        self.assertEqual(dash.kernel_sources(None,{'kind':'target'})['status'],'not-applicable')
+        a=dash.Archive(archive({'evidence/generation.json':{'original_candidate':'private/candidate.py','candidate_sha256':'a'*64}}))
+        self.assertEqual(dash.kernel_sources(a,{'kind':'hardware'})['status'],'unavailable')
+
     def test_wire_settings_validate_the_original_request_cap(self):
         sys.path.insert(0, str(ROOT/'tests/tools'))
         from generation_provider import request_settings

@@ -1,66 +1,264 @@
 'use strict';
 const $ = id => document.getElementById(id);
+const titles = {paired:'Paired skills & context', models:'Model comparison', review:'Reviewed generation', target:'Upstream fixture subset', hardware:'Generated NPU candidate'};
+const levels = {'simulator-numerical':'Simulator numerics', 'npu-numerical-and-timing':'NPU numerics + timing'};
+const failures = ['candidate-failed', 'budget-exhausted', 'failed', 'timeout', 'timed-out'];
+const controls = ['search', 'filter', 'model', 'level', 'outcome'];
 function el(tag, text, className) {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
   if (className) node.className = className;
   return node;
 }
-function link(label, url) {
-  const node = el('a', label);
+function safeURL(url) {
   const parsed = new URL(url);
-  if (parsed.protocol !== 'https:' || parsed.hostname !== 'github.com') throw new Error('Unsafe link');
-  node.href = url; return node;
+  if (parsed.protocol !== 'https:' || parsed.hostname !== 'github.com' || parsed.username || parsed.password) throw new Error('Unsafe link');
+  return url;
 }
-function metric(label, value) {
-  const node = el('div', undefined, 'metric'); node.append(el('strong', value), el('span', label)); return node;
+function link(label, url) {
+  const node = el('a', label); node.href = safeURL(url); return node;
+}
+function available(r) { return r.availability === 'available'; }
+function models(r) {
+  // Prefixes distinguish observed identity from an unverified requested identity.
+  return [...(r.observed_models || []).map(m => `Observed: ${m}`), ...(r.models || []).map(m => `Requested: ${m.requested}`)];
+}
+function countsText(r) { return Object.entries(r.counts).map(([k,v]) => `${k}: ${v}`).join(' · '); }
+function unit(r) { return r.kind === 'target' ? 'fixture catalog cases' : r.kind === 'hardware' ? 'device cases' : ['paired','models'].includes(r.kind) ? 'trials' : 'candidate'; }
+function stateLabel(r) {
+  if (!available(r)) return 'Unavailable';
+  if (r.status !== 'complete') return r.status === 'partial' ? 'Partial scope' : 'Incomplete trials';
+  return ['paired','models'].includes(r.kind) ? 'All trials accounted' : 'Qualified scope';
+}
+function matches(r) {
+  const query = $('search').value.trim().toLowerCase();
+  const searchable = [r.id, r.benchmark || '', ...(r.tasks || []).flatMap(t => [t.id, t.module || '', ...(t.cases || [])])].join(' ').toLowerCase();
+  const outcome = $('outcome').value;
+  const outcomeMatch = outcome === 'all' || (outcome === 'unavailable' && !available(r)) ||
+    (outcome === 'stale' && r.freshness === 'stale') ||
+    (outcome === 'partial' && ['partial','incomplete'].includes(r.status)) ||
+    (outcome === 'failures' && failures.some(k => (r.counts || {})[k] > 0)) ||
+    (['qualified','excluded'].includes(outcome) && (r.counts || {})[outcome] > 0);
+  return searchable.includes(query) && ($('filter').value === 'all' || r.category === $('filter').value) &&
+    ($('model').value === 'all' || models(r).includes($('model').value)) &&
+    ($('level').value === 'all' || r.level === $('level').value) && outcomeMatch;
+}
+function renderOverview(data) {
+  const records = data.records;
+  const groups = [
+    ['Retained archives', records.length, `${records.filter(available).length} available · ${records.filter(r => !available(r)).length} unavailable`],
+    ['Generated / simulator', records.filter(r => available(r) && r.category === 'fresh-generated' && r.level === 'simulator-numerical').length, 'retained records · separate trial denominators'],
+    ['Upstream fixtures', records.filter(r => available(r) && r.category === 'upstream-fixture').length, 'retained records · catalog ≠ tested coverage'],
+    ['Generated / NPU', records.filter(r => available(r) && r.level === 'npu-numerical-and-timing').length, 'retained records · numerics + device timing']
+  ];
+  $('overview').replaceChildren(...groups.map(([label, value, note]) => {
+    const card = el('article', undefined, 'summary-card'); card.append(el('h2', label), el('strong', value), el('p', note)); return card;
+  }));
+}
+function evidenceLinks(r) {
+  const links = el('div', undefined, 'links');
+  links.append(link('Retained archive', r.release_url), link('Download', r.archive_url));
+  if (r.ci_url) links.append(link('CI identity', r.ci_url));
+  return links;
+}
+function provenance(r, trigger) {
+  const dialog = el('dialog', undefined, 'provenance-dialog');
+  dialog.setAttribute('aria-label', `Scope and provenance: ${r.id}`);
+  const close = el('button', 'Close', 'close'); close.type = 'button'; close.addEventListener('click', () => dialog.close());
+  dialog.append(close, el('h2', titles[r.kind]), el('p', r.id, 'record-id'),
+    el('p', 'Exact task IDs, counts, source revisions, settings and hashes from the public allowlisted summary.', 'subtle'),
+    evidenceLinks(r), el('code', `Archive SHA256 ${r.archive_sha256}`, 'checksum'), el('pre', JSON.stringify(r, null, 2)));
+  const source = dialog.querySelector('pre'); source.tabIndex = 0; source.setAttribute('aria-label', 'Public scope and provenance JSON');
+  dialog.addEventListener('close', () => { dialog.remove(); trigger.focus(); });
+  document.body.append(dialog); dialog.showModal(); close.focus();
+}
+function kernelViewer(r, trigger) {
+  const sources = r.kernel_sources;
+  const dialog = el('dialog', undefined, 'provenance-dialog');
+  dialog.setAttribute('aria-label', `Generated kernels: ${r.id}`);
+  const close = el('button', 'Close', 'close'); close.type = 'button'; close.addEventListener('click', () => dialog.close());
+  dialog.append(close, el('h2', 'Generated kernel source'), el('p', r.id, 'record-id'),
+    el('p', 'Read-only Python from the retained archive, hash-verified at build time. Failed candidates remain labelled failed. Viewing source does not execute or independently qualify it.', 'subtle'));
+  const label = el('label', 'Candidate / archived outcome'); const select = el('select'); label.append(select);
+  for (const [index, file] of sources.files.entries()) {
+    const option = el('option', `${file.id} · ${file.outcome}`); option.value = String(index); select.append(option);
+  }
+  const member = el('p', undefined, 'subtle'); const hash = el('code', undefined, 'checksum');
+  const source = el('pre'); source.tabIndex = 0; source.setAttribute('aria-label', 'Generated Python source');
+  const show = () => {
+    const file = sources.files[Number(select.value)];
+    member.textContent = `Archive member: ${file.member}`; hash.textContent = `Source SHA256 ${file.sha256}`; source.textContent = file.text;
+  };
+  select.addEventListener('change', show);
+  dialog.append(label, member, hash, source);
+  if (sources.missing.length) {
+    const details = el('details'); details.append(el('summary', `${sources.missing.length} attempts without viewable source`));
+    for (const item of sources.missing) details.append(el('p', `${item.id}: ${item.reason}`, 'subtle'));
+    dialog.append(details);
+  }
+  dialog.append(evidenceLinks(r)); show();
+  dialog.addEventListener('close', () => { dialog.remove(); trigger.focus(); });
+  document.body.append(dialog); dialog.showModal(); close.focus();
+}
+
+function scopeText(r) {
+  const tasks = r.tasks || [];
+  // Shorten verbose pytest node IDs for scanning; full identifiers remain in provenance.
+  const names = [...new Set(tasks.map(t => t.module || t.id.split('::')[0]))];
+  return names.slice(0, 3).join(' · ') + (names.length > 3 ? ` · +${names.length-3} more` : '');
+}
+function renderRow(r) {
+  const row = el('tr'); row.dataset.recordId = r.id;
+  const scope = el('td'); scope.append(el('h3', titles[r.kind]), el('div', r.id, 'record-id'));
+  if (available(r)) scope.append(el('p', r.category === 'upstream-fixture' ? 'Upstream fixtures · manual run' : 'Generated candidates', 'scope'), el('p', scopeText(r), 'scope'));
+  const attribution = el('td');
+  if (available(r)) {
+    const observed = r.observed_models;
+    for (const m of observed) attribution.append(el('span', m, 'model-name'));
+    if (observed.length) attribution.append(el('span', 'Observed identity', 'subtle'));
+    else if (r.models.length) {
+      for (const m of r.models) attribution.append(el('span', m.requested, 'model-name'));
+      attribution.append(el('span', 'Requested · observed identity not published', 'subtle'));
+    } else attribution.append(el('span', 'No model generation', 'subtle'));
+  } else attribution.append(el('span', 'Unknown', 'subtle'));
+  const verification = el('td');
+  verification.append(el('strong', levels[r.level] || 'Not verified'));
+  const badges = el('div', undefined, 'badges');
+  badges.append(el('span', stateLabel(r), `badge ${!available(r) ? 'bad' : r.status !== 'complete' ? 'warn' : 'blue'}`));
+  if (available(r)) badges.append(el('span', r.freshness === 'stale' ? 'Stale result' : 'Recent result', `badge ${r.freshness === 'stale' ? 'warn' : 'good'}`));
+  verification.append(badges);
+  if (r.finished_at) verification.append(el('div', r.finished_at.slice(0,10), 'subtle'));
+  const coverage = el('td', undefined, 'coverage');
+  if (available(r)) {
+    coverage.append(el('strong', `${r.qualified} / ${r.required}`), el('small', `qualified / required ${unit(r)}`));
+    const bar = el('progress'); bar.max = r.required; bar.value = r.qualified;
+    bar.setAttribute('aria-label', `${r.id}: ${r.qualified} qualified of ${r.required} required ${unit(r)}`);
+    coverage.append(bar, el('p', countsText(r), 'counts'));
+    if (r.kind === 'target') coverage.append(el('p', 'Excluded cases were not numerically tested.', 'subtle'));
+  } else coverage.append(el('p', 'No acceptance claim'), el('p', r.error || 'Evidence could not be retrieved or validated.', 'subtle'));
+  const evidence = el('td'); const button = el('button', 'Scope & provenance'); button.type = 'button';
+  button.setAttribute('aria-label', `Scope and provenance for ${r.id}`);
+  button.addEventListener('click', () => provenance(r, button));
+  evidence.append(button);
+  if (available(r) && r.category === 'fresh-generated') {
+    const sources = r.kernel_sources;
+    if (sources && sources.files.length) {
+      const view = el('button', `View kernels (${sources.files.length})`, 'source-button'); view.type = 'button';
+      view.setAttribute('aria-label', `View generated kernels for ${r.id}`);
+      view.addEventListener('click', () => kernelViewer(r, view)); evidence.append(view);
+      if (sources.missing.length) evidence.append(el('p', `${sources.missing.length} attempts: source unavailable`, 'subtle'));
+    } else evidence.append(el('p', 'Kernel source unavailable in this summary.', 'subtle'));
+  }
+  evidence.append(el('p'), evidenceLinks(r));
+  row.append(scope, attribution, verification, coverage, evidence); return row;
+}
+function svgNode(tag, attrs) {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k,v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+  return node;
+}
+function intervalChart(effect) {
+  // Fixed [-100,+100] pp domain for every contrast; zero and negative bounds stay visible.
+  const x = value => 12 + (value + 1) * 138;
+  const chart = svgNode('svg', {viewBox:'0 0 300 40', preserveAspectRatio:'none', 'aria-hidden':'true', focusable:'false'});
+  chart.append(svgNode('line', {x1:150,x2:150,y1:0,y2:40,class:'chart-zero'}),
+    svgNode('line', {x1:x(effect.interval[0]),x2:x(effect.interval[1]),y1:20,y2:20,class:'chart-range'}));
+  for (const bound of effect.interval) chart.append(svgNode('line', {x1:x(bound),x2:x(bound),y1:14,y2:26,class:'chart-range'}));
+  chart.append(svgNode('circle', {cx:x(effect.qualification_delta),cy:20,r:5,class:'chart-point'}));
+  return chart;
+}
+function pp(value) { return `${value > 0 ? '+' : ''}${(value*100).toFixed(1)}`; }
+function renderComparisons(records) {
+  const panels = [];
+  for (const r of records.filter(r => ['paired','models'].includes(r.kind))) {
+    const panel = el('article', undefined, 'panel'); panel.append(el('h3', titles[r.kind]), el('div', r.id, 'record-id'));
+    if (!available(r) || !Object.keys(r.comparisons).length) {
+      panel.append(el('p', 'No validated paired estimate is available for this record. Incomplete trials do not support an effect estimate.', 'empty'));
+    } else {
+      panel.append(el('p', `${r.qualified}/${r.required} qualified trials · ${r.repetitions} repetitions`, 'subtle'),
+        el('p', countsText(r), 'counts'), el('p', `Observed: ${r.observed_models.join(', ') || 'not published'}`, 'subtle'));
+      for (const [name,effect] of Object.entries(r.comparisons)) {
+        const contrast = el('div', undefined, 'contrast');
+        contrast.append(el('strong', name), el('span', `${pp(effect.qualification_delta)} pp · ${effect.pairs} pairs`, 'effect-value'), intervalChart(effect),
+          el('span', `Conditional 95% interval [${pp(effect.interval[0])}, ${pp(effect.interval[1])}] pp`, 'interval-label'));
+        panel.append(contrast);
+      }
+      const axis = el('div', undefined, 'axis'); axis.append(el('span', '−100 pp'), el('span', '0 · no difference'), el('span', '+100 pp')); panel.append(axis);
+      panel.append(el('p', 'Cohort totals above; arm-level rates are not provided in this summary. See the archive for protocol definitions and paired observations.', 'subtle'));
+    }
+    panel.append(evidenceLinks(r)); panels.push(panel);
+  }
+  $('comparisons').replaceChildren(...(panels.length ? panels : [el('p', 'No retained paired comparisons match these filters.', 'empty')]));
+}
+function renderTiming(records) {
+  const panels = records.filter(r => available(r) && r.baseline_time_ratio != null).map(r => {
+    const panel = el('article', undefined, 'panel'); panel.append(el('h3', `${titles[r.kind]} · ${r.qualified}/${r.required} device cases`), el('div', r.id, 'record-id'));
+    const metrics = el('div', undefined, 'timing-metrics');
+    const timing = el('div'); timing.append(el('span', 'Baseline / candidate time · geometric mean'), el('strong', `${r.baseline_time_ratio.toPrecision(5)}×`),
+      el('p', r.baseline_time_ratio < 1 ? 'Below 1×: candidate slower than baseline.' : 'Above 1×: candidate faster; 1×: equal time.'));
+    const service = el('div'); service.append(el('span', 'CANNBench service score'), el('strong', r.service_score === null ? 'Unavailable' : r.service_score.toFixed(4)), el('p', 'Service-defined score; not a timing speedup.'));
+    metrics.append(timing, service); panel.append(metrics, el('p', `Device job: ${r.elapsed_seconds.toFixed(2)} s · ${stateLabel(r)} · ${r.freshness} result`, 'subtle'), evidenceLinks(r)); return panel;
+  });
+  $('timing').replaceChildren(...(panels.length ? panels : [el('p', 'No retained NPU timing evidence matches these filters. Simulator qualification does not supply a device timing ratio.', 'empty')]));
 }
 function render(data) {
-  const selected = $('filter').value;
-  const records = data.records.filter(r => selected === 'all' || r.category === selected || r.availability === selected);
-  $('count').textContent = `${records.length} retained records`;
-  $('records').replaceChildren();
-  for (const r of records) {
-    const card = el('article', undefined, 'card');
-    const top = el('div', undefined, 'card-top');
-    const stateLabel = r.status === 'complete' ? (['paired','models'].includes(r.kind) ? 'all trials accounted' : 'qualified scope') : r.status;
-    top.append(el('span', r.level || r.kind, 'eyebrow'), el('span', r.availability === 'available' ? `${stateLabel} · ${r.freshness}` : 'unavailable', 'badge'));
-    card.append(top, el('h2', r.id));
-    if (r.availability === 'available') {
-      const metrics = el('div', undefined, 'metrics');
-      metrics.append(metric('qualified / required', `${r.qualified} / ${r.required}`), metric('repetitions', r.repetitions),
-        metric(r.level === 'npu-numerical-and-timing' ? 'device job, seconds' : r.category === 'upstream-fixture' ? 'fixture phases, seconds' : 'experiment, seconds', Number(r.elapsed_seconds).toFixed(2)));
-      card.append(metrics, el('p', Object.entries(r.counts).map(([k,v]) => `${k}: ${v}`).join(' · '), 'counts'));
-      const observed = r.observed_models.length ? r.observed_models.join(', ') : (r.models.length ? 'See retained model attribution' : 'No model generation');
-      card.append(el('p', observed, 'model'), el('p', `${r.manual_run ? 'Manual fixture run' : 'CI-linked result'} · ${r.finished_at}`, 'date'));
-      if (r.baseline_time_ratio !== null && r.baseline_time_ratio !== undefined) {
-        card.append(el('p', `Baseline / candidate time: ${r.baseline_time_ratio.toPrecision(5)}× · Service score: ${Number(r.service_score).toFixed(4)}`, 'timing'));
-      }
-      for (const [name, effect] of Object.entries(r.comparisons)) {
-        card.append(el('p', `${name}: ${(100*effect.qualification_delta).toFixed(1)} percentage points; conditional 95% interval [${effect.interval.map(n => (100*n).toFixed(1)).join(', ')}], ${effect.pairs} pairs.`, 'comparison'));
-      }
-      const details = el('details'); details.append(el('summary', 'Scope, settings and immutable provenance'));
-      const safe = {...r}; delete safe.comparisons;
-      details.append(el('pre', JSON.stringify(safe, null, 2))); card.append(details);
-    } else card.append(el('p', r.error || 'Evidence unavailable. No acceptance claim is displayed.'));
-    const links = el('div', undefined, 'links');
-    links.append(link('Retained archive', r.release_url), link('Download', r.archive_url));
-    if (r.ci_url) links.append(link('CI identity', r.ci_url));
-    card.append(links, el('code', `SHA256 ${r.archive_sha256}`, 'checksum')); $('records').append(card);
-  }
+  const records = data.records.filter(matches);
+  $('count').textContent = `${records.length} of ${data.records.length} retained records`;
+  $('records').replaceChildren(...records.map(renderRow)); $('empty').hidden = records.length > 0;
+  renderComparisons(records); renderTiming(records);
 }
 function freshness(data) {
   const hours = (Date.now()-Date.parse(data.built_at))/3600000;
-  const missing = data.records.filter(r => r.availability !== 'available').length;
-  $('freshness').textContent = `${hours > 24 ? 'STALE PAGE — ' : ''}Evidence checked ${data.built_at}. ${missing} unavailable records. ${hours > 24 ? 'Rebuild before relying on current availability.' : 'This is a retained snapshot, not a live device monitor.'}`;
+  const missing = data.records.filter(r => !available(r)).length;
+  $('freshness').textContent = `${hours > 24 ? 'STALE PAGE — ' : ''}Evidence checked ${data.built_at}. ${missing} unavailable records. Result freshness threshold: ${data.max_age_hours} hours. ${hours > 24 ? 'Rebuild before relying on current availability.' : 'Retained snapshot · not a live device monitor.'}`;
   $('freshness').className = hours > 24 || missing ? 'attention' : '';
 }
-fetch('data.json', {cache:'no-store'}).then(r => {if (!r.ok) throw new Error('Missing data'); return r.json();}).then(data => {
-  if (data.schema_version !== 1 || !Array.isArray(data.records) || !Number.isFinite(Date.parse(data.built_at))) throw new Error('Invalid schema');
-  render(data); freshness(data);
-  $('filter').addEventListener('change', () => render(data));
-  setInterval(() => freshness(data), 60000);
-}).catch(() => {
-  $('records').replaceChildren(); $('freshness').textContent = 'EVIDENCE UNAVAILABLE — the public summary could not be loaded or validated. No result is accepted here.';
+function validate(data) {
+  // The builder owns archive validation. Check the rendered shape before displaying any result.
+  const require = ok => { if (!ok) throw new Error('Invalid public summary'); };
+  require(data.schema_version === 1 && Array.isArray(data.records) && Number.isFinite(Date.parse(data.built_at)) && Number.isInteger(data.max_age_hours) && data.max_age_hours > 0);
+  const ids = new Set();
+  for (const r of data.records) {
+    require(typeof r.id === 'string' && !ids.has(r.id) && Object.hasOwn(titles, r.kind)); ids.add(r.id);
+    require(['available','unavailable'].includes(r.availability) && typeof r.archive_sha256 === 'string' && /^[0-9a-f]{64}$/.test(r.archive_sha256));
+    safeURL(r.release_url); safeURL(r.archive_url); if (r.ci_url) safeURL(r.ci_url);
+    if (!available(r)) continue;
+    if (r.kernel_sources !== undefined) {
+      const sources = r.kernel_sources;
+      require(sources && ['available','partial','unavailable','not-applicable'].includes(sources.status) && Array.isArray(sources.files) && sources.files.length <= 2000 && Array.isArray(sources.missing));
+      require(!['unavailable','not-applicable'].includes(sources.status) || sources.files.length === 0);
+      for (const file of sources.files) require(typeof file.id === 'string' && ['qualified','failed'].includes(file.outcome) && typeof file.member === 'string' && typeof file.sha256 === 'string' && /^[0-9a-f]{64}$/.test(file.sha256) && typeof file.text === 'string' && file.text.length > 0 && file.text.length <= 131072);
+      for (const item of sources.missing) require(typeof item.id === 'string' && typeof item.reason === 'string');
+    }
+    require(Object.hasOwn(levels, r.level) && ['fresh-generated','upstream-fixture'].includes(r.category) && ['complete','partial','incomplete'].includes(r.status) && ['recent','stale'].includes(r.freshness));
+    require(Number.isInteger(r.required) && r.required > 0 && Number.isInteger(r.qualified) && r.qualified >= 0 && r.qualified <= r.required);
+    require(r.counts && Object.values(r.counts).every(n => Number.isInteger(n) && n >= 0) && Object.values(r.counts).reduce((a,b) => a+b,0) === r.required && (r.counts.qualified || 0) === r.qualified);
+    require(Array.isArray(r.tasks) && r.tasks.every(t => typeof t.id === 'string' && (t.cases === undefined || Array.isArray(t.cases))));
+    require(Array.isArray(r.models) && r.models.every(m => typeof m.requested === 'string') && Array.isArray(r.observed_models) && r.observed_models.every(m => typeof m === 'string'));
+    require(Number.isFinite(r.elapsed_seconds) && r.elapsed_seconds >= 0 && Number.isInteger(r.repetitions) && r.repetitions > 0 && Number.isFinite(Date.parse(r.finished_at)));
+    require(r.comparisons && typeof r.comparisons === 'object' && !Array.isArray(r.comparisons));
+    for (const effect of Object.values(r.comparisons)) {
+      require(r.status === 'complete' && Number.isInteger(effect.pairs) && effect.pairs > 0 && Number.isFinite(effect.qualification_delta) && Math.abs(effect.qualification_delta) <= 1 && Array.isArray(effect.interval) && effect.interval.length === 2 && effect.interval.every(n => Number.isFinite(n) && Math.abs(n) <= 1) && effect.interval[0] <= effect.qualification_delta && effect.interval[1] >= effect.qualification_delta);
+    }
+    require(r.baseline_time_ratio == null || r.level === 'npu-numerical-and-timing' && Number.isFinite(r.baseline_time_ratio) && r.baseline_time_ratio > 0);
+    require(r.service_score == null || Number.isFinite(r.service_score));
+  }
+}
+function unavailable() {
+  for (const id of ['overview','records','comparisons','timing','count']) $(id).replaceChildren();
+  $('empty').hidden = true;
+  $('freshness').textContent = 'EVIDENCE UNAVAILABLE — the public summary could not be loaded or validated. No result is accepted here.';
   $('freshness').className = 'attention';
-});
+  for (const control of $('filters').elements) control.disabled = true;
+}
+fetch('data.json', {cache:'no-store'}).then(r => {if (!r.ok) throw new Error('Missing data'); return r.json();}).then(data => {
+  validate(data);
+  for (const name of [...new Set(data.records.flatMap(models))].sort()) {
+    const option = el('option', name); option.value = name; $('model').append(option);
+  }
+  renderOverview(data); render(data); freshness(data);
+  for (const id of controls) $(id).addEventListener(id === 'search' ? 'input' : 'change', () => render(data));
+  $('filters').addEventListener('submit', e => e.preventDefault());
+  $('filters').addEventListener('reset', () => { for (const id of controls) $(id).value = id === 'search' ? '' : 'all'; render(data); });
+  setInterval(() => freshness(data), 60000);
+}).catch(unavailable);
