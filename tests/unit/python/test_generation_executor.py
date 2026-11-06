@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT/'tests/tools'))
 import generation_adapters as adapters
 import generation_executor as executor
 import generation_plan as planner
-from generation_provider import BudgetError, BudgetGate, budget_server, response_usage
+from generation_provider import BudgetError, BudgetGate, budget_server, response_usage, known_budget_exhaustion
 
 
 class ExecutorContracts(unittest.TestCase):
@@ -193,6 +193,9 @@ class ProviderContracts(unittest.TestCase):
         self.assertEqual(self.saves[0]['requests'][0]['status'], 'dispatched')
         self.assertEqual(self.gate.snapshot()['observed_output_tokens'], 14)  # reasoning not double-counted
         self.assertNotIn('fixture-key', json.dumps(self.saves))
+        self.assertEqual(known_budget_exhaustion(self.gate.snapshot(), self.gate.limits), 'request-limit')
+        unknown = self.gate.snapshot();unknown['requests'][0] = dict(unknown['requests'][0], status='unknown')
+        self.assertIsNone(known_budget_exhaustion(unknown, self.gate.limits))
 
     def test_context_audit_failure_never_reaches_provider_and_is_not_unknown_delivery(self):
         self.gate.observe_request = lambda *args: (_ for _ in ()).throw(ValueError('bad local context'))

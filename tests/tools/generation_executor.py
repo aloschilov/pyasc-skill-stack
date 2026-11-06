@@ -15,7 +15,7 @@ import uuid
 
 from generation_adapters import static_check, task_contract, write_probes
 from generation_plan import ROOT, DEFAULT_MATRIX, build_plan, canonical, digest, resource
-from generation_provider import BudgetGate, BudgetError, budget_server
+from generation_provider import BudgetGate, BudgetError, budget_server, known_budget_exhaustion
 
 
 class Blocked(ValueError):
@@ -93,11 +93,11 @@ def command(argv, directory, name, seconds, env=None, abort=None, cwd=None):
     return record
 
 
-def native_trace(events, skills):
+def native_trace(events, skills, *, allow_client_error=False):
     sessions, loaded = set(), set()
     for line in events.splitlines():
         event = json.loads(line)  # Non-JSON output is not accepted as attribution.
-        if event.get('type') == 'error': raise Blocked('OpenCode reported an error')
+        if event.get('type') == 'error' and not allow_client_error: raise Blocked('OpenCode reported an error')
         if event.get('sessionID'): sessions.add(event['sessionID'])
         part = event.get('part') or {}; state = part.get('state') or {}
         if part.get('tool') == 'skill' and state.get('status') == 'completed':
@@ -194,31 +194,29 @@ def generate(attempt, plan, contract, context):
         config['provider'][provider]['options'] = {'baseURL': endpoint, 'apiKey': '{env:PYASC_GATE_TOKEN}'}
         save(attempt/'model-config.json', config)
         env.update(PYASC_GATE_TOKEN=gate.token, OPENCODE_CONFIG_CONTENT=json.dumps(config))
+        result = None
         try:
             result = command(['opencode', 'run', '--pure', '--format', 'json', '--dir', str(project), '-m', model, prompt],
                              attempt, 'generation', max(.01, deadline-time.monotonic()), env, abort=lambda: gate.error, cwd=project)
         except Blocked:
             usage = gate.snapshot()
-            if usage['usage_complete'] and (gate.error == 'Request budget exhausted' or
-                    any(r.get('usage', {}).get('finish_reason') == 'length' for r in usage['requests'])):
-                raise ValueError('Generation budget exhausted; complete provider usage retained') from None
-            raise
+            if not known_budget_exhaustion(usage, limits): raise
         finally:
             save(attempt/'usage.json', gate.snapshot())
     usage = gate.snapshot()
-    if usage['usage_complete'] and (gate.error == 'Request budget exhausted' or
-            any(r.get('usage', {}).get('finish_reason') == 'length' for r in usage['requests'])):
+    budget_failure = known_budget_exhaustion(usage, limits)
+    if budget_failure and not intervention:
         raise ValueError('Generation budget exhausted; complete provider usage retained')
-    if result['exit_code'] or gate.error or not usage['usage_complete']:
+    if not budget_failure and (result is None or result['exit_code'] or gate.error or not usage['usage_complete']):
         raise Blocked('Generation or provider usage incomplete; inspect retained evidence')
     from generation_protocols import context_files
     for name, sha in context_files(plan).items():
         if digest(resource(context, name)) != sha:
             raise Blocked('Generation context changed')
-    trace = native_trace((attempt/'generation.stdout').read_text(), skills)
     if intervention:
         from generation_protocols import audit_trace
-        trace = audit_trace((attempt/'generation.stdout').read_text(), project, context, plan)
+        trace = audit_trace((attempt/'generation.stdout').read_text(), project, context, plan,
+                            allow_client_error=bool(budget_failure))
         audits = [r.get('audit', {}) for r in usage['requests']]
         schemas = {a.get('tool_schema_sha256') for a in audits if a.get('tool_schema_sha256')}
         if not any(a.get('prompt_present') for a in audits) or len(schemas) != 1:
@@ -228,11 +226,16 @@ def generate(attempt, plan, contract, context):
         if intervention['id'] == 'P4' and not any(a['baseline_visible'] for a in audits):
             raise Blocked('Baseline notes did not reach the provider')
         trace.update(tool_schema_sha256=schemas.pop(), prompt_sha256=digest(prompt.encode()))
+    else:
+        trace = native_trace((attempt/'generation.stdout').read_text(), skills)
     observed = {r['usage']['observed_model'] for r in usage['requests']}
     if observed != {plan['model']['expected_response']}: raise Blocked('Provider model attribution mismatch')
     trace.update(requested_model=model, observed_model=plan['model']['expected_response'],
                  provider_model_revision=plan['model']['expected_response'])
     save(attempt/'attribution.json', trace)
+    if budget_failure:
+        save(attempt/'generation-outcome.json', {'status': 'budget-exhausted', 'reason': budget_failure})
+        raise ValueError('Generation budget exhausted; complete provider usage retained')
     candidate = project/'candidate.py'
     if candidate.is_symlink() or not candidate.is_file(): raise ValueError('Missing regular candidate.py')
     if candidate.stat().st_size > 1024*1024: raise ValueError('Candidate too large')

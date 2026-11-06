@@ -88,18 +88,18 @@ def request_audit(body, text, protocol, selected_skills, context):
         'tool_names': [t['name'] for t in schemas]}
 
 
-def audit_trace(events, project, context, plan, *, source_context=None):
+def audit_trace(events, project, context, plan, *, source_context=None, allow_client_error=False):
     """Verify observed file/skill access, not just a requested skills-on flag."""
     from generation_executor import Blocked, native_trace
     skills = {s: context/'skills'/s for s in plan['skills']}
     source_context = source_context or context
-    trace = native_trace(events, skills)
+    trace = native_trace(events, skills, allow_client_error=allow_client_error)
     allowed = context_files(plan)
     # Profile configuration is harness input, not model-readable context.
     readable = {str((context/n).resolve()): sha for n, sha in allowed.items()
                 if not n.startswith('integrations/')}
     candidate = str((project/'candidate.py').resolve())
-    baseline_read = False; accesses = []
+    baseline_read = False; accesses = []; denied = []
     def path(value):
         if not isinstance(value, str): raise Blocked('Missing native access path')
         p = Path(value); return str((p if p.is_absolute() else project/p).resolve())
@@ -111,6 +111,12 @@ def audit_trace(events, project, context, plan, *, source_context=None):
         if tool not in ('read', 'glob', 'grep', 'skill', 'write', 'edit'):
             raise Blocked('Undeclared tool in paired generation')
         if meta.get('loaded'): raise Blocked('Unplanned automatic instruction load')
+        # This pinned native denial occurs before the requested tool access.
+        # Retain the attempted access without pretending its contents were read.
+        if state['status'] == 'error' and state.get('error', '').startswith(
+                'The user has specified a rule which prevents you from using this specific tool call.'):
+            denied.append({'tool': tool, 'path': data.get('filePath', data.get('path')), 'skill': data.get('name')})
+            continue
         if tool == 'skill':
             if data.get('name') not in skills: raise Blocked('Unselected skill call')
             if state['status'] == 'completed' and (meta.get('truncated') or skill_body(
@@ -130,6 +136,7 @@ def audit_trace(events, project, context, plan, *, source_context=None):
         else:
             target = Path(path(data.get('path', str(project))))
             roots = [project.resolve(), *(p.resolve() for p in skills.values())]
+            if plan['intervention']['id'] == 'P4': roots.append((context/BASELINE).parent.resolve())
             if not any(target == root or root in target.parents for root in roots):
                 raise Blocked('Unplanned directory search')
     if plan['intervention']['id'] == 'P4' and not baseline_read:
@@ -137,5 +144,5 @@ def audit_trace(events, project, context, plan, *, source_context=None):
     for name, expected in allowed.items():
         if digest((source_context/name).read_bytes()) != expected: raise Blocked('Paired context changed')
     trace.update(protocol=plan['intervention']['id'], context_sha256=allowed,
-        baseline_read=baseline_read, observed_reads=accesses, protocol_valid=True)
+        baseline_read=baseline_read, observed_reads=accesses, denied_accesses=denied, protocol_valid=True)
     return trace

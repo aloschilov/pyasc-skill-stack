@@ -25,6 +25,20 @@ class BudgetError(ValueError):
     pass
 
 
+def known_budget_exhaustion(usage, limits):
+    """A measured cap is a failure outcome; uncertain delivery is never one."""
+    rows = usage.get('requests', [])
+    if not usage.get('usage_complete') or not rows: return None
+    if any(r.get('status') not in ('complete', 'rejected') or 'usage' not in r for r in rows): return None
+    if usage.get('error') == 'Request budget exhausted' and len(rows) == limits['rounds_per_attempt'] and all(r['status'] == 'complete' for r in rows):
+        return 'request-limit'
+    if (usage.get('error') == 'BudgetError: Model completion truncated at output-token cap'
+            and all(r['status'] == 'complete' for r in rows[:-1]) and rows[-1]['status'] == 'rejected'
+            and rows[-1]['usage'].get('finish_reason') == 'length'):
+        return 'output-limit'
+    return None
+
+
 def response_usage(raw, streaming, model):
     if streaming:
         lines = [line[5:].strip() for line in raw.decode().splitlines() if line.startswith('data:')]

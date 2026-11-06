@@ -14,6 +14,7 @@ from generation_compare import Bundle, require
 from generation_executor import Blocked, configure, execute, exclusive, external, save
 from generation_plan import ROOT, build_plan, canonical, digest, exact_keys, resource, write_plan
 from generation_protocols import BASELINE, CONTRASTS, PROTOCOLS, audit_trace, context_files, prompt
+from generation_provider import known_budget_exhaustion
 
 SPEC = 'tests/generation/paired.json'
 
@@ -166,18 +167,27 @@ def inspect_trial(root, expected, status):
         expected_prompt = prompt(task_contract(ROOT, expected['cells'][0]), expected['intervention']['id'], expected['skills'], Path(isolation['context']))
         require(bundle.read(prefix+'prompt.txt').decode() == expected_prompt, 'Prompt intervention drift')
         events = bundle.read(prefix+'generation.stdout').decode()
+        usage = bundle.json(prefix+'usage.json')
+        budget_failure = known_budget_exhaustion(usage, expected['limits'])
         # Rebind retained absolute access paths to the archived context below.
         trace = audit_trace(events, Path(isolation['project']), Path(isolation['context']), expected,
-                            source_context=root/'context')
+                            source_context=root/'context', allow_client_error=bool(budget_failure))
         attribution = bundle.json(prefix+'attribution.json')
         for key, value in trace.items(): require(attribution.get(key) == value, 'Native protocol attribution mismatch')
         require(trace['session_id'] not in sessions, 'Reused attempt session'); sessions.add(trace['session_id'])
-        bundle.command(prefix, 'generation')
-        usage = bundle.json(prefix+'usage.json')
-        require(usage == attempt['usage'] and usage['usage_complete'] and usage['error'] is None, 'Unknown trial usage')
+        if budget_failure:
+            command = bundle.json(prefix+'generation.command.json')
+            require(command['status'] in ('completed', 'blocked'), 'Unreconciled client interruption')
+            for stream in ('stdout', 'stderr'):
+                require(digest(bundle.read(prefix+'generation.'+stream)) == command[stream+'_sha256'], 'Client log hash mismatch')
+        else: bundle.command(prefix, 'generation')
+        require(usage == attempt['usage'] and usage['usage_complete']
+            and (usage['error'] is None or budget_failure), 'Unknown trial usage')
         require(0 < len(usage['requests']) <= expected['limits']['rounds_per_attempt'], 'Missing/excess provider requests')
         for req in usage['requests']:
-            require(req['status'] == 'complete' and req['usage']['observed_model'] == expected['model']['expected_response'], 'Request model/outcome mismatch')
+            require((req['status'] == 'complete' or budget_failure and req['status'] == 'rejected'
+                and req['usage'].get('finish_reason') == 'length')
+                and req['usage']['observed_model'] == expected['model']['expected_response'], 'Request model/outcome mismatch')
             require(req['audit']['protocol'] == expected['intervention']['id'], 'Request protocol mismatch')
             if req['audit']['tool_schema_sha256']: schemas.add(req['audit']['tool_schema_sha256'])
             for field in ('prompt_tokens', 'completion_tokens', 'total_tokens'):
@@ -188,7 +198,10 @@ def inspect_trial(root, expected, status):
         require(any(req['audit']['prompt_present'] for req in usage['requests']), 'Prompt never reached the provider')
         require({s for req in usage['requests'] for s in req['audit']['visible_skills']} == set(expected['skills']), 'Actual skill context mismatch')
         require(expected['intervention']['id'] != 'P4' or any(req['audit']['baseline_visible'] for req in usage['requests']), 'Baseline context never reached the provider')
-        if attempt['status'] == 'failed':
+        if attempt['status'] == 'failed' and attempt.get('failure_stage') == 'generating':
+            require(budget_failure and bundle.json(prefix+'generation-outcome.json') == {
+                'status': 'budget-exhausted', 'reason': budget_failure}, 'Unqualified generation failure')
+        elif attempt['status'] == 'failed':
             require(attempt['failure_stage'] == 'qualifying', 'Generation failure is not a qualified control outcome')
             sha = attempt['candidate_sha256']
             require(digest(bundle.read(prefix+'candidate.py')) == digest(bundle.read(prefix+'project/candidate.py')) == sha, 'Failed candidate changed')
@@ -221,14 +234,14 @@ def inspect_trial(root, expected, status):
         for value in (attempt['duration_seconds'], usage['provider_cost']):
             require(value is None or type(value) in (int, float) and math.isfinite(value) and value >= 0, 'Invalid duration/cost')
         require(attempt['duration_seconds'] is not None, 'Missing duration')
-        rows.append({'attempts': 1, 'seconds': attempt['duration_seconds'],
+        rows.append({'attempts': 1, 'seconds': attempt['duration_seconds'], 'budget_exhausted': bool(budget_failure),
             'output_tokens': usage['observed_output_tokens'],
             'input_tokens': sum(req['usage']['prompt_tokens'] for req in usage['requests']),
             'cost': usage['provider_cost']})
     require(len(schemas) == 1 and rows, 'Tool schema absent or changed within a trial')
     return {'status': 'valid', 'qualified': cell['status'] == 'passed', 'sessions': sorted(sessions),
         'opencode_version': bundle.version,
-        'outcome': 'qualified' if cell['status'] == 'passed' else 'candidate-failed',
+        'outcome': 'qualified' if cell['status'] == 'passed' else 'budget-exhausted' if rows[-1]['budget_exhausted'] else 'candidate-failed',
         'tool_schema_sha256': schemas.pop(), 'attempts': len(rows), 'repair_attempts': 0,
         'seconds': sum(r['seconds'] for r in rows), 'output_tokens': sum(r['output_tokens'] for r in rows),
         'input_tokens': sum(r['input_tokens'] for r in rows),

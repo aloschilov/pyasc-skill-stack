@@ -87,7 +87,17 @@ class PairedDesign(unittest.TestCase):
                  patch.dict(os.environ, OPENCODE_API_KEY='offline', OPENCODE_BASE_URL='http://127.0.0.1'):
                 factory.return_value.error = None;factory.return_value.token = 'offline';factory.return_value.snapshot.return_value = usage
                 executor.generate(attempt, plan, task_contract(ROOT, plan['cells'][0]), context)
-            self.assertTrue((attempt/'candidate.py').is_file())
+                attempt = root/'capped';attempt.mkdir()
+                usage['error'] = 'BudgetError: Model completion truncated at output-token cap'
+                usage['requests'][0].update(status='rejected')
+                usage['requests'][0]['usage']['finish_reason'] = 'length'
+                factory.return_value.error = usage['error']
+                with self.assertRaisesRegex(ValueError, 'Generation budget exhausted'):
+                    executor.generate(attempt, plan, task_contract(ROOT, plan['cells'][0]), context)
+                self.assertEqual(pairs.read(attempt/'generation-outcome.json'), {'status':'budget-exhausted','reason':'output-limit'})
+                self.assertTrue((attempt/'attribution.json').exists())
+                self.assertFalse((attempt/'candidate.py').exists())
+            self.assertTrue((root/'attempt/candidate.py').is_file())
             self.assertFalse((context/'skills').exists())
 
     def test_missing_cost_and_invalid_control_cannot_create_a_skills_gain(self):
@@ -228,6 +238,46 @@ class PairedReceipts(unittest.TestCase):
         self.assertEqual((r['status'], r['trial_denominator']), ('complete', 24))
         self.assertEqual(r['comparisons']['P6-P3']['qualification_delta'], 0)
         self.assertIsNone(r['comparisons']['P6-P3']['mean_deltas']['cost'])
+
+    def test_known_cap_retains_attribution_as_a_zero_outcome_but_unknown_delivery_does_not(self):
+        t = next(t for t in self.plan['trials'] if t['protocol'] == 'P4')
+        root = self.root/t['id'];p = root/t['cell']/'attempt-1'
+        usage = pairs.read(p/'usage.json');usage['error'] = 'BudgetError: Model completion truncated at output-token cap'
+        usage['requests'][0]['status'] = 'rejected';usage['requests'][0]['usage']['finish_reason'] = 'length'
+        receipts.write(p/'usage.json', usage)
+        receipts.write(p/'generation-outcome.json', {'status':'budget-exhausted','reason':'output-limit'})
+        raw = (p/'generation.stdout').read_text()+'\n'+json.dumps({'type':'error','error':'provider output cap'})
+        self.fixture.command(p, 'generation', raw)
+        command = pairs.read(p/'generation.command.json');command.update(status='blocked', exit_code=-15)
+        receipts.write(p/'generation.command.json', command)
+        for name in ('candidate.py','project/candidate.py','qualification.json','qualification.command.json','qualification.stdout','qualification.stderr','container-cleanup.json'):
+            (p/name).unlink()
+        state = pairs.read(root/'state.json');state['status'] = state['cells'][0]['status'] = 'failed'
+        state['cells'][0]['attempts'][0].update(status='failed', failure_stage='generating', error='Budget exhausted', usage=usage)
+        receipts.write(root/'state.json', state);receipts.seal(root)
+        state = pairs.read(self.root/'state.json');next(i for i in state['trials'] if i['id']==t['id'])['status']='failed'
+        receipts.write(self.root/'state.json', state);pairs.seal(self.root)
+        r=pairs.report_pairs(self.root)
+        self.assertEqual(r['status'],'complete');self.assertEqual(r['observations'][t['id']]['outcome'],'budget-exhausted')
+        self.assertFalse(r['observations'][t['id']]['qualified'])
+        usage['requests'][0]['status']='unknown';usage['usage_complete']=False;receipts.write(p/'usage.json',usage)
+        state=pairs.read(root/'state.json');state['cells'][0]['attempts'][0]['usage']=usage
+        receipts.write(root/'state.json',state);receipts.seal(root);pairs.seal(self.root)
+        self.assertEqual(pairs.report_pairs(self.root)['observations'][t['id']]['status'],'invalid-instrumentation')
+
+    def test_native_denial_is_not_access_but_successful_external_read_is_rejected(self):
+        t = next(t for t in self.plan['trials'] if t['protocol']=='P4');root=self.root/t['id'];p=root/t['cell']/'attempt-1'
+        isolation=pairs.read(p/'isolation.json');project=Path(isolation['project']);context=Path(isolation['context'])
+        events=[json.loads(s) for s in (p/'generation.stdout').read_text().splitlines()]
+        denied={'sessionID':'session-'+t['id'],'part':{'tool':'read','state':{'status':'error',
+            'input':{'filePath':'/unplanned/secret'},'error':'The user has specified a rule which prevents you from using this specific tool call.'}}}
+        events += [denied, {'sessionID':'session-'+t['id'],'part':{'tool':'glob','state':{'status':'completed',
+            'input':{'path':str((context/protocols.BASELINE).parent)}}}}]
+        def audit():return protocols.audit_trace('\n'.join(json.dumps(e) for e in events),project,context,pairs.trial_plan(self.plan,t),source_context=root/'context')
+        trace=audit();self.assertEqual(trace['denied_accesses'][0]['path'],'/unplanned/secret')
+        self.assertTrue(trace['baseline_read'])
+        denied['part']['state']['status']='completed'
+        with self.assertRaisesRegex(Blocked,'Unplanned file access'):audit()
 
     def test_status_and_nonfinite_metrics_are_not_valid_pair_observations(self):
         t = self.plan['trials'][0]

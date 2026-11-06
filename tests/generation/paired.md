@@ -68,6 +68,8 @@ in their readable context. Read permissions name only the candidate and selected
 context files; commands, networking and external directories remain denied.
 The audit checks native accesses, rejects automatic instruction loads, verifies
 full skill/baseline content, and records what reached actual provider requests.
+Native permission denials are retained as attempted accesses, not as loaded
+context; a successful access outside the declared context still invalidates a trial.
 Tool names/argument-schema hashes must match across the experiment. This audits
 the pinned OpenCode permission model and observed behavior; it is not a sandbox
 against a hostile host administrator or malicious replacement client.
@@ -81,6 +83,11 @@ private directories and must never enter published evidence.
 
 The reporter validates each trial against its predeclared plan and exact oracle.
 An actual static/JIT/numerical candidate rejection can be a valid zero outcome.
+A measured output/request cap can also be a zero qualification outcome when all
+provider responses and required context attribution are complete. It is labeled
+`budget-exhausted`, never numerical failure or a successful generation. The client
+is stopped, and no partial output is qualified. Unknown delivery cannot use this
+classification, even if a cap was also reached.
 Timeouts, unavailable infrastructure, missing attribution, changed tools/prompts,
 unresolved usage and not-run trials remain separate from candidate failure.
 An invalid or missing control cannot create a claimed gain. Each contrast keeps
