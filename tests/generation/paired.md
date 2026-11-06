@@ -134,6 +134,19 @@ An incomplete experiment fails the CI job. A complete experiment may contain
 candidate failures; inspect its paired report rather than interpreting green CI
 as a skills benefit. This workflow has no cron and rejects scheduled execution.
 
+The existing **Generation coverage observation** workflow can inspect a retained
+paired run with `experiment=paired` and an explicit `inspect_run=RUN_ID/ATTEMPT`.
+It only fetches evidence, revalidates all pairs and checks freshness and origin;
+it does not download the single-run historical baseline or execute snapshot code.
+Green workflow status without complete, intact evidence is insufficient. The
+result remains `manual-inspection`, cannot qualify a schedule or send a schedule
+alert, and makes no general skills-benefit claim. The equivalent local command is:
+
+```bash
+python3 scripts/generation_operations.py monitor --paired \
+  --inspect-run RUN_ID/ATTEMPT --root /outside-checkout/paired-observation
+```
+
 Remaining qualification: run the complete authorized experiment, audit all pairs
 and publish selected evidence durably. Bounded periodic use should reuse this
 controller and the generation health monitor after both are qualified; activation

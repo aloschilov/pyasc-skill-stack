@@ -196,4 +196,69 @@ class GenerationOperations(unittest.TestCase):
         self.assertNotIn('OPENCODE', str(health)); self.assertNotIn('BENCHSITE', str(health))
 
 
+class PairedObservation(unittest.TestCase):
+    def setUp(self):
+        import test_generation_pairs as paired_receipts
+        from generation_pairs import seal
+        self.fixture = paired_receipts.PairedReceipts(); self.fixture.setUp()
+        self.addCleanup(self.fixture.doCleanups)
+        self.evidence = self.fixture.root.parent/'evidence'; self.evidence.mkdir()
+        shutil.copytree(self.fixture.root, self.evidence/'run')
+        self.config = ops.policy(NOW)
+        self.run = {'id': 123, 'run_attempt': 1, 'event': 'workflow_dispatch',
+            'path': '.github/workflows/generation-paired.yml', 'head_branch': 'codex/paired',
+            'head_sha': self.fixture.plan['checkout_revision'], 'created_at': '2026-11-06T03:00:00Z',
+            'status': 'completed', 'conclusion': 'success', 'html_url': 'https://github.com/'+ops.REPO+'/actions/runs/123'}
+        state = ops.read(self.evidence/'run/state.json')
+        state.update(started_at='2026-11-06T04:00:00Z', finished_at='2026-11-06T04:10:00Z')
+        receipts.write(self.evidence/'run/state.json', state); seal(self.evidence/'run')
+        run = self.run; plan = self.fixture.plan
+        receipts.write(self.evidence/'ci.json', {'experiment': 'paired', 'action': 'execute',
+            'approve_plan': plan['plan_sha256'], 'context': {'GITHUB_RUN_ID': '123', 'GITHUB_RUN_ATTEMPT': '1',
+            'GITHUB_REPOSITORY': ops.REPO, 'GITHUB_EVENT_NAME': 'workflow_dispatch', 'GITHUB_SHA': run['head_sha'],
+            'GITHUB_WORKFLOW_REF': ops.REPO+'/'+run['path']+'@refs/heads/'+run['head_branch']}})
+        receipts.write(self.evidence/'result.json', {'status': 'complete', 'model_invoked': True,
+            'hardware_invoked': False, 'plan_sha256': plan['plan_sha256'], 'trial_denominator': 24,
+            'cells': {t['id']: 'qualified' for t in plan['trials']}})
+
+    def monitor(self, now=NOW):
+        def download(root, config, run=None):
+            self.assertIsNotNone(run, 'Paired inspection must not fetch a single-run baseline')
+            return self.evidence, 'a'*64
+        with patch.object(ops, 'api', return_value=self.run) as api, patch.object(ops, 'download', side_effect=download):
+            report = ops.monitor(self.evidence.parent, self.config, now, '123/1', paired=True)
+        api.assert_called_once_with('repos/'+ops.REPO+'/actions/runs/123/attempts/1')
+        return report
+
+    def test_paired_inspection_verifies_all_pairs_without_claiming_scheduled_coverage(self):
+        report = self.monitor()
+        self.assertEqual(report['status'], 'verified-manual')
+        self.assertEqual(report['scope'], 'manual-inspection')
+        summary = report['last_qualified']['paired_summary']
+        self.assertEqual(summary['trial_denominator'], 24)
+        self.assertEqual(summary['comparisons']['P6-P3']['valid_pairs'], 6)
+        self.assertFalse(summary['general_skills_benefit_claim'])
+        self.assertIn('stale-coverage', self.monitor(NOW+timedelta(hours=37))['alerts'])
+        with patch.object(ops, 'api', side_effect=AssertionError('No network')):
+            with self.assertRaisesRegex(ValueError, 'explicit RUN_ID'):
+                ops.monitor(self.evidence.parent, self.config, NOW, paired=True)
+        with self.assertRaisesRegex(ValueError, 'not configured'):
+            ops.notify(report, self.config, NOW)
+
+    def test_green_paired_run_needs_matching_origin_complete_cells_and_intact_evidence(self):
+        for filename, field, value in [('ci.json', 'approve_plan', 'bad'), ('result.json', 'cells', {}),
+                                       ('result.json', 'trial_denominator', 23), ('result.json', 'model_invoked', False)]:
+            path = self.evidence/filename; original = path.read_text(); item = json.loads(original); item[field] = value
+            receipts.write(path, item)
+            self.assertIn('unverifiable-run', self.monitor()['alerts'])
+            path.write_text(original)
+        self.run['head_sha'] = 'other'
+        self.assertIn('unverifiable-run', self.monitor()['alerts'])
+        self.run['head_sha'] = self.fixture.plan['checkout_revision']
+        t = self.fixture.plan['trials'][0]
+        (self.evidence/'run'/t['id']/t['cell']/'attempt-1/candidate.py').write_text('corrupted')
+        report = self.monitor()
+        self.assertIn('unverifiable-run', report['alerts']); self.assertIsNone(report['last_qualified'])
+
+
 if __name__ == '__main__': unittest.main()

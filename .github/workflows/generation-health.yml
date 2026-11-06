@@ -8,6 +8,11 @@ on:
         description: 'Optional manual CI RUN_ID/ATTEMPT to inspect; never scheduled coverage'
         type: string
         default: ''
+      experiment:
+        description: 'Paired inspection requires an explicit run; neither mode executes models'
+        type: choice
+        options: [single, paired]
+        default: single
       notify:
         description: 'Update the preconfigured marked alert issue; requires enabled policy'
         type: boolean
@@ -41,9 +46,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           INSPECT_RUN: ${{ inputs.inspect_run }}
+          EXPERIMENT: ${{ inputs.experiment || 'single' }}
         run: |
           args=()
           if [ -n "$INSPECT_RUN" ]; then args+=(--inspect-run "$INSPECT_RUN"); fi
+          if [ "$EXPERIMENT" = paired ]; then args+=(--paired); fi
           python3 scripts/generation_operations.py monitor --root "$HEALTH_ROOT" "${args[@]}"
       - name: Update configured alert issue
         if: (github.event_name == 'schedule' || inputs.notify) && inputs.inspect_run == ''
