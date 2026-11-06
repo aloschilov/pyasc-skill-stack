@@ -22,6 +22,17 @@ The current plan selects the separately configured DeepSeek model instead of
 relaxing identity checks or pooling the incomplete cohorts. A small tool request
 observed its response ID below; that is discovery, not OpenCode qualification.
 
+The first [DeepSeek/GLM cohort, 42195347301](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42195347301),
+also remains incomplete: five candidates qualified, ten failed, one request had
+unknown delivery after `IncompleteRead`, and eight trials were not run. It
+established no complete paired comparison. Its archive
+`model-42195347301-blocked.tar.gz`, SHA256
+`759c3c48fbc0e9032d080d94e792529311ec7d3b3f3c84ca5391020b4f7d0f96`,
+is retained on both qualification hosts. All 77 local process groups and 13 owned
+containers were absent before abandoning the request without replay. Its
+24,000-token reservation remains unknown; the missing partial response cannot
+be reconstructed or retroactively accepted.
+
 `models.json` selects two distinct requested and expected response identities:
 
 | Arm | Profile | Requested | Expected response |
@@ -59,6 +70,11 @@ response ID above, never an alias allowlist. This is supported by the pinned
 A gateway repeating identical cumulative usage on the final choice and the
 following usage-only chunk is counted once, only with one response ID, one
 finish event and matching counters. Conflicting counters remain unresolved.
+When the HTTP client exposes partial bytes after `IncompleteRead`, the gate now
+retains them privately. A streaming reply is usable only if those unchanged
+bytes contain the final SSE `DONE`, one finish, the exact model and valid usage;
+the HTTP framing error remains recorded. Missing application completion or an
+incomplete non-streaming body stays UNKNOWN and prevents another request.
 No fallback model, alternate credentials, or hidden repair is used.
 
 Each unchanged candidate must pass static validation, JIT, actual Model execution

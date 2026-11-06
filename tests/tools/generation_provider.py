@@ -7,6 +7,7 @@ records contain hashes and safe diagnostics, never credentials. This is a budget
 """
 from contextlib import contextmanager
 import hashlib
+from http.client import IncompleteRead
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
@@ -178,13 +179,24 @@ class BudgetGate:
                     record['http_status'] = response.status
                     record['response_ids'] = {name: value for name in ('x-request-id', 'x-requestid', 'x-tt-logid')
                         if (value := response.headers.get(name)) and re.fullmatch(r'[A-Za-z0-9_.:-]{1,256}', value)}
-                    raw = response.read(MAX_RESPONSE + 1)
                     content_type = response.headers.get('Content-Type', 'application/json')
+                    try:
+                        raw = response.read(MAX_RESPONSE + 1)
+                    except IncompleteRead as exc:
+                        # Preserve the bytes exposed by the HTTP client even
+                        # when chunk framing is interrupted. A complete SSE
+                        # application message can precede a missing HTTP trailer;
+                        # the unchanged parser below still requires final DONE,
+                        # one finish, the exact model and consistent usage.
+                        raw = exc.partial
+                        record.update(transport_error='IncompleteRead', http_body_complete=False)
                 record['response_sha256'] = hashlib.sha256(raw).hexdigest()
                 record['response_bytes'] = len(raw)
                 if self.capture_response:
                     self.capture_response(len(self.records), raw)
                 if len(raw) > MAX_RESPONSE: raise BudgetError('Provider response too large')
+                if record.get('transport_error') and not body.get('stream'):
+                    raise BudgetError('Incomplete non-streaming HTTP response')
                 usage = response_usage(raw, bool(body.get('stream')), self.response_model)
                 record['usage'] = usage
                 if usage['completion_tokens'] > cap: raise BudgetError('Provider exceeded output-token cap')

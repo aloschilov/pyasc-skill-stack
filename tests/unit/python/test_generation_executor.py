@@ -192,7 +192,13 @@ class ProviderContracts(unittest.TestCase):
                 if body.get('stream'):
                     raw = ('data: '+json.dumps(test.payload)+'\n\ndata: [DONE]\n\n').encode()
                 else: raw = json.dumps(test.payload).encode()
+                if getattr(test, 'truncate_stream', False): raw = raw.removesuffix(b'data: [DONE]\n\n')
                 self.send_response(200); self.send_header('Content-Type', 'text/event-stream' if body.get('stream') else 'application/json')
+                if getattr(test, 'missing_http_trailer', False):
+                    self.send_header('Transfer-Encoding', 'chunked'); self.end_headers()
+                    self.wfile.write(format(len(raw), 'x').encode()+b'\r\n'+raw+b'\r\n')
+                    self.close_connection = True  # Deliberately omit the terminating HTTP chunk.
+                    return
                 self.send_header('Content-Length', str(len(raw))); self.end_headers(); self.wfile.write(raw)
         self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True); self.thread.start()
@@ -276,6 +282,36 @@ class ProviderContracts(unittest.TestCase):
             self.assertEqual(exc.exception.code,400)
             exc.exception.close()
         self.assertEqual(len(self.requests),1)  # No retry reaches the provider.
+
+    def test_complete_sse_before_missing_http_trailer_keeps_exact_usage_without_retry(self):
+        self.missing_http_trailer = True
+        captured = []; self.gate.capture_response = lambda number, raw: captured.append((number, raw))
+        raw, _ = self.gate.dispatch({'model':'test-model','stream':True})
+        record = self.gate.records[0]
+        self.assertFalse(record['http_body_complete']); self.assertEqual(record['transport_error'],'IncompleteRead')
+        self.assertEqual(record['status'],'complete'); self.assertEqual(record['usage']['observed_model'],'test-model')
+        self.assertTrue(self.gate.snapshot()['usage_complete']); self.assertEqual(self.gate.snapshot()['observed_output_tokens'],7)
+        self.assertEqual(captured,[(1,raw)]); self.assertEqual(record['response_sha256'],planner.digest(raw))
+        self.assertEqual(len(self.requests),1)
+
+    def test_incomplete_sse_is_captured_privately_and_never_replayed(self):
+        self.missing_http_trailer = self.truncate_stream = True
+        captured = []; self.gate.capture_response = lambda number, raw: captured.append((number,raw))
+        with self.assertRaisesRegex(BudgetError,'Incomplete streaming response'):
+            self.gate.dispatch({'model':'test-model','stream':True})
+        record=self.gate.records[0]
+        self.assertEqual(record['status'],'unknown'); self.assertNotIn('usage',record)
+        self.assertFalse(self.gate.snapshot()['usage_complete']); self.assertEqual(record['response_bytes'],len(captured[0][1]))
+        self.assertEqual(record['response_sha256'],planner.digest(captured[0][1]))
+        with self.assertRaisesRegex(BudgetError,'Earlier request'): self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertEqual(len(self.requests),1); self.assertEqual(self.gate.snapshot()['reserved_output_tokens'],16)
+
+    def test_incomplete_nonstreaming_http_body_cannot_be_accepted_as_sse(self):
+        self.missing_http_trailer = True
+        with self.assertRaisesRegex(BudgetError,'Incomplete non-streaming'):
+            self.gate.dispatch({'model':'test-model','stream':False})
+        self.assertEqual(self.gate.records[0]['status'],'unknown')
+        self.assertIn('response_sha256',self.gate.records[0])
 
     def test_opencode_adapter_uses_isolated_config_gate_and_native_trace(self):
         with tempfile.TemporaryDirectory() as tmp:
