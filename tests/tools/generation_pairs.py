@@ -46,8 +46,10 @@ def build_pairs(root=ROOT):
     require(type(spec['schema_version']) is int and spec['schema_version'] in (1, 2), 'Unknown paired schema')
     keys = ('schema_version', 'matrix', 'protocols', 'repetitions', 'order_seed',
             'generation_seconds_per_attempt', 'max_output_tokens', 'max_execution_seconds', 'periodic')
+    if spec['schema_version'] == 2 and 'context_path_format' in spec: keys += ('context_path_format',)
     exact_keys(spec, keys + (('model',) if spec['schema_version'] == 2 else ()), 'paired specification')
     if spec['schema_version'] == 2: exact_keys(spec['model'], ('profile', 'response_model'), 'paired model')
+    require(spec.get('context_path_format', 'absolute-v1') in ('absolute-v1', 'relative-read-call-v1'), 'Invalid context path format')
     require(spec['protocols'] == list(PROTOCOLS), 'Declare all four protocols in canonical order')
     reps = spec['repetitions']
     require(type(reps) is int and 2 <= reps <= 8 and reps % 2 == 0, 'Use an even number of repetitions, 2..8')
@@ -94,6 +96,8 @@ def trial_plan(plan, trial):
     common['skills'] = selected if PROTOCOLS[trial['protocol']]['skills'] else []
     common['intervention'] = {'id': trial['protocol'], 'definition': PROTOCOLS[trial['protocol']],
         'selected_skills': selected, 'experiment_sha256': plan['plan_sha256'], 'trial': trial}
+    if 'context_path_format' in plan['spec']:
+        common['intervention']['context_path_format'] = plan['spec']['context_path_format']
     common['checkout_revision'] = plan.get('checkout_revision')
     limits = common['limits']; attempts = limits['attempts_per_cell']
     common['maximum_work'] = {'model_attempts': attempts,
@@ -174,7 +178,8 @@ def inspect_trial(root, expected, status):
         expected_config['provider'][provider]['options'] = options
         require(config == expected_config and isolation['permission'] == config['permission'], 'Model/configuration/permissions drift')
         from generation_adapters import task_contract
-        expected_prompt = prompt(task_contract(ROOT, expected['cells'][0]), expected['intervention']['id'], expected['skills'], Path(isolation['context']))
+        expected_prompt = prompt(task_contract(ROOT, expected['cells'][0]), expected['intervention']['id'], expected['skills'], Path(isolation['context']),
+            project=Path(isolation['project']) if expected['intervention'].get('context_path_format') == 'relative-read-call-v1' else None)
         require(bundle.read(prefix+'prompt.txt').decode() == expected_prompt, 'Prompt intervention drift')
         events = bundle.read(prefix+'generation.stdout').decode()
         usage = bundle.json(prefix+'usage.json')
@@ -301,6 +306,7 @@ def report_pairs(root):
     require(digest(canonical(unsigned)) == sha and plan['kind'] == 'paired-generation-plan', 'Invalid paired plan')
     require(plan['schema_version'] == 1 and plan['protocols'] == PROTOCOLS
         and plan['contrasts'] == [list(c) for c in CONTRASTS], 'Unrecognized paired definitions')
+    require(plan['spec'].get('context_path_format', 'absolute-v1') in ('absolute-v1', 'relative-read-call-v1'), 'Invalid context path format')
     require(plan['trials'] == ordered_trials(plan['common']['cells'], plan['spec']), 'Predeclared order changed')
     index = read(root/'files.json')
     require({'plan.json', 'state.json'} <= set(index), 'Required paired records are not indexed')

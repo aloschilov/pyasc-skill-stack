@@ -82,6 +82,19 @@ The low-reasoning configuration is a new predeclared experiment intended to
 reduce cap exhaustion. It does not repair provider accounting. Counter checks
 remain strict, and old cohorts are neither reclassified nor pooled with it.
 
+The first low-reasoning cohort
+[42173378734](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42173378734)
+stopped after its first P4 trial: the model reconstructed the absolute baseline
+path incorrectly, its read was denied, and the full-context audit blocked the
+trial. All four responses and usage are known (680 output tokens, 21.10 seconds);
+no numerical verification ran. Its archive SHA256 is
+`5b86c8be7bf3ff38ca107667fa71450411363b50b96be48d40dad5ddc46126c5`.
+The new `context_path_format=relative-read-call-v1` instruction supplies the exact
+short project-relative `read` arguments. Context files and permissions stay the
+same; the full baseline must still be observed. Older plans retain their original
+absolute prompt format and incomplete results. This prompt change requires a new
+cohort, not a continuation or pooling of that failed trial.
+
 The earlier 300-second paired generation deadline interrupted a provider response
 in pilot `42161942577`. Its response usage remains unknown and its experiment
 incomplete; changing this deadline does not reinterpret or pool those observations.

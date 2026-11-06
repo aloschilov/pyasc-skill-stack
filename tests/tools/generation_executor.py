@@ -204,7 +204,8 @@ def generate(attempt, plan, contract, context):
     observe_request = None
     if intervention:
         from generation_protocols import context_files, prompt as paired_prompt, request_audit
-        prompt = paired_prompt(contract, intervention['id'], skills, context)
+        prompt = paired_prompt(contract, intervention['id'], skills, context,
+            project=project if intervention.get('context_path_format') == 'relative-read-call-v1' else None)
         visible = context_files(plan)
         save(attempt/'isolation.json', {'protocol': intervention, 'context_sha256': visible,
             'project': str(project), 'context': str(context), 'private': str(state),
