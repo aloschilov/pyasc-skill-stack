@@ -455,7 +455,8 @@ class ReviewCI(unittest.TestCase):
         self.assertNotIn('secrets',prepare)
         self.assertNotIn('OPENCODE_API_KEY',json.dumps(prepare))
         worker = yaml.safe_load((ROOT/'.github/workflows/generation-simulator.yml').read_text())
-        self.assertEqual(worker['concurrency']['group'], 'generation-simulator')
+        self.assertEqual(worker['concurrency']['group'],
+            "${{ inputs.action == 'plan' && format('generation-plan-{0}', github.run_id) || 'generation-simulator' }}")
         self.assertIn("inputs.experiment != 'review'", worker['jobs']['qualify']['if'])
         self.assertIn('generation_review.py', worker['jobs']['qualify']['env']['GENERATION_HELPER'])
 

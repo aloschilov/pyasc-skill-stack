@@ -25,7 +25,7 @@ on:
 # No schedule or PR model calls. A rerun gets a new directory but still obeys
 # the same durable executor latch; cancellation never authorizes another POST.
 concurrency:
-  group: generation-simulator
+  group: ${{ inputs.action == 'plan' && format('generation-plan-{0}', github.run_id) || 'generation-simulator' }}
   cancel-in-progress: false
 
 jobs:
