@@ -244,6 +244,10 @@ class PairedObservation(unittest.TestCase):
                 ops.monitor(self.evidence.parent, self.config, NOW, paired=True)
         with self.assertRaisesRegex(ValueError, 'not configured'):
             ops.notify(report, self.config, NOW)
+        self.run.update(status='in_progress', conclusion=None)
+        pending = self.monitor()
+        self.assertEqual(pending['status'], 'pending'); self.assertIsNone(pending['last_qualified'])
+        self.assertIn('run-stalled', self.monitor(NOW+timedelta(hours=3))['alerts'])
 
     def test_green_paired_run_needs_matching_origin_complete_cells_and_intact_evidence(self):
         for filename, field, value in [('ci.json', 'approve_plan', 'bad'), ('result.json', 'cells', {}),

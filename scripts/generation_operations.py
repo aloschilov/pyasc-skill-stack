@@ -195,10 +195,12 @@ def monitor(root, config, now, inspect_run=None, paired=False):
             item['error_type'] = type(exc).__name__; report['alerts'].append('unverifiable-run')
     if not report['last_qualified']:
         if len(runs) > 20: report['alerts'].append('inspection-limit')
-        if inspect_run or now-utc(config['enabled_since']) >= timedelta(hours=config['max_age_hours']):
+        if (inspect_run and runs[0]['status'] == 'completed' or not inspect_run
+                and now-utc(config['enabled_since']) >= timedelta(hours=config['max_age_hours'])):
             report['alerts'].append('stale-coverage')
     report['alerts'] = sorted(set(report['alerts']))
-    report['status'] = 'alert' if report['alerts'] else 'verified-manual' if inspect_run else 'healthy' if report['last_qualified'] else 'pending'
+    report['status'] = ('alert' if report['alerts'] else 'pending' if not report['last_qualified']
+        else 'verified-manual' if inspect_run else 'healthy')
     return report
 
 
