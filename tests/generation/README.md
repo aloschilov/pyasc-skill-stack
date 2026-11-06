@@ -196,6 +196,20 @@ exact Release baseline and checksum are checked before any generation. The polic
 snapshot/hash and controller hash are retained separately from execution inputs;
 changing the enable flag does not silently requalify an incompatible executor.
 
+The changed CI executor uses a separately reviewed baseline:
+[run 42134641956](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42134641956)
+on `d7b92c4`, OpenCode 1.19.0 / GLM-5.3, **3/3** fresh candidates,
+nine Model launches, 21 output/input checks and three rejecting controls.
+Executor wall time was 250.38 s (315 s CI job); 15 requests used 13,772 output
+and 165,497 input tokens, with monetary cost unavailable. Its
+[durable Release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-42134641956)
+retains `generation.tar.gz`, SHA256
+`e0611c1c17005d076e3a16396efaa3eb77dbe4b319ea0d917c21797436094e85`.
+All 216 archive members, 87 execution-source hashes and container cleanup were
+verified before selection. Older baselines remain historical evidence; the
+policy names this compatible baseline explicitly. This is manual simulator
+qualification, not scheduled or hardware coverage.
+
 ```bash
 gh workflow run generation-nightly.yml --ref <reviewed-branch> -f mode=plan
 # Inspect generation-control-<run>-<attempt>, then use its exact digest:
