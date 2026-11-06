@@ -11,6 +11,10 @@ The writer loads pinned codegen skills and writes `candidate.py` and `design.md`
 The design describes the task ABI, shapes, memory ranks, tails, precision and
 verification scope. These bytes, the task contract and their hashes form the
 immutable handoff. The writer cannot read the oracle or a reference candidate.
+The version 2 plan supplies exact project-relative `read` arguments for each
+handoff file. This follows the observed absolute-path reconstruction failure in
+the paired experiment; it does not relax full-read attribution or permissions.
+Version 1 receipts retain their original absolute prompt format.
 
 A new reviewer session loads the review/build/API skills and reads the complete
 task, candidate, design and binding. It can write only `review.json`; candidate

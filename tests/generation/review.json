@@ -1,5 +1,6 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "context_path_format": "relative-read-call-v1",
   "matrix": "tests/generation/matrix.json",
   "cell": "add-f32-tail",
   "max_repairs": 1,

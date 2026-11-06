@@ -54,7 +54,7 @@ def inspect_role(evidence, prefix, plan, role, contract, inputs):
     expected.update({'inputs/'+n: digest(data) for n, data in dict(inputs, **{'task.json': canonical(contract)}).items()})
     require(isolation['context_sha256'] == expected, 'Role context differs from handoff/skills')
     for name, sha in expected.items(): require(digest(evidence.bytes(prefix+'context/'+name)) == sha, 'Handoff changed')
-    message = role_prompt(selected, role, contract, context, inputs)
+    message = role_prompt(selected, role, contract, context, inputs, project=project)
     require(evidence.bytes(prefix+'prompt.txt').decode() == message, 'Role prompt drift')
     config = evidence.json(prefix+'model-config.json'); provider = selected['model']['requested'].split('/')[0]
     expected_config = role_config(selected, role, evidence.root/'source', context, project, expected)
