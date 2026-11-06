@@ -163,6 +163,24 @@ class Handoffs(unittest.TestCase):
         downgraded=self.verdict(bound,reject=True);downgraded['verdict']='accept';downgraded['findings'][0]['severity']='advisory'
         with self.assertRaisesRegex(ValueError,'severity downgrade'):review.validate_review(downgraded,bound,prior)
 
+    def test_handoff_read_arguments_resolve_exactly_and_legacy_prompts_remain_readable(self):
+        contract = review.task_contract(ROOT, self.plan['common']['cells'][0])
+        context = Path('/long/evidence/run/cycle-1/reviewer/context'); project = context.parent/'project'
+        inputs = {'candidate.py': b'candidate', 'design.md': b'design', 'binding.json': b'{}'}
+        for role in ('writer', 'reviewer', 'tuner'):
+            selected = review.role_plan(self.plan, role)
+            prompt = review.role_prompt(selected, role, contract, context, inputs, project=project)
+            for name in ('task.json', *inputs):
+                argument = {'filePath': '../context/inputs/'+name}
+                self.assertIn(json.dumps(argument), prompt)
+                self.assertEqual((project/argument['filePath']).resolve(), context/'inputs'/name)
+            with self.assertRaisesRegex(ValueError, 'project required'):
+                review.role_prompt(selected, role, contract, context, inputs)
+            legacy = deepcopy(selected); legacy.pop('context_path_format')
+            old = review.role_prompt(legacy, role, contract, context, inputs)
+            self.assertIn(str(context/'inputs/task.json'), old)
+            self.assertEqual(old, review.role_prompt(legacy, role, contract, context, inputs, project=project))
+
     def test_native_role_context_is_readonly_complete_and_attributed(self):
         contract = review.task_contract(ROOT, self.plan['common']['cells'][0])
         candidate, design = b'candidate fixture', b'design fixture'
