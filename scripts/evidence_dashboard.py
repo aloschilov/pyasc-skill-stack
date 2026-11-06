@@ -292,6 +292,22 @@ def summarize(archive, entry):
     raise ValueError('Unknown lane')
 
 
+def validate_projection(value):
+    require(value['category'] in ('fresh-generated', 'upstream-fixture')
+        and value['level'] in ('simulator-numerical', 'npu-numerical-and-timing')
+        and value['status'] in ('complete', 'incomplete', 'partial'), 'Unknown public result schema')
+    for key in ('required', 'qualified', 'repetitions'):
+        require(type(value[key]) is int and value[key] >= (0 if key == 'qualified' else 1), 'Invalid result denominator')
+    counts = value['counts']
+    allowed = {'qualified', 'candidate-failed', 'budget-exhausted', 'not-run', 'interrupted', 'timeout',
+        'unresolved-infrastructure', 'simulator-unavailable', 'invalid-instrumentation', 'running',
+        'blocked', 'failed', 'unsupported', 'timed-out', 'excluded', 'unresolved'}
+    require(isinstance(counts, dict) and set(counts) <= allowed
+        and all(type(n) is int and n >= 0 for n in counts.values())
+        and sum(counts.values()) == value['required'] and counts.get('qualified', 0) == value['qualified'], 'Contradictory public counts')
+    require(finite(value['elapsed_seconds']) >= 0 and re.fullmatch(r'[0-9a-f]{40}', value['stack_revision']), 'Invalid time or revision')
+
+
 def build(catalog_path, output, loader=fetch, now=None):
     spec = catalog(catalog_path); now = now or datetime.now(timezone.utc)
     output = Path(output).resolve()
@@ -304,6 +320,7 @@ def build(catalog_path, output, loader=fetch, now=None):
             'archive_sha256': entry['sha256'], 'ci_url': 'https://github.com/'+REPOSITORY+'/actions/runs/'+str(entry['run_id']) if entry['run_id'] else None}
         try:
             projection = summarize(Archive(loader(url), entry['sha256']), entry)
+            validate_projection(projection)
             age = (now-timestamp(projection['finished_at'])).total_seconds()/3600
             require(age >= -1, 'Future result timestamp')
             record.update(projection, availability='available', freshness='stale' if age > spec['max_age_hours'] else 'recent')

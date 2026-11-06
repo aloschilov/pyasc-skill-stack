@@ -175,5 +175,12 @@ class Dashboard(unittest.TestCase):
         model['options']['api_key']='PRIVATE'
         with self.assertRaises(ValueError):dash.profile_settings(config)
 
+    def test_public_counts_reject_boolean_denominator_unknown_status_and_contradiction(self):
+        raw=self.reviewed();valid=dash.generated(dash.Archive(raw),self.entry);dash.validate_projection(valid)
+        for change in ({'required':True},{'counts':{'qualified':2}},{'counts':{'PRIVATE':1}},{'elapsed_seconds':float('inf')},
+                       {'level':'compile-only'},{'stack_revision':'main'}):
+            value=dict(valid,**change)
+            with self.subTest(change=change),self.assertRaises(ValueError):dash.validate_projection(value)
+
 
 if __name__=='__main__':unittest.main()
