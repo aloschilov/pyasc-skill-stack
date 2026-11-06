@@ -274,6 +274,19 @@ class PairedReceipts(unittest.TestCase):
         self.assertEqual(r['observations'][t['id']]['status'], 'invalid-instrumentation')
         self.assertIn('OpenCode versions differ', r['observations'][t['id']]['reason'])
 
+    def test_failed_evaluator_cannot_substitute_another_candidate(self):
+        t = self.plan['trials'][1];root = self.root/t['id'];p = root/t['cell']/'attempt-1'
+        q = pairs.read(p/'qualification.json');q['status'] = 'failed';q['phases']['jit']['exit_code'] = 1
+        q['input_sha256']['candidate.py'] = 'd'*64;receipts.write(p/'qualification.json', q)
+        state = pairs.read(root/'state.json');state['status'] = state['cells'][0]['status'] = 'failed'
+        state['cells'][0]['attempts'][0].update(status='failed', error='JIT failure', failure_stage='qualifying')
+        receipts.write(root/'state.json', state);receipts.seal(root)
+        state = pairs.read(self.root/'state.json');state['trials'][1]['status'] = 'failed'
+        receipts.write(self.root/'state.json', state);pairs.seal(self.root)
+        value = pairs.report_pairs(self.root)['observations'][t['id']]
+        self.assertEqual(value['status'], 'invalid-instrumentation')
+        self.assertIn('another candidate', value['reason'])
+
     def test_reused_session_is_not_an_independent_pair(self):
         first, t = self.plan['trials'][:2]
         p = self.root/t['id']/t['cell']/'attempt-1'

@@ -206,6 +206,14 @@ def inspect_trial(root, expected, status):
                 require(rejected, 'Missing failed qualification evidence')
         if prefix+'qualification.json' in bundle.files:
             from generation_adapters import wrapper
+            qualification = bundle.json(prefix+'qualification.json')
+            require(qualification['input_sha256']['candidate.py'] == attempt['candidate_sha256'], 'Evaluator measured another candidate')
+            for name, sha in qualification['input_sha256'].items():
+                require(digest(bundle.read(prefix+name)) == sha, 'Evaluator input hash mismatch')
+            command = bundle.json(prefix+'qualification.command.json')
+            require(command['status'] == 'completed' and command['exit_code'] in (0, 1), 'Unresolved evaluator command')
+            for stream in ('stdout', 'stderr'):
+                require(digest(bundle.read(prefix+'qualification.'+stream)) == command[stream+'_sha256'], 'Evaluator log hash mismatch')
             contract = task_contract(ROOT, expected['cells'][0])
             require(bundle.json(prefix+'adapter.json') == contract, 'Numerical task/oracle contract drift')
             for name, check in [('probe.py', True), ('compile_probe.py', False)]:
