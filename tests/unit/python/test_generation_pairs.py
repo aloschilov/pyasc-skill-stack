@@ -564,10 +564,11 @@ class PairedCI(unittest.TestCase):
             'GITHUB_WORKFLOW_REF': 'aloschilov/pyasc-skill-stack/.github/workflows/generation-paired.yml@refs/heads/codex/paired',
             'GENERATION_STATE_DIR': str(Path(self.tmp.name)/'state')}
 
-    def test_workflow_is_plan_only_on_pr_and_has_no_cron(self):
+    def test_periodic_workflow_remains_plan_only_on_pr(self):
         import yaml
         workflow = yaml.safe_load((ROOT/'.github/workflows/generation-paired.yml').read_text())
-        self.assertEqual(set(workflow[True]), {'pull_request', 'workflow_dispatch'})
+        self.assertEqual(set(workflow[True]), {'pull_request', 'workflow_dispatch', 'schedule'})
+        self.assertEqual(workflow[True]['schedule'], [{'cron': '47 17 * * *'}])
         self.assertEqual(workflow[True]['workflow_dispatch']['inputs']['mode']['default'], 'plan')
         job = workflow['jobs']['paired']
         self.assertEqual(set(workflow['jobs']), {'prepare','paired'})  # Cadence skip receipt contract.
@@ -577,7 +578,10 @@ class PairedCI(unittest.TestCase):
         self.assertIn('needs.prepare.outputs.action', job['with']['action'])
         self.assertNotIn('OPENCODE_API_KEY', str(workflow['jobs']['prepare']))
         self.assertIn('generation_operations.py plan --paired', str(workflow['jobs']['prepare']))
-        self.assertFalse(json.loads((ROOT/'tests/generation/paired.json').read_text())['periodic']['enabled'])
+        policy = json.loads((ROOT/'tests/generation/paired.json').read_text())['periodic']
+        self.assertTrue(policy['enabled'])
+        self.assertEqual(policy['alert_issue'], 38)
+        self.assertEqual(policy['min_interval_hours'], 168)
 
     def test_plan_and_archive_are_offline_and_private_bytes_are_excluded(self):
         with patch.dict(os.environ, self.env, clear=True), patch.object(ci.subprocess, 'check_output', return_value='synthetic-revision\n'), \

@@ -1,7 +1,9 @@
 name: Model generation comparison
 
-# PRs plan only. Periodic activation is a separate reviewed change: no cron.
+# Daily cadence check; execute at most once per 168 hours, including failures.
 on:
+  schedule:
+    - cron: '47 18 * * *'
   pull_request:
   workflow_dispatch:
     inputs:

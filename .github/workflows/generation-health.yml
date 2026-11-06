@@ -1,7 +1,9 @@
 name: Generation coverage observation
 
-# Independent from the self-hosted executor. No cron until separately approved.
+# Hourly observation on GitHub-hosted Ubuntu, independent of the simulator runner.
 on:
+  schedule:
+    - cron: '43 * * * *'
   workflow_dispatch:
     inputs:
       inspect_run:

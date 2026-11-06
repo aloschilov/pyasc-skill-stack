@@ -131,8 +131,8 @@ API must be classified as a candidate failure, not an unavailable simulator.
 `examples-gate` retains these reports in a separate artifact. This is verification
 of the adapters/executor, **not** newly generated-kernel or hardware qualification.
 
-Remaining #22 work: live alert delivery and an explicitly approved
-schedule plus end-to-end scheduled acceptance. The inactive controller and health
+Remaining #22 work: verify live alert/recovery delivery and end-to-end scheduled
+acceptance after the authorized activation on 2026-11-06. The controller and health
 observer are described below. #23 skills-effect comparisons and #24 model diversity should
 reuse these contracts; #20 owns separate reviewer/tuner handoffs.
 
@@ -194,16 +194,21 @@ persistent directory and shared executor latch before taking further action.
 Re-running a CI job creates a new directory but cannot bypass that latch.
 
 Comparison alerts appear in the job summary and cause a failing check; a
-qualification-only result cannot claim regression coverage. Scheduling is still
-inactive; the separate health observer does not infer fresh coverage from a
+qualification-only result cannot claim regression coverage. The separate health
+observer does not infer fresh coverage from a
 green ordinary CI job.
 
-## Inactive nightly controller and health observer
+## Nightly controller and health observer
+
+<a id="inactive-nightly-controller-and-health-observer"></a>
 
 `generation-nightly.yml` reuses the same executor. PRs only prepare a plan without
 provider credentials; explicit manual execute requires its reviewed digest.
-`tests/generation/nightly.json` keeps `enabled: false`, no activation timestamp
-and no alert destination. Neither new workflow has a cron trigger. The policy's
+`tests/generation/nightly.json` is enabled following user authorization on
+2026-11-06, with an activation timestamp and dedicated alert issue #37.
+Generation runs daily at 17:17 UTC (20:17 Moscow); the independent observer
+runs hourly at minute 43. GitHub can delay schedules. A configured cron is not
+evidence that a scheduled run or notification delivery has passed. The policy's
 exact Release baseline and checksum are checked before any generation. The policy
 snapshot/hash and controller hash are retained separately from execution inputs;
 changing the enable flag does not silently requalify an incompatible executor.
@@ -237,8 +242,9 @@ python3 scripts/generation_operations.py monitor \
 ```
 
 The independent `generation-health.yml` runs on GitHub-hosted Ubuntu, not the
-self-hosted simulator runner. It is manual-only and notification defaults to
-false. Disabled policy yields `disabled`; a manual archive audit can yield only
+self-hosted simulator runner. Scheduled observations cover all three lanes and
+update their dedicated alert issues; manual notification still defaults to false.
+Disabled policy yields `disabled`; a manual archive audit can yield only
 `verified-manual`, never scheduled acceptance. Monitor exit 1 means an alert;
 the workflow retains/delivers it before its final failing check.
 
@@ -261,14 +267,22 @@ by GET confirmation; unknown delivery is reconciled, never blindly repeated.
 `delivery.json` is evidence that GitHub stored the update, not proof a person read
 a notification. No model or CANNBench credential is available to the observer.
 
-Activation remains a separate user-approved change: qualify/select a baseline
-compatible with the **final** executor, configure/test the marked alert issue,
-set `enabled_since` and `enabled: true`, and add reviewed cron triggers (proposed
-generation `17 3 * * *`, independent health `43 * * * *`, UTC). Update the inactive
-workflow regression assertions in that same change. GitHub schedules run on the
-[default branch and may be delayed](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule),
-so activation also requires an approved merge. An actual scheduled generation,
-comparison and alert/recovery delivery must be verified before closing #22.
+Activation was authorized on 2026-11-06. The selected baseline remains compatible
+with the generation inputs; only policies, controller triggers, tests and docs
+change. Paired skills and model comparisons check daily at 17:47 and 18:47 UTC
+(20:47 and 21:47 Moscow), respectively, but execute no more often than every
+168 hours. Failed/cancelled attempts consume that interval; daily deferred checks
+do not. Their dedicated alert destinations are #38 and #39. The shared executor
+serializes all provider work; budgets and UNKNOWN protections remain in force.
+
+An actual scheduled generation, independent baseline comparison, complete paired
+and model cohorts, and confirmed alert/recovery delivery are still required
+before closing #22/#23/#24. Activation alone is not qualification. The delivery
+drill uses an explicitly invalid read-only observer token in a temporary branch:
+the real GitHub API rejects observation, the production notifier records the alert,
+and subsequent valid observation may close it only after verified scheduled
+coverage. This demonstrates an observation failure, not a candidate/NPU failure.
+No failure-injection hook is added to the deployed workflows.
 Observation on the same GitHub platform cannot guarantee delivery during a
 GitHub-wide outage; job summaries/artifacts remain the audit trail when available.
 
@@ -321,7 +335,7 @@ fresh coverage without recorded completion time. This tool produces alert record
 and nonzero exits; it does not itself monitor a schedule, send notifications or
 prove that a scheduled job ran. The health observer implements the independent
 checks and explicit issue-update path, but live delivery and scheduled acceptance
-remain unqualified while scheduling is disabled.
+remain unqualified until their actual execution and delivery receipts are verified.
 
 ## Manual pilot, 2026-11-06
 
@@ -390,7 +404,7 @@ suppressed-launch controls. Executor wall time: **246.42 s**; qualification job:
 provider cost unavailable. This single same-skills comparison validates the
 comparison path and repeatability for these cells, not a skills-effect estimate
 or scheduled coverage. This describes the historical selection; the current
-policy baseline is recorded in the inactive controller section above.
+policy baseline is recorded in the controller section above.
 
 The same Release retains `comparison-42129712051.tar.gz` (217 checked members),
 SHA256 `125a6119a3cb14eb6c430a224db9da4c1b7e0771a898827cf42066d9ac289408`.

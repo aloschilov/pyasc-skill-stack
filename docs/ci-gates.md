@@ -1,12 +1,13 @@
 # CI gates
 
 The [CI workflow](../.github/workflows/ci.yml) separates ordinary checks from
-explicit model and hardware work. No nightly schedule is configured.
+explicit model and hardware work. Separate generation controllers are scheduled
+following authorization on 2026-11-06; NPU remains explicit and unscheduled.
 The [generation planner and explicit executor](../tests/generation/README.md)
 validate a bounded multi-operator inventory. Ordinary CI exercises only local
 provider doubles and fixed numerical fixtures. An explicit manual generation
-dispatch can invoke the executor after plan approval; no nightly lane is enabled
-or qualified.
+dispatch can invoke the executor after plan approval. Scheduled qualification
+is reported separately from the existence of enabled controllers.
 
 | Job | Trigger | Acceptance |
 |---|---|---|
@@ -15,11 +16,12 @@ or qualified.
 | `merge-gate` | Push to `main`, or manual dispatch with both hardware and generation actions `none`; 60-minute cap | Every discovered target module compiles; failures **and resource blocks** fail the gate |
 | `generated-hardware` | Explicit manual dispatch with generate/repair/continue/resume | Selected operator recipe, exact package, strict hardware result and durable publication |
 | `generation-simulator` | Explicit manual `generation_action=plan|execute`; default `none` | Offline plan, or hash-approved fresh simulator qualification and optional compatible-baseline comparison; no NPU |
-| `Opt-in generation` | PR planning only, or explicit manual plan/execute; scheduling disabled | Shared executor and pinned policy baseline; PRs never call a provider |
+| `Opt-in generation` | Daily 17:17 UTC; PR planning only, or explicit manual plan/execute | Shared executor and pinned policy baseline; PRs never call a provider |
+| `Paired generation experiment` / `Model generation comparison` | Daily cadence checks at 17:47 / 18:47 UTC; at most one execution per 168 hours | Complete predeclared cohorts, retained failures, no NPU |
 | `Reviewed generation` | PR planning only, or explicit manual plan/execute | [Fresh writer/reviewer sessions](../tests/generation/review.md), bounded repairs and unchanged-byte simulator qualification; no NPU |
-| `Generation coverage observation` | Explicit manual dispatch; scheduling disabled | GET-only archive/freshness inspection; issue updates require separate opt-in and a marked destination |
+| `Generation coverage observation` | Hourly at minute 43 UTC, or explicit manual dispatch | GET-only archive/freshness inspection; scheduled issue updates use marked destinations; manual notification requires opt-in |
 | `Evidence dashboard` | Relevant PRs run offline tests; manual build, optional publish | GET-only projection of pinned public archives; [scope, failure handling and publication](../dashboard/README.md); no generation or device access |
-| release | `v*` tag | Fast suite, skills-only archive and install verification |
+| release | `v[0-9]*` tag | Fast suite, skills-only archive and install verification |
 
 ## Ordinary PR checks
 
@@ -44,8 +46,8 @@ Both PR jobs must pass on the current head. Artifacts retain the complete
 verification-contract and generation-adapter runs for 30 days, including failures. Queue time is separate
 from execution time. Neither job qualifies model generation or NPU behavior.
 Accepted qualification requires [durable evidence](verification-contract.md#storage).
-The [inactive controller and observer](../tests/generation/README.md#inactive-nightly-controller-and-health-observer)
-retain control/health records separately. Their disabled/manual green checks do
+The [controller and observer](../tests/generation/README.md#inactive-nightly-controller-and-health-observer)
+retain control/health records separately. Their planning/manual green checks do
 not establish scheduled coverage or successful notification delivery.
 
 ## Compile coverage
