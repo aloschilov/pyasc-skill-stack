@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "repository": "aloschilov/pyasc-skill-stack",
+  "max_age_hours": 192,
+  "sources": [
+    {
+      "id": "paired-42175778880",
+      "kind": "paired",
+      "release": "qualification-paired-42175778880",
+      "asset": "qualification-42175778880.tar.gz",
+      "sha256": "0ae0f6b13c06ff1f06abff2ad44b665677439f4d4b6556fd8e087e411c2acb74",
+      "run_id": 42175778880
+    },
+    {
+      "id": "review-42183443085",
+      "kind": "review",
+      "release": "qualification-review-42183443085",
+      "asset": "qualification-review-42183443085.tar.gz",
+      "sha256": "f0801b055dfcebf9bf1c5f2011e6255fc4e9128c7058f912e1db1bcb37febfa1",
+      "run_id": 42183443085
+    },
+    {
+      "id": "target-subset-a3e3075",
+      "kind": "target",
+      "release": "qualification-target-subset-a3e3075",
+      "asset": "qualification-target-subset-a3e3075.tar.gz",
+      "sha256": "8da0a446302304cda44b934b4a0abb8bac3e219d0ac289b2aa6a4924c3c1e6ce",
+      "run_id": null
+    },
+    {
+      "id": "swiglu-41673353296",
+      "kind": "hardware",
+      "release": "qualification-swiglu-41673353296",
+      "asset": "run-41673353296-qualification.tar.gz",
+      "sha256": "aa86a82a28f4a13edf5858059495119cf083c0df876c81e9641a16b8b3a52d56",
+      "run_id": 41673353296
+    }
+  ]
+}

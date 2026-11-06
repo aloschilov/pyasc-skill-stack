@@ -1,0 +1,66 @@
+name: Evidence dashboard
+
+on:
+  pull_request:
+    paths: ['dashboard/**', 'scripts/evidence_dashboard.py', 'tests/unit/python/test_evidence_dashboard.py', '.github/workflows/evidence-pages.yml']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish a read-only snapshot of the pinned public archives'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: evidence-pages
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python3 -m unittest discover -s tests/unit/python -p test_evidence_dashboard.py
+      - run: node --check dashboard/app.js
+
+  build:
+    needs: test
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Fetch pinned public archives and project safe summaries (GET only)
+        run: python3 scripts/evidence_dashboard.py --output "$RUNNER_TEMP/public-evidence"
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/public-evidence
+
+  deploy:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the built snapshot
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Evidence and coverage for PyASC skills, with exact scopes and retained qualification archives.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'">
+  <title>PyASC · Evidence</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header><a href="https://github.com/aloschilov/pyasc-skill-stack">PYASC / SKILL STACK</a><span>Evidence, with boundaries.</span></header>
+  <main>
+    <p class="eyebrow">QUALIFICATION REGISTER</p>
+    <h1>What has actually<br>been checked?</h1>
+    <p class="intro">A read-only view of retained experiments. Every result belongs to its exact tasks, model, source and runtime. Incomplete coverage stays visible.</p>
+    <div id="freshness" role="status">Loading evidence…</div>
+    <section class="toolbar" aria-label="Filter results">
+      <label>View <select id="filter"><option value="all">All evidence</option><option value="fresh-generated">Generated candidates</option><option value="upstream-fixture">Upstream fixtures</option><option value="unavailable">Unavailable evidence</option></select></label>
+      <span id="count"></span>
+    </section>
+    <div id="records" aria-live="polite"></div>
+    <section class="limits">
+      <h2>Read the boundaries</h2>
+      <p>Simulator results are not NPU results. Fixture coverage is not generation coverage. A completed experiment can contain failed candidates. No overall score combines these different denominators.</p>
+      <p>Paired effects describe these fixed tasks and runs; the displayed interval does not establish a general skills benefit. Kernel timing ratios and CANNBench service scores are separate metrics.</p>
+      <p>Availability is verified when this page is built. Old results and stale page snapshots are labelled separately. Follow the archive checksum and CI link to inspect the retained evidence.</p>
+    </section>
+  </main>
+  <footer><a href="data.json">Public summary JSON</a><a href="https://github.com/aloschilov/pyasc-skill-stack/issues">Report a gap</a><span>Manual refresh · no generation or device access</span></footer>
+</body>
+</html>
