@@ -194,12 +194,15 @@ class ProviderContracts(unittest.TestCase):
                 else: raw = json.dumps(test.payload).encode()
                 if getattr(test, 'truncate_stream', False): raw = raw.removesuffix(b'data: [DONE]\n\n')
                 self.send_response(200); self.send_header('Content-Type', 'text/event-stream' if body.get('stream') else 'application/json')
-                if getattr(test, 'missing_http_trailer', False):
+                if getattr(test, 'missing_http_trailer', False) or getattr(test, 'truncated_http_chunk', False):
                     self.send_header('Transfer-Encoding', 'chunked'); self.end_headers()
-                    self.wfile.write(format(len(raw), 'x').encode()+b'\r\n'+raw+b'\r\n')
+                    truncated = getattr(test, 'truncated_http_chunk', False)
+                    terminator=b'\r' if getattr(test, 'partial_chunk_terminator', False) else b'\r\n'
+                    self.wfile.write(format(len(raw)+(8 if truncated else 0), 'x').encode()+b'\r\n'+raw+(b'' if truncated else terminator))
                     self.close_connection = True  # Deliberately omit the terminating HTTP chunk.
                     return
-                self.send_header('Content-Length', str(len(raw))); self.end_headers(); self.wfile.write(raw)
+                self.send_header('Content-Length', str(len(raw)+(8 if getattr(test, 'short_content_length', False) else 0)))
+                self.end_headers(); self.wfile.write(raw)
         self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True); self.thread.start()
         self.addCleanup(self.server.server_close); self.addCleanup(self.server.shutdown)
@@ -312,6 +315,51 @@ class ProviderContracts(unittest.TestCase):
             self.gate.dispatch({'model':'test-model','stream':False})
         self.assertEqual(self.gate.records[0]['status'],'unknown')
         self.assertIn('response_sha256',self.gate.records[0])
+
+    def test_complete_sse_inside_truncated_http_chunk_keeps_all_received_bytes(self):
+        self.truncated_http_chunk = True
+        captured=[];self.gate.capture_response=lambda number,raw:captured.append(raw)
+        raw,_=self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertTrue(raw.endswith(b'data: [DONE]\n\n'));self.assertEqual(captured,[raw])
+        self.assertEqual(self.gate.records[0]['status'],'complete')
+        self.assertEqual(self.gate.records[0]['transport_error'],'IncompleteRead')
+        self.assertEqual(self.gate.snapshot()['observed_output_tokens'],7)
+        self.assertEqual(len(self.requests),1)
+
+    def test_partial_sse_inside_truncated_chunk_stays_unknown_without_replay(self):
+        self.truncated_http_chunk=self.truncate_stream=True
+        captured=[];self.gate.capture_response=lambda number,raw:captured.append(raw)
+        with self.assertRaisesRegex(BudgetError,'Incomplete streaming response'):
+            self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertTrue(captured[0].startswith(b'data: '));self.assertNotIn(b'[DONE]',captured[0])
+        self.assertEqual(self.gate.records[0]['response_sha256'],planner.digest(captured[0]))
+        self.assertEqual(self.gate.records[0]['status'],'unknown')
+        with self.assertRaisesRegex(BudgetError,'Earlier request'):self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertEqual(len(self.requests),1)
+
+    def test_short_content_length_nonstreaming_body_is_preserved_but_not_accepted(self):
+        self.short_content_length=True
+        captured=[];self.gate.capture_response=lambda number,raw:captured.append(raw)
+        with self.assertRaisesRegex(BudgetError,'Incomplete non-streaming'):
+            self.gate.dispatch({'model':'test-model'})
+        self.assertEqual(json.loads(captured[0]),self.payload)
+        self.assertEqual(self.gate.records[0]['status'],'unknown')
+
+    def test_partial_http_chunk_terminator_does_not_enter_the_sse_body(self):
+        self.missing_http_trailer=self.partial_chunk_terminator=True
+        raw,_=self.gate.dispatch({'model':'test-model','stream':True})
+        expected=('data: '+json.dumps(self.payload)+'\n\ndata: [DONE]\n\n').encode()
+        self.assertEqual(raw,expected)
+        self.assertEqual(self.gate.records[0]['response_sha256'],planner.digest(expected))
+
+    def test_incremental_reader_stops_at_response_byte_cap_and_blocks_retry(self):
+        captured=[];self.gate.capture_response=lambda number,raw:captured.append(raw)
+        with patch('generation_provider.MAX_RESPONSE',64),self.assertRaisesRegex(BudgetError,'Provider response too large'):
+            self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertEqual(len(captured[0]),65)
+        self.assertEqual(self.gate.records[0]['status'],'unknown')
+        with self.assertRaisesRegex(BudgetError,'Earlier request'):self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertEqual(len(self.requests),1)
 
     def test_opencode_adapter_uses_isolated_config_gate_and_native_trace(self):
         with tempfile.TemporaryDirectory() as tmp:

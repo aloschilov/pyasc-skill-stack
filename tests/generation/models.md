@@ -41,8 +41,9 @@ usages (9,271 output and 108,037 input tokens) and one unknown 24,000-token
 reservation. The accepted candidate has three JIT/Model launches, nine numerical
 checks and one rejecting control; no comparative effect can be reported.
 The gate preserved 243,334 partial response bytes privately: 808 valid SSE events,
-but no `DONE`, finish reason or usage. This is an incomplete transport response,
-not a recoverable parser rejection. All 14 local process groups and two owned
+but no `DONE`, finish reason or usage. Those retained bytes cannot qualify a
+response; the original reader may also have discarded part of the final HTTP
+chunk. All 14 local process groups and two owned
 containers were absent before releasing the lease; the original request was
 abandoned without replay and retains UNKNOWN accounting.
 
@@ -90,8 +91,8 @@ response ID above, never an alias allowlist. This is supported by the pinned
 A gateway repeating identical cumulative usage on the final choice and the
 following usage-only chunk is counted once, only with one response ID, one
 finish event and matching counters. Conflicting counters remain unresolved.
-When the HTTP client exposes partial bytes after `IncompleteRead`, the gate now
-retains them privately. A streaming reply is usable only if those unchanged
+The gate drains bounded `read1` fragments and retains received body bytes
+privately, including a partial final HTTP chunk. A streaming reply is usable only if those unchanged
 bytes contain the final SSE `DONE`, one finish, the exact model and valid usage;
 the HTTP framing error remains recorded. Missing application completion or an
 incomplete non-streaming body stays UNKNOWN and prevents another request.

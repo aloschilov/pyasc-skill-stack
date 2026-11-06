@@ -180,21 +180,31 @@ class BudgetGate:
                     record['response_ids'] = {name: value for name in ('x-request-id', 'x-requestid', 'x-tt-logid')
                         if (value := response.headers.get(name)) and re.fullmatch(r'[A-Za-z0-9_.:-]{1,256}', value)}
                     content_type = response.headers.get('Content-Type', 'application/json')
+                    received = bytearray(); read_error = None
                     try:
-                        raw = response.read(MAX_RESPONSE + 1)
-                    except IncompleteRead as exc:
-                        # Preserve the bytes exposed by the HTTP client even
-                        # when chunk framing is interrupted. A complete SSE
-                        # application message can precede a missing HTTP trailer;
-                        # the unchanged parser below still requires final DONE,
-                        # one finish, the exact model and consistent usage.
-                        raw = exc.partial
-                        record.update(transport_error='IncompleteRead', http_body_complete=False)
+                        # HTTPResponse.read() can discard the partial final HTTP
+                        # chunk when it wraps IncompleteRead. Drain bounded read1
+                        # pieces so every returned body byte survives that error.
+                        while len(received) <= MAX_RESPONSE:
+                            if time.monotonic() >= self.deadline: raise TimeoutError()
+                            chunk = response.read1(min(65536, MAX_RESPONSE+1-len(received)))
+                            if not chunk:
+                                if response.length: raise IncompleteRead(b'')
+                                break
+                            received.extend(chunk)
+                    except (IncompleteRead, OSError) as exc:
+                        # read1 returns body fragments directly. IncompleteRead's
+                        # partial value here can instead be a broken chunk CRLF;
+                        # never append HTTP framing bytes to the captured body.
+                        read_error = exc
+                        record.update(transport_error=type(exc).__name__, http_body_complete=False)
+                    raw = bytes(received)
                 record['response_sha256'] = hashlib.sha256(raw).hexdigest()
                 record['response_bytes'] = len(raw)
                 if self.capture_response:
                     self.capture_response(len(self.records), raw)
                 if len(raw) > MAX_RESPONSE: raise BudgetError('Provider response too large')
+                if read_error is not None and not isinstance(read_error, IncompleteRead): raise read_error
                 if record.get('transport_error') and not body.get('stream'):
                     raise BudgetError('Incomplete non-streaming HTTP response')
                 usage = response_usage(raw, bool(body.get('stream')), self.response_model)
