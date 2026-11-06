@@ -65,20 +65,27 @@ distinct performance metrics and preservation of the previous snapshot.
 
 ## Public publication qualification (2026-11-06)
 
-The [public page](https://aloschilov.github.io/pyasc-skill-stack/) was published
-from `39935af1264ac7706fbfed34490d8f42b30435db` by
-[run 42205845893](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42205845893).
-All four retained records were available; public GET bytes matched the Pages
-artifact. Seventeen offline tests passed. The test/build/deploy jobs took
-14/14/9 seconds. Chrome verified rendering and the manual, partial fixture filter;
-the final publication retains the same HTML/CSS/JavaScript bytes.
+The [public page](https://aloschilov.github.io/pyasc-skill-stack/) was refreshed
+from `adb5f9773e8bc179bd648145ad697da4ae7fcdfc` by
+[run 42215507117](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42215507117).
+All five retained records were available, including the complete DeepSeek/GLM
+comparison. Public HTML/CSS/JavaScript/JSON bytes matched the Pages artifact.
+Eighteen offline tests passed; test/build/deploy took 11/19/71 seconds. Chrome
+verified all five cards, including the model denominators and four intervals.
 
-The [durable publication archive](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-dashboard-42205845893)
+The real model archive exposed a projection bug: request settings were validated
+without the original receipt's token cap. The adapter now checks each original
+receipt before deduplicating settings for display. A regression reproduces the
+old rejection and checks missing, mismatched and boolean caps. No qualification
+report, candidate or measured result was changed.
+
+The [durable publication archive](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-dashboard-42215507117)
 contains the sources, public snapshot, log and hash receipts. Archive SHA256:
-`e55ca1cb0296b95d88d8149806ced0607279e8ee66ba0cd3f852554c358e2963`.
-Its 22 indexed files were verified after public download and copied to the
-external Mac/VM qualification stores. The temporary PR-branch deployment rule
-was removed, leaving the original `main` rule intact.
+`dd913ebe83dec958d31c3d2f3c8750b751887f944dabb79340f0d19418f233a7`.
+Its 23 indexed files were verified and copied to the external Mac/VM stores.
+The temporary PR-branch deployment rule was removed, leaving the original
+`main` rule intact. The earlier four-record publication remains in its own
+[retained release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-dashboard-42205845893).
 
 This qualifies publication of the retained scopes, not a new generation or
 numerical run. Manual fixture results remain explicitly manual; their later CI
