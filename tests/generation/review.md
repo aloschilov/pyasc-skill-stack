@@ -75,7 +75,9 @@ caller's external device-measurement receipt. It permits one tuner proposal with
 the same bounded review/repair cycle, using the codegen/API performance guidance.
 The new design must state the optimization hypothesis and tradeoff. Candidate,
 design, measurement and budget are immutable inputs read by the fresh tuner
-session. A repair cannot silently revert to the incumbent as a new optimization.
+session. Measurement and budget share `tuning-context.json`, so sequential reads,
+two output writes and the final completion fit the same 12-request ceiling.
+A repair cannot silently revert to the incumbent as a new optimization.
 
 An accepted simulator proposal leaves the incumbent selected and enters
 `awaiting-measurement`. The caller separately obtains an explicitly authorized

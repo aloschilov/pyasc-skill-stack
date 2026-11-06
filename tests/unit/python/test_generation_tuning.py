@@ -59,7 +59,13 @@ class TunerHandoffs(unittest.TestCase):
         self.assertNotEqual(result['proposed_candidate_sha256'],self.receipt['candidate_sha256'])
         row=review.read(self.root/'proposal/state.json')['cycles'][0]
         self.assertEqual(row['writer']['role'],'tuner');self.assertNotEqual(row['writer']['session_id'],row['reviewer']['session_id'])
-        self.assertIn('incumbent-measurement.json',row['writer']['read_inputs'])
+        self.assertIn('tuning-context.json',row['writer']['read_inputs'])
+        context=review.read(self.root/'proposal/cycle-1/writer/context/inputs/tuning-context.json')
+        self.assertEqual(context,{'measurement':self.plan['tuning']['measurement'],'budget':self.plan['tuning']['budget']})
+        # One auxiliary request, sequential skill/input reads, two writes and a
+        # final completion must fit without assuming parallel tool calls.
+        minimum_requests=1+len(self.plan['common']['skills'])+1+len(tuning.handoff_inputs(self.plan['tuning']))+2+1
+        self.assertLessEqual(minimum_requests,self.plan['spec']['writer']['rounds_per_attempt'])
         self.assertTrue((self.root/'proposal/cycle-1/verification/qualification.json').exists())
         with self.assertRaisesRegex(ValueError,'Never replay'):self.propose()
 

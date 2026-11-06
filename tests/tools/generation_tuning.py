@@ -64,7 +64,7 @@ def measurement(value, bound, runtime, contract):
 
 def handoff_inputs(value):
     return {'incumbent.py': value['candidate'].encode(), 'incumbent-design.md': value['design'].encode(),
-        'incumbent-measurement.json': canonical(value['measurement']), 'tuning-budget.json': canonical(value['budget'])}
+        'tuning-context.json': canonical({'measurement': value['measurement'], 'budget': value['budget']})}
 
 
 def validate_handoff(value, plan, source=ROOT):
