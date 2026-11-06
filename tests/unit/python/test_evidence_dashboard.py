@@ -36,7 +36,7 @@ class Dashboard(unittest.TestCase):
 
     def write_catalog(self): self.catalog.write_bytes(raw_json(self.spec))
 
-    def reviewed(self, accepted=True):
+    def reviewed(self, accepted=True, requests=None):
         common = {'model':{'requested':'gateway/test','expected_response':'test-1','profile':'test'},
             'runtime':{'backend':'Model','source_revision':'a'*40,'image':'image@sha256:'+'a'*64},
             'source_sha256':{'skills/example/SKILL.md':'a'*64},'cells':[{'id':'add','module':'test_add.py','cases':['tail']} ]}
@@ -45,7 +45,7 @@ class Dashboard(unittest.TestCase):
         report={'status':'accepted' if accepted else 'failed','validated_acceptance':accepted,'plan_sha256':plan['plan_sha256'],
             'candidate_sha256':'c'*64,'observed_model':'test-1','elapsed_seconds':12.0,'independent_model':False,'repair_attempts':0}
         inner=archive({'run/plan.json':plan,'run/report.json':report,'run/state.json':{'finished_at':'2026-11-05T10:00:00Z'},
-            'run/cell/usage.json':{'requests':[{'usage':{'observed_model':'test-1'}}]},
+            'run/cell/usage.json':{'requests':requests if requests is not None else [{'usage':{'observed_model':'test-1'}}]},
             'run/private/credential.json':{'secret':'NEVER-PUBLISH'},
             'run/arbitrary.py':b"raise RuntimeError('NEVER EXECUTE')"})
         verification={'run':1,'head':'b'*40,'archive_sha256':dash.digest(inner),'report':report,
@@ -61,6 +61,19 @@ class Dashboard(unittest.TestCase):
         self.assertEqual(record['availability'],'available');self.assertEqual(record['qualified'],1)
         self.assertEqual(record['level'],'simulator-numerical');self.assertIsNone(record['service_score'])
         text=(self.root/'out/data.json').read_text();self.assertNotIn('NEVER-PUBLISH',text);self.assertNotIn('arbitrary.py',text)
+
+    def test_wire_settings_validate_the_original_request_cap(self):
+        sys.path.insert(0, str(ROOT/'tests/tools'))
+        from generation_provider import request_settings
+        wire=request_settings({'max_tokens':24000,'reasoning_effort':'high','thinking':{'type':'enabled'}})
+        request={'max_tokens':24000,'request_settings':wire,'usage':{'observed_model':'test-1'}}
+        raw=self.reviewed(requests=[request])
+        row=dash.build(self.catalog,self.root/'valid-wire',loader=lambda _:raw,now=self.now)['records'][0]
+        self.assertEqual(row['availability'],'available');self.assertEqual(row['wire_settings'],[wire])
+        for cap in (None, 1, True):
+            changed=dict(request,max_tokens=cap);raw=self.reviewed(requests=[changed])
+            row=dash.build(self.catalog,self.root/str(cap),loader=lambda _:raw,now=self.now)['records'][0]
+            self.assertEqual(row['availability'],'unavailable');self.assertNotIn('wire_settings',row)
 
     def test_missing_malformed_and_checksum_failure_are_visible_without_acceptance(self):
         good=self.reviewed()

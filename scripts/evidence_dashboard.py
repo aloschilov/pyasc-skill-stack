@@ -217,14 +217,19 @@ def generated(archive, entry):
     usage = [bundle.json(n) for n in bundle.members if n.endswith('/usage.json') and '/private/' not in n]
     requests = [r for u in usage for r in u.get('requests', [])]
     result['observed_models'] = sorted({r['usage']['observed_model'] for r in requests if r.get('usage')})
-    result['wire_settings'] = list({json.dumps(r['request_settings'], sort_keys=True) for r in requests if r.get('request_settings')})
     # Reuse the trusted public allowlist; do not copy arbitrary artifact fields.
     import sys
     sys.path.insert(0, str(ROOT/'tests/tools'))
     from generation_models import inspect_request_settings
-    result['wire_settings'] = [json.loads(v) for v in sorted(result['wire_settings'])]
-    for value in result['wire_settings']:
-        inspect_request_settings({'request_settings': value}, value['max_tokens'], True)
+    settings = set()
+    for request in requests:
+        if request.get('request_settings') is not None:
+            value = request['request_settings']
+            # Validate the original receipt before deduplicating for display;
+            # synthesizing a request loses its independently recorded cap.
+            inspect_request_settings(request, value['max_tokens'], True)
+            settings.add(json.dumps(value, sort_keys=True))
+    result['wire_settings'] = [json.loads(v) for v in sorted(settings)]
     result['unknown_requests'] = sum('usage' not in r for r in requests)
     if result['status'] == 'complete': require(result['unknown_requests'] == 0, 'Complete cohort has unknown usage')
     return result
