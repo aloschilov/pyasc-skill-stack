@@ -243,7 +243,7 @@ class PairedPolicy(unittest.TestCase):
     def test_policy_limits_activation_and_disabled_observation_are_get_free(self):
         self.assertTrue(ops.policy(NOW, paired=True)['enabled'])
         for key, value in [('min_interval_hours', True), ('min_interval_hours', 1), ('max_age_hours', 1),
-                           ('max_run_hours', 2), ('enabled', 'true'), ('alert_issue', None),
+                           ('max_run_hours', 9), ('enabled', 'true'), ('alert_issue', None),
                            ('enabled_since', (NOW+timedelta(days=1)).isoformat())]:
             self.file.write_text(json.dumps({'schema_version':1, 'periodic': dict(self.config, **{key: value})}))
             with self.assertRaises((ValueError, TypeError)): ops.policy(NOW, paired=True)
@@ -346,7 +346,7 @@ class PairedObservation(unittest.TestCase):
         self.run.update(status='in_progress', conclusion=None)
         pending = self.monitor()
         self.assertEqual(pending['status'], 'pending'); self.assertIsNone(pending['last_qualified'])
-        self.assertIn('run-stalled', self.monitor(NOW+timedelta(hours=3))['alerts'])
+        self.assertIn('run-stalled', self.monitor(NOW+timedelta(hours=self.config['max_run_hours']))['alerts'])
 
     def test_green_paired_run_needs_matching_origin_complete_cells_and_intact_evidence(self):
         for filename, field, value in [('ci.json', 'approve_plan', 'bad'), ('result.json', 'cells', {}),
@@ -392,7 +392,7 @@ class PairedObservation(unittest.TestCase):
         self.assertIn('stale-coverage', monitor([])['alerts'])
         failed = dict(self.run, id=124, conclusion='failure', created_at=(NOW-timedelta(minutes=1)).isoformat())
         mixed = monitor([failed,self.run]); self.assertIn('run-failed', mixed['alerts']); self.assertIsNotNone(mixed['last_qualified'])
-        stalled = dict(self.run, status='queued', conclusion=None, created_at=(NOW-timedelta(hours=6)).isoformat())
+        stalled = dict(self.run, status='queued', conclusion=None, created_at=(NOW-timedelta(hours=self.config['max_run_hours']+1)).isoformat())
         self.assertIn('run-stalled', monitor([stalled])['alerts'])
         with patch.object(ops, 'api', return_value={'body':ops.MARKER, 'state':'open'}):
             with self.assertRaisesRegex(ValueError, 'unmarked'): ops.notify(healthy, self.config, NOW)

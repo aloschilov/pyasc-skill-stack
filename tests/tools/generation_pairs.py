@@ -12,7 +12,7 @@ import time
 
 from generation_compare import Bundle, require
 from generation_executor import Blocked, configure, execute, exclusive, external, save
-from generation_plan import ROOT, build_plan, canonical, digest, exact_keys, resource, write_plan
+from generation_plan import ROOT, LIMITS, build_plan, canonical, digest, exact_keys, resource, write_plan
 from generation_protocols import BASELINE, CONTRASTS, PROTOCOLS, audit_trace, context_files, prompt, provider_prompt
 from generation_provider import known_budget_exhaustion
 
@@ -44,13 +44,21 @@ def ordered_trials(cells, spec):
 def build_pairs(root=ROOT):
     spec = json.loads(resource(root, SPEC))
     exact_keys(spec, ('schema_version', 'matrix', 'protocols', 'repetitions', 'order_seed',
-                     'max_output_tokens', 'max_execution_seconds', 'periodic'), 'paired specification')
+                     'generation_seconds_per_attempt', 'max_output_tokens', 'max_execution_seconds', 'periodic'), 'paired specification')
     require(type(spec['schema_version']) is int and spec['schema_version'] == 1, 'Unknown paired schema')
     require(spec['protocols'] == list(PROTOCOLS), 'Declare all four protocols in canonical order')
     reps = spec['repetitions']
     require(type(reps) is int and 2 <= reps <= 8 and reps % 2 == 0, 'Use an even number of repetitions, 2..8')
     require(type(spec['order_seed']) is int and 0 <= spec['order_seed'] < 2**32, 'Explicit order seed required')
     common = build_plan(root, spec['matrix'])
+    seconds = spec['generation_seconds_per_attempt']
+    require(type(seconds) is int and 1 <= seconds <= LIMITS['generation_seconds_per_attempt'], 'Invalid paired generation deadline')
+    # This experiment has its own predeclared deadline. Keep the qualified
+    # single-run matrix unchanged and apply the same limit to every paired leg.
+    common['limits']['generation_seconds_per_attempt'] = seconds
+    common['maximum_work']['execution_seconds'] = len(common['cells'])*common['limits']['attempts_per_cell']*(
+        seconds+common['limits']['qualification_seconds_per_attempt'])
+    common['limits']['max_execution_seconds'] = common['maximum_work']['execution_seconds']
     for name in (SPEC, BASELINE, '.github/workflows/generation-paired.yml', 'scripts/generation_operations.py'):
         common['source_sha256'][name] = digest(resource(root, name))
     trials = ordered_trials(common['cells'], spec)
@@ -61,7 +69,7 @@ def build_pairs(root=ROOT):
     for field in ('output_tokens', 'execution_seconds'):
         cap = spec['max_'+field]
         require(type(cap) is int and cap > 0 and maximum[field] <= cap, 'Paired aggregate '+field+' budget exceeded')
-    require(spec['max_execution_seconds'] <= 14400, 'Paired execution must fit the 300-minute CI job including setup/collection')
+    require(spec['max_execution_seconds'] <= 28800, 'Paired execution must fit the 600-minute CI job including setup/collection')
     return {'schema_version': 1, 'kind': 'paired-generation-plan', 'spec': spec, 'common': common,
         'protocols': PROTOCOLS, 'contrasts': CONTRASTS, 'trials': trials, 'maximum_work': maximum,
         'order_design': 'seeded-mirrored-rotations-v1', 'generation_seed': None,

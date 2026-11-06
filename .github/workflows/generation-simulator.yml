@@ -32,7 +32,7 @@ jobs:
   qualify:
     if: github.repository == 'aloschilov/pyasc-skill-stack' && (inputs.experiment == 'single' || inputs.experiment == 'paired') && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && inputs.experiment == 'paired' && inputs.action == 'plan'))
     runs-on: [self-hosted, arm64]
-    timeout-minutes: ${{ inputs.experiment == 'paired' && 300 || 40 }}
+    timeout-minutes: ${{ inputs.experiment == 'paired' && 600 || 40 }}
     permissions:
       contents: read
       actions: read
