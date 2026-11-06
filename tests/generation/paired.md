@@ -39,6 +39,10 @@ ABI and restrictions. Those necessities are not counted as extra guidance.
 P6-P4 replaces two context packages; it does not isolate the skills effect.
 The new [baseline notes](context/baseline.md) have their own version and contain no
 reference kernel. They do not pretend to restore the removed historical AGENTS.md.
+Version 2 uses API names exercised by the qualified fixed fixtures. Version 1
+incorrectly advertised `load`/`store` and a reduction shape rule; its pilot runs
+are invalid controls and must not be pooled with version 2. The fixture API check
+catches unsupported names; semantic changes to these notes still need review.
 
 `paired.json` predeclares add, reduction and broadcast through the existing
 matrix, all four legs and two repetitions per task: **24 trials**, six matched

@@ -1,9 +1,11 @@
 """Synthetic paired receipts and offline protocol tests, never qualification evidence."""
 from copy import deepcopy
 from contextlib import nullcontext
+import ast
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import sys
 import tempfile
@@ -30,6 +32,17 @@ def signed_plan():
 class PairedDesign(unittest.TestCase):
     def setUp(self):
         self.plan = signed_plan()
+
+    def test_baseline_apis_are_exercised_by_qualified_fixtures(self):
+        exercised = set()
+        for name in ('add', 'reduce', 'broadcast'):
+            tree = ast.parse((ROOT/'tests/generation/fixtures'/f'{name}.py').read_text())
+            exercised.update(node.attr for node in ast.walk(tree)
+                if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
+                and node.value.id == 'asctile')
+        advertised = set(re.findall(r'`asctile\.(\w+)`', (ROOT/protocols.BASELINE).read_text()))
+        self.assertTrue(advertised)
+        self.assertFalse(advertised-exercised, 'Baseline advertises API absent from qualified fixtures')
 
     def test_plan_is_predeclared_bounded_and_counterbalances_each_task(self):
         self.assertEqual(self.plan, signed_plan())

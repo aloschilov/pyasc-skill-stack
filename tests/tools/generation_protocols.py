@@ -8,7 +8,7 @@ BASELINE = 'tests/generation/context/baseline.md'
 PROTOCOLS = {
     'P2': {'name': 'minimal', 'guidance': False, 'baseline_context': False, 'skills': False},
     'P3': {'name': 'guided', 'guidance': True, 'baseline_context': False, 'skills': False},
-    'P4': {'name': 'baseline-notes-v1', 'guidance': True, 'baseline_context': True, 'skills': False},
+    'P4': {'name': 'baseline-notes-v2', 'guidance': True, 'baseline_context': True, 'skills': False},
     'P6': {'name': 'skills', 'guidance': True, 'baseline_context': False, 'skills': True},
 }
 # P6-P3 isolates the skills package/retrieval intervention. P6-P4 replaces two
