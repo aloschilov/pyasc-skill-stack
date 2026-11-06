@@ -134,7 +134,7 @@ class PairedDesign(unittest.TestCase):
             plan = pairs.trial_plan(self.plan, t)
             for name in protocols.context_files(plan):
                 dest = context/name;dest.parent.mkdir(parents=True, exist_ok=True);shutil.copyfile(ROOT/name, dest)
-            usage = {'usage_complete': True, 'requests': [{'usage': {'observed_model': plan['model']['expected_response']},
+            usage = {'usage_complete': True, 'error': None, 'requests': [{'usage': {'observed_model': plan['model']['expected_response']},
                 'audit': {'prompt_present': True, 'tool_schema_sha256': 'a'*64, 'visible_skills': []}}]}
             def client(command, directory, name, *args, **kwargs):
                 if name == 'generation':

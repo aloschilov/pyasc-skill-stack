@@ -140,40 +140,12 @@ def configure(config, plan, context, project):
     return config
 
 
-def generate(attempt, plan, contract, context):
+def run_session(attempt, plan, project, config, prompt, observe_request=None):
+    """One fresh OpenCode session using the shared measured provider gate."""
     limits = plan['limits']; model = plan['model']['requested']; provider, model_id = model.split('/')
-    project = attempt/'project'; project.mkdir()
-    state = attempt/'private'; state.mkdir(mode=0o700)
-    skills = {s: context/'skills'/s for s in plan['skills']}
-    config = configure(json.loads((context/f'integrations/opencode/profiles/{plan["model"]["profile"]}.json').read_text()), plan, context, project)
-    prompt = ('Load these pinned skills with the skill tool: '+', '.join(skills)+'.\n'
-        'Write candidate.py for this task: '+json.dumps(contract)+'.\n'
-        'Use import asc and from asc.experimental import asctile. Define @asctile.jit device functions '
-        'and def launch('+', '.join(contract['arguments'])+'). The host launch body must be exactly '
-        'one kernel[block_count](input tensors, out, optional literal scalar arguments) call; '
-        'block_count is '+str(contract['blocks'])+'. No Torch, CPU arithmetic, imports inside functions, '
-        'runtime configuration, main, tests, file I/O or function defaults in candidate.py. '
-        'Supported device calls are asctile APIs, tensor reshape/broadcast_to and scalar min/max/range/len/int/float/bool/abs. '
-        'All inputs are CPU tensors for Model simulation; the harness owns the oracle and poisoned output. '
-        'Do not copy a reference kernel. Do not run commands. Write only candidate.py.')
-    intervention = plan.get('intervention')
-    observe_request = None
-    if intervention:
-        from generation_protocols import context_files, prompt as paired_prompt, request_audit
-        prompt = paired_prompt(contract, intervention['id'], skills, context,
-            project=project if intervention.get('context_path_format') == 'relative-read-call-v1' else None)
-        visible = context_files(plan)
-        save(attempt/'isolation.json', {'protocol': intervention, 'context_sha256': visible,
-            'project': str(project), 'context': str(context), 'private': str(state),
-            'fresh_project': not any(project.iterdir()), 'fresh_private': not any(state.iterdir()),
-            'permission': config['permission']})
-        def observe_request(number, body, payload):
-            path = state/f'provider-request-{number}.bin'
-            with path.open('xb') as handle: handle.write(payload)
-            path.chmod(0o600)
-            try: return request_audit(body, prompt, intervention['id'], intervention['selected_skills'], context)
-            except (ValueError, KeyError, TypeError) as exc:
-                raise BudgetError('Paired request context/schema audit failed') from exc
+    state = attempt/'private'
+    state.mkdir(mode=0o700, exist_ok=True)
+    if any(state.iterdir()): raise Blocked('Existing private session is never replayed')
     (attempt/'prompt.txt').write_text(prompt)
     deadline = time.monotonic() + limits['generation_seconds_per_attempt']
     # OpenCode 1.19 resolves edit rules against its VCS worktree. Without a
@@ -209,10 +181,48 @@ def generate(attempt, plan, contract, context):
         finally:
             save(attempt/'usage.json', gate.snapshot())
     usage = gate.snapshot()
+    return result, usage
+
+
+def generate(attempt, plan, contract, context):
+    limits = plan['limits']; model = plan['model']['requested']; provider, model_id = model.split('/')
+    project = attempt/'project'; project.mkdir()
+    state = attempt/'private'; state.mkdir(mode=0o700)
+    skills = {s: context/'skills'/s for s in plan['skills']}
+    config = configure(json.loads((context/f'integrations/opencode/profiles/{plan["model"]["profile"]}.json').read_text()), plan, context, project)
+    prompt = ('Load these pinned skills with the skill tool: '+', '.join(skills)+'.\n'
+        'Write candidate.py for this task: '+json.dumps(contract)+'.\n'
+        'Use import asc and from asc.experimental import asctile. Define @asctile.jit device functions '
+        'and def launch('+', '.join(contract['arguments'])+'). The host launch body must be exactly '
+        'one kernel[block_count](input tensors, out, optional literal scalar arguments) call; '
+        'block_count is '+str(contract['blocks'])+'. No Torch, CPU arithmetic, imports inside functions, '
+        'runtime configuration, main, tests, file I/O or function defaults in candidate.py. '
+        'Supported device calls are asctile APIs, tensor reshape/broadcast_to and scalar min/max/range/len/int/float/bool/abs. '
+        'All inputs are CPU tensors for Model simulation; the harness owns the oracle and poisoned output. '
+        'Do not copy a reference kernel. Do not run commands. Write only candidate.py.')
+    intervention = plan.get('intervention')
+    observe_request = None
+    if intervention:
+        from generation_protocols import context_files, prompt as paired_prompt, request_audit
+        prompt = paired_prompt(contract, intervention['id'], skills, context,
+            project=project if intervention.get('context_path_format') == 'relative-read-call-v1' else None)
+        visible = context_files(plan)
+        save(attempt/'isolation.json', {'protocol': intervention, 'context_sha256': visible,
+            'project': str(project), 'context': str(context), 'private': str(state),
+            'fresh_project': not any(project.iterdir()), 'fresh_private': not any(state.iterdir()),
+            'permission': config['permission']})
+        def observe_request(number, body, payload):
+            path = state/f'provider-request-{number}.bin'
+            with path.open('xb') as handle: handle.write(payload)
+            path.chmod(0o600)
+            try: return request_audit(body, prompt, intervention['id'], intervention['selected_skills'], context)
+            except (ValueError, KeyError, TypeError) as exc:
+                raise BudgetError('Paired request context/schema audit failed') from exc
+    result, usage = run_session(attempt, plan, project, config, prompt, observe_request)
     budget_failure = known_budget_exhaustion(usage, limits)
     if budget_failure and not intervention:
         raise ValueError('Generation budget exhausted; complete provider usage retained')
-    if not budget_failure and (result is None or result['exit_code'] or gate.error or not usage['usage_complete']):
+    if not budget_failure and (result is None or result['exit_code'] or usage['error'] or not usage['usage_complete']):
         raise Blocked('Generation or provider usage incomplete; inspect retained evidence')
     from generation_protocols import context_files
     for name, sha in context_files(plan).items():
