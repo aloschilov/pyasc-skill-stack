@@ -182,5 +182,47 @@ class Dashboard(unittest.TestCase):
             value=dict(valid,**change)
             with self.subTest(change=change),self.assertRaises(ValueError):dash.validate_projection(value)
 
+    def test_truncated_compressed_record_is_unavailable_without_losing_healthy_record(self):
+        healthy=self.reviewed(); broken=healthy[:-8]
+        self.spec['sources'].append(dict(self.entry,id='truncated',sha256=dash.digest(broken)))
+        self.write_catalog(); raw=iter([healthy,broken])
+        rows=dash.build(self.catalog,self.root/'out',loader=lambda _:next(raw),now=self.now)['records']
+        self.assertEqual([r['availability'] for r in rows],['available','unavailable'])
+        self.assertNotIn('qualified',rows[1])
+
+    def paired(self, status='complete', delta=1.0, interval=None):
+        reviewed=dash.Archive(self.reviewed())
+        inner=dash.Archive(reviewed.raw('result/generation.tar.gz',dash.MAX_ARCHIVE))
+        plan=inner.json('run/plan.json'); plan.pop('plan_sha256')
+        plan.update(kind='paired-generation-plan',trials=[{'id':'a'},{'id':'b'}],spec={'repetitions':1})
+        plan['plan_sha256']=dash.digest(json.dumps(plan,sort_keys=True,separators=(',',':')).encode())
+        comparison={'valid_pairs':1 if status=='complete' else 0,'denominator':1,
+            'coverage_gaps':[] if status=='complete' else ['b'],'qualification_delta':delta,
+            'paired_rows':[{'qualification_delta':1.0}],
+            'uncertainty':{'method':'Hoeffding 95%, independent paired trials, D in [-1,1]',
+                'interval':[-1,1] if interval is None else interval}}
+        report={'plan_sha256':plan['plan_sha256'],'status':status,'trial_denominator':2,
+            'observations':{'a':{'status':'valid','outcome':'qualified'},
+                'b':{'status':'valid' if status=='complete' else 'unresolved','outcome':'candidate-failed' if status=='complete' else 'unresolved'}},
+            'comparisons':{'B-A':comparison}}
+        files={n:inner.raw(n,dash.MAX_ARCHIVE) for n in inner.members}
+        files.update({'run/plan.json':raw_json(plan),'run/report.json':raw_json(report)})
+        bundle=archive(files);v=reviewed.json('result/verification.json')
+        v.update(archive_sha256=dash.digest(bundle),outcomes=dict(dash.Counter(o['outcome'] for o in report['observations'].values())),
+            elapsed_seconds=12.0,accepted_numerical_checks=3,accepted_execution_launches=1,rejecting_controls=1)
+        outer={'generation.tar.gz':bundle,'ci-run.json':reviewed.raw('result/ci-run.json'),'verification.json':raw_json(v)}
+        outer['files.json']=raw_json({n:dash.digest(v) for n,v in outer.items()})
+        return dash.Archive(archive({'result/'+n:v for n,v in outer.items()}))
+
+    def test_paired_projection_suppresses_incomplete_effect_and_rejects_invented_precision(self):
+        entry=dict(self.entry,kind='paired')
+        self.assertEqual(dash.generated(self.paired(),entry)['comparisons']['B-A']['interval'],[-1,1])
+        result=dash.generated(self.paired(status='incomplete',delta=None),entry)
+        self.assertEqual(result['status'],'incomplete');self.assertEqual(result['comparisons'],{})
+        with self.assertRaisesRegex(ValueError,'Partial comparison'):
+            dash.generated(self.paired(status='incomplete'),entry)
+        with self.assertRaisesRegex(ValueError,'Invalid uncertainty'):
+            dash.generated(self.paired(interval=[.9,1]),entry)
+
 
 if __name__=='__main__':unittest.main()

@@ -17,6 +17,7 @@ import shutil
 import tarfile
 import urllib.error
 import urllib.request
+import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = 'aloschilov/pyasc-skill-stack'
@@ -189,8 +190,12 @@ def generated(archive, entry):
                 require(len(rows) == comparison['denominator'] and rows, 'Invalid pair denominator')
                 expected = sum(finite(r['qualification_delta']) for r in rows)/len(rows)
                 require(abs(expected-finite(delta)) < 1e-12 and -1 <= delta <= 1, 'Contradictory effect estimate')
-                interval = comparison['uncertainty']['interval']
-                require(len(interval) == 2 and -1 <= finite(interval[0]) <= delta <= finite(interval[1]) <= 1, 'Invalid uncertainty')
+                uncertainty = comparison['uncertainty']; interval = uncertainty['interval']
+                radius = math.sqrt(2*math.log(40)/len(rows))
+                expected_interval = [max(-1, delta-radius), min(1, delta+radius)]
+                require(uncertainty['method'] == 'Hoeffding 95%, independent paired trials, D in [-1,1]'
+                    and len(interval) == 2 and all(math.isclose(finite(a), b, abs_tol=1e-12)
+                        for a,b in zip(interval, expected_interval)), 'Invalid uncertainty')
                 result['comparisons'][name] = {'pairs': len(rows), 'qualification_delta': delta, 'interval': interval}
         result.update(status=report['status'], counts=counts, required=len(trials), repetitions=plan['spec']['repetitions'],
             qualified=counts.get('qualified', 0), observed_models=sorted({o['model']['observed'] for o in observations.values()
@@ -324,7 +329,8 @@ def build(catalog_path, output, loader=fetch, now=None):
             age = (now-timestamp(projection['finished_at'])).total_seconds()/3600
             require(age >= -1, 'Future result timestamp')
             record.update(projection, availability='available', freshness='stale' if age > spec['max_age_hours'] else 'recent')
-        except (OSError, ValueError, KeyError, TypeError, tarfile.TarError) as exc:
+        except (OSError, ValueError, LookupError, TypeError, AttributeError, ArithmeticError,
+                EOFError, RecursionError, zlib.error, tarfile.TarError) as exc:
             # External payloads/error strings are never copied into public pages.
             record.update(availability='unavailable', freshness='unknown', error='Evidence could not be retrieved or validated',
                           error_type=type(exc).__name__)
