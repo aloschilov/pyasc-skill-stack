@@ -65,6 +65,11 @@ Use `asctile.TensorLocation.UB/L1/L0A/L0B/L0C`, not the removed
 `TileLocation` spelling. Shape rank, offsets rank, and `real_shape` rank must
 match. Static local shapes must be literals or compile-time values.
 
+For a sum reduction, the pinned API is `asctile.reduce_sum(tile, axis)`;
+`asctile.sum` is not exported. Reducing a padded local tile of shape `[1, C]`
+along axis `1` produces shape `[1]`, suitable for a one-element GM output.
+Pad with zero and preserve the task's output dtype and logical reduction axis.
+
 ## Tails and padding
 
 For a partial tile, allocate an aligned physical `shape` and pass the logical

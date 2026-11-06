@@ -34,6 +34,12 @@ comparison also needs repeated observations and an explicit treatment of noise;
 a single hardware smoke establishes neither a causal skills benefit nor a
 reliable performance improvement.
 
+The opt-in [paired context experiment](../tests/generation/paired.md) implements
+four explicit protocols through the shared generation executor. It fixes the
+trial inventory before execution, audits actual context isolation, and retains
+invalid/missing controls without interpreting them as a skills gain. Its manual
+CI path is under qualification; periodic evaluation remains disabled.
+
 ## Evidence retention
 
 Keep source/configuration hashes, native session provenance, candidate and

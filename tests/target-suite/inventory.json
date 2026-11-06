@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "upstream_revision": "d0f64a63c432761aa57648e67be7582780a17561",
+  "runtime_image": "ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:eb3b5684ddd5569cb6df1acea8980e649f07bf2f0782622cd55b30b9a504f065",
+  "platform": "Ascend950PR_9599",
+  "inventory_format": "target-relative-pytest-nodeids-v1",
+  "case_count": 1155,
+  "case_ids_sha256": "780984e4fb44e08e1b643b6cc867f92f6f5010c003c911fa34a4e044c8d4b90d",
+  "source_sha256": {
+    "reference/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "reference/asctile/PIN.json": "ffdd6efe06a27c26b36ffb4caea870aa5679bc38bd9ad1a7ccfad8fb58ac5d55",
+    "reference/asctile/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "reference/asctile/conftest.py": "566e750cd09c6b202c0c792664882708feb3add8dda7407c75f4a933c8d6bb7a",
+    "reference/asctile/target/__init__.py": "7424da3a1347b0206e9de7f2b962ae2fff1db8b9f78bec0995fd43c16795325b",
+    "reference/asctile/target/conftest.py": "281c69b65a72d1246611db1a400302e585d80790253b3377a03e20dab186d2f8",
+    "reference/asctile/target/helpers.py": "d2dcee76c783944f7872901d9b6291a8743009ea098341a418888464b0e04952",
+    "reference/asctile/target/kimi_k3/__init__.py": "7424da3a1347b0206e9de7f2b962ae2fff1db8b9f78bec0995fd43c16795325b",
+    "reference/asctile/target/kimi_k3/test_attn_residual.py": "ac2ccddbd58adad195474029c5fb732ffcfd7a809b07b0c5eb5ad4454a1e9603",
+    "reference/asctile/target/kimi_k3/test_kda_chunk_delta_h.py": "d68d25bd5b31fb11d601d44c01b54ef358ad20c665320e16f23cdd365bf9f587",
+    "reference/asctile/target/matmul_v3/__init__.py": "9dc5e8b27aca276ad4ac520d381bc80fa577db4375fa91e2b6fae7627da66b49",
+    "reference/asctile/target/matmul_v3/test_matmul_v3_cube_only.py": "a1d5d0a11f9a639f39b03e24215e7291236da9f7060979158e7e5023da3c7bef",
+    "reference/asctile/target/matmul_v3/test_matmul_v3_fixpipe_opti.py": "af87d785afa26a3d6d1f144331a9523fe8c3cdfcb5940398598db15b54063fec",
+    "reference/asctile/target/matmul_v3/test_matmul_v3_stream_k.py": "9178d5e9b2a9140cd929c291fdd66e07f210298d2b4add804764c197a210c972",
+    "reference/asctile/target/test_addcdiv.py": "2b79a406e8540dcab1b0be67663843f06502651618814e983601a37881c66d51",
+    "reference/asctile/target/test_broadcast.py": "665898af02f0b3c11e3972b199293adbf467a22fa3200d4883a37911dac93a20",
+    "reference/asctile/target/test_cast.py": "5d15b486ba2838a55271186d0e7d99b5d51cda3483f4d5cbb2b4ae84971b511c",
+    "reference/asctile/target/test_fused_infer_attention_score.py": "e6cad95b4ce21c59f90b0eec110d8da4babceb2b24ffbfd8d05f402d25c58b82",
+    "reference/asctile/target/test_gather.py": "6b30cd6010ed66eb9a37832c188994aa4be0c64b04927f60c80bb8c6be102df1",
+    "reference/asctile/target/test_gelu.py": "3add918ba96f73ee236b009536695e6e6fb81f31a8cd8eac4b696b81efd2fec8",
+    "reference/asctile/target/test_kl_div.py": "c44c6955833b535be687941b82ca50361d97647c5a700f60cb83401398123e32",
+    "reference/asctile/target/test_layer_norm.py": "13d23e80eca3a2936ac01e8169e79a76044d0ccc713cd8a0e4b82955e5b1f631",
+    "reference/asctile/target/test_one_hot.py": "c56cf21074b2eae9ffd98ca6481a8bafe7ab5b882676053d422384043a11a9a7",
+    "reference/asctile/target/test_reciprocal.py": "46270ef4ec6b63f7e9cb3efb87058ebebf8a95de86d4d7593d62663832d912c5",
+    "reference/asctile/target/test_reduce_max.py": "e920527e7422570a31347905375d54ab078f18544b2abf93b8430842fee28e7b",
+    "reference/asctile/target/test_reduce_sum.py": "2924b7ec6f9c6e3a9961938fb15d15400601b6d85bb9eccb9d36ce6c88fee24a",
+    "reference/asctile/target/test_rms_norm.py": "12908d4ab821cdc8689f3e1a000281cdf39e0f53d3ca13a2d4a3688f65a3d094",
+    "reference/asctile/target/test_rms_norm_fused.py": "ec0a702f2bc27c5741bc28f969e2999cbd37d8b3b091abaeedf529b53d44a387",
+    "reference/asctile/target/test_select.py": "4bdefa8864f755e05ccc519e129fcf5c31e383541b9679ae7ef72ca4cc5c9b14",
+    "reference/asctile/target/test_softmax.py": "339181518ab24b51615594f668959e505a8df05a949888d55566d93ebf74c8f3",
+    "reference/asctile/target/test_split_v.py": "4b706010122cf74914b01327346254fde336d9ff861f0b547e45a7fbc5c785ff",
+    "reference/asctile/target/test_transpose.py": "929df76bcdd1386bcf79ced137164aa54dd36060069756c635d1c46a2414b391",
+    "reference/asctile/target/test_vadd.py": "c233a1ac136c2f3b7b2f2450771907545aa46a3c66f48ceaef732a8ebabeddfc",
+    "reference/images/ENV.json": "b20773be143034f53192350a5be9567793be164bcb859f74226c61977704f5da"
+  },
+  "modules": {
+    "kimi_k3/test_attn_residual.py": {
+      "case_count": 10,
+      "case_ids_sha256": "3554d9448d9bce6c39ea40c94d5ac2b37a663c6fff4f268619272e020a322aa8"
+    },
+    "kimi_k3/test_kda_chunk_delta_h.py": {
+      "case_count": 14,
+      "case_ids_sha256": "ac77f2e7a6a9a7def6ce6ff125b3652624a3e761c867d35b05e7ef2a2f17a5da"
+    },
+    "matmul_v3/test_matmul_v3_cube_only.py": {
+      "case_count": 184,
+      "case_ids_sha256": "7d6eb72bbc204bbabd05f9cd4f4b00bfef8018aea7123e593449242757e04d9b"
+    },
+    "matmul_v3/test_matmul_v3_fixpipe_opti.py": {
+      "case_count": 40,
+      "case_ids_sha256": "37fdc69b68307c4324e4ac991745d93e043a395107f2b57032a6c95ee4c00441"
+    },
+    "matmul_v3/test_matmul_v3_stream_k.py": {
+      "case_count": 20,
+      "case_ids_sha256": "02a8565a01c9fc1198dd11aea30a5c026f60df6519c39776701f23fca7753cf7"
+    },
+    "test_addcdiv.py": {
+      "case_count": 50,
+      "case_ids_sha256": "0bb54572fd08a2ac1ccbf101f654856daff1c41a3ba839117f183996706c0bef"
+    },
+    "test_broadcast.py": {
+      "case_count": 78,
+      "case_ids_sha256": "29a567b4356c83b63d95e04279abfb126884d493ccb4a13dfaa2cc890eca32fa"
+    },
+    "test_cast.py": {
+      "case_count": 104,
+      "case_ids_sha256": "58adfde10be6eeeb64e8926ea8ce1dcaa6b9442c8ab97bbf28795bbe3b801a8c"
+    },
+    "test_fused_infer_attention_score.py": {
+      "case_count": 12,
+      "case_ids_sha256": "a7875487d2f177347c4d33dd7f77e577dfcb8805ddad9766cd54070d1dd97333"
+    },
+    "test_gather.py": {
+      "case_count": 14,
+      "case_ids_sha256": "0736065e527a73d165e6342fa49079e80103f01bc68cece6a8ba4cc007df4829"
+    },
+    "test_gelu.py": {
+      "case_count": 2,
+      "case_ids_sha256": "79ccd48877fd55ef5e20e474b7bb13d3ed8543ed8de10824be561c36cc5512b1"
+    },
+    "test_kl_div.py": {
+      "case_count": 24,
+      "case_ids_sha256": "2dcd8d14adb094cfee2bb5e7282ecb3fe4194e07c894c9526bec1a797e017320"
+    },
+    "test_layer_norm.py": {
+      "case_count": 24,
+      "case_ids_sha256": "8f8a10140efe4cd4b8f1a90ad04bbebe34bba95703681962df48b662eff310ed"
+    },
+    "test_one_hot.py": {
+      "case_count": 26,
+      "case_ids_sha256": "29f8f09f54ef58a3e8f6027ec8a3f98e891c223ae0e184393cdac8a650b8ae98"
+    },
+    "test_reciprocal.py": {
+      "case_count": 44,
+      "case_ids_sha256": "841aa03dd729e7aa9853300398d90d9805dfec69ca6ee1453a169892e0e94ea1"
+    },
+    "test_reduce_max.py": {
+      "case_count": 30,
+      "case_ids_sha256": "ee32f3473e27758c65d0249d5b7a303cb431609f02a3a674b5ba0270f7c14c5f"
+    },
+    "test_reduce_sum.py": {
+      "case_count": 100,
+      "case_ids_sha256": "967e339dc5671f7222ab8af466f00a594d934d95473ca06473e1a47b30b5f1e7"
+    },
+    "test_rms_norm.py": {
+      "case_count": 30,
+      "case_ids_sha256": "49ef797955dd7956ece672af32395e0b0f354289f0b7bde420eb6a8ca1c82374"
+    },
+    "test_rms_norm_fused.py": {
+      "case_count": 30,
+      "case_ids_sha256": "f323301fdfb041d48de1b75933da09d3b293ae9467984fefc9019e1c1ecc8a9a"
+    },
+    "test_select.py": {
+      "case_count": 64,
+      "case_ids_sha256": "d945bd0edace2d0205daf43d20bb47509635453577b9487562f62227b31274ee"
+    },
+    "test_softmax.py": {
+      "case_count": 80,
+      "case_ids_sha256": "2fb6613ca424dc2b2b1c35a8359b4719f51ee498db7fe1ca65c2942f09ae7c5c"
+    },
+    "test_split_v.py": {
+      "case_count": 54,
+      "case_ids_sha256": "7e166e45a0e656a76a7063aaa93cf0e572183f17ad7bedf06a8b97a62e080f51"
+    },
+    "test_transpose.py": {
+      "case_count": 13,
+      "case_ids_sha256": "21583729cf00d2459518acd8c8aedbbecddd80c59e314cda8da2fe3a79f76d1e"
+    },
+    "test_vadd.py": {
+      "case_count": 108,
+      "case_ids_sha256": "5fbdc67d13690468398f85bdb1c4425e36e48a45c7fe2c9d24ccf42a90bb55b1"
+    }
+  }
+}

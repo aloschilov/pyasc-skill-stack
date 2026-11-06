@@ -132,6 +132,8 @@ incur charges; see [tests](tests/README.md).
   subjects, never correctness or performance references.
 - [Verification status](docs/verification-status.md): measured outcomes and
   remaining limitations. Simulator success does not close the hardware gate.
+- [Public evidence dashboard](https://aloschilov.github.io/pyasc-skill-stack/):
+  retained results with exact scope, freshness and archive links; [publication contract](dashboard/README.md).
 - [Review order](docs/review-order.md): run the upstream target suite.
 - [CANNBench smoke](integrations/cannbench/README.md): one-operator external NPU evaluation.
 - [Review/tuning automation follow-up](https://github.com/aloschilov/pyasc-skill-stack/issues/20):
@@ -154,6 +156,12 @@ Foreign links and copied skill directories remain untouched; remove old copies
 explicitly to avoid duplicate discovery. Historical receipts keep their original
 `pyasc-*` names and hashes. Existing CI continuation validates that recorded
 namespace instead of relabeling an old run.
+
+The generation matrix and reviewer use the same `asctile-*` names. Retained
+review plans select their original namespace from hash-bound inputs; mixed
+namespaces or missing reviewer skills fail before execution. Historical
+generation results retain their original skills and do not qualify the renamed
+context for new generation.
 
 No optional `asctile-u-*` namespace is introduced: a name would not make
 checkout-dependent verification self-contained. `asctile-target-operator` is
