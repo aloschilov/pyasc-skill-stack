@@ -78,6 +78,8 @@ class PairedDesign(unittest.TestCase):
                     relative = os.path.relpath(context/name, project)
                     self.assertEqual(rules.get(relative, rules['*']), 'deny' if name.startswith('integrations/') else 'allow')
                 self.assertEqual(rules.get('../../../../source/oracle.py', rules['*']), 'deny')
+                self.assertEqual(config['permission']['glob'], 'deny')
+                self.assertEqual(config['permission']['grep'], 'deny')
 
     def test_control_generation_does_not_require_unselected_skill_files(self):
         # Exercise generate itself with a fake client, not merely context_files.
@@ -288,13 +290,24 @@ class PairedReceipts(unittest.TestCase):
         events=[json.loads(s) for s in (p/'generation.stdout').read_text().splitlines()]
         denied={'sessionID':'session-'+t['id'],'part':{'tool':'read','state':{'status':'error',
             'input':{'filePath':'/unplanned/secret'},'error':'The user has specified a rule which prevents you from using this specific tool call.'}}}
-        events += [denied, {'sessionID':'session-'+t['id'],'part':{'tool':'glob','state':{'status':'completed',
-            'input':{'path':str((context/protocols.BASELINE).parent)}}}}]
+        events += [denied]
         def audit():return protocols.audit_trace('\n'.join(json.dumps(e) for e in events),project,context,pairs.trial_plan(self.plan,t),source_context=root/'context')
         trace=audit();self.assertEqual(trace['denied_accesses'][0]['path'],'/unplanned/secret')
         self.assertTrue(trace['baseline_read'])
         denied['part']['state']['status']='completed'
         with self.assertRaisesRegex(Blocked,'Unplanned file access'):audit()
+        denied['part']['state']['status']='error'
+        for tool in ('glob', 'grep'):
+            attempted = {'sessionID':'session-'+t['id'],'part':{'tool':tool,'state':{'status':'error',
+                'input':{'path':str(project.parent/'private/data/opencode/tool-output'), 'pattern':'**/*'},
+                'error':denied['part']['state']['error']}}}
+            events.append(attempted)
+            self.assertEqual(len(audit()['denied_accesses']), 2)
+            attempted['part']['state'].update(status='completed', output='No files found')
+            with self.assertRaisesRegex(Blocked, 'Directory search is disabled'): audit()
+            attempted['part']['state'].update(status='error', error='ripgrep execution failed', output='')
+            with self.assertRaisesRegex(Blocked, 'Directory search is disabled'): audit()
+            events.pop()
 
     def test_status_and_nonfinite_metrics_are_not_valid_pair_observations(self):
         t = self.plan['trials'][0]
@@ -411,9 +424,14 @@ class PairedCI(unittest.TestCase):
         self.assertEqual(set(workflow[True]), {'pull_request', 'workflow_dispatch'})
         self.assertEqual(workflow[True]['workflow_dispatch']['inputs']['mode']['default'], 'plan')
         job = workflow['jobs']['paired']
+        self.assertEqual(set(workflow['jobs']), {'prepare','paired'})  # Cadence skip receipt contract.
         self.assertEqual(job['uses'], './.github/workflows/generation-simulator.yml')
-        self.assertIn("github.event_name == 'workflow_dispatch'", job['with']['action'])
-        self.assertIn("|| 'plan'", job['with']['action'])
+        self.assertEqual(job['needs'], 'prepare')
+        self.assertIn("github.event_name != 'pull_request'", job['if'])
+        self.assertIn('needs.prepare.outputs.action', job['with']['action'])
+        self.assertNotIn('OPENCODE_API_KEY', str(workflow['jobs']['prepare']))
+        self.assertIn('generation_operations.py plan --paired', str(workflow['jobs']['prepare']))
+        self.assertFalse(json.loads((ROOT/'tests/generation/paired.json').read_text())['periodic']['enabled'])
 
     def test_plan_and_archive_are_offline_and_private_bytes_are_excluded(self):
         with patch.dict(os.environ, self.env, clear=True), patch.object(ci.subprocess, 'check_output', return_value='synthetic-revision\n'), \
@@ -434,14 +452,33 @@ class PairedCI(unittest.TestCase):
         with patch.dict(os.environ, self.env, clear=True), patch.object(ci.subprocess, 'check_output', return_value='synthetic-revision\n'):
             self.assertEqual(ci.prepare(self.root), 0)
         for key, value, message in [('GITHUB_EVENT_NAME', 'schedule', 'not activated'),
-                                    ('GITHUB_EVENT_NAME', 'pull_request', 'manual controller'),
-                                    ('GITHUB_WORKFLOW_REF', 'wrong', 'manual controller'),
+                                    ('GITHUB_EVENT_NAME', 'pull_request', 'explicit controller'),
+                                    ('GITHUB_WORKFLOW_REF', 'wrong', 'explicit controller'),
                                     ('APPROVE_PLAN', '0'*64, 'digest mismatch')]:
             with self.subTest(key=key, value=value):
                 env = dict(self.env, **{key: value})
                 with patch.dict(os.environ, env, clear=True), patch.object(ci.subprocess, 'check_output', return_value='synthetic-revision\n'), \
                      self.assertRaisesRegex(ValueError, message):
                     ci.prepare(Path(self.tmp.name)/(key+'-'+value.replace('/', '_')))
+
+    def test_scheduled_worker_rechecks_activation_and_interval_before_any_model_call(self):
+        sys.path.insert(0, str(ROOT/'scripts'))
+        import generation_operations as ops
+        p = pairs.build_pairs();p['checkout_revision'] = 'synthetic-revision'
+        env = dict(self.env, GITHUB_EVENT_NAME='schedule', GITHUB_REF='refs/heads/main',
+            GITHUB_WORKFLOW_REF=ops.REPO+'/'+ops.PAIRED_WORKFLOW+'@refs/heads/main',
+            GITHUB_RUN_ID='99', GITHUB_RUN_ATTEMPT='1', GENERATION_ACTION='execute', APPROVE_PLAN=digest(canonical(p)))
+        config = {'enabled':True}; history = {'workflow_runs':[{'id':99}]}
+        with patch.dict(os.environ, env, clear=True), patch.object(ci.subprocess,'check_output',return_value='synthetic-revision\n'), \
+             patch.object(ops,'policy',return_value=config), patch.object(ops,'paired_due',return_value=(True,history)), \
+             patch.object(ci,'run_pairs',side_effect=AssertionError('Prepare cannot invoke a model')):
+            self.assertEqual(ci.prepare(self.root),0)
+            self.assertEqual(pairs.read(self.root/'ci.json')['cadence_history'],history)
+            self.assertFalse(pairs.read(self.root/'result.json')['model_invoked'])
+            with patch.object(ops,'paired_due',return_value=(False,history)), self.assertRaisesRegex(ValueError,'interval already consumed'):
+                ci.prepare(Path(self.tmp.name)/'consumed')
+            with patch.object(ops,'policy',return_value={'enabled':False}), self.assertRaisesRegex(ValueError,'not activated'):
+                ci.prepare(Path(self.tmp.name)/'disabled')
 
 
 if __name__ == '__main__': unittest.main()

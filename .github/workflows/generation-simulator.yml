@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   qualify:
-    if: github.repository == 'aloschilov/pyasc-skill-stack' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && inputs.experiment == 'single' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && inputs.experiment == 'paired' && inputs.action == 'plan'))
+    if: github.repository == 'aloschilov/pyasc-skill-stack' && (inputs.experiment == 'single' || inputs.experiment == 'paired') && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && inputs.experiment == 'paired' && inputs.action == 'plan'))
     runs-on: [self-hosted, arm64]
     timeout-minutes: ${{ inputs.experiment == 'paired' && 300 || 40 }}
     permissions:
@@ -61,6 +61,8 @@ jobs:
           echo "GENERATION_STATE_DIR=$base/state" >> "$GITHUB_ENV"
 
       - name: Prepare and verify the reviewed plan
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: python3 "$GENERATION_HELPER" prepare --root "$GENERATION_ROOT"
 
       - name: Retrieve explicit baseline (GET only)

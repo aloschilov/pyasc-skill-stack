@@ -1,4 +1,4 @@
-"""Manual paired CI bridge. Reuse the shared executor, ledger and public archive."""
+"""Opt-in paired CI bridge. Reuse the shared executor, ledger and public archive."""
 import argparse
 from datetime import datetime, timezone
 import os
@@ -26,12 +26,20 @@ def prepare(root):
     require(request['action'] in ('plan', 'execute'), 'Use plan or execute')
     require(not os.environ.get('BASELINE_REF') and not os.environ.get('BASELINE_SHA256'), 'Paired controls are predeclared, not a historical baseline')
     context = request['context']
-    require(context['GITHUB_EVENT_NAME'] != 'schedule', 'Paired scheduling is not activated')
     if request['action'] == 'execute':
-        require(context['GITHUB_EVENT_NAME'] == 'workflow_dispatch'
+        require(context['GITHUB_EVENT_NAME'] in ('workflow_dispatch', 'schedule')
             and context['GITHUB_REPOSITORY'] == 'aloschilov/pyasc-skill-stack'
             and context['GITHUB_WORKFLOW_REF'] == 'aloschilov/pyasc-skill-stack/.github/workflows/generation-paired.yml@'+os.environ.get('GITHUB_REF', ''),
-            'Paired execution requires the explicit manual controller')
+            'Paired execution requires the explicit controller')
+    if context['GITHUB_EVENT_NAME'] == 'schedule':
+        sys.path.insert(0, str(ROOT/'scripts'))
+        from generation_operations import paired_due, policy
+        config = policy(datetime.now(timezone.utc), paired=True)
+        require(request['action'] == 'execute' and config['enabled']
+            and os.environ.get('GITHUB_REF') == 'refs/heads/main', 'Paired scheduling is not activated')
+        due, history = paired_due(config, datetime.now(timezone.utc))
+        request.update(periodic_policy=config, cadence_history=history); save(root/'ci.json', request)
+        require(due, 'Paired interval already consumed; no automatic retry')
     plan = build_pairs()
     plan['checkout_revision'] = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
     if context['GITHUB_SHA']: require(plan['checkout_revision'] == context['GITHUB_SHA'], 'Checkout differs from dispatched revision')

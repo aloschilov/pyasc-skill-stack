@@ -44,14 +44,14 @@ def ordered_trials(cells, spec):
 def build_pairs(root=ROOT):
     spec = json.loads(resource(root, SPEC))
     exact_keys(spec, ('schema_version', 'matrix', 'protocols', 'repetitions', 'order_seed',
-                     'max_output_tokens', 'max_execution_seconds'), 'paired specification')
+                     'max_output_tokens', 'max_execution_seconds', 'periodic'), 'paired specification')
     require(type(spec['schema_version']) is int and spec['schema_version'] == 1, 'Unknown paired schema')
     require(spec['protocols'] == list(PROTOCOLS), 'Declare all four protocols in canonical order')
     reps = spec['repetitions']
     require(type(reps) is int and 2 <= reps <= 8 and reps % 2 == 0, 'Use an even number of repetitions, 2..8')
     require(type(spec['order_seed']) is int and 0 <= spec['order_seed'] < 2**32, 'Explicit order seed required')
     common = build_plan(root, spec['matrix'])
-    for name in (SPEC, BASELINE, '.github/workflows/generation-paired.yml'):
+    for name in (SPEC, BASELINE, '.github/workflows/generation-paired.yml', 'scripts/generation_operations.py'):
         common['source_sha256'][name] = digest(resource(root, name))
     trials = ordered_trials(common['cells'], spec)
     limits = common['limits']; attempts = len(trials)*limits['attempts_per_cell']

@@ -30,7 +30,8 @@ def common_prompt(contract):
         'runtime configuration, main, tests, file I/O or function defaults in candidate.py. '
         'Supported device calls are asctile APIs, tensor reshape/broadcast_to and scalar min/max/range/len/int/float/bool/abs. '
         'All inputs are CPU tensors for Model simulation; the harness owns the oracle and poisoned output. '
-        'Do not copy a reference kernel. Do not run commands. Write only candidate.py.')
+        'Do not copy a reference kernel. Do not run commands or search directories. '
+        'Read only explicitly provided context files or candidate.py. Write only candidate.py.')
 
 
 def prompt(contract, protocol, skills, context):
@@ -143,11 +144,7 @@ def audit_trace(events, project, context, plan, *, source_context=None, allow_cl
                     baseline_read = (not meta.get('truncated') and display.get('lineStart') == 1
                         and display.get('text') == (source_context/BASELINE).read_text().rstrip('\n'))
         else:
-            target = Path(path(data.get('path', str(project))))
-            roots = [project.resolve(), *(p.resolve() for p in skills.values())]
-            if plan['intervention']['id'] == 'P4': roots.append((context/BASELINE).parent.resolve())
-            if not any(target == root or root in target.parents for root in roots):
-                raise Blocked('Unplanned directory search')
+            raise Blocked('Directory search is disabled in paired trials')
     if plan['intervention']['id'] == 'P4' and not baseline_read:
         raise Blocked('Complete baseline context read was not observed')
     for name, expected in allowed.items():

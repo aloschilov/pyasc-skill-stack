@@ -69,14 +69,19 @@ is introduced. Re-execution requires a new explicit plan/run after reconciliatio
 
 Controls receive no skills, reference kernels, other candidates or oracle files
 in their readable context. Read permissions name only the candidate and selected
-context files; commands, networking and external directories remain denied.
+context files; commands, networking and directory search remain denied in every
+leg. OpenCode's glob/grep permissions match the search expression rather than its
+path, and native internal tool-output directories have external-directory
+exceptions. Disabling both search tools avoids widening the context through
+those exceptions; explicit file reads and native skill loads remain available.
 The audit checks native accesses, rejects automatic instruction loads, verifies
 full skill/baseline content, and records what reached actual provider requests.
 Prompt hashes bind both the supplied text and the exact single-argument quoting
 performed by the pinned [OpenCode 1.19 CLI](https://github.com/anomalyco/opencode/blob/v1.19.0/packages/opencode/src/cli/cmd/run.ts#L288).
 The audit does not broadly normalize whitespace or remove arbitrary escaping.
 Native permission denials are retained as attempted accesses, not as loaded
-context; a successful access outside the declared context still invalidates a trial.
+context. A successful access outside the declared context or an unaccounted search
+still invalidates a trial; an empty output or generic tool error does not waive it.
 Tool names/argument-schema hashes must match across the experiment. This audits
 the pinned OpenCode permission model and observed behavior; it is not a sandbox
 against a hostile host administrator or malicious replacement client.
@@ -132,14 +137,14 @@ worker, pinned OpenCode/runtime provisioning, shared latch and public archive;
 the 300-minute job limit includes the four-hour maximum execution reservation.
 An incomplete experiment fails the CI job. A complete experiment may contain
 candidate failures; inspect its paired report rather than interpreting green CI
-as a skills benefit. This workflow has no cron and rejects scheduled execution.
+as a skills benefit. This workflow has no cron; its periodic policy is disabled.
 
 The existing **Generation coverage observation** workflow can inspect a retained
 paired run with `experiment=paired` and an explicit `inspect_run=RUN_ID/ATTEMPT`.
 It only fetches evidence, revalidates all pairs and checks freshness and origin;
 it does not download the single-run historical baseline or execute snapshot code.
 Green workflow status without complete, intact evidence is insufficient. The
-result remains `manual-inspection`, cannot qualify a schedule or send a schedule
+explicit-run result remains `manual-inspection`, cannot qualify a schedule or send a schedule
 alert, and makes no general skills-benefit claim. The equivalent local command is:
 
 ```bash
@@ -147,7 +152,35 @@ python3 scripts/generation_operations.py monitor --paired \
   --inspect-run RUN_ID/ATTEMPT --root /outside-checkout/paired-observation
 ```
 
-Remaining qualification: run the complete authorized experiment, audit all pairs
-and publish selected evidence durably. Bounded periodic use should reuse this
-controller and the generation health monitor after both are qualified; activation
-requires a separate reviewed change. No NPU spending is implicit.
+## Prepared periodic use (disabled)
+
+The `periodic` policy in `paired.json` reuses the controller, shared executor latch
+and health monitor. It defaults to disabled, a 168-hour minimum interval, a
+192-hour freshness window and a five-hour stalled-run threshold. PRs only plan;
+manual execution still requires the exact reviewed digest regardless of policy.
+
+Future scheduled execution is main-only and must be enabled explicitly, with an
+activation timestamp and a separately marked alert issue. Before preparation and
+again before the execution worker, GET-only history checks enforce the interval.
+Any recent scheduled attempt consumes it, including failed or cancelled work;
+scheduled reruns are rejected. Missing, duplicated or truncated history blocks
+spending. A successful controller-only skip is distinguished through its exact
+job receipt (`prepare` succeeded, `paired` skipped); it does not reset the interval
+or establish fresh generation coverage. Thus a future schedule may poll more
+often than it executes. At most 20 recent prior runs are inspected before refusing
+spending. A new explicitly approved manual run remains possible after reconciling
+the shared latch. There is no second ledger or automatic repair campaign.
+
+Without `inspect_run`, the paired monitor observes scheduled coverage only when
+this policy is enabled. It verifies complete matched evidence (candidate failures
+may be valid experimental outcomes), reports missing/failed/stalled/stale runs,
+and uses an alert issue starting with `<!-- pyasc-generation-health:paired:v1 -->`.
+It cannot overwrite the single-run alert channel. Both policies and workflow cron
+triggers remain off; the future scheduled health workflow selects both policies,
+and an inactive policy stays disabled without sending notifications.
+
+Remaining qualification: complete and archive the authorized manual experiment,
+verify it through the observer, and retain final CI evidence. Actual periodic
+activation and scheduled-run qualification require a separately reviewed change;
+offline controller tests do not establish scheduled coverage. No NPU spending is
+implicit.

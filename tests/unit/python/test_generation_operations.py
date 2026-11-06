@@ -196,6 +196,106 @@ class GenerationOperations(unittest.TestCase):
         self.assertNotIn('OPENCODE', str(health)); self.assertNotIn('BENCHSITE', str(health))
 
 
+class PairedPolicy(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.file = self.root/'paired.json'
+        self.config = dict(ops.read(ops.PAIRED_POLICY)['periodic'], enabled=True,
+            enabled_since=(NOW-timedelta(days=10)).isoformat(), alert_issue=321)
+        self.file.write_text(json.dumps({'schema_version':1, 'periodic': self.config}))
+        p = patch.object(ops, 'PAIRED_POLICY', self.file); p.start(); self.addCleanup(p.stop)
+        self.env = {'GITHUB_REPOSITORY': ops.REPO, 'GITHUB_EVENT_NAME': 'schedule',
+            'GITHUB_REF': 'refs/heads/main', 'GITHUB_WORKFLOW_REF': ops.REPO+'/'+ops.PAIRED_WORKFLOW+'@refs/heads/main',
+            'GITHUB_SHA': 'synthetic-revision', 'GITHUB_RUN_ID': '99', 'GITHUB_RUN_ATTEMPT': '1'}
+        self.current = {'id': 99, 'event': 'schedule', 'path': ops.PAIRED_WORKFLOW,
+            'head_branch': 'main', 'created_at': (NOW-timedelta(minutes=1)).isoformat()}
+
+    def history(self, prior=False):
+        runs = [self.current]
+        if prior: runs.append(dict(self.current, id=98, created_at=(NOW-timedelta(days=1)).isoformat(), conclusion='failure'))
+        return {'total_count': len(runs), 'workflow_runs': runs}
+
+    def test_failed_or_cancelled_attempts_consume_the_period_and_unknown_history_blocks(self):
+        with patch.dict(os.environ, self.env, clear=True):
+            with patch.object(ops, 'api', return_value=self.history()) as api:
+                self.assertTrue(ops.paired_due(self.config, NOW)[0])
+                self.assertEqual(len(api.call_args.args), 1)  # GET, no payload.
+            for conclusion in ('failure', 'cancelled', 'success', None):
+                history = self.history(True); history['workflow_runs'][-1]['conclusion'] = conclusion
+                with patch.object(ops, 'api', return_value=history):
+                    self.assertFalse(ops.paired_due(self.config, NOW)[0])
+            boundary = self.history(True)
+            boundary['workflow_runs'][-1]['created_at'] = (NOW-timedelta(hours=168)).isoformat()
+            with patch.object(ops, 'api', return_value=boundary):
+                self.assertTrue(ops.paired_due(self.config, NOW)[0])
+                self.assertTrue(ops.paired_due(self.config, NOW+timedelta(microseconds=1))[0])
+            for history in ({'total_count': 101, 'workflow_runs': [self.current]},
+                            {'total_count': 0, 'workflow_runs': []},
+                            {'total_count': 2, 'workflow_runs': [self.current, self.current]},
+                            {'total_count': 1, 'workflow_runs': [dict(self.current, head_branch='other')]}):
+                with patch.object(ops, 'api', return_value=history), self.assertRaises(ValueError):
+                    ops.paired_due(self.config, NOW)
+        with patch.dict(os.environ, dict(self.env, GITHUB_RUN_ATTEMPT='2'), clear=True), \
+             patch.object(ops, 'api', side_effect=AssertionError('No GET for rerun')):
+            with self.assertRaisesRegex(ValueError, 'reruns'): ops.paired_due(self.config, NOW)
+
+    def test_policy_limits_activation_and_disabled_observation_are_get_free(self):
+        self.assertTrue(ops.policy(NOW, paired=True)['enabled'])
+        for key, value in [('min_interval_hours', True), ('min_interval_hours', 1), ('max_age_hours', 1),
+                           ('max_run_hours', 2), ('enabled', 'true'), ('alert_issue', None),
+                           ('enabled_since', (NOW+timedelta(days=1)).isoformat())]:
+            self.file.write_text(json.dumps({'schema_version':1, 'periodic': dict(self.config, **{key: value})}))
+            with self.assertRaises((ValueError, TypeError)): ops.policy(NOW, paired=True)
+        self.config.update(enabled=False, enabled_since=None, alert_issue=None)
+        self.file.write_text(json.dumps({'schema_version':1, 'periodic': self.config}))
+        with patch.object(ops, 'api', side_effect=AssertionError('Disabled is offline')), \
+             patch.object(ops, 'download', side_effect=AssertionError('Disabled is offline')):
+            report = ops.monitor(self.root, self.config, NOW, paired=True)
+            self.assertEqual(report['status'], 'disabled')
+            self.assertEqual(ops.notify(report, self.config, NOW)['status'], 'disabled')
+
+    def test_controller_keeps_manual_digest_and_pr_guards_and_defers_consumed_period(self):
+        from generation_pairs import build_pairs
+        plan = build_pairs(); plan['checkout_revision'] = 'synthetic-revision'; approval = digest(canonical(plan))
+        cases = [('workflow_dispatch', False, 'plan', '', False, 'plan'),
+                 ('workflow_dispatch', False, 'execute', approval, False, 'execute'),
+                 ('pull_request', False, 'plan', '', False, 'plan'),
+                 ('schedule', False, 'plan', '', False, 'none'),
+                 ('schedule', True, 'plan', '', False, 'execute'),
+                 ('schedule', True, 'plan', '', True, 'none')]
+        for i, (event, enabled, mode, approved, prior, action) in enumerate(cases):
+            dest = self.root/str(i); dest.mkdir()
+            with patch.dict(os.environ, dict(self.env, GITHUB_EVENT_NAME=event), clear=True), \
+                 patch.object(ops.subprocess, 'check_output', return_value='synthetic-revision\n'), \
+                 patch.object(ops, 'api', return_value=self.history(prior)) as api:
+                result = ops.plan(dest, dict(self.config, enabled=enabled), mode, approved, paired=True, now=NOW)
+            self.assertEqual(result['action'], action); self.assertFalse(result['model_invoked'])
+            self.assertEqual(result['baseline_ref'], '')
+            if event != 'schedule' or not enabled: api.assert_not_called()
+            if prior: self.assertEqual(result['skip_reason'], 'interval-not-elapsed')
+        for event in ('workflow_dispatch', 'pull_request'):
+            with patch.dict(os.environ, dict(self.env, GITHUB_EVENT_NAME=event), clear=True), \
+                 patch.object(ops.subprocess, 'check_output', return_value='synthetic-revision\n'), self.assertRaises(ValueError):
+                ops.plan(self.root/event, self.config, 'execute', '', paired=True, now=NOW)
+        with patch.dict(os.environ, dict(self.env, GITHUB_REF='refs/heads/other'), clear=True):
+            with self.assertRaisesRegex(ValueError, 'main-only'):
+                ops.plan(self.root/'wrong-branch', self.config, 'plan', '', paired=True, now=NOW)
+
+    def test_controller_only_skips_do_not_permanently_postpone_the_next_period(self):
+        history = self.history(True)
+        history['workflow_runs'][-1].update(status='completed', conclusion='success', run_attempt=1)
+        jobs = {'total_count':2, 'jobs':[{'name':'prepare','conclusion':'success'}, {'name':'paired','conclusion':'skipped'}]}
+        def api(endpoint):return deepcopy(jobs if '/jobs?' in endpoint else history)
+        with patch.dict(os.environ, self.env, clear=True), patch.object(ops,'api',side_effect=api):
+            due, checked = ops.paired_due(self.config,NOW)
+            self.assertTrue(due);self.assertEqual(checked['deferred_runs'],[98])
+            jobs['jobs'][1] = {'name':'paired / qualify','conclusion':'success'}
+            self.assertFalse(ops.paired_due(self.config,NOW)[0])
+            jobs['total_count'] = 3
+            with self.assertRaisesRegex(ValueError,'Incomplete paired job history'):ops.paired_due(self.config,NOW)
+
+
 class PairedObservation(unittest.TestCase):
     def setUp(self):
         import test_generation_pairs as paired_receipts
@@ -204,7 +304,7 @@ class PairedObservation(unittest.TestCase):
         self.addCleanup(self.fixture.doCleanups)
         self.evidence = self.fixture.root.parent/'evidence'; self.evidence.mkdir()
         shutil.copytree(self.fixture.root, self.evidence/'run')
-        self.config = ops.policy(NOW)
+        self.config = ops.policy(NOW, paired=True)
         self.run = {'id': 123, 'run_attempt': 1, 'event': 'workflow_dispatch',
             'path': '.github/workflows/generation-paired.yml', 'head_branch': 'codex/paired',
             'head_sha': self.fixture.plan['checkout_revision'], 'created_at': '2026-11-06T03:00:00Z',
@@ -238,11 +338,10 @@ class PairedObservation(unittest.TestCase):
         self.assertEqual(summary['trial_denominator'], 24)
         self.assertEqual(summary['comparisons']['P6-P3']['valid_pairs'], 6)
         self.assertFalse(summary['general_skills_benefit_claim'])
-        self.assertIn('stale-coverage', self.monitor(NOW+timedelta(hours=37))['alerts'])
+        self.assertIn('stale-coverage', self.monitor(NOW+timedelta(hours=193))['alerts'])
         with patch.object(ops, 'api', side_effect=AssertionError('No network')):
-            with self.assertRaisesRegex(ValueError, 'explicit RUN_ID'):
-                ops.monitor(self.evidence.parent, self.config, NOW, paired=True)
-        with self.assertRaisesRegex(ValueError, 'not configured'):
+            self.assertEqual(ops.monitor(self.evidence.parent, self.config, NOW, paired=True)['status'], 'disabled')
+        with self.assertRaisesRegex(ValueError, 'Manual inspection'):
             ops.notify(report, self.config, NOW)
         self.run.update(status='in_progress', conclusion=None)
         pending = self.monitor()
@@ -263,6 +362,40 @@ class PairedObservation(unittest.TestCase):
         (self.evidence/'run'/t['id']/t['cell']/'attempt-1/candidate.py').write_text('corrupted')
         report = self.monitor()
         self.assertIn('unverifiable-run', report['alerts']); self.assertIsNone(report['last_qualified'])
+
+    def test_periodic_pair_observation_tracks_missing_failed_stalled_and_verified_runs(self):
+        self.config.update(enabled=True, enabled_since=(NOW-timedelta(days=10)).isoformat(), alert_issue=321)
+        self.run.update(event='schedule', head_branch='main')
+        ci = ops.read(self.evidence/'ci.json')
+        ci['context'].update(GITHUB_EVENT_NAME='schedule', GITHUB_WORKFLOW_REF=ops.REPO+'/'+ops.PAIRED_WORKFLOW+'@refs/heads/main')
+        receipts.write(self.evidence/'ci.json', ci)
+        def monitor(runs):
+            def response(endpoint):
+                if '/jobs?' in endpoint: return {'total_count':2,'jobs':[{'name':'prepare','conclusion':'success'},
+                    {'name':'paired' if '/125/' in endpoint else 'paired / qualify',
+                     'conclusion':'skipped' if '/125/' in endpoint else 'success'}]}
+                return {'total_count':len(runs), 'workflow_runs':runs}
+            with patch.object(ops, 'api', side_effect=response) as api, \
+                 patch.object(ops, 'download', return_value=(self.evidence, 'a'*64)) as fetch:
+                report = ops.monitor(self.evidence.parent, self.config, NOW, paired=True)
+            self.assertIn('generation-paired.yml/runs?', api.call_args_list[0].args[0])
+            for call in fetch.call_args_list: self.assertIsNotNone(call.args[2])
+            return report
+        healthy = monitor([self.run]); self.assertEqual(healthy['status'], 'healthy')
+        self.assertEqual(healthy['scope'], 'scheduled-coverage')
+        self.assertEqual(healthy['last_qualified']['paired_summary']['trial_denominator'], 24)
+        deferred = dict(self.run, id=125, created_at=(NOW-timedelta(minutes=1)).isoformat())
+        observed = monitor([deferred,self.run]);self.assertEqual(observed['status'],'healthy')
+        self.assertEqual(observed['observations'][0]['comparison'],'not-run')
+        self.assertEqual(observed['last_qualified']['id'],self.run['id'])
+        self.assertIn('stale-coverage',monitor([deferred])['alerts'])
+        self.assertIn('stale-coverage', monitor([])['alerts'])
+        failed = dict(self.run, id=124, conclusion='failure', created_at=(NOW-timedelta(minutes=1)).isoformat())
+        mixed = monitor([failed,self.run]); self.assertIn('run-failed', mixed['alerts']); self.assertIsNotNone(mixed['last_qualified'])
+        stalled = dict(self.run, status='queued', conclusion=None, created_at=(NOW-timedelta(hours=6)).isoformat())
+        self.assertIn('run-stalled', monitor([stalled])['alerts'])
+        with patch.object(ops, 'api', return_value={'body':ops.MARKER, 'state':'open'}):
+            with self.assertRaisesRegex(ValueError, 'unmarked'): ops.notify(healthy, self.config, NOW)
 
 
 if __name__ == '__main__': unittest.main()

@@ -125,6 +125,10 @@ def configure(config, plan, context, project):
     config['provider'][provider]['models'][model_id]['limit']['output'] = limits['output_tokens_per_response']
     if plan.get('intervention'):
         from generation_protocols import context_files
+        # OpenCode glob/grep permissions match the search expression, not its
+        # directory. Internal tool-output paths also receive native exceptions.
+        # Paired trials therefore expose only explicit file reads and skill loads.
+        config['permission'].update(glob='deny', grep='deny')
         config['permission']['read'] = {'*': 'deny', 'candidate.py': 'allow', str(project/'candidate.py'): 'allow',
             # OpenCode 1.19 read asks relative to the isolated Git worktree;
             # external_directory asks separately with an absolute directory glob.
