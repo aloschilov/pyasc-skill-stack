@@ -18,6 +18,7 @@ or qualified.
 | `Opt-in generation` | PR planning only, or explicit manual plan/execute; scheduling disabled | Shared executor and pinned policy baseline; PRs never call a provider |
 | `Reviewed generation` | PR planning only, or explicit manual plan/execute | [Fresh writer/reviewer sessions](../tests/generation/review.md), bounded repairs and unchanged-byte simulator qualification; no NPU |
 | `Generation coverage observation` | Explicit manual dispatch; scheduling disabled | GET-only archive/freshness inspection; issue updates require separate opt-in and a marked destination |
+| `Evidence dashboard` | Relevant PRs run offline tests; manual build, optional publish | GET-only projection of pinned public archives; [scope, failure handling and publication](../dashboard/README.md); no generation or device access |
 | release | `v*` tag | Fast suite, skills-only archive and install verification |
 
 ## Ordinary PR checks

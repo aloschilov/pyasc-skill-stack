@@ -132,6 +132,8 @@ incur charges; see [tests](tests/README.md).
   subjects, never correctness or performance references.
 - [Verification status](docs/verification-status.md): measured outcomes and
   remaining limitations. Simulator success does not close the hardware gate.
+- [Public evidence dashboard](https://aloschilov.github.io/pyasc-skill-stack/):
+  retained results with exact scope, freshness and archive links; [publication contract](dashboard/README.md).
 - [Review order](docs/review-order.md): run the upstream target suite.
 - [CANNBench smoke](integrations/cannbench/README.md): one-operator external NPU evaluation.
 - [Review/tuning automation follow-up](https://github.com/aloschilov/pyasc-skill-stack/issues/20):
