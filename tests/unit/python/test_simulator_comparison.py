@@ -16,7 +16,7 @@ class ComparisonTests(unittest.TestCase):
         for n,ticks in [('reference',30),('candidate',20),('fusion',10)]:
             def sample(i,t):return {'index':i,'tick_before':123,'tick_after':123+t,'ticks':t,'launches':1,'numerical_checks':3}
             reports[n]={'status':'passed','variant':n,'task':comparison.TASK,'metric':comparison.METRIC,
-                        'input_hashes':intent['input_hashes'],'runtime_hashes':{'model.so':'3'*64},
+                        'input_hashes':intent['input_hashes'],'runtime_hashes':{'model.so':'3'*64,'@loaded_runtime_wrapper':'5'*64},
                         'binary_sha256':'4'*64,'commands':[{'kind':'compile','argv':['compiler']}],
                         'warmup':[sample(0,9999)],'samples':[sample(i,ticks+i) for i in range(3)],
                         'control':{'status':'rejected','launch_attempts':1,'launches':0},
@@ -46,7 +46,7 @@ class ComparisonTests(unittest.TestCase):
 
     def test_every_sample_requires_launch_numerics_and_valid_tick_delta(self):
         changes=[('launches',0),('launches',2),('numerical_checks',0),('index',9),('ticks',0),
-                 ('ticks',-1),('ticks',float('nan')),('ticks',float('inf')),('ticks',True),('tick_after',0)]
+                 ('ticks',-1),('ticks',float('nan')),('ticks',float('inf')),('ticks',True),('tick_after',0),('tick_before',-1)]
         for field,value in changes:
             i,r=self.fixtures();r['candidate']['samples'][0][field]=value
             with self.subTest(field=field,value=value),self.assertRaises(ValueError):comparison.summarize(i,r)
@@ -67,7 +67,8 @@ class ComparisonTests(unittest.TestCase):
                 with self.subTest(key=key,change=change),self.assertRaisesRegex(ValueError,'Fusion'):comparison.summarize(i,r)
 
     def test_missing_hashes_or_commands_rejected(self):
-        for key,value in [('runtime_hashes',{}),('binary_sha256','unknown'),('commands',[])]:
+        for key,value in [('runtime_hashes',{}),('runtime_hashes',{'model.so':'3'*64}),
+                          ('binary_sha256','unknown'),('binary_sha256',None),('commands',[])]:
             i,r=self.fixtures();r['reference'][key]=value
             with self.assertRaisesRegex(ValueError,'evidence'):comparison.summarize(i,r)
 

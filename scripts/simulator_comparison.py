@@ -67,7 +67,8 @@ def summarize(intent, reports):
             raise ValueError('Unqualified or misattributed variant: '+variant)
         identities.append(r['runtime_hashes'])
         hashes = [r['binary_sha256'], *r['runtime_hashes'].values(), *r['input_hashes'].values()]
-        if not r['runtime_hashes'] or not r['commands'] or any(not re.fullmatch('[0-9a-f]{64}',h) for h in hashes):
+        if ('@loaded_runtime_wrapper' not in r['runtime_hashes'] or not r['commands']
+                or any(not isinstance(h,str) or not re.fullmatch('[0-9a-f]{64}',h) for h in hashes)):
             raise ValueError('Missing runtime/compiler evidence')
         for phase, count in [('warmup', intent['warmup']), ('samples', intent['samples'])]:
             if len(r[phase]) != count:
@@ -75,6 +76,7 @@ def summarize(intent, reports):
             for index, sample in enumerate(r[phase]):
                 if (sample['index'] != index or sample['launches'] != 1 or sample['numerical_checks'] != 3
                         or type(sample['tick_before']) is not int or type(sample['tick_after']) is not int
+                        or sample['tick_before'] < 0
                         or sample['ticks'] != sample['tick_after']-sample['tick_before']
                         or not positive(sample['ticks'])):
                     raise ValueError('Invalid per-launch sample')
@@ -171,6 +173,7 @@ def probe(variant):
         from asc.runtime.kernel_meta import CompiledKernel, KernelMeta, LaunchedKernel
         from asc._C import ir
         from asc.lib import runtime as rt
+        from asc.lib.runtime import state
         config.set_platform('Model','Ascend950PR_9599',check=True)
         assert rt.is_model()
         rng = np.random.default_rng(0)
@@ -222,8 +225,12 @@ def probe(variant):
         cann=Path(os.environ['ASCEND_HOME_PATH'])
         runtime_files=[p for p in Path(asc.__file__).parent.rglob('*') if p.is_file() and p.suffix in ('.py','.cpp','.so')]
         runtime_files += [p for p in cann.glob('*/simulator/dav_3510/lib/*.so*') if p.is_file()]
+        runtime_files += [Path(c['argv'][0]) for c in commands]
         if not any('libmodel_top' in p.name for p in runtime_files):raise ValueError('Model library provenance missing')
         result['runtime_hashes']={str(p):sha(p) for p in sorted(runtime_files)}
+        wrapper=Path(state.lib.lib._name)
+        result['runtime_wrapper_path']=str(wrapper)
+        result['runtime_hashes']['@loaded_runtime_wrapper']=sha(wrapper)
         handle=rt.register_device_binary_kernel(kernel.binary,rt.magic_elf_value(kernel.meta.core_type))
         function=rt.register_function(handle,entry,mode=0)
         launched=LaunchedKernel.from_compiled(kernel,function)
