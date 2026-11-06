@@ -21,10 +21,12 @@ def variable(value):
 
 def endpoint(value):
     require(isinstance(value, str) and not any(c.isspace() for c in value), 'Invalid selected provider endpoint')
-    try: url = urlsplit(value)
+    try:
+        url = urlsplit(value)
+        port = url.port  # urlsplit alone does not validate malformed/out-of-range ports.
     except ValueError: raise ValueError('Invalid selected provider endpoint') from None
     require(url.scheme in ('http', 'https') and url.hostname and not url.username and not url.password
-        and not url.query and not url.fragment, 'Invalid selected provider endpoint')
+        and not url.query and not url.fragment and (port is None or port > 0), 'Invalid selected provider endpoint')
     return value.rstrip('/')
 
 
@@ -69,7 +71,9 @@ def resolve(config, planned_model, environment):
             require(isinstance(result, str) and bool(result.strip()), 'Missing selected provider variable '+name)
             return result
         return binding.get('literal', binding.get('public_placeholder'))
-    return endpoint(value(declared['endpoint'])), value(declared['credential'])
+    key = value(declared['credential'])
+    require(not any(c in key for c in ('\r', '\n')), 'Invalid selected provider credential')
+    return endpoint(value(declared['endpoint'])), key
 
 
 def inspect_binding(model, sources, read):

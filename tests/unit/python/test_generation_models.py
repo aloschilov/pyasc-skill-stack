@@ -76,10 +76,15 @@ class ProfileBindings(unittest.TestCase):
         config = profile()
         for url in ('https://user:private-secret@host/v1', 'https://host/v1?key=private-secret',
                     'https://host/v1#private-secret', 'https://bad host/v1', 'https://[private-secret',
+                    'https://host:private-secret/v1', 'https://host:65536/v1', 'https://host:0/v1',
                     'file:///private-secret'):
             with self.assertRaises(ValueError) as error:
                 models.resolve(config, planned(config), {'SELECTED_BASE_URL': url, 'SELECTED_API_KEY': 'private-secret'})
             self.assertNotIn('private-secret', str(error.exception))
+        with self.assertRaisesRegex(ValueError, 'credential') as error:
+            models.resolve(config, planned(config), {'SELECTED_BASE_URL': 'https://host/v1',
+                'SELECTED_API_KEY': 'private-secret\ninvalid'})
+        self.assertNotIn('private-secret', str(error.exception))
 
     def local_plan(self, root, config):
         plan = build_plan(); name = 'integrations/opencode/profiles/offline-selected.json'
