@@ -33,6 +33,26 @@ containers were absent before abandoning the request without replay. Its
 24,000-token reservation remains unknown; the missing partial response cannot
 be reconstructed or retroactively accepted.
 
+The subsequent [run 42204519269](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42204519269)
+on `3bd20950dfee61723bf1a154eaa40b9f26c8dfaf` retained one qualified DeepSeek/P6
+candidate, one GLM/P3 JIT failure, one unresolved DeepSeek/P3 request and 21 unrun
+trials. Execution took 204.749164 seconds. Nine requests contain eight known
+usages (9,271 output and 108,037 input tokens) and one unknown 24,000-token
+reservation. The accepted candidate has three JIT/Model launches, nine numerical
+checks and one rejecting control; no comparative effect can be reported.
+The gate preserved 243,334 partial response bytes privately: 808 valid SSE events,
+but no `DONE`, finish reason or usage. This is an incomplete transport response,
+not a recoverable parser rejection. All 14 local process groups and two owned
+containers were absent before releasing the lease; the original request was
+abandoned without replay and retains UNKNOWN accounting.
+
+Archive `model-42204519269-blocked.tar.gz`, SHA256
+`37db7a1304355b121993bb80272340b0e677b5a373182ea82fdd335e0738e6b0`,
+is verified on both qualification hosts. The earlier CLI-download-only failure
+42202423456 made no provider request; a checksum-verified external OpenCode cache
+removed that preflight blocker. A complete model comparison still requires a
+reliable provider response path; no unchanged cohort is automatically retried.
+
 `models.json` selects two distinct requested and expected response identities:
 
 | Arm | Profile | Requested | Expected response |
