@@ -1,9 +1,44 @@
 # Fresh-session review handoffs
 
 This is the writer/reviewer/verifier slice of [#20](https://github.com/aloschilov/pyasc-skill-stack/issues/20).
-It has offline transition and receipt tests; a real end-to-end run is still required.
+It has offline transition/receipt tests and the manual qualification below.
 The selected task is one existing add adapter. This does not qualify arbitrary
 operators, hardware performance, a second model, or an autonomous tuning campaign.
+
+## Manual qualification, 2026-11-06
+
+[Run 42183443085](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42183443085)
+on `9d2324f45a4f921b0c09ab3fd3788e2afdc67fa3` accepted one freshly generated
+float32 add candidate after a separate reviewer session and unchanged-byte
+simulator qualification. Both sessions used GLM-5.3 (`glm-5-3-260814`) through
+OpenCode 1.19.0; this is session independence, not independent-model review.
+Plan SHA256: `53a54393df5bba601c6105201741c821a060c08c94eeed6e7761eba76ce51f85`.
+
+The reviewer accepted without findings. The verifier then made **three real Model
+launches**, passed **nine output/input checks** on seeds 0, 1 and 7, and rejected
+the suppressed-launch control. All 99 source hashes, full skill/handoff reads,
+native session IDs, task/design/candidate bindings and provider usage were rechecked
+from the public archive. Candidate SHA256:
+`e92c8e40517e4a9094f1dd8656ce6944de0b974a0367bfdcdcf811124f3894b6`.
+
+Ten requests used **4,821 output** and **95,173 input tokens**; monetary cost is
+unknown. Executor wall time was **151.70 s**, including 137.21 s for both model
+sessions and 13.27 s for qualification. Preceding queue/setup took 65.04 s;
+the qualification CI job took 206 s. A post-run private-payload hash audit found
+high reasoning and enabled thinking in both roles, with caps of 24,000 output
+tokens for the writer and 8,192 for the reviewer. Other sampling defaults and
+immutable provider weights revision remain unknown; provider compliance is not
+asserted. Recorded processes and the simulator container were absent after the
+run, and the executor released the shared latch.
+
+The [durable Release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-review-42183443085)
+retains `qualification-review-42183443085.tar.gz`, SHA256
+`f0801b055dfcebf9bf1c5f2011e6255fc4e9128c7058f912e1db1bcb37febfa1`.
+It contains the original public CI archive and verification/cleanup receipts;
+private provider payloads are excluded. Copies also remain outside checkout on
+the workstation and VM. This run required no repair and no tuner: their transition
+rules have offline tests, but no live repair or tuning improvement is claimed.
+There was no NPU call, schedule activation or automatic promotion.
 
 ## Transitions and acceptance
 
