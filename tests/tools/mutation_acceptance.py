@@ -13,7 +13,7 @@ def main():
     args=ap.parse_args();run=RunArtifacts(args.results_dir,'mutation-acceptance')
     image=pinned_sim_image();run.data['image']=image
     template=run.path/'bad-template.py'
-    source=(ROOT/'skills/pyasc-codegen-workflow/templates/kernel-template.py').read_text()
+    source=(ROOT/'skills/asctile-codegen-workflow/templates/kernel-template.py').read_text()
     old='        valid = min(size - tile_offset, tile_size)'
     assert source.count(old)==1
     template.write_text(source.replace(old,'        valid = size - tile_offset\n        if valid > tile_size:\n            valid = tile_size'))

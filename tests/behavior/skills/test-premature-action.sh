@@ -38,7 +38,7 @@ print_section_header "Scenario 1: Kernel Dev Prompt"
 
 PROMPT="Implement a pyasc vector add kernel for two float32 tensors of size 1024.
 Use @asc2.jit and asc2.load/asc2.store for data movement and synchronization.
-Follow the pyasc-codegen-workflow phases."
+Follow the asctile-codegen-workflow phases."
 
 TEST_PROJECT=$(create_test_project "premature-test")
 trap "cleanup_test_project '$TEST_PROJECT'" EXIT
@@ -81,7 +81,7 @@ if [ -n "$SESSION_ID" ]; then
     if [ -s "$SESSION_FILE" ]; then
         echo ""
         echo "  Analyzing premature actions..."
-        if ! analyze_premature_actions "$SESSION_FILE" "skill" "pyasc-codegen-workflow"; then
+        if ! analyze_premature_actions "$SESSION_FILE" "skill" "asctile-codegen-workflow"; then
             FAILED=$((FAILED + 1))
         fi
 

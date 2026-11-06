@@ -93,20 +93,20 @@ runtime images; it does not build them.
 
 | Skill | Responsibility |
 |---|---|
-| `pyasc-codegen-workflow` | Environment, design, implementation and verification workflow |
-| `pyasc-api-patterns` | asctile API, tiling and data movement |
-| `pyasc-syntax-constraints` | Supported kernel syntax |
-| `pyasc-docs-search` | Find API documentation and references |
-| `pyasc-build-run-verify` | Compilation, execution and numerical checks |
-| `pyasc-code-review` | Review kernel correctness and constraints |
-| `pyasc-env-check` | Diagnose runtime prerequisites |
-| `pyasc-task-focus` | Keep the development task focused |
-| `pyasc-target-operator` | Extend the upstream target suite |
-| `pyasc-cannbench-kernel` | Configure CANNBench operators; performance is a separate lane |
+| `asctile-codegen-workflow` | Environment, design, implementation and verification workflow |
+| `asctile-api-patterns` | asctile API, tiling and data movement |
+| `asctile-syntax-constraints` | Supported kernel syntax |
+| `asctile-docs-search` | Find API documentation and references |
+| `asctile-build-run-verify` | Compilation, execution and numerical checks |
+| `asctile-code-review` | Review kernel correctness and constraints |
+| `asctile-env-check` | Diagnose runtime prerequisites |
+| `asctile-task-focus` | Keep the development task focused |
+| `asctile-target-operator` | Extend the upstream target suite |
+| `asctile-cannbench-kernel` | Configure CANNBench operators; performance is a separate lane |
 
 The target-suite and CANNBench skills apply to their respective operator contracts.
 The design → implementation → review → validation → tuning workflow is in
-`pyasc-codegen-workflow`; these are caller-managed phases, not automatically
+`asctile-codegen-workflow`; these are caller-managed phases, not automatically
 spawned agents. See [CI coverage](docs/ci-gates.md#agent-workflows).
 
 `./install.sh` without `--target` links skills globally for Cursor and OpenCode;
@@ -132,6 +132,8 @@ incur charges; see [tests](tests/README.md).
   subjects, never correctness or performance references.
 - [Verification status](docs/verification-status.md): measured outcomes and
   remaining limitations. Simulator success does not close the hardware gate.
+- [Public evidence dashboard](https://aloschilov.github.io/pyasc-skill-stack/):
+  retained results with exact scope, freshness and archive links; [publication contract](dashboard/README.md).
 - [Review order](docs/review-order.md): run the upstream target suite.
 - [CANNBench smoke](integrations/cannbench/README.md): one-operator external NPU evaluation.
 - [Review/tuning automation follow-up](https://github.com/aloschilov/pyasc-skill-stack/issues/20):
@@ -140,6 +142,42 @@ incur charges; see [tests](tests/README.md).
 Keep run artifacts outside checkout. Git holds checks, regression fixtures and
 short evidence summaries. Preserve historical evidence; older campaign material
 is available on `archive/campaign-2026`.
+
+## Skill names and delivery
+
+The ten skill IDs now use `asctile-*`, matching the experimental AscTile API.
+Their directories and frontmatter names are identical; new kernel templates use
+`from asc.experimental import asctile`. The repository name and Python package
+remain `pyasc-skill-stack` and `pyasc-dev` respectively.
+
+After updating an existing checkout, rerun `install.sh` for the same target.
+It installs the new names and removes only dangling links into that checkout.
+Foreign links and copied skill directories remain untouched; remove old copies
+explicitly to avoid duplicate discovery. Historical receipts keep their original
+`pyasc-*` names and hashes. Existing CI continuation validates that recorded
+namespace instead of relabeling an old run.
+
+The generation matrix and reviewer use the same `asctile-*` names. Retained
+review plans select their original namespace from hash-bound inputs; mixed
+namespaces or missing reviewer skills fail before execution. Historical
+generation results retain their original skills and do not qualify the renamed
+context for new generation.
+
+No optional `asctile-u-*` namespace is introduced: a name would not make
+checkout-dependent verification self-contained. `asctile-target-operator` is
+maintainer-facing; the other skills guide operator development, with full
+verification requiring the checkout described above. A wheel distributor can
+copy the `skills/` tree to `experimental/asctile/skills`; this repository does
+not modify or publish an upstream wheel as part of skill installation.
+
+The rename at `0423963` was checked through installation from a skills-only
+archive and native OpenCode 1.19.0 discovery (10/10 skills). CI
+[42221103276](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42221103276)
+passed 72 Python tests, the 18-case verifier contract and six short-row simulator
+regressions. [Retained delivery evidence](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-delivery-0423963):
+`qualification-delivery-0423963.tar.gz`, SHA256
+`ee32fb799cae5c5bc36f4eb0ad6c2a55e378b9983623f5a089f8250a75779b31`.
+This does not establish new generation quality, performance or NPU coverage.
 
 ## Release archives
 

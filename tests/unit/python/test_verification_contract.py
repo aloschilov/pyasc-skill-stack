@@ -143,7 +143,7 @@ class Contract(unittest.TestCase):
                 skills.extract_examples(root/'after')
             before = json.loads((root/'before/inventory.json').read_text())
             after = json.loads((root/'after/inventory.json').read_text())
-            target = 'skills/pyasc-target-operator/SKILL.md'
+            target = 'skills/asctile-target-operator/SKILL.md'
             old = next(e for e in before if e['file'] == target)
             new = next(e for e in after if e['file'] == target)
             self.assertNotEqual(old['label'], new['label'])
@@ -193,7 +193,7 @@ class Contract(unittest.TestCase):
 
     def test_skill_scalar_overrides_reject_stale_sources(self):
         import skill_jit_examples as skills
-        target = 'skills/pyasc-target-operator/SKILL.md'
+        target = 'skills/asctile-target-operator/SKILL.md'
         for change in ('bogus-key', 'removed', 'renamed', 'marked-fragment'):
             with self.subTest(change=change), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)

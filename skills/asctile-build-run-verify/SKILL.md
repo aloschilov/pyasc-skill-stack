@@ -1,0 +1,149 @@
+---
+name: asctile-build-run-verify
+description: Build, compile, execute, and verify AscTile kernels on exact-source QEMU gates, camodel, NPU, and CANNBench.
+---
+
+# Build, run, and verify PyASC/AscTile asctile kernels
+
+Always keep source, wheel, Python ABI, compiler, and platform provenance
+together.
+
+**Default runtime:** the digest-pinned development simulator image in
+`reference/images/ENV.json`, paired with `reference/asctile/PIN.json`.
+It includes PyASC, CANN and CPU torch; preserve its entrypoint. The README's
+`qualify_generated.py` command runs static checks, JIT and numerical verification
+with this image. No host PyASC install is required. The wheel exposes
+`from asc.experimental import asctile`.
+
+Host wheel/source setups are optional; see `docs/cann-setup.md` and record the
+actual wheel version and source revision instead of assuming the latest matches.
+
+**Campaign runtimes** are different artifacts and are pinned deliberately. The
+CANNBench campaign uses `PyASC/AscTile@0a631f70968c3cb7c33ce45330a85768dd5a6f06`
+with CPython 3.12 for the submitted x86_64 wheel and the recorded target
+platform; those builds expose `asctile` as a **top-level** module instead. The
+historical high-level GeLU campaign used
+`adadd7d66ed0ee16d33d79487bf584899a26ef1e`; that pin is not CANNBench
+authority — never change the runtime to match stale GeLU prose. Local GeLU
+evidence uses `Ascend950PR_9599`; do not infer remote resources from that name.
+
+Never mix the two: evidence produced on a campaign pin does not transfer to the
+published wheel, or the reverse. State which runtime produced each result.
+
+## Validation ladder
+
+1. **Syntax/static:** parse and `python3 -m py_compile`; enforce callable,
+   anti-cheat, API, and host/JIT-boundary rules.
+2. **Exact-runtime compile:** replay every case dispatch and lower every unique JIT
+   specialization through pyasc/AscendC, including memory-budget checks and
+   legalized kernel-argument kinds.
+3. **Camodel:** execute ordinary and adversarial numerical routes against the
+   golden with task tolerances.
+4. **Real NPU/CANNBench:** authoritative correctness, profiler time, score, and
+   anti-cheat result.
+
+Never claim numerics or performance from a QEMU compile-only gate.
+
+## CANNBench compile gate
+
+Use `integrations/cannbench/ci/single_qualify.py` in the configured compiler
+environment. It verifies the installed runtime against the selected wheel,
+then replays the selected task's complete case inventory. Read the current
+[local validation contract](../asctile-cannbench-kernel/references/local-validation.md)
+for scope and limitations. Runtime provisioning is a prerequisite, not an
+implicit worker action. A pass for one recipe does not qualify other operators.
+
+## Native camodel setup
+
+Use a wheel built from the selected commit. If you need a local LLVM for a
+source build, point `LLVM_INSTALL_PREFIX` at it. A typical environment is:
+
+```bash
+export ASCEND_HOME_PATH=/usr/local/Ascend/cann-9.2.0
+export PYASC_COMPILER=$ASCEND_HOME_PATH/tools/bisheng_compiler/bin/bisheng
+export PATH=$ASCEND_HOME_PATH/tools/bisheng_compiler/bin:$PATH
+SIM=$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599
+export LD_LIBRARY_PATH=$SIM/camodel:$SIM/lib:$SIM/lib64:$ASCEND_HOME_PATH/lib64:$LD_LIBRARY_PATH
+```
+
+Run target tests through pytest so fixtures configure backend/platform:
+
+```bash
+python3 -m pytest python/test/asctile/target/test_<op>.py \
+  --compile-only --backend Model --platform Ascend950PR_9599 -q
+python3 -m pytest python/test/asctile/target/test_<op>.py \
+  --backend Model --platform Ascend950PR_9599 -q
+```
+
+For CANNBench modules use `run_camodel_smoke.py` and state its suite/operator
+scope. `critical` or `adversarial` is `verified-camodel-smoke`, not a full
+20-case pass unless every contract route was executed.
+
+## JIT diagnostics
+
+- Set `PYASC_DUMP_PATH` to inspect generated IR and AscendC.
+- Use `always_compile=True` only while debugging cache effects.
+- Lower `opt_level` when a clearer compiler failure is useful.
+- `insert_sync=True` is a current AscTile default.
+- Valid allocation modes are `reuse_alloc=0/1/2`; test the mode used in the
+  submitted candidate. Check public decorator/call-time propagation and the
+  base-first discovery-cache reproducer in the JIT reference; do not introduce
+  a concrete-options adapter or compiler monkeypatch.
+- Do not use the removed `run_asc2_passes` option.
+
+Common failures:
+
+- rank mismatch: `global_tensor`, `offsets`, physical shape, and `real_shape`
+  do not have the same rank
+- alignment error: final physical transfer dimension is not 32-byte aligned
+- UB/L1/L0 overflow: tile or unroll factor creates too many live buffers
+- generated C++ declaration conflict: f16/bf16 temporaries share a scalar name
+- dispatch passes but compile fails: host fallback needs to observe the same
+  compile-time exception and select a supported specialization
+- low-level C310 specialization contains `FftsAddr`: the base compiler will
+  call `c2c_ctrl_addr()` and fail on CANNBench 950PR before launch
+- large VF/reuse loop times out on NPU despite fitting UB: classify it as a
+  runtime/compiler failure and fall back to a bounded non-fused route
+
+## Numerical verification
+
+For the repository qualification command, put a real launch and a direct
+`assert torch.allclose(actual, expected, ...)` (or supported NumPy/torch testing
+assertion) in the runnable main path. A custom maximum-error assertion may be
+useful but is not recognized by the existing static/numerical contract. See
+`docs/verification-contract.md` for supported comparisons and evidence limits.
+
+
+Compare the full logical output, shape, dtype, and list arity. Use the task's
+atol/rtol, compare NaN/Inf positions, exercise runtime scalars and both sides
+of attribute dispatch, and inspect simulator diagnostics for invalid padded
+lane arithmetic. A finite random smoke is not enough for exp/GELU/norm/softmax.
+
+## Remote evidence
+
+Run OpenCode and the skills in the environment that provides PyASC/CANN. The
+existing `host` runtime backend runs in the current interpreter, including
+inside a container. CANNBench can provide external hardware evaluation without
+remote-shell access; see `integrations/cannbench/README.md` for the one-operator
+smoke. Its result qualifies only the submitted package and official cases,
+not fresh generation or the full local verification matrix.
+
+For performance iterations use the
+[top-down CANN-sample methodology](../asctile-api-patterns/references/cann-performance-tuning.md).
+Capture per-block envelope, engine intervals and requested/effective geometry
+before explaining a gain. Ratios are not additive, allocation is not bandwidth,
+and simulated ticks/trace counts are not hardware latency. Retain failed
+prefetch/fusion experiments as evidence; do not assume a pipeline overlaps.
+
+For every CANNBench result record submission ID, job ID, immutable URL,
+operator/case counts, passed cases, score/geomean, anti-cheat failures, exact
+wheel hash, and pyasc commit. A queued job is not a completed run.
+
+## References
+
+- [JIT diagnostics](references/jit-diagnostics.md)
+- [Verification patterns](references/verification-patterns.md) — preflight and gate reporting
+- [Execution example](references/execution-example.md) — a complete, tested simulator run
+- [Hardware targets and measurement](references/hardware.md)
+- [Report template](references/report-template.md)
+- `asctile-cannbench-kernel/references/local-validation.md`

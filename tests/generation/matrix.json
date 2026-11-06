@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "profile": "cloud-glm-5.3",
+  "response_model": "glm-5-3-260814",
+  "skills": ["asctile-codegen-workflow", "asctile-api-patterns", "asctile-syntax-constraints", "asctile-build-run-verify"],
+  "limits": {
+    "attempts_per_cell": 1,
+    "rounds_per_attempt": 8,
+    "output_tokens_per_response": 8192,
+    "generation_seconds_per_attempt": 300,
+    "qualification_seconds_per_attempt": 300,
+    "max_output_tokens": 200000,
+    "max_execution_seconds": 1800
+  },
+  "cells": [
+    {"id": "add-f32-tail", "module": "test_vadd.py", "cases": ["vadd_test_2"]},
+    {"id": "reduce-sum", "module": "test_reduce_sum.py", "cases": ["reduce_sum_test_1"]},
+    {"id": "broadcast-f32", "module": "test_broadcast.py", "cases": ["broadcast_test_2"]}
+  ]
+}

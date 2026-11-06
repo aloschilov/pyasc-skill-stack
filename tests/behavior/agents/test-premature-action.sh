@@ -37,7 +37,7 @@ print_section_header "Scenario: Kernel Dev Team Prompt"
 PROMPT="You are helping via the pyasc kernel development team agent.
 Implement a pyasc vector add kernel for two float32 tensors of size 1024.
 Use @asc2.jit and asc2.load/asc2.store for GM–UB data movement and synchronization.
-Follow the pyasc-codegen-workflow phases and load skills before editing files."
+Follow the asctile-codegen-workflow phases and load skills before editing files."
 
 TEST_PROJECT=$(create_test_project "agent-premature-test")
 trap "cleanup_test_project '$TEST_PROJECT'" EXIT
@@ -79,8 +79,8 @@ if [ -n "$SESSION_ID" ]; then
 
     if [ -s "$SESSION_FILE" ]; then
         echo ""
-        echo "  Analyzing premature actions (expect pyasc-codegen-workflow before writes)..."
-        if ! analyze_premature_actions "$SESSION_FILE" "skill" "pyasc-codegen-workflow"; then
+        echo "  Analyzing premature actions (expect asctile-codegen-workflow before writes)..."
+        if ! analyze_premature_actions "$SESSION_FILE" "skill" "asctile-codegen-workflow"; then
             FAILED=$((FAILED + 1))
         fi
 
