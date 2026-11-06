@@ -8,15 +8,15 @@ from run_artifacts import ROOT
 # These listings explain individual syntax constructs, not standalone kernels.
 # New unclassified JIT listings fail closed rather than silently losing coverage.
 EXCLUDED = {
-    'skills/pyasc-syntax-constraints/SKILL.md': 'ellipsis body; syntax fragment',
-    'skills/pyasc-syntax-constraints/references/unsupported-syntax.md': 'deliberately invalid counter-example',
-    'skills/pyasc-syntax-constraints/references/supported-syntax.md': 'helper/caller fragment without imports, output or standalone launch contract',
-    'skills/pyasc-syntax-constraints/references/constexpr-guide.md': 'conditional input fragment without imports or output',
+    'skills/asctile-syntax-constraints/SKILL.md': 'ellipsis body; syntax fragment',
+    'skills/asctile-syntax-constraints/references/unsupported-syntax.md': 'deliberately invalid counter-example',
+    'skills/asctile-syntax-constraints/references/supported-syntax.md': 'helper/caller fragment without imports, output or standalone launch contract',
+    'skills/asctile-syntax-constraints/references/constexpr-guide.md': 'conditional input fragment without imports or output',
 }
 
 # Parameters belong to a source listing, never its enumeration position.
 SCALAR_ARGS = {
-    'skills/pyasc-target-operator/SKILL.md': {'size': 1025, 'tile_size': 1024},
+    'skills/asctile-target-operator/SKILL.md': {'size': 1025, 'tile_size': 1024},
 }
 
 

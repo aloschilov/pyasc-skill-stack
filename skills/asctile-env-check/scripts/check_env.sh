@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== pyasc Environment Check ==="
+echo ""
+
+ERRORS=0
+WARNINGS=0
+
+# asctile lives at asc.experimental.asctile in the published pyasc-dev wheel,
+# but older source builds expose it as a top-level module. Probe both.
+ASCTILE_PROBE='
+try:
+    from asc.experimental import asctile
+except ImportError:
+    import asctile
+'
+
+# Auto-detect the correct Python: prefer whichever has pyasc installed
+if [ -z "${PYTHON:-}" ]; then
+    # 3.9 last and only as a fallback: it is the cell upstream most recently
+    # could not build. At 1.1.1.dev20261023173239 both cp39 wheels were marked
+    # incompatible (upstream used dataclass(slots=True), which needs 3.10), and
+    # they only reappeared one publication later. Prefer a version that has
+    # never dropped out of the matrix.
+    for candidate in python3.11 python3.10 python3.12 python3.9 python3; do
+        if command -v "$candidate" >/dev/null 2>&1 \
+           && "$candidate" -c "import asc; $ASCTILE_PROBE" 2>/dev/null; then
+            PYTHON="$candidate"
+            break
+        fi
+    done
+    PYTHON="${PYTHON:-python3}"
+fi
+echo "[INFO] Using Python: $PYTHON ($(command -v "$PYTHON" 2>/dev/null || echo 'not found'))"
+echo ""
+
+# Python version
+PYTHON_VERSION=$($PYTHON --version 2>&1 | awk '{print $2}' || echo "not found")
+PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
+PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
+
+if [ "$PYTHON_VERSION" = "not found" ]; then
+    echo "[FAIL] Python3 not found"
+    ERRORS=$((ERRORS + 1))
+elif [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -ge 10 ] && [ "$PYTHON_MINOR" -le 12 ]; then
+    echo "[PASS] Python: $PYTHON_VERSION"
+elif [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -eq 9 ]; then
+    # Supported only intermittently upstream: the cp39 wheels were published,
+    # then marked incompatible, then published again within two days. Usable,
+    # but not something to rely on.
+    echo "[WARN] Python: $PYTHON_VERSION (3.9 wheels come and go upstream; prefer 3.10-3.12)"
+    WARNINGS=$((WARNINGS + 1))
+else
+    echo "[WARN] Python: $PYTHON_VERSION (supported: 3.10-3.12)"
+    WARNINGS=$((WARNINGS + 1))
+fi
+
+# pyasc + asctile
+PYASC_VERSION=$($PYTHON -c "
+import asc
+$ASCTILE_PROBE
+print(getattr(asc, '__version__', 'installed'), asctile.__file__)
+" 2>/dev/null || echo "not installed")
+if [ "$PYASC_VERSION" = "not installed" ]; then
+    echo "[FAIL] no pyasc runtime with asctile (pip install --pre pyasc-dev)"
+    ERRORS=$((ERRORS + 1))
+else
+    echo "[PASS] pyasc: $PYASC_VERSION"
+fi
+
+# Which distribution and upstream commit is this?
+PYASC_DIST=$($PYTHON -c "
+import importlib.metadata as m, re
+v = m.version('pyasc-dev')
+try:
+    d = m.metadata('pyasc-dev')['Description']
+    sha = re.search(r'Source: .([0-9a-f]{40}).', d).group(1)[:8]
+except Exception:
+    sha = 'unknown'
+print(f'pyasc-dev {v} (source {sha})')
+" 2>/dev/null || echo "")
+if [ -n "$PYASC_DIST" ]; then
+    echo "[INFO] $PYASC_DIST"
+fi
+
+# pyasc and pyasc-dev both provide the 'asc' package and must not coexist.
+if $PYTHON -c "import importlib.metadata as m; m.distribution('pyasc'); m.distribution('pyasc-dev')" 2>/dev/null; then
+    echo "[FAIL] both 'pyasc' and 'pyasc-dev' are installed; they provide the same"
+    echo "       'asc' package. Use a clean virtualenv with only one of them."
+    ERRORS=$((ERRORS + 1))
+fi
+
+# numpy
+NUMPY_VERSION=$($PYTHON -c "import numpy; print(numpy.__version__)" 2>/dev/null || echo "not installed")
+if [ "$NUMPY_VERSION" = "not installed" ]; then
+    echo "[FAIL] numpy not installed (pip install 'numpy<2')"
+    ERRORS=$((ERRORS + 1))
+else
+    NUMPY_MAJOR=$(echo "$NUMPY_VERSION" | cut -d. -f1)
+    if [ "$NUMPY_MAJOR" -ge 2 ]; then
+        echo "[WARN] numpy: $NUMPY_VERSION (recommended: < 2.0)"
+        WARNINGS=$((WARNINGS + 1))
+    else
+        echo "[PASS] numpy: $NUMPY_VERSION"
+    fi
+fi
+
+# torch (optional)
+TORCH_VERSION=$($PYTHON -c "import torch; print(torch.__version__)" 2>/dev/null || echo "not installed")
+if [ "$TORCH_VERSION" = "not installed" ]; then
+    echo "[INFO] torch: not installed (optional)"
+else
+    echo "[PASS] torch: $TORCH_VERSION"
+fi
+
+# torch_npu (optional)
+TORCH_NPU=$($PYTHON -c "import torch_npu; print('available')" 2>/dev/null || echo "not available")
+if [ "$TORCH_NPU" = "not available" ]; then
+    echo "[INFO] torch_npu: not available (optional, for NPU tensors)"
+else
+    echo "[PASS] torch_npu: available"
+fi
+
+# CANN
+CANN_PATH="${ASCEND_HOME_PATH:-not set}"
+if [ "$CANN_PATH" = "not set" ]; then
+    echo "[WARN] ASCEND_HOME_PATH not set"
+    echo "       Run: source /usr/local/Ascend/cann-9.2.0/set_env.sh (or your installed toolkit path)"
+    WARNINGS=$((WARNINGS + 1))
+elif [ -d "$CANN_PATH" ]; then
+    CANN_VERSION="unknown"
+    for vinfo in "$CANN_PATH/compiler/version.info" "$CANN_PATH/version.info"; do
+        if [ -f "$vinfo" ]; then
+            CANN_VERSION=$(grep -m1 '^Version=' "$vinfo" 2>/dev/null | cut -d= -f2 || echo "unknown")
+            break
+        fi
+    done
+    echo "[PASS] CANN: $CANN_PATH (v$CANN_VERSION)"
+else
+    echo "[FAIL] CANN path does not exist: $CANN_PATH"
+    ERRORS=$((ERRORS + 1))
+fi
+
+# CANN Simulator
+if [ "$CANN_PATH" != "not set" ] && [ -d "$CANN_PATH" ]; then
+    SIM_PATH="$CANN_PATH/tools/simulator/Ascend950PR_9599/lib"
+    if [ -d "$SIM_PATH" ]; then
+        echo "[PASS] Simulator: Ascend950PR_9599 libs found"
+        if echo "${LD_LIBRARY_PATH:-}" 2>/dev/null | grep -q "simulator"; then
+            echo "[PASS] Simulator: LD_LIBRARY_PATH includes simulator path"
+        else
+            echo "[WARN] Simulator: LD_LIBRARY_PATH missing simulator path"
+            echo "       Run: export LD_LIBRARY_PATH=\$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib:\$LD_LIBRARY_PATH"
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    else
+        echo "[INFO] Simulator: Ascend950PR_9599 libs not found (Model backend requires this)"
+    fi
+fi
+
+# NPU (optional)
+NPU_STATUS=$(npu-smi info 2>/dev/null | head -1 || echo "not available")
+if [ "$NPU_STATUS" = "not available" ]; then
+    echo "[INFO] NPU: not available (Model backend still usable)"
+else
+    echo "[PASS] NPU: $NPU_STATUS"
+fi
+
+# Summary
+echo ""
+echo "=== Summary ==="
+echo "Errors:   $ERRORS"
+echo "Warnings: $WARNINGS"
+if [ $ERRORS -gt 0 ]; then
+    echo "[FAIL] Fix $ERRORS error(s) before proceeding"
+    exit 1
+else
+    echo "[PASS] Environment ready"
+fi

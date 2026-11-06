@@ -56,7 +56,7 @@ regeneration or resubmission.
 
 ## Agent workflows
 
-`pyasc-codegen-workflow`, `pyasc-code-review` and `pyasc-build-run-verify` retain
+`asctile-codegen-workflow`, `asctile-code-review` and `asctile-build-run-verify` retain
 the design → implementation → fresh-session review → validation → tuning loop.
 A caller arranges these handoffs; one model can serve different sessions.
 `tests/run-tests.sh --agentic` exercises provider-backed behavior and integration;
