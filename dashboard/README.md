@@ -130,8 +130,11 @@ are separate, including ratios below one.
 
 ### Review and validation
 
-The local review bundle is outside Git at
-`/Users/aloschilov/articles-workspace/dashboard-review-42/`:
+The original local review bundle is outside Git in an external
+`dashboard-review-42/` directory. Its durable successor is the
+[publication archive](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-dashboard-42281897715),
+which includes the deployed snapshot, review screenshots and verification receipts.
+The original local bundle contains:
 
 - `index.html`: human review entry point, with historical, before/after desktop
   and mobile screenshots plus synthetic empty/stale/unavailable/error views.
@@ -190,3 +193,19 @@ have neither a candidate hash nor a retained candidate file. Their absence is
 tracked in [#43](https://github.com/aloschilov/pyasc-skill-stack/issues/43); no
 replacement run or backfill was performed. Upstream fixtures are explicitly
 outside the generated-kernel source view.
+
+
+### Deployed visual refresh
+
+[Pages run 42281897715](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42281897715)
+published the explorer and kernel viewer from `ef386c48cbb88c0d540f9e66aeb086f42d3967a0`.
+All four live files matched the deployment artifact, all 45 source texts were
+selected through the public viewer and matched their archived SHA256, and the
+main-only deployment rule was restored. The deployed archive has 47 indexed
+files; its anonymous public download and every indexed hash were verified.
+
+Archive SHA256: `3b37c73b938f4a7993a332bc8ed0f2772c3e0586b12023692c9f3ab439f8dac6`.
+Open `preview/index.html` inside the archive for historical/before/after review.
+The deployed snapshot is in `site/`; workflow and live verification receipts are
+at the archive root. This documents publication of existing evidence, not new
+model generation or device qualification. PR #44 remains the integration path.
