@@ -119,8 +119,9 @@ API must be classified as a candidate failure, not an unavailable simulator.
 `examples-gate` retains these reports in a separate artifact. This is verification
 of the adapters/executor, **not** newly generated-kernel or hardware qualification.
 
-Remaining #22 work: scheduled failure/staleness alert delivery and an explicitly approved
-schedule plus end-to-end scheduled acceptance. #23 skills-effect comparisons and #24 model diversity should
+Remaining #22 work: live alert delivery and an explicitly approved
+schedule plus end-to-end scheduled acceptance. The inactive controller and health
+observer are described below. #23 skills-effect comparisons and #24 model diversity should
 reuse these contracts; #20 owns separate reviewer/tuner handoffs.
 
 ## Manual CI dispatch
@@ -181,9 +182,66 @@ persistent directory and shared executor latch before taking further action.
 Re-running a CI job creates a new directory but cannot bypass that latch.
 
 Comparison alerts appear in the job summary and cause a failing check; a
-qualification-only result cannot claim regression coverage. This is a manual
-lane, not a periodic monitor: independent scheduled failure/staleness alert
-delivery and scheduled acceptance still require implementation and authorization.
+qualification-only result cannot claim regression coverage. Scheduling is still
+inactive; the separate health observer does not infer fresh coverage from a
+green ordinary CI job.
+
+## Inactive nightly controller and health observer
+
+`generation-nightly.yml` reuses the same executor. PRs only prepare a plan without
+provider credentials; explicit manual execute requires its reviewed digest.
+`tests/generation/nightly.json` keeps `enabled: false`, no activation timestamp
+and no alert destination. Neither new workflow has a cron trigger. The policy's
+exact Release baseline and checksum are checked before any generation. The policy
+snapshot/hash and controller hash are retained separately from execution inputs;
+changing the enable flag does not silently requalify an incompatible executor.
+
+```bash
+gh workflow run generation-nightly.yml --ref <reviewed-branch> -f mode=plan
+# Inspect generation-control-<run>-<attempt>, then use its exact digest:
+gh workflow run generation-nightly.yml --ref <same-branch> \
+  -f mode=execute -f approve_plan=<reviewed-plan-sha256>
+
+# GET-only audit of an existing manual run; no provider or Docker calls:
+python3 scripts/generation_operations.py monitor \
+  --root /outside-checkout/new-observation --inspect-run <RUN_ID/ATTEMPT>
+```
+
+The independent `generation-health.yml` runs on GitHub-hosted Ubuntu, not the
+self-hosted simulator runner. It is manual-only and notification defaults to
+false. Disabled policy yields `disabled`; a manual archive audit can yield only
+`verified-manual`, never scheduled acceptance. Monitor exit 1 means an alert;
+the workflow retains/delivers it before its final failing check.
+
+When explicitly enabled, scheduled observations filter the dedicated workflow's
+`schedule` events on `main` after `enabled_since`. Healthy coverage requires the
+exact run/attempt and revision, selected baseline, full numerical proof and a
+fresh independent comparison. A recent GitHub success without verified evidence
+is an alert. Failed/cancelled runs, more than two hours queued/running, missing
+coverage after the 36-hour activation grace period, stale results, expired or
+corrupt artifacts and observation failures remain visible. History/inspection
+limits fail closed. An in-grace period with no completed result is `pending`,
+not fresh coverage. A later verified run can clear older failures.
+
+Alerts use one **dedicated**, preconfigured issue whose body begins with
+`<!-- pyasc-generation-health:v1 -->`; do not point this at a development issue.
+The notifier never creates issues or mentions people. Explicit notification
+updates that issue idempotently, reopens it for an alert, and closes it only on
+verified healthy coverage. Unchanged findings cause no edit. A PATCH is followed
+by GET confirmation; unknown delivery is reconciled, never blindly repeated.
+`delivery.json` is evidence that GitHub stored the update, not proof a person read
+a notification. No model or CANNBench credential is available to the observer.
+
+Activation remains a separate user-approved change: qualify/select a baseline
+compatible with the **final** executor, configure/test the marked alert issue,
+set `enabled_since` and `enabled: true`, and add reviewed cron triggers (proposed
+generation `17 3 * * *`, independent health `43 * * * *`, UTC). Update the inactive
+workflow regression assertions in that same change. GitHub schedules run on the
+[default branch and may be delayed](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule),
+so activation also requires an approved merge. An actual scheduled generation,
+comparison and alert/recovery delivery must be verified before closing #22.
+Observation on the same GitHub platform cannot guarantee delivery during a
+GitHub-wide outage; job summaries/artifacts remain the audit trail when available.
 
 ## Offline regression policy
 
@@ -231,8 +289,9 @@ emit `unknown-coverage-time`. File modification time is never evidence of fresh
 coverage. Legacy runs can be inspected or selected explicitly, but cannot prove
 fresh coverage without recorded completion time. This tool produces alert records
 and nonzero exits; it does not itself monitor a schedule, send notifications or
-prove that a scheduled job ran. Scheduled failure/staleness alert delivery and
-scheduled acceptance remain unimplemented while scheduling is disabled.
+prove that a scheduled job ran. The health observer implements the independent
+checks and explicit issue-update path, but live delivery and scheduled acceptance
+remain unqualified while scheduling is disabled.
 
 ## Manual pilot, 2026-11-06
 

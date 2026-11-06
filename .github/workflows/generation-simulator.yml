@@ -1,4 +1,4 @@
-name: Manual generation simulator qualification
+name: Generation simulator qualification
 
 on:
   workflow_call:
@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   qualify:
-    if: github.event_name == 'workflow_dispatch' && github.repository == 'aloschilov/pyasc-skill-stack'
+    if: github.repository == 'aloschilov/pyasc-skill-stack' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.ref == 'refs/heads/main'))
     runs-on: [self-hosted, arm64]
     timeout-minutes: 40
     permissions:

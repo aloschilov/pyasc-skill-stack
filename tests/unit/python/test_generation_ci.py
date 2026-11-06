@@ -112,6 +112,37 @@ class GenerationCI(unittest.TestCase):
         self.assertEqual(result['status'], 'incomplete'); self.assertIsNone(result['model_invoked'])
         self.assertEqual(result['alerts'], ['missing-terminal-result'])
 
+    def test_collection_before_prepare_still_retains_an_incomplete_result(self):
+        ci.collect(self.root)
+        self.assertEqual(ci.read(self.root/'result.json')['status'], 'incomplete')
+        self.assertIn('Trigger: unknown', (self.root/'public/SUMMARY.md').read_text())
+
+    def test_scheduled_prepare_requires_enabled_main_policy_and_exact_baseline(self):
+        source = self.root.parent/'checkout'; source.mkdir()
+        policy_file = source/'tests/generation/nightly.json'; policy_file.parent.mkdir(parents=True)
+        selected = {'enabled': True, 'baseline_ref': 'release/reviewed', 'baseline_sha256': 'a'*64}
+        plan = ci.build_plan(); plan['checkout_revision'] = 'synthetic-offline-fixture'
+        self.env.update(GENERATION_ACTION='execute', APPROVE_PLAN=digest(canonical(plan)),
+            GITHUB_EVENT_NAME='schedule', GITHUB_REF='refs/heads/main',
+            GITHUB_WORKFLOW_REF='aloschilov/pyasc-skill-stack/.github/workflows/generation-nightly.yml@refs/heads/main',
+            BASELINE_REF=selected['baseline_ref'], BASELINE_SHA256=selected['baseline_sha256'])
+        unsigned = dict(plan); unsigned.pop('checkout_revision')
+        for i, (enabled, ref, baseline, okay) in enumerate([(True, 'refs/heads/main', selected['baseline_ref'], True),
+                (False, 'refs/heads/main', selected['baseline_ref'], False),
+                (True, 'refs/heads/other', selected['baseline_ref'], False),
+                (True, 'refs/heads/main', 'release/other', False)]):
+            selected['enabled'] = enabled; policy_file.write_text(json.dumps(selected))
+            env = dict(self.env, GITHUB_REF=ref, BASELINE_REF=baseline)
+            with patch.dict(os.environ, env), patch.object(ci, 'ROOT', source), patch.object(ci, 'build_plan', return_value=dict(unsigned)), \
+                 patch.object(ci.subprocess, 'check_output', return_value='synthetic-offline-fixture'), \
+                 patch.object(ci, 'execute', side_effect=AssertionError('No provider calls')):
+                destination = self.root.parent/f'scheduled-{i}'
+                if okay:
+                    self.assertEqual(ci.prepare(destination), 0)
+                    self.assertEqual(ci.read(destination/'ci.json')['schedule_policy'], selected)
+                else:
+                    with self.assertRaisesRegex(ValueError, 'disabled|policy mismatch'): ci.prepare(destination)
+
     def test_cli_replay_preserves_original_result_and_never_dispatches(self):
         self.prepare(); before = (self.root/'result.json').read_bytes()
         for action in ('prepare', 'execute'):

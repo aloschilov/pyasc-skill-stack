@@ -15,6 +15,8 @@ or qualified.
 | `merge-gate` | Push to `main`, or manual dispatch with both hardware and generation actions `none`; 60-minute cap | Every discovered target module compiles; failures **and resource blocks** fail the gate |
 | `generated-hardware` | Explicit manual dispatch with generate/repair/continue/resume | Selected operator recipe, exact package, strict hardware result and durable publication |
 | `generation-simulator` | Explicit manual `generation_action=plan|execute`; default `none` | Offline plan, or hash-approved fresh simulator qualification and optional compatible-baseline comparison; no NPU |
+| `Opt-in generation` | PR planning only, or explicit manual plan/execute; scheduling disabled | Shared executor and pinned policy baseline; PRs never call a provider |
+| `Generation coverage observation` | Explicit manual dispatch; scheduling disabled | GET-only archive/freshness inspection; issue updates require separate opt-in and a marked destination |
 | release | `v*` tag | Fast suite, skills-only archive and install verification |
 
 ## Ordinary PR checks
@@ -40,6 +42,9 @@ Both PR jobs must pass on the current head. Artifacts retain the complete
 verification-contract and generation-adapter runs for 30 days, including failures. Queue time is separate
 from execution time. Neither job qualifies model generation or NPU behavior.
 Accepted qualification requires [durable evidence](verification-contract.md#storage).
+The [inactive controller and observer](../tests/generation/README.md#inactive-nightly-controller-and-health-observer)
+retain control/health records separately. Their disabled/manual green checks do
+not establish scheduled coverage or successful notification delivery.
 
 ## Compile coverage
 

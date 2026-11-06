@@ -1,4 +1,4 @@
-"""Manual CI bridge: plan, execute, compare and archive; no schedule or NPU path."""
+"""CI bridge: approved plan, execute, compare and archive; no NPU path."""
 import argparse
 from datetime import datetime, timezone
 import io
@@ -36,6 +36,15 @@ def prepare(root):
         'created_at': datetime.now(timezone.utc).isoformat()}
     save(root/'ci.json', request)
     require(request['action'] in ('plan', 'execute'), 'Use plan or execute')
+    if request['context']['GITHUB_EVENT_NAME'] == 'schedule':
+        policy = read(ROOT/'tests/generation/nightly.json')
+        require(policy['enabled'] is True and os.environ.get('GITHUB_REF') == 'refs/heads/main', 'Scheduled execution is disabled or not on main')
+        require(request['context']['GITHUB_WORKFLOW_REF'] == 'aloschilov/pyasc-skill-stack/.github/workflows/generation-nightly.yml@refs/heads/main', 'Unexpected scheduled caller')
+        require(request['action'] == 'execute' and request['baseline_ref'] == policy['baseline_ref']
+            and request['baseline_sha256'] == policy['baseline_sha256'], 'Scheduled baseline/policy mismatch')
+        request['schedule_policy'] = policy
+        request['schedule_policy_sha256'] = digest((ROOT/'tests/generation/nightly.json').read_bytes())
+        save(root/'ci.json', request)
     require(bool(request['baseline_ref']) == bool(request['baseline_sha256']), 'Baseline run and archive checksum are a pair')
     if request['baseline_ref']:
         require(re.fullmatch(BASELINE_REF, request['baseline_ref']), 'Baseline must be RUN_ID/ATTEMPT or release/TAG')
@@ -78,6 +87,20 @@ def unpack(archive, destination, expected):
         with target.open('xb') as handle: handle.write(data)
 
 
+def baseline_at(directory, repository, reference):
+    """Validate a reviewed baseline without importing its snapshot code."""
+    baseline = Bundle(directory/'run')
+    require(baseline.state['status'] == 'passed', 'Selected baseline did not qualify')
+    origin_record = read(directory/'ci.json'); origin = origin_record['context']
+    require(origin_record['action'] == 'execute' and read(directory/'result.json')['status'] in ('qualified', 'passed'), 'Baseline was not an accepted execution')
+    require(origin['GITHUB_REPOSITORY'] == repository and origin['GITHUB_EVENT_NAME'] == 'workflow_dispatch', 'Baseline origin mismatch')
+    require(origin['GITHUB_SHA'] == baseline.plan.get('checkout_revision') == baseline.state.get('checkout_revision'), 'Baseline revision mismatch')
+    kind, identifier = reference.split('/')
+    if kind != 'release':
+        require(origin['GITHUB_RUN_ID'] == kind and origin['GITHUB_RUN_ATTEMPT'] == identifier, 'Baseline run/attempt mismatch')
+    return baseline
+
+
 def fetch(root):
     request = read(root/'ci.json')
     require(request['action'] == 'execute', 'Baseline retrieval is execute-only')
@@ -89,14 +112,7 @@ def fetch(root):
                ['gh', 'run', 'download', kind, '--name', f'generation-evidence-{kind}-{identifier}'])
     subprocess.run(command+['--repo', repository, '--dir', str(downloaded)], check=True, timeout=120)
     unpack(downloaded/'generation.tar.gz', root/'baseline', request['baseline_sha256'])
-    baseline = Bundle(root/'baseline/run')
-    require(baseline.state['status'] == 'passed', 'Selected baseline did not qualify')
-    origin_record = read(root/'baseline/ci.json'); origin = origin_record['context']
-    require(origin_record['action'] == 'execute' and read(root/'baseline/result.json')['status'] in ('qualified', 'passed'), 'Baseline was not an accepted execution')
-    require(origin['GITHUB_REPOSITORY'] == repository and origin['GITHUB_EVENT_NAME'] == 'workflow_dispatch', 'Baseline origin mismatch')
-    require(origin['GITHUB_SHA'] == baseline.plan.get('checkout_revision') == baseline.state.get('checkout_revision'), 'Baseline revision mismatch')
-    if kind != 'release':
-        require(origin['GITHUB_RUN_ID'] == kind and origin['GITHUB_RUN_ATTEMPT'] == identifier, 'Baseline run/attempt mismatch')
+    baseline = baseline_at(root/'baseline', repository, request['baseline_ref'])
     request['baseline_index_sha256'] = baseline.sha256
     save(root/'ci.json', request)
     return 0
@@ -159,10 +175,11 @@ def collect(root):
     checksum = digest(archive.read_bytes())
     (out/'generation.tar.gz.sha256').write_text(checksum+'  generation.tar.gz\n')
     plan = read(root/'plan/plan.json') if (root/'plan/plan.json').exists() else {}
+    trigger = read(root/'ci.json')['context'].get('GITHUB_EVENT_NAME', 'unknown') if (root/'ci.json').exists() else 'unknown'
     summary = ('# Generation simulator result\n\nStatus: **'+result['status']+'**.\n\n'
         'Plan: `'+plan.get('plan_sha256', 'unavailable')+'`\n\n'
         'Archive SHA256: `'+checksum+'`\n\n'
-        'No hardware execution or scheduled qualification. A plan is not a generation result; '
+        'No hardware execution. Trigger: '+str(trigger)+'. A plan is not a generation result; '
         'a qualified run is not automatically the baseline.\n')
     if result.get('cells'):
         summary += '\n| Cell | Outcome |\n|---|---|\n'+''.join('| '+name+' | '+status+' |\n' for name, status in result['cells'].items())

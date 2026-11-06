@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "enabled": false,
+  "enabled_since": null,
+  "baseline_ref": "release/qualification-generation-42126948369",
+  "baseline_sha256": "bb574ef974083bc1352c9c5d347a67047203b5a7aea6998ecd4730125e8f3d67",
+  "max_age_hours": 36,
+  "max_run_hours": 2,
+  "alert_issue": null
+}
