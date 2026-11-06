@@ -2,7 +2,7 @@
 
 This is the model axis of the [paired experiment](paired.md), using its executor,
 credential binding, session/context audit and numerical adapters. One complete
-manual comparison is qualified below. The periodic policy remains disabled;
+manual comparison is qualified below. The periodic policy is enabled after authorization on 2026-11-06;
 workflows execute only when explicitly dispatched.
 
 ## Manual qualification, 2026-11-06
@@ -140,9 +140,9 @@ python3 scripts/generation_operations.py monitor --models \
 
 `generation-models.yml` plans on PRs and defaults to `mode=plan` on manual
 dispatch. Execution uses the shared simulator workflow and durable executor
-lease. The periodic policy is disabled and there is no cron. Future activation
-requires its own review, main-only origin, cadence/health checks and a dedicated
-alert issue marked `<!-- pyasc-generation-health:models:v1 -->`. Model and context
+lease. Its daily cadence check runs at 18:47 UTC (21:47 Moscow), with a
+168-hour minimum execution interval, main-only origin and dedicated alert issue
+#39 marked `<!-- pyasc-generation-health:models:v1 -->`. Model and context
 coverage use separate histories and cannot satisfy each other's observers.
 `generation-health.yml` accepts `experiment=models` for manual inspection.
 Hosted/scheduled observation is not qualified merely by these offline tests.

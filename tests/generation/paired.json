@@ -10,11 +10,11 @@
   "max_output_tokens": 1600000,
   "max_execution_seconds": 28800,
   "periodic": {
-    "enabled": false,
-    "enabled_since": null,
+    "enabled": true,
+    "enabled_since": "2026-11-06T16:33:00Z",
     "min_interval_hours": 168,
     "max_age_hours": 192,
     "max_run_hours": 10,
-    "alert_issue": null
+    "alert_issue": 38
   }
 }

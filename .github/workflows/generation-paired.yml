@@ -1,7 +1,9 @@
 name: Paired generation experiment
 
-# PRs plan only. Periodic activation is a separate reviewed change: no cron.
+# Daily cadence check; execute at most once per 168 hours, including failures.
 on:
+  schedule:
+    - cron: '47 17 * * *'
   pull_request:
   workflow_dispatch:
     inputs:

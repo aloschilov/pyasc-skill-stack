@@ -15,7 +15,7 @@ from generation_plan import canonical, digest
 sys.path.insert(0, str(ROOT/'scripts'))
 import generation_operations as ops
 
-NOW = datetime(2026, 11, 6, 10, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 6, 20, tzinfo=timezone.utc)
 
 
 class ModelDesign(unittest.TestCase):
@@ -145,16 +145,19 @@ class ModelEvidence(unittest.TestCase):
 
 
 class ModelController(unittest.TestCase):
-    def test_isolated_disabled_policy_and_workflows(self):
+    def test_activated_model_policy_is_separate_and_can_still_be_disabled(self):
         import yaml
-        config=ops.policy(NOW,paired='models');self.assertFalse(config['enabled'])
+        config=ops.policy(NOW,paired='models');self.assertTrue(config['enabled'])
+        self.assertEqual(config['alert_issue'],39)
+        self.assertEqual(config['min_interval_hours'],168)
         self.assertNotEqual(ops.policy_path(True),ops.policy_path('models'))
         workflow=yaml.safe_load((ROOT/ops.MODELS_WORKFLOW).read_text())
-        self.assertEqual(set(workflow[True]),{'pull_request','workflow_dispatch'})
+        self.assertEqual(set(workflow[True]),{'pull_request','workflow_dispatch','schedule'})
+        self.assertEqual(workflow[True]['schedule'],[{'cron':'47 18 * * *'}])
         self.assertEqual(workflow['jobs']['paired']['with']['experiment'],'models')
         self.assertIn('plan --models',str(workflow['jobs']['prepare']))
         with tempfile.TemporaryDirectory() as d, patch.object(ops,'api',side_effect=AssertionError('Disabled policy must not query')):
-            report=ops.monitor(Path(d),config,NOW,paired='models')
+            report=ops.monitor(Path(d),dict(config,enabled=False),NOW,paired='models')
             self.assertEqual((report['status'],report['experiment']),('disabled','models'))
 
     def test_caller_and_plan_cannot_cross_model_and_context_lanes(self):

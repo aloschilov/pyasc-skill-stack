@@ -178,13 +178,18 @@ class GenerationOperations(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, 'unconfirmed'): ops.notify(report, self.config, NOW)
             self.assertEqual(len(writes), 1)
 
-    def test_workflows_are_disabled_by_default_and_pr_planning_has_no_secret(self):
+    def test_activated_schedules_preserve_pr_isolation_and_independent_observation(self):
         import yaml
         nightly = yaml.safe_load((ROOT/'.github/workflows/generation-nightly.yml').read_text())
         health = yaml.safe_load((ROOT/'.github/workflows/generation-health.yml').read_text())
-        self.assertEqual(set(nightly[True]), {'pull_request', 'workflow_dispatch'})
-        self.assertEqual(set(health[True]), {'workflow_dispatch'})
-        self.assertFalse(json.loads((ROOT/'tests/generation/nightly.json').read_text())['enabled'])
+        self.assertEqual(set(nightly[True]), {'pull_request', 'workflow_dispatch', 'schedule'})
+        self.assertEqual(nightly[True]['schedule'], [{'cron': '17 17 * * *'}])
+        self.assertEqual(set(health[True]), {'workflow_dispatch', 'schedule'})
+        self.assertEqual(health[True]['schedule'], [{'cron': '43 * * * *'}])
+        config = json.loads((ROOT/'tests/generation/nightly.json').read_text())
+        self.assertTrue(config['enabled'])
+        self.assertEqual(config['alert_issue'], 37)
+        self.assertEqual(config['enabled_since'], '2026-11-06T16:33:00Z')
         self.assertNotIn('secrets', nightly['jobs']['prepare'])
         self.assertNotIn('OPENCODE_API_KEY', str(nightly['jobs']['prepare']))
         self.assertIn("github.event_name != 'pull_request'", nightly['jobs']['qualify']['if'])
@@ -304,7 +309,8 @@ class PairedObservation(unittest.TestCase):
         self.addCleanup(self.fixture.doCleanups)
         self.evidence = self.fixture.root.parent/'evidence'; self.evidence.mkdir()
         shutil.copytree(self.fixture.root, self.evidence/'run')
-        self.config = ops.policy(NOW, paired=True)
+        self.config = dict(ops.read(ops.PAIRED_POLICY)['periodic'],
+            enabled=False, enabled_since=None, alert_issue=None)
         self.run = {'id': 123, 'run_attempt': 1, 'event': 'workflow_dispatch',
             'path': '.github/workflows/generation-paired.yml', 'head_branch': 'codex/paired',
             'head_sha': self.fixture.plan['checkout_revision'], 'created_at': '2026-11-06T03:00:00Z',

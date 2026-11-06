@@ -2,7 +2,7 @@
 
 Work for [#23](https://github.com/aloschilov/pyasc-skill-stack/issues/23) uses the
 shared bounded executor and numerical adapters. The manual experiment below has
-24 auditable trials. Scheduling remains disabled. A complete experiment is not necessarily
+24 auditable trials. Scheduling was authorized on 2026-11-06; scheduled acceptance remains pending. A complete experiment is not necessarily
 a successful kernel in every trial, nor evidence that skills improve results.
 
 ## Manual qualification, 2026-11-06
@@ -222,7 +222,7 @@ worker, pinned OpenCode/runtime provisioning, shared latch and public archive;
 the 600-minute job limit includes the eight-hour maximum execution reservation.
 An incomplete experiment fails the CI job. A complete experiment may contain
 candidate failures; inspect its paired report rather than interpreting green CI
-as a skills benefit. This workflow has no cron; its periodic policy is disabled.
+as a skills benefit. Its daily cadence check is enabled; scheduled qualification is tracked separately below.
 
 The existing **Generation coverage observation** workflow can inspect a retained
 paired run with `experiment=paired` and an explicit `inspect_run=RUN_ID/ATTEMPT`.
@@ -237,21 +237,22 @@ python3 scripts/generation_operations.py monitor --paired \
   --inspect-run RUN_ID/ATTEMPT --root /outside-checkout/paired-observation
 ```
 
-## Prepared periodic use (disabled)
+## Periodic use
 
 The `periodic` policy in `paired.json` reuses the controller, shared executor latch
-and health monitor. It defaults to disabled, a 168-hour minimum interval, a
+and health monitor. It is enabled with a 168-hour minimum interval, a
 192-hour freshness window and a ten-hour stalled-run threshold. PRs only plan;
 manual execution still requires the exact reviewed digest regardless of policy.
 
-Future scheduled execution is main-only and must be enabled explicitly, with an
-activation timestamp and a separately marked alert issue. Before preparation and
+Scheduled execution is main-only. Activation was authorized on 2026-11-06,
+with its timestamp and dedicated alert issue #38. The cadence check runs daily
+at 17:47 UTC (20:47 Moscow). Before preparation and
 again before the execution worker, GET-only history checks enforce the interval.
 Any recent scheduled attempt consumes it, including failed or cancelled work;
 scheduled reruns are rejected. Missing, duplicated or truncated history blocks
 spending. A successful controller-only skip is distinguished through its exact
 job receipt (`prepare` succeeded, `paired` skipped); it does not reset the interval
-or establish fresh generation coverage. Thus a future schedule may poll more
+or establish fresh generation coverage. Thus the daily schedule polls more
 often than it executes. At most 20 recent prior runs are inspected before refusing
 spending. A new explicitly approved manual run remains possible after reconciling
 the shared latch. There is no second ledger or automatic repair campaign.
@@ -261,10 +262,10 @@ this policy is enabled. It verifies complete matched evidence (candidate failure
 may be valid experimental outcomes), reports missing/failed/stalled/stale runs,
 and uses an alert issue starting with `<!-- pyasc-generation-health:paired:v1 -->`.
 It cannot overwrite the single-run alert channel. Both policies and workflow cron
-triggers remain off; the future scheduled health workflow selects both policies,
+triggers are enabled; the hourly scheduled health workflow selects all three policies,
 and an inactive policy stays disabled without sending notifications.
 
 The manual experiment and local evidence observer are qualified above. Hosted
-observer qualification, actual periodic activation and scheduled-run qualification
-remain separate work; activation requires a separately reviewed change. Offline
+observer and scheduled-run qualification remain pending until verified artifacts
+and alert/recovery receipts exist. Offline
 controller tests do not establish scheduled coverage. No NPU spending is implicit.
