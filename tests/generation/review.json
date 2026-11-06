@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "matrix": "tests/generation/matrix.json",
+  "cell": "add-f32-tail",
+  "max_repairs": 1,
+  "writer": {"rounds_per_attempt": 12, "output_tokens_per_response": 24000, "generation_seconds_per_attempt": 900},
+  "reviewer": {"rounds_per_attempt": 12, "output_tokens_per_response": 8192, "generation_seconds_per_attempt": 300},
+  "max_output_tokens": 800000,
+  "max_execution_seconds": 3600
+}

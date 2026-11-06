@@ -16,6 +16,7 @@ or qualified.
 | `generated-hardware` | Explicit manual dispatch with generate/repair/continue/resume | Selected operator recipe, exact package, strict hardware result and durable publication |
 | `generation-simulator` | Explicit manual `generation_action=plan|execute`; default `none` | Offline plan, or hash-approved fresh simulator qualification and optional compatible-baseline comparison; no NPU |
 | `Opt-in generation` | PR planning only, or explicit manual plan/execute; scheduling disabled | Shared executor and pinned policy baseline; PRs never call a provider |
+| `Reviewed generation` | PR planning only, or explicit manual plan/execute | [Fresh writer/reviewer sessions](../tests/generation/review.md), bounded repairs and unchanged-byte simulator qualification; no NPU |
 | `Generation coverage observation` | Explicit manual dispatch; scheduling disabled | GET-only archive/freshness inspection; issue updates require separate opt-in and a marked destination |
 | release | `v*` tag | Fast suite, skills-only archive and install verification |
 
