@@ -33,7 +33,8 @@ from operator_recipe import load_recipe, run_recipe
 from submission import save
 
 PIN = json.loads((HERE / 'single-runtime.json').read_text())
-SKILLS = ('pyasc-cannbench-kernel', 'pyasc-syntax-constraints', 'pyasc-api-patterns', 'pyasc-build-run-verify')
+SKILLS = ('asctile-cannbench-kernel', 'asctile-syntax-constraints', 'asctile-api-patterns', 'asctile-build-run-verify')
+LEGACY_SKILLS = tuple(name.replace('asctile-', 'pyasc-', 1) for name in SKILLS)
 MODEL = PIN['model']
 
 
@@ -106,7 +107,25 @@ def call(command, log, *, cwd=ROOT, env=None, timeout=900):
     return out
 
 
-def trace(stdout, skill_root):
+def receipt_skills(meta):
+    """Read the namespace from immutable source/context, never relabel old runs."""
+    selected = []
+    for group in (SKILLS, LEGACY_SKILLS):
+        paths = {'skills/'+name+'/SKILL.md' for name in group}
+        if (paths <= set(meta['source_hashes']) and paths <= set(meta['context_hashes'])
+                and all(meta['source_hashes'][p] == meta['context_hashes'][p] for p in paths)):
+            selected.append(group)
+    if len(selected) != 1:
+        raise ValueError('Missing or ambiguous recorded skill namespace')
+    opposite = LEGACY_SKILLS if selected[0] == SKILLS else SKILLS
+    if any('skills/'+name+'/SKILL.md' in meta['source_hashes']
+           or 'skills/'+name+'/SKILL.md' in meta['context_hashes'] for name in opposite):
+        raise ValueError('Mixed recorded skill namespaces')
+    return selected[0]
+
+
+def trace(stdout, skill_root, required=None):
+    required = SKILLS if required is None else required
     sessions, loaded, reads = set(), set(), []
     for line in stdout.splitlines():
         try: event = json.loads(line)
@@ -120,7 +139,7 @@ def trace(stdout, skill_root):
                     or Path(directory).resolve() != (skill_root/name).resolve()):
                 raise ValueError('Native skill came from an unpinned source')
             loaded.add(name); reads.append({'name': name, 'directory': directory})
-    if len(sessions) != 1 or not set(SKILLS) <= loaded:
+    if len(sessions) != 1 or not set(required) <= loaded:
         raise ValueError('Missing unique native session or selected skill-load evidence')
     return {'session_id': next(iter(sessions)), 'loaded_skills': sorted(loaded), 'skill_calls': reads}
 
@@ -203,7 +222,7 @@ def generated_binding(root):
     check_hashes(root, gen['files'])
     if gen['model'] != MODEL or gen['provider_model_revision'] != 'unknown':
         raise ValueError('Unexpected model attribution')
-    if not set(SKILLS) <= set(gen['native_trace']['loaded_skills']):
+    if not set(receipt_skills(meta)) <= set(gen['native_trace']['loaded_skills']):
         raise ValueError('Incomplete native skill evidence')
     qualified_binding(root, gen, load(root/'catalog.json'))
     staged = smoke.verify(root / 'package')
@@ -326,7 +345,7 @@ def qualified_generation(root):
     for name in ('project/candidate.py', 'candidate/'+run_recipe(root)['function']+'.py'):
         if smoke.sha(iteration/name) != digest: raise ValueError('Qualified candidate changed')
     if load(iteration/'static.json').get('passed') is not True: raise ValueError('Static checks did not pass')
-    native = trace((iteration/'events.log').read_text(), Path(config['skills']['paths'][0]))
+    native = trace((iteration/'events.log').read_text(), Path(config['skills']['paths'][0]), receipt_skills(meta))
     if native != load(iteration/'skill-trace.json'): raise ValueError('Native skill trace changed')
     session = load(iteration/'session.json')
     model = json.loads(session['session']['model'])

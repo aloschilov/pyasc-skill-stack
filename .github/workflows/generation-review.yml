@@ -1,0 +1,59 @@
+name: Reviewed generation
+
+# Explicit manual execution; PRs plan only. No schedule or hardware path.
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Plan only by default; execute one bounded review/repair plan'
+        type: choice
+        options: [plan, execute]
+        default: plan
+      approve_plan:
+        description: 'Exact reviewed plan digest required to execute'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    if: github.repository == 'aloschilov/pyasc-skill-stack'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Select external plan evidence
+        run: echo "CONTROL_ROOT=$RUNNER_TEMP/review-control-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+      - name: Validate reviewed plan without provider credentials
+        env:
+          GENERATION_ACTION: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'plan' }}
+          APPROVE_PLAN: ${{ inputs.approve_plan || '' }}
+        run: python3 tests/tools/generation_review.py prepare --root "$CONTROL_ROOT"
+      - name: Preserve plan including failures
+        if: always() && env.CONTROL_ROOT != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.CONTROL_ROOT }}/
+          if-no-files-found: error
+          retention-days: 90
+
+  review:
+    needs: prepare
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'execute'
+    uses: ./.github/workflows/generation-simulator.yml
+    with:
+      experiment: review
+      action: execute
+      approve_plan: ${{ inputs.approve_plan || '' }}
+    secrets:
+      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}

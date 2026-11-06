@@ -2,7 +2,7 @@
 # =============================================================================
 # L3 Integration Test: Full Workflow Execution (Agent-in-the-Loop)
 # =============================================================================
-# Runs OpenCode through a complete pyasc-codegen-workflow: environment check,
+# Runs OpenCode through a complete asctile-codegen-workflow: environment check,
 # design, implementation with review, and verification.  Validates that the
 # agent follows the phased workflow via both artifact inspection and session
 # analysis.
@@ -38,7 +38,7 @@ fi
 TEST_PROJECT=$(create_test_project "workflow-exec")
 
 # Run init_kernel_project.sh to set up the kernel directory
-INIT_SCRIPT="$SKILLS_DIR/skills/pyasc-codegen-workflow/scripts/init_kernel_project.sh"
+INIT_SCRIPT="$SKILLS_DIR/skills/asctile-codegen-workflow/scripts/init_kernel_project.sh"
 if [ -x "$INIT_SCRIPT" ]; then
     (cd "$TEST_PROJECT" && bash "$INIT_SCRIPT" test_vadd 2>/dev/null) || true
 fi
@@ -55,7 +55,7 @@ echo ""
 print_section_header "Phase: Agent Workflow Execution"
 
 PROMPT="You are a pyasc kernel development engineer. Your task is to develop
-a vector add kernel following the pyasc-codegen-workflow phases strictly:
+a vector add kernel following the asctile-codegen-workflow phases strictly:
 
 Phase 0 - Environment: Check that pyasc is available.
 Phase 1 - Design: Create a design document at kernels/test_vadd/docs/design.md
@@ -216,7 +216,7 @@ if [ -n "$SESSION_ID" ]; then
         done
         echo ""
 
-        analyze_premature_actions "$SESSION_FILE" "skill" "pyasc-codegen-workflow" || true
+        analyze_premature_actions "$SESSION_FILE" "skill" "asctile-codegen-workflow" || true
     else
         print_info "Session export was empty"
     fi

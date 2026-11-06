@@ -1,0 +1,92 @@
+name: Generation coverage observation
+
+# Independent from the self-hosted executor. No cron until separately approved.
+on:
+  workflow_dispatch:
+    inputs:
+      inspect_run:
+        description: 'Optional manual CI RUN_ID/ATTEMPT to inspect; never scheduled coverage'
+        type: string
+        default: ''
+      experiment:
+        description: 'Observe one explicit run or the selected coverage policy; no model calls'
+        type: choice
+        options: [single, paired, models]
+        default: single
+      notify:
+        description: 'Update the preconfigured marked alert issue; requires enabled policy'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: generation-health
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    if: github.repository == 'aloschilov/pyasc-skill-stack'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        experiment: ${{ fromJSON(github.event_name == 'schedule' && '["single","paired","models"]' || inputs.experiment == 'models' && '["models"]' || inputs.experiment == 'paired' && '["paired"]' || '["single"]') }}
+    env:
+      EXPERIMENT: ${{ matrix.experiment }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Select external observation directory
+        run: echo "HEALTH_ROOT=$RUNNER_TEMP/generation-health-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+      - name: Observe recorded coverage (GET only)
+        continue-on-error: true # Deliver/retain an alert before the final failing check.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INSPECT_RUN: ${{ inputs.inspect_run }}
+        run: |
+          args=()
+          if [ -n "$INSPECT_RUN" ]; then args+=(--inspect-run "$INSPECT_RUN"); fi
+          if [ "$EXPERIMENT" = paired ]; then args+=(--paired); fi
+          if [ "$EXPERIMENT" = models ]; then args+=(--models); fi
+          python3 scripts/generation_operations.py monitor --root "$HEALTH_ROOT" "${args[@]}"
+      - name: Update configured alert issue
+        if: (github.event_name == 'schedule' || inputs.notify) && inputs.inspect_run == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          args=()
+          if [ "$EXPERIMENT" = paired ]; then args+=(--paired); fi
+          if [ "$EXPERIMENT" = models ]; then args+=(--models); fi
+          python3 scripts/generation_operations.py notify --root "$HEALTH_ROOT" "${args[@]}"
+      - name: Retain observation and delivery receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generation-health${{ matrix.experiment == 'models' && '-models' || matrix.experiment == 'paired' && '-paired' || '' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.HEALTH_ROOT }}/health.json
+            ${{ env.HEALTH_ROOT }}/history.json
+            ${{ env.HEALTH_ROOT }}/delivery.json
+            ${{ env.HEALTH_ROOT }}/error.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Report health status
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads((Path(os.environ['HEALTH_ROOT'])/'health.json').read_text())
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write(report.get('experiment', 'unknown')+' coverage: **'+report['status']+'**.\n\nScope: '+report['scope']+'\n\n')
+              out.write('Alerts: '+(', '.join(report['alerts']) or 'none')+'\n')
+          raise SystemExit(1 if report['status'] == 'alert' else 0)
+          PY

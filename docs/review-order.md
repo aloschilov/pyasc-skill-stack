@@ -49,8 +49,8 @@ exit 1 — failed; оба результата не дают полного pass
 
 ## Проверка ядра и skills
 
-Начните с `pyasc-codegen-workflow`, затем загрузите нужные API/синтаксические
-skills, `pyasc-code-review` и `pyasc-build-run-verify`. Проверьте наличие дизайна,
+Начните с `asctile-codegen-workflow`, затем загрузите нужные API/синтаксические
+skills, `asctile-code-review` и `asctile-build-run-verify`. Проверьте наличие дизайна,
 ревью с идентификатором сессии, неизменного candidate hash и отчётов проверок.
 Исправленный кандидат требует повторного ревью и проверки; сохраняйте оригинал.
 

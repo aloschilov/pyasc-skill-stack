@@ -15,7 +15,7 @@ force `accepted: false` (regardless of total score) and emit
 
   - ``F_legacy_api_import``: kernel imports or references a banned legacy
     framework (``ascendcl``, ``tik``, ``tik2``, ``tbe``, ``TPosition``,
-    ``.npu()``). See ``skills/pyasc-api-patterns/SKILL.md`` -> "Required
+    ``.npu()``). See ``skills/asctile-api-patterns/SKILL.md`` -> "Required
     host imports & forbidden APIs".
   - ``F_missing_asc2_import``: kernel source calls ``asc2.<something>`` but
     does not ``import asc2``. Would surface as ``NameError`` at simulator
@@ -97,7 +97,7 @@ except AttributeError:
 
 # Phase 10 host-import policy. Top-level module names (and submodule prefixes)
 # that constitute a legacy v1 / TBE / TIK leak. See
-# ``skills/pyasc-api-patterns/SKILL.md`` -> "Required host imports & forbidden
+# ``skills/asctile-api-patterns/SKILL.md`` -> "Required host imports & forbidden
 # APIs" for the policy rationale and the four Phase 9 failure modes that
 # motivated the ban.
 LEGACY_API_MODULES = ("ascendcl", "tik", "tik2", "tbe")

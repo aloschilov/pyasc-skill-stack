@@ -8,12 +8,12 @@
     },
     {
       "role": "assistant",
-      "content": "I'll follow the pyasc-codegen-workflow to develop this kernel.",
+      "content": "I'll follow the asctile-codegen-workflow to develop this kernel.",
       "parts": [
         {
           "type": "tool_use",
           "name": "skill",
-          "input": {"name": "pyasc-codegen-workflow"}
+          "input": {"name": "asctile-codegen-workflow"}
         }
       ]
     },
@@ -24,12 +24,12 @@
         {
           "type": "tool_use",
           "name": "skill",
-          "input": {"name": "pyasc-env-check"}
+          "input": {"name": "asctile-env-check"}
         },
         {
           "type": "tool_use",
           "name": "Read",
-          "input": {"path": "skills/pyasc-codegen-workflow/SKILL.md"}
+          "input": {"path": "skills/asctile-codegen-workflow/SKILL.md"}
         }
       ]
     },
@@ -40,17 +40,17 @@
         {
           "type": "tool_use",
           "name": "skill",
-          "input": {"name": "pyasc-docs-search"}
+          "input": {"name": "asctile-docs-search"}
         },
         {
           "type": "tool_use",
           "name": "skill",
-          "input": {"name": "pyasc-api-patterns"}
+          "input": {"name": "asctile-api-patterns"}
         },
         {
           "type": "tool_use",
           "name": "skill",
-          "input": {"name": "pyasc-syntax-constraints"}
+          "input": {"name": "asctile-syntax-constraints"}
         },
         {
           "type": "tool_use",
@@ -81,7 +81,7 @@
         {
           "type": "tool_use",
           "name": "skill",
-          "input": {"name": "pyasc-code-review"}
+          "input": {"name": "asctile-code-review"}
         },
         {
           "type": "tool_use",

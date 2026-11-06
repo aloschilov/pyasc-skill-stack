@@ -92,13 +92,15 @@ class GeneratedCI(unittest.TestCase):
                 result=subprocess.run(['bash','-c',script],cwd=root,env=dict(env,PROBE_EXIT=str(code)),capture_output=True,text=True)
                 self.assertEqual(result.returncode==0, code==0 and files, result.stdout+result.stderr)
 
-    def qualified_parent(self, parent):
+    def qualified_parent(self, parent, skills=None):
+        skills=ci.SKILLS if skills is None else skills
         attempt=parent/'generation/attempt-1';attempt.mkdir(parents=True)
         source=parent/'source';context=parent/'context';source.mkdir();context.mkdir()
         (source/'reference/images').mkdir(parents=True)
         ci.save(source/'reference/images/ENV.json',{'dev_image':{'ref':'simulator'}})
-        for skill in ci.SKILLS:
-            folder=context/'skills'/skill;folder.mkdir(parents=True);(folder/'SKILL.md').write_text(skill)
+        for skill in skills:
+            for base in (source,context):
+                folder=base/'skills'/skill;folder.mkdir(parents=True);(folder/'SKILL.md').write_text(skill)
         ci.save(parent/'catalog.json',{'required_cases':20});ci.save(parent/'task.json',{})
         ci.save(parent/'model-config.json',{'skills':{'paths':['/original/context/skills']}})
         for name in ('original-candidate.py','project/candidate.py','candidate/swi_glu.py'):
@@ -110,9 +112,9 @@ class GeneratedCI(unittest.TestCase):
             'runtime_files_verified':114,'candidate_sha256':digest})
         ci.save(attempt/'simulator.json',{'passed':True,'cases':[{'passed':True} for _ in range(12)],'candidate_sha256':digest})
         events='\n'.join(json.dumps({'sessionID':'session','type':'tool_use','part':{'tool':'skill','state':{
-            'status':'completed','input':{'name':s},'metadata':{'dir':'/original/context/skills/'+s}}}}) for s in ci.SKILLS)
+            'status':'completed','input':{'name':s},'metadata':{'dir':'/original/context/skills/'+s}}}}) for s in skills)
         (attempt/'events.log').write_text(events)
-        ci.save(attempt/'skill-trace.json',ci.trace(events,Path('/original/context/skills')))
+        ci.save(attempt/'skill-trace.json',ci.trace(events,Path('/original/context/skills'),skills))
         ci.save(attempt/'session.json',{'session':{'id':'session','model':json.dumps({'providerID':'gateway','id':'glm-5.3'})},
             'message':[{'original':'message'}],'part':[{'original':'part'}]})
         ci.save(parent/'run.json',{'repository':'owner/repo','origin_run_id':'123','origin_run_attempt':'1',
@@ -305,6 +307,32 @@ class GeneratedCI(unittest.TestCase):
         with self.assertRaises(ValueError): ci.trace(encode(events),root)
         with self.assertRaises(ValueError): ci.trace('I loaded all the skills',root)
 
+    def test_receipts_keep_the_recorded_namespace_after_skill_rename(self):
+        for group in (ci.SKILLS, ci.LEGACY_SKILLS):
+            hashes={'skills/'+name+'/SKILL.md':'fixture' for name in group}
+            meta={'source_hashes':dict(hashes), 'context_hashes':dict(hashes)}
+            self.assertEqual(ci.receipt_skills(meta), group)
+            root=Path('/original/context/skills')
+            events=[{'sessionID':'legacy-session', 'type':'tool_use', 'part':{'tool':'skill',
+                'state':{'status':'completed', 'input':{'name':name}, 'metadata':{'dir':str(root/name)}}}}
+                for name in group]
+            result=ci.trace('\n'.join(map(json.dumps,events)),root,ci.receipt_skills(meta))
+            self.assertEqual(result['loaded_skills'],sorted(group))
+            other=ci.LEGACY_SKILLS if group==ci.SKILLS else ci.SKILLS
+            meta['context_hashes']['skills/'+other[0]+'/SKILL.md']='mixed'
+            with self.assertRaisesRegex(ValueError,'Mixed'): ci.receipt_skills(meta)
+            del meta['context_hashes']['skills/'+other[0]+'/SKILL.md']
+            del meta['context_hashes']['skills/'+group[0]+'/SKILL.md']
+            with self.assertRaisesRegex(ValueError,'Missing'): ci.receipt_skills(meta)
+
+    def test_legacy_qualified_generation_reconstructs_without_relabeling(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict('os.environ',{'GITHUB_REPOSITORY':'owner/repo'}):
+            root=Path(tmp); self.qualified_parent(root,ci.LEGACY_SKILLS)
+            before=ci.hashes(root)
+            result=ci.qualified_generation(root)
+            self.assertEqual(result['native_trace']['loaded_skills'],sorted(ci.LEGACY_SKILLS))
+            self.assertEqual(before,ci.hashes(root))
+
     def test_evidence_paths_and_bytes_are_checked(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); (root/'candidate.py').write_text('original')
@@ -377,7 +405,9 @@ class GeneratedCI(unittest.TestCase):
                 z.writestr('cann_bench/swi_glu.py',b'original');z.writestr('cann_bench/_pyasc_runtime.py',b'helper')
             prepared={'files':{'candidate/swi_glu.py':'candidate-digest','candidate/_pyasc_runtime.py':ci.smoke.sha(helper)},
                 'runtime_bundle_sha256':ci.PIN['runtime_bundle_sha256'],'catalog':{},'wheel_sha256':hashlib.sha256(wheel.getvalue()).hexdigest()}
-            with patch.object(ci,'inputs',return_value={}),patch.object(ci,'qualified_binding'),patch.object(ci.smoke,'verify',return_value=prepared):
+            bindings={'skills/'+s+'/SKILL.md':'fixture' for s in ci.SKILLS}
+            meta={'source_hashes':bindings,'context_hashes':bindings}
+            with patch.object(ci,'inputs',return_value=meta),patch.object(ci,'qualified_binding'),patch.object(ci.smoke,'verify',return_value=prepared):
                 with self.assertRaisesRegex(ValueError,'Source/wheel candidate mismatch'): ci.generated_binding(root)
 
 if __name__=='__main__': unittest.main()

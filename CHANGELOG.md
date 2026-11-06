@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — AscTile skill delivery
+
+- Rename the ten installable skills from `pyasc-*` to `asctile-*`, with matching
+  frontmatter and references. Re-run the installer to migrate owned stale links.
+- Use the modern AscTile import in new templates and recommend CANN 9.2.0 for
+  new setups. Historical runtime/evidence records keep their original identity.
+- Validate old generated receipts using their recorded skill namespace; mixed
+  or mismatched source/context namespaces fail rather than acquiring new names.
+
 Releases are git tags. Tagging `v*` builds the archives and publishes them —
 see [.github/workflows/release.yml](.github/workflows/release.yml). There is no
 `release/<date>/` directory; a dated copy of a tree drifts from the tree.

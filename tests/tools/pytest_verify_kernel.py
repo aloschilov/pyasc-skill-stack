@@ -123,6 +123,13 @@ def _is_provisioning_error(exc: BaseException, asc_pkg_dir: Optional[str]) -> bo
     failure, so require that shape *and* an origin inside pyasc, and never
     excuse an error raised by the compiler or the language layer.
     """
+    # AST lowering may resolve a candidate's nonexistent public API inside
+    # asc.codegen. That is a kernel defect even though the deepest frame is
+    # inside the runtime; it is not evidence of an incomplete installation.
+    if isinstance(exc, AttributeError) and getattr(getattr(exc, "obj", None), "__name__", None) in (
+        "asc.experimental.asctile", "asctile",
+    ):
+        return False
     origin = (type(exc).__module__ or "").split(".")
     if origin[:1] == ["asc"] and len(origin) > 1 and origin[1] in ("codegen", "language"):
         return False

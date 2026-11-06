@@ -69,19 +69,19 @@ run_behavior_test \
     60
 
 run_behavior_test \
-    "pyasc-api-patterns skill trigger" \
+    "asctile-api-patterns skill trigger" \
     "What are the best practices for using asc2.load and asc2.store?" \
     "asc2\.load|asc2\.store|asc2\.tensor|TPosition|copy|tensor|pyasc|asc\." \
     60
 
 run_behavior_test \
-    "pyasc-syntax-constraints skill trigger" \
+    "asctile-syntax-constraints skill trigger" \
     "What Python constructs are banned inside @asc2.jit?" \
     "syntax|unsupported|forbidden|jit|@asc|lambda|print|try" \
     60
 
 run_behavior_test \
-    "pyasc-code-review skill trigger" \
+    "asctile-code-review skill trigger" \
     "Review my pyasc kernel for syntax constraint violations" \
     "review|syntax|constraint|jit|pyasc|kernel|check|violat" \
     60

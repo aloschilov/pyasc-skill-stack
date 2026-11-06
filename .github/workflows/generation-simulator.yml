@@ -1,0 +1,125 @@
+name: Generation simulator qualification
+
+on:
+  workflow_call:
+    inputs:
+      experiment:
+        default: single
+        type: string
+      action:
+        required: true
+        type: string
+      approve_plan:
+        default: ''
+        type: string
+      baseline_ref:
+        default: ''
+        type: string
+      baseline_sha256:
+        default: ''
+        type: string
+    secrets:
+      OPENCODE_API_KEY:
+        required: false
+
+# No schedule or PR model calls. A rerun gets a new directory but still obeys
+# the same durable executor latch; cancellation never authorizes another POST.
+concurrency:
+  group: generation-simulator
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    if: github.repository == 'aloschilov/pyasc-skill-stack' && (inputs.experiment == 'single' || (inputs.experiment == 'paired' || inputs.experiment == 'models') || inputs.experiment == 'review') && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && inputs.experiment != 'review' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && (inputs.experiment == 'paired' || inputs.experiment == 'models') && inputs.action == 'plan'))
+    runs-on: [self-hosted, arm64]
+    timeout-minutes: ${{ (inputs.experiment == 'paired' || inputs.experiment == 'models') && 600 || inputs.experiment == 'review' && 120 || 40 }}
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GENERATION_HELPER: ${{ (inputs.experiment == 'paired' || inputs.experiment == 'models') && 'tests/tools/generation_pairs_ci.py' || inputs.experiment == 'review' && 'tests/tools/generation_review.py' || 'tests/tools/generation_ci.py' }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      GENERATION_EXPERIMENT: ${{ inputs.experiment }}
+      GENERATION_ACTION: ${{ inputs.action }}
+      APPROVE_PLAN: ${{ inputs.approve_plan }}
+      BASELINE_REF: ${{ inputs.baseline_ref }}
+      BASELINE_SHA256: ${{ inputs.baseline_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Select persistent external evidence directory
+        run: |
+          # The runner is a container. Its work volume is shared at the same
+          # absolute path with Docker; HOME and runner temp are not durable state.
+          test ! -e "$HOME/.local/state/pyasc-generation/active.json"
+          base="$(dirname "$RUNNER_WORKSPACE")/.pyasc-generation"
+          echo "GENERATION_ROOT=$base/results/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+          echo "GENERATION_STATE_DIR=$base/state" >> "$GITHUB_ENV"
+
+      - name: Prepare and verify the reviewed plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 "$GENERATION_HELPER" prepare --root "$GENERATION_ROOT"
+
+      - name: Retrieve explicit baseline (GET only)
+        if: inputs.experiment == 'single' && inputs.action == 'execute' && inputs.baseline_ref != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tests/tools/generation_ci.py fetch --root "$GENERATION_ROOT"
+
+      - name: Provision experiment simulator
+        if: inputs.experiment != 'single' && inputs.action == 'execute'
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          image = json.loads(Path('reference/images/ENV.json').read_text())['dev_image']['ref']
+          subprocess.run(['docker', 'pull', image], check=True, timeout=480)
+          PY
+
+      - name: Provision pinned OpenCode CLI (no model request)
+        if: inputs.action == 'execute'
+        run: |
+          tool_dir="$RUNNER_TEMP/pyasc-opencode-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          checksum=e9841d43d3e1a8f36ed2691592d3b8b4fb097e606c8b559a277a1b845840e26b
+          cache_dir="$(dirname "$RUNNER_WORKSPACE")/.pyasc-generation/tools"
+          archive="$cache_dir/opencode-$checksum.tar.gz"
+          mkdir -p "$tool_dir" "$cache_dir"
+          if ! echo "$checksum  $archive" | sha256sum --check --status; then
+            curl --fail --location --connect-timeout 20 --max-time 600 \
+              https://github.com/anomalyco/opencode/releases/download/v1.19.0/opencode-linux-arm64.tar.gz \
+              --output "$tool_dir/opencode.tar.gz"
+            echo "$checksum  $tool_dir/opencode.tar.gz" | sha256sum --check
+            cp "$tool_dir/opencode.tar.gz" "$archive.$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.tmp"
+            mv "$archive.$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.tmp" "$archive"
+          fi
+          cp "$archive" "$tool_dir/opencode.tar.gz"
+          echo "$checksum  $tool_dir/opencode.tar.gz" | sha256sum --check
+          tar -xzf "$tool_dir/opencode.tar.gz" -C "$tool_dir" opencode
+          "$tool_dir/opencode" --version
+          echo "$tool_dir" >> "$GITHUB_PATH"
+
+      - name: Execute approved plan and compare when a baseline is selected
+        if: inputs.action == 'execute'
+        env:
+          OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: python3 "$GENERATION_HELPER" execute --root "$GENERATION_ROOT"
+
+      - name: Collect public evidence and write job summary
+        if: always() && env.GENERATION_ROOT != ''
+        run: python3 "$GENERATION_HELPER" collect --root "$GENERATION_ROOT"
+
+      - name: Preserve public evidence including failures
+        if: always() && env.GENERATION_ROOT != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: generation-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.GENERATION_ROOT }}/public/
+          if-no-files-found: error
+          retention-days: 90

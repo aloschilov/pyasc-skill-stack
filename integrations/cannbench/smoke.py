@@ -20,7 +20,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
-sys.path[:0] = [str(HERE / 'workers'), str(HERE / 'ci')]
+sys.path[:0] = [str(HERE), str(HERE / 'workers'), str(HERE / 'ci')]
 from hardware_gate import evaluate
 from submission import save, reconcile, TERMINAL
 
@@ -87,14 +87,29 @@ def make_bundle(runtime, expected_hash, sources, version, destination, function=
                 continue
             if '..' in Path(n).parts or n.startswith('/'):
                 raise ValueError('Unsafe wheel member')
-            if n.startswith(('asc/', 'asctile/', 'pybind11/')):
+            if n.startswith(('asc/', 'asctile/', 'pybind11/', 'numpy/', 'numpy.libs/')) or n == 'typing_extensions.py':
                 contents[n] = archive.read(n)
             elif '.dist-info/licenses/' in n:
                 contents[metadata + 'licenses/' + n.split('.dist-info/licenses/', 1)[1]] = archive.read(n)
-    if (not all(n in contents for n in ('asc/__init__.py', 'asctile/__init__.py', 'pybind11/__init__.py'))
+    modern = 'asc/experimental/asctile/__init__.py' in contents
+    legacy = 'asctile/__init__.py' in contents
+    if (not all(n in contents for n in ('asc/__init__.py', 'pybind11/__init__.py'))
+            or not (modern or legacy)
             or not any(n.startswith('asc/_C/libpyasc') and n.endswith('.so') for n in contents)
-            or not any('PYASC-LICENSE' in n for n in contents)):
+            or not any('PYASC-LICENSE' in n or '/licenses/pyasc_dev/' in n for n in contents)):
         raise ValueError('Expected self-contained PyASC runtime, pybind11 and licenses')
+    if modern and not legacy:
+        # Source-built bundles have full dependency payload and verified RECORDs.
+        import runtime_bundle
+        files = runtime_bundle.read_wheel(runtime, expected_hash)
+        manifests = [n for n in files if n.endswith('.dist-info/runtime-manifest.json')]
+        if len(manifests) != 1:
+            raise ValueError('Missing source-runtime manifest')
+        declared = json.loads(files[manifests[0]])['payload_sha256']
+        actual = {n: hashlib.sha256(b).hexdigest() for n, b in files.items() if runtime_bundle.payload_name(n)}
+        if (declared != actual or 'numpy/__init__.py' not in actual
+                or 'typing_extensions.py' not in actual or runtime_bundle.NATIVE not in actual):
+            raise ValueError('Source-runtime manifest/payload mismatch')
     for name in (function+'.py', '_pyasc_runtime.py'):
         data = (sources / name).read_bytes()
         compile(data, name, 'exec')
