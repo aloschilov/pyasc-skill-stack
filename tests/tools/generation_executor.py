@@ -219,8 +219,18 @@ def generate(attempt, plan, contract, context):
             raise Blocked('Generation context changed')
     if intervention:
         from generation_protocols import audit_trace
-        trace = audit_trace((attempt/'generation.stdout').read_text(), project, context, plan,
-                            allow_client_error=bool(budget_failure))
+        events = (attempt/'generation.stdout').read_text(); empty_session = None
+        if budget_failure and not events.strip() and intervention['id'] in ('P2', 'P3'):
+            from generation_native import early_output_cap, capture_empty_session
+            from generation_protocols import provider_prompt
+            if early_output_cap(usage, limits):
+                import sqlite3
+                try: empty_session = capture_empty_session(state, project, model, provider_prompt(prompt))
+                except (OSError, ValueError, KeyError, TypeError, sqlite3.Error) as exc:
+                    raise Blocked('Could not attribute the empty native session') from exc
+                save(attempt/'native-session.json', empty_session)
+        trace = audit_trace(events, project, context, plan, allow_client_error=bool(budget_failure),
+                            empty_session=empty_session, usage=usage)
         audits = [r.get('audit', {}) for r in usage['requests']]
         schemas = {a.get('tool_schema_sha256') for a in audits if a.get('tool_schema_sha256')}
         if not any(a.get('prompt_present') for a in audits) or len(schemas) != 1:

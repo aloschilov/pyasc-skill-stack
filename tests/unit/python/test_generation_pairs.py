@@ -115,6 +115,33 @@ class PairedDesign(unittest.TestCase):
             self.assertTrue((root/'attempt/candidate.py').is_file())
             self.assertFalse((context/'skills').exists())
 
+    def test_generator_captures_empty_native_session_after_a_known_cap(self):
+        from test_generation_native import database_fixture
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d).resolve();context=root/'context';attempt=root/'attempt';attempt.mkdir()
+            t=next(t for t in self.plan['trials'] if t['protocol']=='P2');plan=pairs.trial_plan(self.plan,t)
+            for name in protocols.context_files(plan):
+                dest=context/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/name,dest)
+            usage={'usage_complete':True,'error':'BudgetError: Model completion truncated at output-token cap',
+                'requests':[{'status':'rejected','usage':{'observed_model':plan['model']['expected_response'],'finish_reason':'length'},
+                    'audit':{'prompt_present':True,'tool_schema_sha256':'a'*64,'visible_skills':[],
+                        'tool_names':['edit','read','skill','write']}}]}
+            def client(argv,directory,name,*args,**kwargs):
+                if name=='generation':
+                    (attempt/'generation.stdout').write_text('')
+                    database_fixture(attempt/'private',attempt/'project',protocols.provider_prompt(argv[-1]))
+                return {'exit_code':0}
+            with patch.object(executor,'BudgetGate') as factory, patch.object(executor,'command',side_effect=client), \
+                 patch.object(executor,'budget_server',return_value=nullcontext('http://127.0.0.1/v1')), \
+                 patch.dict(os.environ,OPENCODE_API_KEY='offline',OPENCODE_BASE_URL='http://127.0.0.1'):
+                factory.return_value.error=usage['error'];factory.return_value.token='offline';factory.return_value.snapshot.return_value=usage
+                with self.assertRaisesRegex(ValueError,'Generation budget exhausted'):
+                    executor.generate(attempt,plan,task_contract(ROOT,plan['cells'][0]),context)
+            self.assertEqual(pairs.read(attempt/'attribution.json')['session_source'],'private-db-empty-session')
+            self.assertTrue((attempt/'native-session.json').is_file())
+            self.assertTrue((attempt/'private/empty-session.db').is_file())
+            self.assertFalse((attempt/'candidate.py').exists())
+
     def test_missing_cost_and_invalid_control_cannot_create_a_skills_gain(self):
         values = {t['id']: {'status': 'valid', 'qualified': t['protocol'] == 'P6', 'attempts': 1,
             'seconds': 5, 'output_tokens': 10, 'input_tokens': 20, 'cost': None} for t in self.plan['trials']}
@@ -282,6 +309,53 @@ class PairedReceipts(unittest.TestCase):
         usage['requests'][0]['status']='unknown';usage['usage_complete']=False;receipts.write(p/'usage.json',usage)
         state=pairs.read(root/'state.json');state['cells'][0]['attempts'][0]['usage']=usage
         receipts.write(root/'state.json',state);receipts.seal(root);pairs.seal(self.root)
+        self.assertEqual(pairs.report_pairs(self.root)['observations'][t['id']]['status'],'invalid-instrumentation')
+
+    def test_early_cap_empty_native_receipt_is_only_a_measured_zero(self):
+        t=next(t for t in self.plan['trials'] if t['protocol']=='P2')
+        plan=pairs.trial_plan(self.plan,t);root=self.root/t['id'];p=root/t['cell']/'attempt-1'
+        isolation=pairs.read(p/'isolation.json');project=Path(isolation['project']);context=Path(isolation['context'])
+        usage=pairs.read(p/'usage.json');usage['error']='BudgetError: Model completion truncated at output-token cap'
+        usage['requests'][0].update(status='rejected');usage['requests'][0]['usage']['finish_reason']='length'
+        usage['requests'][0]['audit']['tool_names']=['edit','read','skill','write']
+        receipt={'schema_version':1,'kind':'opencode-1.19-empty-session','session_id':'ses_fixture',
+            'session_version':'1.19.0','project':str(project),'model':plan['model']['requested'],
+            'user_message_id':'msg_user','assistant_message_id':'msg_assistant',
+            'prompt_sha256':digest(protocols.provider_prompt((p/'prompt.txt').read_text()).encode()),
+            'table_counts':{'project':1,'session':1,'message':2,'part':1},'snapshot_sha256':'a'*64}
+        def audit(**overrides):
+            args=dict(source_context=root/'context',allow_client_error=True,empty_session=receipt,usage=usage)
+            args.update(overrides)
+            return protocols.audit_trace('',project,context,plan,**args)
+        trace=audit();self.assertEqual(trace['session_source'],'private-db-empty-session')
+        with self.assertRaisesRegex(Blocked,'Missing native'): audit(empty_session=None)
+        with self.assertRaisesRegex(Blocked,'cannot replace'): audit(allow_client_error=False)
+        with self.assertRaisesRegex(Blocked,'cannot replace'): audit(usage=dict(usage,usage_complete=False))
+        with self.assertRaisesRegex(Blocked,'cannot replace'):
+            protocols.audit_trace('{}',project,context,plan,source_context=root/'context',
+                allow_client_error=True,empty_session=receipt,usage=usage)
+        for other in ('P4','P6'):
+            altered=deepcopy(plan);altered['intervention']['id']=other
+            with self.assertRaisesRegex(Blocked,'cannot replace'):
+                protocols.audit_trace('',project,context,altered,source_context=root/'context',
+                    allow_client_error=True,empty_session=receipt,usage=usage)
+        attribution=pairs.read(p/'attribution.json');attribution.update(trace)
+        receipts.write(p/'attribution.json',attribution);receipts.write(p/'native-session.json',receipt)
+        receipts.write(p/'usage.json',usage)
+        receipts.write(p/'generation-outcome.json',{'status':'budget-exhausted','reason':'output-limit'})
+        self.fixture.command(p,'generation','')
+        for name in ('candidate.py','project/candidate.py','qualification.json','qualification.command.json','qualification.stdout','qualification.stderr','container-cleanup.json'):
+            (p/name).unlink()
+        state=pairs.read(root/'state.json');state['status']=state['cells'][0]['status']='failed'
+        state['cells'][0]['attempts'][0].update(status='failed',failure_stage='generating',error='Budget exhausted',usage=usage)
+        receipts.write(root/'state.json',state);receipts.seal(root)
+        state=pairs.read(self.root/'state.json');next(i for i in state['trials'] if i['id']==t['id'])['status']='failed'
+        receipts.write(self.root/'state.json',state);pairs.seal(self.root)
+        report=pairs.report_pairs(self.root)
+        self.assertEqual(report['status'],'complete');self.assertFalse(report['observations'][t['id']]['qualified'])
+        self.assertEqual(report['observations'][t['id']]['outcome'],'budget-exhausted')
+        receipt['prompt_sha256']='b'*64;receipts.write(p/'native-session.json',receipt)
+        receipts.seal(root);pairs.seal(self.root)
         self.assertEqual(pairs.report_pairs(self.root)['observations'][t['id']]['status'],'invalid-instrumentation')
 
     def test_native_denial_is_not_access_but_successful_external_read_is_rejected(self):

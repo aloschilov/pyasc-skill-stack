@@ -171,7 +171,8 @@ def inspect_trial(root, expected, status):
         budget_failure = known_budget_exhaustion(usage, expected['limits'])
         # Rebind retained absolute access paths to the archived context below.
         trace = audit_trace(events, Path(isolation['project']), Path(isolation['context']), expected,
-                            source_context=root/'context', allow_client_error=bool(budget_failure))
+                            source_context=root/'context', allow_client_error=bool(budget_failure), usage=usage,
+                            empty_session=bundle.json(prefix+'native-session.json') if prefix+'native-session.json' in bundle.files else None)
         attribution = bundle.json(prefix+'attribution.json')
         for key, value in trace.items(): require(attribution.get(key) == value, 'Native protocol attribution mismatch')
         require(trace['session_id'] not in sessions, 'Reused attempt session'); sessions.add(trace['session_id'])

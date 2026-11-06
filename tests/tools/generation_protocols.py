@@ -98,12 +98,23 @@ def request_audit(body, text, protocol, selected_skills, context):
         'tool_names': [t['name'] for t in schemas]}
 
 
-def audit_trace(events, project, context, plan, *, source_context=None, allow_client_error=False):
+def audit_trace(events, project, context, plan, *, source_context=None, allow_client_error=False, empty_session=None, usage=None):
     """Verify observed file/skill access, not just a requested skills-on flag."""
     from generation_executor import Blocked, native_trace
     skills = {s: context/'skills'/s for s in plan['skills']}
     source_context = source_context or context
-    trace = native_trace(events, skills, allow_client_error=allow_client_error)
+    if empty_session is not None:
+        from generation_native import early_output_cap, validate_empty_session
+        from generation_adapters import task_contract
+        from generation_plan import ROOT
+        if events.strip() or not allow_client_error or plan['intervention']['id'] not in ('P2', 'P3') or skills or not early_output_cap(usage, plan['limits']):
+            raise Blocked('Empty native identity cannot replace protocol access evidence')
+        text = prompt(task_contract(ROOT, plan['cells'][0]), plan['intervention']['id'], [], context)
+        validate_empty_session(empty_session, project, plan['model']['requested'], provider_prompt(text))
+        trace = {'session_id': empty_session['session_id'], 'loaded_skills': [],
+            'session_source': 'private-db-empty-session', 'session_receipt_sha256': digest(canonical(empty_session))}
+    else:
+        trace = native_trace(events, skills, allow_client_error=allow_client_error)
     allowed = context_files(plan)
     # Profile configuration is harness input, not model-readable context.
     readable = {str((context/n).resolve()): sha for n, sha in allowed.items()

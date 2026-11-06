@@ -100,6 +100,18 @@ provider responses and required context attribution are complete. It is labeled
 `budget-exhausted`, never numerical failure or a successful generation. The client
 is stopped, and no partial output is qualified. Unknown delivery cannot use this
 classification, even if a cap was also reached.
+
+For P2/P3 only, the first tool-bearing response can exhaust its output cap before
+OpenCode emits any CLI event. After stopping the client, the executor may bind
+that known failure to a read-only backup of its private OpenCode 1.19 database:
+exactly one session, the original user prompt and the initial assistant message,
+with no assistant/tool parts or candidate. Earlier auxiliary responses must have
+no tool schema and finish normally; the capped response was withheld by the gate.
+The public receipt contains identity and hashes, while the database stays private.
+This receipt establishes only an empty failed session. It cannot replace events,
+prove P4/P6 context loads, waive unknown usage, or qualify a candidate. Historical
+pilots with missing receipts remain incomplete; they are not retroactively accepted.
+
 Timeouts, unavailable infrastructure, missing attribution, changed tools/prompts,
 unresolved usage and not-run trials remain separate from candidate failure.
 An invalid or missing control cannot create a claimed gain. Each contrast keeps
