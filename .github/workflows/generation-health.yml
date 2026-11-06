@@ -1,6 +1,6 @@
 name: Generation coverage observation
 
-# Hourly observation on GitHub-hosted Ubuntu, independent of the simulator runner.
+# Temporary authorized API-authentication failure drill. Never merge this branch.
 on:
   schedule:
     - cron: '43 * * * *'
@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        experiment: ${{ fromJSON(github.event_name == 'schedule' && '["single","paired","models"]' || inputs.experiment == 'models' && '["models"]' || inputs.experiment == 'paired' && '["paired"]' || '["single"]') }}
+        experiment: [single, paired, models]
     env:
       EXPERIMENT: ${{ matrix.experiment }}
     steps:
@@ -52,9 +52,15 @@ jobs:
       - name: Observe recorded coverage (GET only)
         continue-on-error: true # Deliver/retain an alert before the final failing check.
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: deliberately-invalid-observer-drill-token
           INSPECT_RUN: ${{ inputs.inspect_run }}
         run: |
+          python3 - <<'PYPROBE'
+          import subprocess
+          probe = subprocess.run(['gh', 'api', 'repos/aloschilov/pyasc-skill-stack/actions/workflows/generation-nightly.yml/runs?per_page=1'], capture_output=True, text=True)
+          assert probe.returncode != 0 and 'HTTP 401' in probe.stderr, 'Expected actual GitHub authentication rejection'
+          print('Controlled observation failure: actual GitHub HTTP 401; no model or NPU call.')
+          PYPROBE
           args=()
           if [ -n "$INSPECT_RUN" ]; then args+=(--inspect-run "$INSPECT_RUN"); fi
           if [ "$EXPERIMENT" = paired ]; then args+=(--paired); fi
