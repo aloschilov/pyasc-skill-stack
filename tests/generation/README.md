@@ -131,8 +131,9 @@ API must be classified as a candidate failure, not an unavailable simulator.
 `examples-gate` retains these reports in a separate artifact. This is verification
 of the adapters/executor, **not** newly generated-kernel or hardware qualification.
 
-Remaining #22 work: verify live alert/recovery delivery and end-to-end scheduled
-acceptance after the authorized activation on 2026-11-06. The controller and health
+Remaining #22 work: verify live alert/recovery delivery and end-to-end controller
+execution. On 2026-11-06 the user accepted manual dispatch instead of waiting for
+cron; those receipts must remain explicitly manual, not scheduled qualification. The controller and health
 observer are described below. #23 skills-effect comparisons and #24 model diversity should
 reuse these contracts; #20 owns separate reviewer/tuner handoffs.
 
@@ -261,8 +262,9 @@ not fresh coverage. A later verified run can clear older failures.
 Alerts use one **dedicated**, preconfigured issue whose body begins with
 `<!-- pyasc-generation-health:v1 -->`; do not point this at a development issue.
 The notifier never creates issues or mentions people. Explicit notification
-updates that issue idempotently, reopens it for an alert, and closes it only on
-verified healthy coverage. Unchanged findings cause no edit. A PATCH is followed
+updates that issue idempotently and reopens it for an alert. Scheduled observation
+closes it only on verified healthy coverage. An explicit manual inspection may
+close it with the distinct `verified-manual` status; that does not verify cron. Unchanged findings cause no edit. A PATCH is followed
 by GET confirmation; unknown delivery is reconciled, never blindly repeated.
 `delivery.json` is evidence that GitHub stored the update, not proof a person read
 a notification. No model or CANNBench credential is available to the observer.
@@ -275,14 +277,27 @@ change. Paired skills and model comparisons check daily at 17:47 and 18:47 UTC
 do not. Their dedicated alert destinations are #38 and #39. The shared executor
 serializes all provider work; budgets and UNKNOWN protections remain in force.
 
-An actual scheduled generation, independent baseline comparison, complete paired
-and model cohorts, and confirmed alert/recovery delivery are still required
-before closing #22/#23/#24. Activation alone is not qualification. The delivery
+Independent baseline comparison, complete paired/model cohorts and confirmed
+alert/recovery delivery are required for acceptance. On 2026-11-06 the user
+authorized manual controller runs instead of waiting for cron. These can satisfy
+that revised acceptance, but cannot establish actual scheduled delivery.
+Activation alone is not qualification. The delivery
 drill uses an explicitly invalid read-only observer token in a temporary branch:
 the real GitHub API rejects observation, the production notifier records the alert,
-and subsequent valid observation may close it only after verified scheduled
-coverage. This demonstrates an observation failure, not a candidate/NPU failure.
+and subsequent valid observation may close it after verified scheduled coverage
+or an explicitly selected, labelled manual qualification. This demonstrates an
+observation failure, not a candidate/NPU failure.
 No failure-injection hook is added to the deployed workflows.
+
+To explicitly publish a retained manual result, dispatch the independent observer
+with both `inspect_run=RUN_ID/ATTEMPT` and `notify=true`. The CLI equivalent is a
+GET-only `monitor --inspect-run` followed by `notify --notify-inspection` for the
+same external directory and lane. Notification is off by default; a manual report
+without this explicit selection cannot update the scheduled alert channel.
+The issue identifies the exact inspected run and says that cron is unqualified.
+Pending/incomplete checks cannot clear an alert. The ordinary hourly observer
+still filters `schedule` events and reopens the issue for missing/stale scheduled
+coverage after the policy grace period; manual delivery does not reset that grace.
 Observation on the same GitHub platform cannot guarantee delivery during a
 GitHub-wide outage; job summaries/artifacts remain the audit trail when available.
 
