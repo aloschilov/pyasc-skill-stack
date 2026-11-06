@@ -95,7 +95,10 @@ test('combined task, model, origin, verification and outcome filters retain coho
 test('keyboard filters and provenance dialog retain exact hashes and return focus', async () => {
   await load(); await page.locator('#search').focus(); await page.keyboard.press('Tab');
   assert.equal(await page.locator(':focus').getAttribute('id'),'filter');
-  await page.keyboard.press('g'); await page.keyboard.press('Enter'); await page.keyboard.press('Tab');
+  // Native select navigation differs by platform; Tab commits the selection
+  // without Enter reopening the Linux popup and reverting the typeahead choice.
+  await page.keyboard.press(process.platform === 'darwin' ? 'g' : 'ArrowDown');
+  await page.keyboard.press('Tab');
   assert.equal(await page.locator('#filter').inputValue(),'fresh-generated'); assert.equal((await ids()).length,4);
   const button = page.getByRole('button',{name:'Scope and provenance for synthetic-paired'});
   await button.focus(); await page.keyboard.press('Enter');
