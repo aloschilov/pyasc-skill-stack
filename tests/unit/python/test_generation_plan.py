@@ -84,7 +84,7 @@ class GenerationPlanning(unittest.TestCase):
 
     def test_skill_change_changes_plan_identity(self):
         before=planner.digest(planner.canonical(self.plan()))
-        path=self.root/'skills/pyasc-api-patterns/references/api-jit-options.md'
+        path=self.root/'skills/asctile-api-patterns/references/api-jit-options.md'
         path.write_text(path.read_text()+'\nChanged instruction.\n')
         self.assertNotEqual(before,planner.digest(planner.canonical(self.plan())))
 

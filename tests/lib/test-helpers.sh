@@ -254,7 +254,7 @@ export_session() {
 
 # Verify a skill was invoked in an exported session JSON.
 # Looks for tool_use events referencing the skill name.
-# Usage: verify_skill_invoked "session.json" "pyasc-codegen-workflow"
+# Usage: verify_skill_invoked "session.json" "asctile-codegen-workflow"
 verify_skill_invoked() {
     local session_file="$1"
     local skill_name="$2"
@@ -288,7 +288,7 @@ count_tool_invocations() {
 }
 
 # Detect premature write/edit/shell actions before a target skill/tool load.
-# Usage: analyze_premature_actions "session.json" "skill" "pyasc-codegen-workflow"
+# Usage: analyze_premature_actions "session.json" "skill" "asctile-codegen-workflow"
 analyze_premature_actions() {
     local session_file="$1"
     local target_type="$2"   # "skill" or "agent"

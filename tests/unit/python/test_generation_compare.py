@@ -171,7 +171,7 @@ class Comparisons(unittest.TestCase):
         self.assertIn('cells', result['incompatible_fields']); self.assertEqual(result['denominator'], 3)
 
     def test_skills_and_stack_revision_may_change_but_are_reported(self):
-        name = 'skills/pyasc-api-patterns/SKILL.md'
+        name = 'skills/asctile-api-patterns/SKILL.md'
         p = self.new/'source'/name; p.write_text(p.read_text()+'\nNew guidance.\n')
         self.edit('plan.json', lambda p: p['source_sha256'].update({name: digest((self.new/'source'/name).read_bytes())}))
         self.edit('state.json', lambda s: s.update(checkout_revision='another-commit'))

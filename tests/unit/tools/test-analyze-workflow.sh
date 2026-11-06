@@ -65,7 +65,7 @@ if [ -f "$WORKFLOW_TOOL" ]; then
         ERRORS=$((ERRORS + 1))
     fi
 
-    if echo "$output" | grep -qi "pyasc-codegen-workflow"; then
+    if echo "$output" | grep -qi "asctile-codegen-workflow"; then
         print_pass "Workflow skill reference found"
     else
         print_warn "Workflow skill not detected in output"

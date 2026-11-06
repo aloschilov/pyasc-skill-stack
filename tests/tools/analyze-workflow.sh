@@ -28,17 +28,17 @@ ISSUES=0
 
 # Check skill load order
 echo "--- Skill Load Order ---"
-skill_lines=$(grep -n "pyasc-" "$SESSION_FILE" 2>/dev/null | head -20 || true)
+skill_lines=$(grep -nE '(asctile|pyasc)-' "$SESSION_FILE" 2>/dev/null | head -20 || true)
 if [ -n "$skill_lines" ]; then
     while IFS=: read -r line_num content; do
         [ -z "${line_num:-}" ] && continue
-        skill=$(printf '%s\n' "$content" | grep -oE 'pyasc-[a-z0-9-]+' | head -1 || true)
+        skill=$(printf '%s\n' "$content" | grep -oE '(asctile|pyasc)-[a-z0-9-]+' | head -1 || true)
         if [ -n "$skill" ]; then
             printf "  Line %5s: %s\n" "$line_num" "$skill"
         fi
     done <<<"$skill_lines"
 else
-    echo "  No pyasc skill references found"
+    echo "  No AscTile skill references found"
 fi
 echo ""
 
@@ -62,7 +62,7 @@ echo ""
 
 # Check premature actions
 echo "--- Premature Action Check ---"
-first_skill_line=$(grep -n "pyasc-codegen-workflow" "$SESSION_FILE" 2>/dev/null | head -1 | cut -d: -f1 || true)
+first_skill_line=$(grep -nE '(asctile|pyasc)-codegen-workflow' "$SESSION_FILE" 2>/dev/null | head -1 | cut -d: -f1 || true)
 if [ -n "$first_skill_line" ]; then
     echo "  Workflow skill first referenced at line: $first_skill_line"
     write_before=$(head -n "$first_skill_line" "$SESSION_FILE" 2>/dev/null | \

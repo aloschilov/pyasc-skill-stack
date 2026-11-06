@@ -3,6 +3,7 @@ from copy import deepcopy
 import json
 import os
 from pathlib import Path
+import shutil
 import sys
 import tempfile
 import unittest
@@ -65,7 +66,7 @@ class Handoffs(unittest.TestCase):
 
     def test_plan_is_offline_and_binds_roles_limits_and_source(self):
         self.assertEqual(self.plan['maximum_work'], {'model_sessions': 4, 'output_tokens': 772608, 'execution_seconds': 3000})
-        self.assertIn('skills/pyasc-code-review/SKILL.md', self.plan['common']['source_sha256'])
+        self.assertIn('skills/asctile-code-review/SKILL.md', self.plan['common']['source_sha256'])
         path = self.root/'plan.json'; review.save(path, self.plan)
         with patch.object(review.subprocess, 'Popen', side_effect=AssertionError('Offline planning')):
             self.assertEqual(review.validate_plan(path), self.plan)
@@ -84,6 +85,37 @@ class Handoffs(unittest.TestCase):
         self.assertEqual(result['reserved_output_tokens'], 386304)
         self.assertFalse((self.root/'state/active.json').exists())
         self.assertTrue((self.root/'run/files.json').exists())
+
+    def retained_source(self):
+        source = self.root/'source'
+        for name in self.plan['common']['source_sha256']:
+            target = source/name; target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT/name, target)
+        return source
+
+    def test_old_namespace_is_reconstructed_without_rewriting_evidence(self):
+        source = self.retained_source()
+        for path in (source/'skills').iterdir():
+            path.rename(path.with_name(path.name.replace('asctile-', 'pyasc-', 1)))
+        matrix = source/self.plan['spec']['matrix']
+        value = json.loads(matrix.read_text())
+        value['skills'] = [s.replace('asctile-', 'pyasc-', 1) for s in value['skills']]
+        matrix.write_text(json.dumps(value))
+        before = {p.relative_to(source).as_posix(): digest(p.read_bytes()) for p in source.rglob('*') if p.is_file()}
+        legacy = review.build_review(source)
+        self.assertEqual(legacy['reviewer_skills'], [s.replace('asctile-', 'pyasc-', 1) for s in review.REVIEW_SKILLS])
+        self.assertIn('skills/pyasc-code-review/SKILL.md', legacy['common']['source_sha256'])
+        self.assertEqual(before, {p.relative_to(source).as_posix(): digest(p.read_bytes()) for p in source.rglob('*') if p.is_file()})
+        # A self-consistent mixed namespace is still not one supported context.
+        old = source/'skills/pyasc-api-patterns'; old.rename(old.with_name('asctile-api-patterns'))
+        value['skills'] = [s.replace('pyasc-api-patterns', 'asctile-api-patterns') for s in value['skills']]
+        matrix.write_text(json.dumps(value))
+        with self.assertRaisesRegex(ValueError, 'Mixed or unknown'): review.build_review(source)
+
+    def test_missing_reviewer_skill_cannot_silently_produce_a_plan(self):
+        source = self.retained_source()
+        shutil.rmtree(source/'skills/asctile-code-review')
+        with self.assertRaisesRegex(ValueError, 'Missing or external input'): review.build_review(source)
 
     def test_rejection_repairs_with_lineage_then_new_review_and_verification(self):
         self.reject_first = True; result = self.run_double()
@@ -423,7 +455,8 @@ class ReviewCI(unittest.TestCase):
         self.assertNotIn('secrets',prepare)
         self.assertNotIn('OPENCODE_API_KEY',json.dumps(prepare))
         worker = yaml.safe_load((ROOT/'.github/workflows/generation-simulator.yml').read_text())
-        self.assertEqual(worker['concurrency']['group'], 'generation-simulator')
+        self.assertEqual(worker['concurrency']['group'],
+            "${{ inputs.action == 'plan' && format('generation-plan-{0}', github.run_id) || 'generation-simulator' }}")
         self.assertIn("inputs.experiment != 'review'", worker['jobs']['qualify']['if'])
         self.assertIn('generation_review.py', worker['jobs']['qualify']['env']['GENERATION_HELPER'])
 

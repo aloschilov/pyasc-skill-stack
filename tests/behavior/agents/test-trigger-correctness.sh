@@ -57,7 +57,7 @@ run_behavior_test \
 
 run_behavior_test \
     "Forced workflow mention" \
-    "What does the pyasc kernel dev team require regarding pyasc-codegen-workflow and phases?" \
+    "What does the pyasc kernel dev team require regarding asctile-codegen-workflow and phases?" \
     "phase|workflow|codegen|skill|kernel|pyasc" \
     60
 

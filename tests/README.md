@@ -287,7 +287,7 @@ For new **Python** checks, add a script under `tests/tools/` and invoke it from 
 ## See also
 
 - Repository [`README.md`](../README.md) for skill-stack overview
-- Skill-specific verification: `skills/pyasc-build-run-verify/` and `skills/pyasc-codegen-workflow/`
+- Skill-specific verification: `skills/asctile-build-run-verify/` and `skills/asctile-codegen-workflow/`
 
 Run storage, strict generation acceptance and numerical proof semantics are
 defined in [verification-contract](../docs/verification-contract.md).

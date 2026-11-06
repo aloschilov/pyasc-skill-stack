@@ -22,7 +22,7 @@ from generation_protocols import common_prompt, provider_prompt, skill_body
 from generation_provider import BudgetError, known_budget_exhaustion
 
 SPEC = 'tests/generation/review.json'
-REVIEW_SKILLS = ['pyasc-code-review', 'pyasc-build-run-verify', 'pyasc-api-patterns', 'pyasc-syntax-constraints']
+REVIEW_SKILLS = ['asctile-code-review', 'asctile-build-run-verify', 'asctile-api-patterns', 'asctile-syntax-constraints']
 
 
 class RoleRejected(ValueError):
@@ -41,6 +41,12 @@ def build_review(root=ROOT, tuning=None):
     require(spec.get('context_path_format', 'absolute-v1') in ('absolute-v1', 'relative-read-call-v1'), 'Invalid role context path format')
     require(type(spec['max_repairs']) is int and 0 <= spec['max_repairs'] <= 2, 'Use zero to two repairs')
     base = build_plan(root, spec['matrix'])
+    # Reconstruct retained plans with their original, hash-bound skill names.
+    # New execution uses the current matrix; never silently rename old evidence.
+    namespaces = {skill.split('-', 1)[0] for skill in base['skills']}
+    require(namespaces in ({'asctile'}, {'pyasc'}), 'Mixed or unknown review skill namespace')
+    namespace = next(iter(namespaces))
+    reviewer_skills = [name.replace('asctile-', namespace+'-', 1) for name in REVIEW_SKILLS]
     common = {k: base[k] for k in ('model', 'runtime', 'skills', 'cells', 'source_sha256')}
     common['limits'] = {'qualification_seconds_per_attempt': base['limits']['qualification_seconds_per_attempt']}
     cells = [c for c in common['cells'] if c['id'] == spec['cell']]
@@ -56,7 +62,9 @@ def build_review(root=ROOT, tuning=None):
     inputs = common['source_sha256']
     for name in (SPEC, '.github/workflows/generation-review.yml'):
         inputs[name] = digest(resource(root, name))
-    for skill in REVIEW_SKILLS:
+    for skill in reviewer_skills:
+        name = 'skills/'+skill+'/SKILL.md'
+        inputs[name] = digest(resource(root, name))
         for p in sorted((root/'skills'/skill).rglob('*')):
             if p.is_file() and '__pycache__' not in p.parts and p.suffix in ('.md', '.py', '.sh', '.json'):
                 inputs[p.relative_to(root).as_posix()] = digest(resource(root, p.relative_to(root).as_posix()))
@@ -69,7 +77,7 @@ def build_review(root=ROOT, tuning=None):
         cap = spec['max_'+field]
         require(type(cap) is int and maximum[field] <= cap <= (2000000 if field == 'output_tokens' else 5400), 'Review aggregate '+field+' limit')
     return {'schema_version': 1, 'kind': 'review-generation-plan', 'spec': spec, 'common': common,
-        'reviewer_skills': REVIEW_SKILLS, 'maximum_work': maximum,
+        'reviewer_skills': reviewer_skills, 'maximum_work': maximum,
         'tuning': tuning,
         'hardware_invoked': False, 'schedule_enabled': False}
 

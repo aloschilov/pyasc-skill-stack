@@ -2,7 +2,7 @@
   "schema_version": 2,
   "profile": "cloud-glm-5.3",
   "response_model": "glm-5-3-260814",
-  "skills": ["pyasc-codegen-workflow", "pyasc-api-patterns", "pyasc-syntax-constraints", "pyasc-build-run-verify"],
+  "skills": ["asctile-codegen-workflow", "asctile-api-patterns", "asctile-syntax-constraints", "asctile-build-run-verify"],
   "limits": {
     "attempts_per_cell": 1,
     "rounds_per_attempt": 8,

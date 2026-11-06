@@ -53,7 +53,7 @@ device-kernel timings in a durable Release. This is an implemented CI path,
 limited to the qualified recipe; it is not a broad benchmark campaign.
 
 TTK case definitions can inform separate CANN-side reproductions; see the
-[CANNBench skill reference](../skills/pyasc-cannbench-kernel/references/ttk.md).
+[CANNBench skill reference](../skills/asctile-cannbench-kernel/references/ttk.md).
 A private TTK export is not needed to read or validate the current service report.
 
 ## Retention and status

@@ -13,7 +13,7 @@ from run_and_verify import pinned_sim_image, verification_command_timeout
 def core_cases():
     fixtures = ROOT/'tests/fixtures/kernels'
     evidence = ROOT/'docs/evidence/generation-gate-20261028'
-    template = ROOT/'skills/pyasc-codegen-workflow/templates/kernel-template.py'
+    template = ROOT/'skills/asctile-codegen-workflow/templates/kernel-template.py'
     return [
         ('wrong-numerics', fixtures/'wrong_numerics.py', 'execute', 1, None, 1, 'verification failed'),
         ('raises-midrun', fixtures/'raises_midrun.py', 'execute', 1, None, 1, 'deliberate post-launch'),
