@@ -3,7 +3,20 @@
 This lane concerns the upstream runtime fixtures, not model generation. Its
 inventory contains **1,155 cases in 24 modules** at PyASC
 `d0f64a63c432761aa57648e67be7582780a17561`. That count proves collection only.
-Numerical qualification of this new lane is not yet established.
+At stack source `a3e3075`, **six selected official cases qualified**: float32 add
+with a tail, int32 reduction and bfloat16 broadcast, each in static and dynamic
+form. They produced six completed Model launches, six official assertions and
+six rejecting controls. The other **1,149 cases remain unevaluated**.
+
+The [durable subset archive](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-target-subset-a3e3075)
+is `qualification-target-subset-a3e3075.tar.gz`, SHA256
+`8da0a446302304cda44b934b4a0abb8bac3e219d0ac289b2aa6a4924c3c1e6ce`.
+Its 107 member hashes and 38 source hashes were verified; copies are retained on
+the qualification Mac and Linux VM. Real phases took 34.70 s and controls 12.89 s
+including container startup/cleanup. All owned containers were confirmed absent,
+and resuming an existing shard preserved every case artifact without replay.
+The earlier package-import failure is retained separately in the same release;
+it executed no kernels and does not count as a kernel defect.
 
 `inventory.json` versions the derivation inputs, module counts and exact sorted
 pytest-ID hashes. The complete IDs are reproducibly collected from the pinned
