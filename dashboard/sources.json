@@ -12,6 +12,14 @@
       "run_id": 42175778880
     },
     {
+      "id": "models-42209794583",
+      "kind": "models",
+      "release": "qualification-models-42209794583",
+      "asset": "qualification-models-42209794583.tar.gz",
+      "sha256": "1244eaefad5760fdc1a3e955fcbc267023af71d3bb6e2a9f8d597d9652c78edb",
+      "run_id": 42209794583
+    },
+    {
       "id": "review-42183443085",
       "kind": "review",
       "release": "qualification-review-42183443085",
