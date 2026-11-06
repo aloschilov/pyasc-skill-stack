@@ -8,6 +8,11 @@ on:
         description: 'Optional manual CI RUN_ID/ATTEMPT to inspect; never scheduled coverage'
         type: string
         default: ''
+      experiment:
+        description: 'Observe one explicit run or the selected coverage policy; no model calls'
+        type: choice
+        options: [single, paired]
+        default: single
       notify:
         description: 'Update the preconfigured marked alert issue; requires enabled policy'
         type: boolean
@@ -27,6 +32,12 @@ jobs:
     if: github.repository == 'aloschilov/pyasc-skill-stack'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        experiment: ${{ fromJSON(github.event_name == 'schedule' && '["single","paired"]' || inputs.experiment == 'paired' && '["paired"]' || '["single"]') }}
+    env:
+      EXPERIMENT: ${{ matrix.experiment }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,17 +55,21 @@ jobs:
         run: |
           args=()
           if [ -n "$INSPECT_RUN" ]; then args+=(--inspect-run "$INSPECT_RUN"); fi
+          if [ "$EXPERIMENT" = paired ]; then args+=(--paired); fi
           python3 scripts/generation_operations.py monitor --root "$HEALTH_ROOT" "${args[@]}"
       - name: Update configured alert issue
         if: (github.event_name == 'schedule' || inputs.notify) && inputs.inspect_run == ''
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/generation_operations.py notify --root "$HEALTH_ROOT"
+        run: |
+          args=()
+          if [ "$EXPERIMENT" = paired ]; then args+=(--paired); fi
+          python3 scripts/generation_operations.py notify --root "$HEALTH_ROOT" "${args[@]}"
       - name: Retain observation and delivery receipts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: generation-health-${{ github.run_id }}-${{ github.run_attempt }}
+          name: generation-health${{ matrix.experiment == 'paired' && '-paired' || '' }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ env.HEALTH_ROOT }}/health.json
             ${{ env.HEALTH_ROOT }}/history.json
@@ -69,7 +84,7 @@ jobs:
           from pathlib import Path
           report = json.loads((Path(os.environ['HEALTH_ROOT'])/'health.json').read_text())
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
-              out.write('Generation coverage: **'+report['status']+'**.\n\nScope: '+report['scope']+'\n\n')
+              out.write(report.get('experiment', 'unknown')+' coverage: **'+report['status']+'**.\n\nScope: '+report['scope']+'\n\n')
               out.write('Alerts: '+(', '.join(report['alerts']) or 'none')+'\n')
           raise SystemExit(1 if report['status'] == 'alert' else 0)
           PY

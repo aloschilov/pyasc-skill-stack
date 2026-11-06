@@ -294,7 +294,8 @@ becoming `failed` emits `lost-pass` and exit **1**; there is no percentage thres
 from the denominator. A regression with additional gaps lists both. Complete
 compatible runs without alerts exit **0**. This is a deterministic regression
 signal from one trial per configured attempt, not a statistical skills-effect or
-performance claim; repeated/paired measurement belongs to #23.
+performance claim; the separate [paired context experiment](paired.md) records
+repeated measurement and its conditional uncertainty.
 
 New executor receipts include UTC `started_at` and `finished_at`. The reporter
 emits `stale-coverage` when completion is older than 36 hours by default

@@ -25,6 +25,20 @@ class BudgetError(ValueError):
     pass
 
 
+def known_budget_exhaustion(usage, limits):
+    """A measured cap is a failure outcome; uncertain delivery is never one."""
+    rows = usage.get('requests', [])
+    if not usage.get('usage_complete') or not rows: return None
+    if any(r.get('status') not in ('complete', 'rejected') or 'usage' not in r for r in rows): return None
+    if usage.get('error') == 'Request budget exhausted' and len(rows) == limits['rounds_per_attempt'] and all(r['status'] == 'complete' for r in rows):
+        return 'request-limit'
+    if (usage.get('error') == 'BudgetError: Model completion truncated at output-token cap'
+            and all(r['status'] == 'complete' for r in rows[:-1]) and rows[-1]['status'] == 'rejected'
+            and rows[-1]['usage'].get('finish_reason') == 'length'):
+        return 'output-limit'
+    return None
+
+
 def response_usage(raw, streaming, model):
     if streaming:
         lines = [line[5:].strip() for line in raw.decode().splitlines() if line.startswith('data:')]
@@ -59,7 +73,8 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class BudgetGate:
-    def __init__(self, base_url, api_key, model, limits, save, deadline, capture_response=None, response_model=None):
+    def __init__(self, base_url, api_key, model, limits, save, deadline, capture_response=None, response_model=None,
+                 observe_request=None):
         url = urlsplit(base_url)
         if url.scheme not in ('https', 'http') or not url.netloc or url.username or url.password or url.query or url.fragment:
             raise BudgetError('Invalid provider endpoint')
@@ -67,6 +82,7 @@ class BudgetGate:
         self.key, self.model, self.limits, self.save, self.deadline = api_key, model, limits, save, deadline
         self.response_model = response_model or model
         self.capture_response = capture_response
+        self.observe_request = observe_request
         self.records = []
         self.error = None
         self.lock = threading.Lock()
@@ -98,8 +114,14 @@ class BudgetGate:
             self.records.append(record)
             self.save(self.snapshot())  # durable reservation BEFORE network input
             try:
+                record['dispatch_started'] = False
+                if self.observe_request:
+                    record['audit'] = self.observe_request(len(self.records), body, payload)
+                    self.save(self.snapshot())
                 request = urllib.request.Request(self.url, data=payload,
                     headers={'Authorization': 'Bearer '+self.key, 'Content-Type': 'application/json'})
+                record['dispatch_started'] = True
+                self.save(self.snapshot())
                 with urllib.request.build_opener(NoRedirect).open(request, timeout=max(.01, self.deadline-time.monotonic())) as response:
                     record['http_status'] = response.status
                     record['response_ids'] = {name: value for name in ('x-request-id', 'x-requestid', 'x-tt-logid')
@@ -119,7 +141,7 @@ class BudgetGate:
                 self.save(self.snapshot())
                 return raw, content_type
             except Exception as exc:
-                record['status'] = 'rejected' if 'usage' in record else 'unknown'
+                record['status'] = 'rejected' if 'usage' in record else 'unknown' if record['dispatch_started'] else 'not-sent'
                 # Only our fixed validation messages are safe to persist. External
                 # exception strings can contain credentials, URLs or response text.
                 if isinstance(exc, urllib.error.HTTPError):

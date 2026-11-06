@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT/'tests/tools'))
 import generation_adapters as adapters
 import generation_executor as executor
 import generation_plan as planner
-from generation_provider import BudgetError, BudgetGate, budget_server, response_usage
+from generation_provider import BudgetError, BudgetGate, budget_server, response_usage, known_budget_exhaustion
 
 
 class ExecutorContracts(unittest.TestCase):
@@ -193,6 +193,17 @@ class ProviderContracts(unittest.TestCase):
         self.assertEqual(self.saves[0]['requests'][0]['status'], 'dispatched')
         self.assertEqual(self.gate.snapshot()['observed_output_tokens'], 14)  # reasoning not double-counted
         self.assertNotIn('fixture-key', json.dumps(self.saves))
+        self.assertEqual(known_budget_exhaustion(self.gate.snapshot(), self.gate.limits), 'request-limit')
+        unknown = self.gate.snapshot();unknown['requests'][0] = dict(unknown['requests'][0], status='unknown')
+        self.assertIsNone(known_budget_exhaustion(unknown, self.gate.limits))
+
+    def test_context_audit_failure_never_reaches_provider_and_is_not_unknown_delivery(self):
+        self.gate.observe_request = lambda *args: (_ for _ in ()).throw(ValueError('bad local context'))
+        with self.assertRaises(BudgetError): self.gate.dispatch({'model': 'test-model'})
+        self.assertEqual(self.requests, [])
+        record = self.gate.snapshot()['requests'][0]
+        self.assertEqual(record['status'], 'not-sent');self.assertFalse(record['dispatch_started'])
+        self.assertIsNotNone(self.gate.error)
 
     def test_missing_usage_or_excess_tokens_blocks_retry(self):
         for payload in ({'model':'test-model'}, {'model':'test-model','choices':[{'index':0,'finish_reason':'stop'}],'usage':{'prompt_tokens':3,'completion_tokens':17,'total_tokens':20}}):
@@ -296,6 +307,22 @@ class ProviderContracts(unittest.TestCase):
         with self.assertRaises(BudgetError): response_usage(('data: '+json.dumps(self.payload)).encode(),True,'test-model')
         with self.assertRaises(BudgetError): self.gate.dispatch({'model':'fallback'})
         self.assertFalse(self.requests)
+
+    def test_captured_counter_contradiction_is_not_a_valid_budget_failure(self):
+        # Redacted counters from cohort42167095606: keep strict accounting.
+        self.payload['usage'] = {'prompt_tokens': 3721, 'completion_tokens': 8192, 'total_tokens': 11913,
+            'completion_tokens_details': {'reasoning_tokens': 8195}}
+        self.payload['choices'][0]['finish_reason'] = 'length'
+        self.gate.limits['output_tokens_per_response'] = 8192
+        captured = []; self.gate.capture_response = lambda number, raw: captured.append(raw)
+        with self.assertRaisesRegex(BudgetError, 'Invalid reasoning usage'):
+            self.gate.dispatch({'model': 'test-model', 'stream': True})
+        self.assertEqual(len(self.requests), 1); self.assertEqual(len(captured), 1)
+        self.assertTrue(captured[0].decode().strip().endswith('data: [DONE]'))
+        self.assertFalse(self.gate.snapshot()['usage_complete'])
+        self.assertIsNone(known_budget_exhaustion(self.gate.snapshot(), self.gate.limits))
+        with self.assertRaises(BudgetError): self.gate.dispatch({'model': 'test-model'})
+        self.assertEqual(len(self.requests), 1)
 
 
 if __name__ == '__main__': unittest.main()

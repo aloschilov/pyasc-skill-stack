@@ -3,6 +3,9 @@ name: Generation simulator qualification
 on:
   workflow_call:
     inputs:
+      experiment:
+        default: single
+        type: string
       action:
         required: true
         type: string
@@ -27,13 +30,14 @@ concurrency:
 
 jobs:
   qualify:
-    if: github.repository == 'aloschilov/pyasc-skill-stack' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.ref == 'refs/heads/main'))
+    if: github.repository == 'aloschilov/pyasc-skill-stack' && (inputs.experiment == 'single' || inputs.experiment == 'paired') && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && inputs.experiment == 'paired' && inputs.action == 'plan'))
     runs-on: [self-hosted, arm64]
-    timeout-minutes: 40
+    timeout-minutes: ${{ inputs.experiment == 'paired' && 600 || 40 }}
     permissions:
       contents: read
       actions: read
     env:
+      GENERATION_HELPER: ${{ inputs.experiment == 'paired' && 'tests/tools/generation_pairs_ci.py' || 'tests/tools/generation_ci.py' }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       GENERATION_ACTION: ${{ inputs.action }}
       APPROVE_PLAN: ${{ inputs.approve_plan }}
@@ -57,13 +61,25 @@ jobs:
           echo "GENERATION_STATE_DIR=$base/state" >> "$GITHUB_ENV"
 
       - name: Prepare and verify the reviewed plan
-        run: python3 tests/tools/generation_ci.py prepare --root "$GENERATION_ROOT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 "$GENERATION_HELPER" prepare --root "$GENERATION_ROOT"
 
       - name: Retrieve explicit baseline (GET only)
-        if: inputs.action == 'execute' && inputs.baseline_ref != ''
+        if: inputs.experiment == 'single' && inputs.action == 'execute' && inputs.baseline_ref != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 tests/tools/generation_ci.py fetch --root "$GENERATION_ROOT"
+
+      - name: Provision paired simulator
+        if: inputs.experiment == 'paired' && inputs.action == 'execute'
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          image = json.loads(Path('reference/images/ENV.json').read_text())['dev_image']['ref']
+          subprocess.run(['docker', 'pull', image], check=True, timeout=480)
+          PY
 
       - name: Provision pinned OpenCode CLI (no model request)
         if: inputs.action == 'execute'
@@ -83,11 +99,11 @@ jobs:
         env:
           OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-        run: python3 tests/tools/generation_ci.py execute --root "$GENERATION_ROOT"
+        run: python3 "$GENERATION_HELPER" execute --root "$GENERATION_ROOT"
 
       - name: Collect public evidence and write job summary
         if: always() && env.GENERATION_ROOT != ''
-        run: python3 tests/tools/generation_ci.py collect --root "$GENERATION_ROOT"
+        run: python3 "$GENERATION_HELPER" collect --root "$GENERATION_ROOT"
 
       - name: Preserve public evidence including failures
         if: always() && env.GENERATION_ROOT != ''

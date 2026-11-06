@@ -1,6 +1,6 @@
 """Explicit, serial generation executor. No schedule, hardware or automatic resume."""
 import argparse
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import datetime, timezone
 import fcntl
 import json
@@ -15,7 +15,7 @@ import uuid
 
 from generation_adapters import static_check, task_contract, write_probes
 from generation_plan import ROOT, DEFAULT_MATRIX, build_plan, canonical, digest, resource
-from generation_provider import BudgetGate, budget_server
+from generation_provider import BudgetGate, BudgetError, budget_server, known_budget_exhaustion
 
 
 class Blocked(ValueError):
@@ -93,11 +93,11 @@ def command(argv, directory, name, seconds, env=None, abort=None, cwd=None):
     return record
 
 
-def native_trace(events, skills):
+def native_trace(events, skills, *, allow_client_error=False):
     sessions, loaded = set(), set()
     for line in events.splitlines():
         event = json.loads(line)  # Non-JSON output is not accepted as attribution.
-        if event.get('type') == 'error': raise Blocked('OpenCode reported an error')
+        if event.get('type') == 'error' and not allow_client_error: raise Blocked('OpenCode reported an error')
         if event.get('sessionID'): sessions.add(event['sessionID'])
         part = event.get('part') or {}; state = part.get('state') or {}
         if part.get('tool') == 'skill' and state.get('status') == 'completed':
@@ -110,14 +110,10 @@ def native_trace(events, skills):
     return {'session_id': sessions.pop(), 'loaded_skills': sorted(loaded)}
 
 
-def generate(attempt, plan, contract, context):
+def configure(config, plan, context, project):
     limits = plan['limits']; model = plan['model']['requested']; provider, model_id = model.split('/')
-    project = attempt/'project'; project.mkdir()
-    state = attempt/'private'; state.mkdir(mode=0o700)
-    config = json.loads((context/f'integrations/opencode/profiles/{plan["model"]["profile"]}.json').read_text())
     if config['provider'][provider].get('npm') != '@ai-sdk/openai-compatible':
         raise Blocked('Budget gate supports only OpenAI-compatible Chat Completions')
-    skills = {s: context/'skills'/s for s in plan['skills']}
     config['enabled_providers'] = [provider]
     config['small_model'] = model  # Auxiliary/title calls share the same gate and budget.
     config['skills'] = {'paths': [str(context/'skills')]}
@@ -127,6 +123,29 @@ def generate(attempt, plan, contract, context):
         'edit': {'*': 'deny', 'candidate.py': 'allow', str(project/'candidate.py'): 'allow'},
         'external_directory': {'*': 'deny', str(context/'skills'/'*'): 'allow'}}
     config['provider'][provider]['models'][model_id]['limit']['output'] = limits['output_tokens_per_response']
+    if plan.get('intervention'):
+        from generation_protocols import context_files
+        # OpenCode glob/grep permissions match the search expression, not its
+        # directory. Internal tool-output paths also receive native exceptions.
+        # Paired trials therefore expose only explicit file reads and skill loads.
+        config['permission'].update(glob='deny', grep='deny')
+        config['permission']['read'] = {'*': 'deny', 'candidate.py': 'allow', str(project/'candidate.py'): 'allow',
+            # OpenCode 1.19 read asks relative to the isolated Git worktree;
+            # external_directory asks separately with an absolute directory glob.
+            **{os.path.relpath(context/n, project): 'allow' for n in context_files(plan) if not n.startswith('integrations/')}}
+        config['permission']['external_directory'] = {'*': 'deny',
+            **{str(context/('skills/'+s)/'*'): 'allow' for s in plan['skills']}}
+        if plan['intervention']['id'] == 'P4':
+            config['permission']['external_directory'][str(context/'tests/generation/context'/'*')] = 'allow'
+    return config
+
+
+def generate(attempt, plan, contract, context):
+    limits = plan['limits']; model = plan['model']['requested']; provider, model_id = model.split('/')
+    project = attempt/'project'; project.mkdir()
+    state = attempt/'private'; state.mkdir(mode=0o700)
+    skills = {s: context/'skills'/s for s in plan['skills']}
+    config = configure(json.loads((context/f'integrations/opencode/profiles/{plan["model"]["profile"]}.json').read_text()), plan, context, project)
     prompt = ('Load these pinned skills with the skill tool: '+', '.join(skills)+'.\n'
         'Write candidate.py for this task: '+json.dumps(contract)+'.\n'
         'Use import asc and from asc.experimental import asctile. Define @asctile.jit device functions '
@@ -137,6 +156,24 @@ def generate(attempt, plan, contract, context):
         'Supported device calls are asctile APIs, tensor reshape/broadcast_to and scalar min/max/range/len/int/float/bool/abs. '
         'All inputs are CPU tensors for Model simulation; the harness owns the oracle and poisoned output. '
         'Do not copy a reference kernel. Do not run commands. Write only candidate.py.')
+    intervention = plan.get('intervention')
+    observe_request = None
+    if intervention:
+        from generation_protocols import context_files, prompt as paired_prompt, request_audit
+        prompt = paired_prompt(contract, intervention['id'], skills, context,
+            project=project if intervention.get('context_path_format') == 'relative-read-call-v1' else None)
+        visible = context_files(plan)
+        save(attempt/'isolation.json', {'protocol': intervention, 'context_sha256': visible,
+            'project': str(project), 'context': str(context), 'private': str(state),
+            'fresh_project': not any(project.iterdir()), 'fresh_private': not any(state.iterdir()),
+            'permission': config['permission']})
+        def observe_request(number, body, payload):
+            path = state/f'provider-request-{number}.bin'
+            with path.open('xb') as handle: handle.write(payload)
+            path.chmod(0o600)
+            try: return request_audit(body, prompt, intervention['id'], intervention['selected_skills'], context)
+            except (ValueError, KeyError, TypeError) as exc:
+                raise BudgetError('Paired request context/schema audit failed') from exc
     (attempt/'prompt.txt').write_text(prompt)
     deadline = time.monotonic() + limits['generation_seconds_per_attempt']
     # OpenCode 1.19 resolves edit rules against its VCS worktree. Without a
@@ -150,7 +187,8 @@ def generate(attempt, plan, contract, context):
         with path.open('xb') as handle: handle.write(raw)
         path.chmod(0o600)
     gate = BudgetGate(os.environ['OPENCODE_BASE_URL'], os.environ['OPENCODE_API_KEY'], model_id,
-                      limits, lambda value: save(attempt/'usage.json', value), deadline, capture_response, response_model=plan['model']['expected_response'])
+                      limits, lambda value: save(attempt/'usage.json', value), deadline, capture_response,
+                      response_model=plan['model']['expected_response'], observe_request=observe_request)
     save(attempt/'usage.json', gate.snapshot())
     # No inherited credentials/config/plugins: only the gate knows the provider key.
     env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
@@ -161,32 +199,58 @@ def generate(attempt, plan, contract, context):
         config['provider'][provider]['options'] = {'baseURL': endpoint, 'apiKey': '{env:PYASC_GATE_TOKEN}'}
         save(attempt/'model-config.json', config)
         env.update(PYASC_GATE_TOKEN=gate.token, OPENCODE_CONFIG_CONTENT=json.dumps(config))
+        result = None
         try:
             result = command(['opencode', 'run', '--pure', '--format', 'json', '--dir', str(project), '-m', model, prompt],
                              attempt, 'generation', max(.01, deadline-time.monotonic()), env, abort=lambda: gate.error, cwd=project)
         except Blocked:
             usage = gate.snapshot()
-            if usage['usage_complete'] and (gate.error == 'Request budget exhausted' or
-                    any(r.get('usage', {}).get('finish_reason') == 'length' for r in usage['requests'])):
-                raise ValueError('Generation budget exhausted; complete provider usage retained') from None
-            raise
+            if not known_budget_exhaustion(usage, limits): raise
         finally:
             save(attempt/'usage.json', gate.snapshot())
     usage = gate.snapshot()
-    if usage['usage_complete'] and (gate.error == 'Request budget exhausted' or
-            any(r.get('usage', {}).get('finish_reason') == 'length' for r in usage['requests'])):
+    budget_failure = known_budget_exhaustion(usage, limits)
+    if budget_failure and not intervention:
         raise ValueError('Generation budget exhausted; complete provider usage retained')
-    if result['exit_code'] or gate.error or not usage['usage_complete']:
+    if not budget_failure and (result is None or result['exit_code'] or gate.error or not usage['usage_complete']):
         raise Blocked('Generation or provider usage incomplete; inspect retained evidence')
-    for name, sha in plan['source_sha256'].items():
-        if name.startswith(('skills/', 'integrations/opencode/profiles/')) and digest(resource(context, name)) != sha:
+    from generation_protocols import context_files
+    for name, sha in context_files(plan).items():
+        if digest(resource(context, name)) != sha:
             raise Blocked('Generation context changed')
-    trace = native_trace((attempt/'generation.stdout').read_text(), skills)
+    if intervention:
+        from generation_protocols import audit_trace
+        events = (attempt/'generation.stdout').read_text(); empty_session = None
+        if budget_failure and not events.strip() and intervention['id'] in ('P2', 'P3'):
+            from generation_native import early_output_cap, capture_empty_session
+            from generation_protocols import provider_prompt
+            if early_output_cap(usage, limits):
+                import sqlite3
+                try: empty_session = capture_empty_session(state, project, model, provider_prompt(prompt))
+                except (OSError, ValueError, KeyError, TypeError, sqlite3.Error) as exc:
+                    raise Blocked('Could not attribute the empty native session') from exc
+                save(attempt/'native-session.json', empty_session)
+        trace = audit_trace(events, project, context, plan, allow_client_error=bool(budget_failure),
+                            empty_session=empty_session, usage=usage)
+        audits = [r.get('audit', {}) for r in usage['requests']]
+        schemas = {a.get('tool_schema_sha256') for a in audits if a.get('tool_schema_sha256')}
+        if not any(a.get('prompt_present') for a in audits) or len(schemas) != 1:
+            raise Blocked('Paired provider prompt/tool attribution incomplete')
+        if {s for a in audits for s in a['visible_skills']} != set(skills):
+            raise Blocked('Pinned skill contents did not reach the provider')
+        if intervention['id'] == 'P4' and not any(a['baseline_visible'] for a in audits):
+            raise Blocked('Baseline notes did not reach the provider')
+        trace.update(tool_schema_sha256=schemas.pop(), prompt_sha256=digest(prompt.encode()))
+    else:
+        trace = native_trace((attempt/'generation.stdout').read_text(), skills)
     observed = {r['usage']['observed_model'] for r in usage['requests']}
     if observed != {plan['model']['expected_response']}: raise Blocked('Provider model attribution mismatch')
     trace.update(requested_model=model, observed_model=plan['model']['expected_response'],
                  provider_model_revision=plan['model']['expected_response'])
     save(attempt/'attribution.json', trace)
+    if budget_failure:
+        save(attempt/'generation-outcome.json', {'status': 'budget-exhausted', 'reason': budget_failure})
+        raise ValueError('Generation budget exhausted; complete provider usage retained')
     candidate = project/'candidate.py'
     if candidate.is_symlink() or not candidate.is_file(): raise ValueError('Missing regular candidate.py')
     if candidate.stat().st_size > 1024*1024: raise ValueError('Candidate too large')
@@ -222,13 +286,14 @@ def qualify(attempt, plan, contract, source):
     return report
 
 
-def execute(plan, output, state_dir):
+def execute(plan, output, state_dir, *, _lease=None):
+    """Run cells; a paired coordinator may retain its already-held shared lease."""
     output = external(output)
     if output.exists(): raise ValueError('Use a new results directory; existing attempts are never replayed')
     for key in ('OPENCODE_API_KEY', 'OPENCODE_BASE_URL'):
         if not os.environ.get(key): raise Blocked('Missing '+key)
     contracts = {c['id']: task_contract(ROOT, c) for c in plan['cells']}
-    with exclusive(state_dir, output) as latch:
+    with (exclusive(state_dir, output) if _lease is None else nullcontext(_lease)) as latch:
         output.mkdir(parents=True)
         save(output/'plan.json', plan)
         revision = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], capture_output=True, text=True)
@@ -247,9 +312,10 @@ def execute(plan, output, state_dir):
                 target = source/name; target.parent.mkdir(parents=True, exist_ok=True); target.write_bytes(data)
             # Public model context contains selected skills/profile only, never oracle kernels.
             context = output/'context'; context.mkdir()
-            for name in plan['source_sha256']:
-                if name.startswith(('skills/', 'integrations/opencode/profiles/')):
-                    dest = context/name; dest.parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(source/name, dest)
+            from generation_protocols import context_files
+            for name in context_files(plan):
+                dest = context/name; dest.parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(source/name, dest)
+            if plan.get('intervention'): (context/'skills').mkdir(exist_ok=True)
             version = command(['opencode', '--version'], output, 'opencode-version', 20)
             image = command(['docker', 'image', 'inspect', plan['runtime']['image']], output, 'image-inspect', 20)
             if version['exit_code'] or image['exit_code']: raise Blocked('Provision OpenCode and pinned simulator first')
@@ -280,6 +346,7 @@ def execute(plan, output, state_dir):
                         entry['status'] = cell['status'] = 'blocked'
                         raise
                     except (ValueError, SyntaxError) as exc:
+                        entry['failure_stage'] = entry['status']
                         entry['status'] = cell['status'] = 'failed'
                         entry['error'] = str(exc)
                     finally:
@@ -293,7 +360,8 @@ def execute(plan, output, state_dir):
             state['status'] = 'passed' if all(c['status']=='passed' for c in state['cells']) else 'failed'
             state['inputs_unchanged'] = all(digest(resource(ROOT, name))==sha for name, sha in plan['source_sha256'].items())
             if not state['inputs_unchanged']: raise Blocked('Checkout changed during execution')
-            latch.unlink()  # All attempts and their usage/cleanup have terminal outcomes.
+            if _lease is None:
+                latch.unlink()  # A paired coordinator releases only after all trials finish.
         except BaseException as exc:
             state.update(status='blocked', error=type(exc).__name__ + ': ' + str(exc))
             # Keep the latch: do not assume interrupted/unknown provider work is safe to replay.
