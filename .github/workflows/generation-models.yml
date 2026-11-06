@@ -19,8 +19,9 @@ permissions:
   contents: read
   actions: read
 
+# Offline planning must not evict another PR or a pending paid execution.
 concurrency:
-  group: generation-models
+  group: ${{ (github.event_name == 'pull_request' || inputs.mode == 'plan') && format('generation-models-plan-{0}', github.run_id) || 'generation-models' }}
   cancel-in-progress: false
 
 jobs:
