@@ -43,7 +43,8 @@ container without credentials or device mounts.
 
 An authorized manual run uses `--execute --approve-plan <exact plan_sha256>
 --results-dir /outside-checkout/new-run`. It needs OpenCode, the locally available
-digest-pinned simulator, and `OPENCODE_BASE_URL` / `OPENCODE_API_KEY`. The executor
+digest-pinned simulator, and the endpoint/credential variables declared by the
+selected profile (`OPENCODE_BASE_URL` / `OPENCODE_API_KEY` for the default). The executor
 never pulls an image, submits to CANNBench, or selects an NPU backend. No schedule
 is added. Manual CI dispatch is described below. A provider-backed simulator pilot is recorded below; ordinary PR checks
 continue to use fixed fixtures and local provider doubles only.
@@ -63,6 +64,17 @@ OpenCode receives selected skills in a fresh Git worktree/private state director
 (no commits are created). The worktree makes its file-edit permission patterns
 resolve to the intended project. It runs with shell, delegation, web access and unrelated edits denied. Native session and
 skill-load events plus provider-observed model/usage bind attribution.
+
+New plans bind the selected profile bytes and provider/model configuration.
+Missing selected variables or configuration drift block execution before commands
+or requests; another provider's ambient credentials are never a fallback. Each
+request records allowlisted wire sampling/seed, reasoning/thinking and effective
+token-cap settings before dispatch. Read-only qualification requires those fields
+when the hashed provider implementation records them, including the exact cap and
+the distinction between omitted and explicit-null settings. Historical receipts
+remain readable without acquiring this new evidence. Unspecified defaults and
+immutable provider weights revisions stay unknown; recording a setting does not
+prove the provider honored it.
 Matrix schema 2 separately pins the requested alias (`gateway/glm-5.3`) and
 expected provider response ID (`glm-5-3-260814`). That reported ID is retained as
 model revision metadata, not a claim of immutable model weights. Any unlisted
@@ -281,7 +293,7 @@ wire responses are unnecessary and must remain excluded. Reusing the baseline or
 one of its successful sessions is not a fresh comparison.
 
 Compatibility requires the same ordered inventory/case anchors, model/profile,
-provider response revision, OpenCode version, runtime digest, budgets, required
+observed provider response ID, OpenCode version, runtime digest, budgets, required
 gates and non-skill input hashes. Only skill contents and checkout revision may
 change; changed skill files are listed. The offline comparison tool itself is
 excluded from execution compatibility. All other executor, adapter, verifier,

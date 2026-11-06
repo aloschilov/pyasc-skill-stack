@@ -16,7 +16,7 @@ import time
 
 from generation_adapters import task_contract
 from generation_compare import require
-from generation_executor import Blocked, command, exclusive, external, native_trace, qualify, run_session, save
+from generation_executor import Blocked, command, exclusive, external, native_trace, provider_credentials, qualify, run_session, save
 from generation_plan import ROOT, LIMITS, build_plan, canonical, digest, exact_keys, resource, write_plan
 from generation_protocols import common_prompt, provider_prompt, skill_body
 from generation_provider import BudgetError, known_budget_exhaustion
@@ -273,7 +273,7 @@ def verifier_feedback(directory, error):
 
 def run_review(plan, output, state_dir, *, initial_inputs=None):
     output = external(output); require(not output.exists(), 'Never replay an existing review run')
-    for key in ('OPENCODE_API_KEY', 'OPENCODE_BASE_URL'): require(os.environ.get(key), 'Missing '+key)
+    provider_credentials(plan['common'])
     contract = task_contract(ROOT, plan['common']['cells'][0])
     revision = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
     require(revision == plan['checkout_revision'], 'Review checkout changed after planning')

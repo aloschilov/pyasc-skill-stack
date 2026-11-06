@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT/'tests/tools'))
 import generation_adapters as adapters
 import generation_executor as executor
 import generation_plan as planner
-from generation_provider import BudgetError, BudgetGate, budget_server, response_usage, known_budget_exhaustion
+from generation_provider import BudgetError, BudgetGate, budget_server, response_usage, known_budget_exhaustion, request_settings
 
 
 class ExecutorContracts(unittest.TestCase):
@@ -158,6 +158,27 @@ class ExecutorContracts(unittest.TestCase):
 
 
 class ProviderContracts(unittest.TestCase):
+    def test_public_wire_settings_distinguish_explicit_values_and_unknown_defaults(self):
+        body = {'max_tokens': 8192, 'temperature': 0, 'seed': 0, 'reasoning_effort': 'high',
+            'thinking': {'type': 'enabled'}, 'enable_thinking': False, 'messages': [{'content': 'private prompt'}],
+            'metadata': {'api_key': 'private-secret'}, 'tools': [{'description': 'private tool content'}]}
+        value = request_settings(body)
+        self.assertEqual(value['sampling']['temperature'], 0); self.assertEqual(value['sampling']['seed'], 0)
+        self.assertIsNone(value['sampling']['top_p']); self.assertNotIn('top_p', value['present_fields'])
+        self.assertEqual(value['reasoning']['thinking'], {'type': 'enabled'})
+        self.assertFalse(value['reasoning']['enable_thinking']); self.assertEqual(value['max_tokens'], 8192)
+        self.assertNotIn('private', json.dumps(value))
+        value['reasoning']['thinking']['type'] = 'disabled'
+        self.assertEqual(body['thinking']['type'], 'enabled')
+
+    def test_unsafe_or_nonfinite_wire_settings_are_rejected_without_echoing_values(self):
+        for extra in ({'temperature': float('nan')}, {'seed': True}, {'seed': 1.5}, {'top_p': 'private-secret'},
+                      {'reasoning_effort': 'private-secret'}, {'thinking': {'type': 'enabled', 'secret': 'private-secret'}},
+                      {'thinking': {'type': 'enabled', 'budget_tokens': -1}}, {'enable_thinking': 'private-secret'}):
+            with self.subTest(extra=extra), self.assertRaises(BudgetError) as error:
+                request_settings(dict(max_tokens=10, **extra))
+            self.assertNotIn('private-secret', str(error.exception))
+
     def setUp(self):
         self.requests, self.saves = [], []
         self.payload = {'model':'test-model', 'choices':[{'index':0, 'finish_reason':'stop'}], 'usage': {'prompt_tokens':3, 'completion_tokens':7,
@@ -171,8 +192,17 @@ class ProviderContracts(unittest.TestCase):
                 if body.get('stream'):
                     raw = ('data: '+json.dumps(test.payload)+'\n\ndata: [DONE]\n\n').encode()
                 else: raw = json.dumps(test.payload).encode()
+                if getattr(test, 'truncate_stream', False): raw = raw.removesuffix(b'data: [DONE]\n\n')
                 self.send_response(200); self.send_header('Content-Type', 'text/event-stream' if body.get('stream') else 'application/json')
-                self.send_header('Content-Length', str(len(raw))); self.end_headers(); self.wfile.write(raw)
+                if getattr(test, 'missing_http_trailer', False) or getattr(test, 'truncated_http_chunk', False):
+                    self.send_header('Transfer-Encoding', 'chunked'); self.end_headers()
+                    truncated = getattr(test, 'truncated_http_chunk', False)
+                    terminator=b'\r' if getattr(test, 'partial_chunk_terminator', False) else b'\r\n'
+                    self.wfile.write(format(len(raw)+(8 if truncated else 0), 'x').encode()+b'\r\n'+raw+(b'' if truncated else terminator))
+                    self.close_connection = True  # Deliberately omit the terminating HTTP chunk.
+                    return
+                self.send_header('Content-Length', str(len(raw)+(8 if getattr(test, 'short_content_length', False) else 0)))
+                self.end_headers(); self.wfile.write(raw)
         self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True); self.thread.start()
         self.addCleanup(self.server.server_close); self.addCleanup(self.server.shutdown)
@@ -204,6 +234,21 @@ class ProviderContracts(unittest.TestCase):
         record = self.gate.snapshot()['requests'][0]
         self.assertEqual(record['status'], 'not-sent');self.assertFalse(record['dispatch_started'])
         self.assertIsNotNone(self.gate.error)
+
+    def test_actual_gate_retains_capped_wire_settings_before_provider_dispatch(self):
+        body = {'model': 'test-model', 'temperature': 0.2, 'reasoning_effort': 'high',
+            'thinking': {'type': 'enabled', 'budget_tokens': 8}, 'max_tokens': 10000}
+        self.gate.dispatch(body)
+        value = self.gate.snapshot()['requests'][0]['request_settings']
+        self.assertEqual(value, request_settings(self.requests[0])); self.assertEqual(value['max_tokens'], 16)
+        before = [s['requests'][0] for s in self.saves if s['requests'] and s['requests'][0].get('dispatch_started')]
+        self.assertEqual(before[0]['request_settings'], value); self.assertNotIn('usage', before[0])
+
+    def test_invalid_wire_settings_stop_before_any_provider_request(self):
+        with self.assertRaises(BudgetError): self.gate.dispatch({'model': 'test-model', 'temperature': 'private-secret'})
+        record = self.gate.snapshot()['requests'][0]
+        self.assertEqual(self.requests, []); self.assertEqual(record['status'], 'not-sent')
+        self.assertFalse(record['dispatch_started']); self.assertNotIn('private-secret', json.dumps(self.saves))
 
     def test_missing_usage_or_excess_tokens_blocks_retry(self):
         for payload in ({'model':'test-model'}, {'model':'test-model','choices':[{'index':0,'finish_reason':'stop'}],'usage':{'prompt_tokens':3,'completion_tokens':17,'total_tokens':20}}):
@@ -240,6 +285,81 @@ class ProviderContracts(unittest.TestCase):
             self.assertEqual(exc.exception.code,400)
             exc.exception.close()
         self.assertEqual(len(self.requests),1)  # No retry reaches the provider.
+
+    def test_complete_sse_before_missing_http_trailer_keeps_exact_usage_without_retry(self):
+        self.missing_http_trailer = True
+        captured = []; self.gate.capture_response = lambda number, raw: captured.append((number, raw))
+        raw, _ = self.gate.dispatch({'model':'test-model','stream':True})
+        record = self.gate.records[0]
+        self.assertFalse(record['http_body_complete']); self.assertEqual(record['transport_error'],'IncompleteRead')
+        self.assertEqual(record['status'],'complete'); self.assertEqual(record['usage']['observed_model'],'test-model')
+        self.assertTrue(self.gate.snapshot()['usage_complete']); self.assertEqual(self.gate.snapshot()['observed_output_tokens'],7)
+        self.assertEqual(captured,[(1,raw)]); self.assertEqual(record['response_sha256'],planner.digest(raw))
+        self.assertEqual(len(self.requests),1)
+
+    def test_incomplete_sse_is_captured_privately_and_never_replayed(self):
+        self.missing_http_trailer = self.truncate_stream = True
+        captured = []; self.gate.capture_response = lambda number, raw: captured.append((number,raw))
+        with self.assertRaisesRegex(BudgetError,'Incomplete streaming response'):
+            self.gate.dispatch({'model':'test-model','stream':True})
+        record=self.gate.records[0]
+        self.assertEqual(record['status'],'unknown'); self.assertNotIn('usage',record)
+        self.assertFalse(self.gate.snapshot()['usage_complete']); self.assertEqual(record['response_bytes'],len(captured[0][1]))
+        self.assertEqual(record['response_sha256'],planner.digest(captured[0][1]))
+        with self.assertRaisesRegex(BudgetError,'Earlier request'): self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertEqual(len(self.requests),1); self.assertEqual(self.gate.snapshot()['reserved_output_tokens'],16)
+
+    def test_incomplete_nonstreaming_http_body_cannot_be_accepted_as_sse(self):
+        self.missing_http_trailer = True
+        with self.assertRaisesRegex(BudgetError,'Incomplete non-streaming'):
+            self.gate.dispatch({'model':'test-model','stream':False})
+        self.assertEqual(self.gate.records[0]['status'],'unknown')
+        self.assertIn('response_sha256',self.gate.records[0])
+
+    def test_complete_sse_inside_truncated_http_chunk_keeps_all_received_bytes(self):
+        self.truncated_http_chunk = True
+        captured=[];self.gate.capture_response=lambda number,raw:captured.append(raw)
+        raw,_=self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertTrue(raw.endswith(b'data: [DONE]\n\n'));self.assertEqual(captured,[raw])
+        self.assertEqual(self.gate.records[0]['status'],'complete')
+        self.assertEqual(self.gate.records[0]['transport_error'],'IncompleteRead')
+        self.assertEqual(self.gate.snapshot()['observed_output_tokens'],7)
+        self.assertEqual(len(self.requests),1)
+
+    def test_partial_sse_inside_truncated_chunk_stays_unknown_without_replay(self):
+        self.truncated_http_chunk=self.truncate_stream=True
+        captured=[];self.gate.capture_response=lambda number,raw:captured.append(raw)
+        with self.assertRaisesRegex(BudgetError,'Incomplete streaming response'):
+            self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertTrue(captured[0].startswith(b'data: '));self.assertNotIn(b'[DONE]',captured[0])
+        self.assertEqual(self.gate.records[0]['response_sha256'],planner.digest(captured[0]))
+        self.assertEqual(self.gate.records[0]['status'],'unknown')
+        with self.assertRaisesRegex(BudgetError,'Earlier request'):self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertEqual(len(self.requests),1)
+
+    def test_short_content_length_nonstreaming_body_is_preserved_but_not_accepted(self):
+        self.short_content_length=True
+        captured=[];self.gate.capture_response=lambda number,raw:captured.append(raw)
+        with self.assertRaisesRegex(BudgetError,'Incomplete non-streaming'):
+            self.gate.dispatch({'model':'test-model'})
+        self.assertEqual(json.loads(captured[0]),self.payload)
+        self.assertEqual(self.gate.records[0]['status'],'unknown')
+
+    def test_partial_http_chunk_terminator_does_not_enter_the_sse_body(self):
+        self.missing_http_trailer=self.partial_chunk_terminator=True
+        raw,_=self.gate.dispatch({'model':'test-model','stream':True})
+        expected=('data: '+json.dumps(self.payload)+'\n\ndata: [DONE]\n\n').encode()
+        self.assertEqual(raw,expected)
+        self.assertEqual(self.gate.records[0]['response_sha256'],planner.digest(expected))
+
+    def test_incremental_reader_stops_at_response_byte_cap_and_blocks_retry(self):
+        captured=[];self.gate.capture_response=lambda number,raw:captured.append(raw)
+        with patch('generation_provider.MAX_RESPONSE',64),self.assertRaisesRegex(BudgetError,'Provider response too large'):
+            self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertEqual(len(captured[0]),65)
+        self.assertEqual(self.gate.records[0]['status'],'unknown')
+        with self.assertRaisesRegex(BudgetError,'Earlier request'):self.gate.dispatch({'model':'test-model','stream':True})
+        self.assertEqual(len(self.requests),1)
 
     def test_opencode_adapter_uses_isolated_config_gate_and_native_trace(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -323,6 +443,29 @@ class ProviderContracts(unittest.TestCase):
         self.assertIsNone(known_budget_exhaustion(self.gate.snapshot(), self.gate.limits))
         with self.assertRaises(BudgetError): self.gate.dispatch({'model': 'test-model'})
         self.assertEqual(len(self.requests), 1)
+
+    def test_identical_final_usage_only_chunk_is_counted_once(self):
+        # Minimal protocol fixture for the two final frames captured in
+        # cohort42189411115, not a retained run payload or qualification.
+        ending = dict(copy.deepcopy(self.payload), id='response-1')
+        ending['choices'][0]['finish_reason'] = 'tool_calls'
+        usage_only = dict(copy.deepcopy(ending), choices=[])
+        def encode(parts):
+            return ('\n\n'.join('data: '+json.dumps(p) for p in parts)+'\n\ndata: [DONE]\n').encode()
+        parsed = response_usage(encode([ending, usage_only]), True, 'test-model')
+        self.assertEqual((parsed['completion_tokens'], parsed['total_tokens'], parsed['finish_reason']), (7, 10, 'tool_calls'))
+        with self.assertRaisesRegex(BudgetError, 'different observed model'):
+            response_usage(encode([ending, usage_only]), True, 'another-model')
+        mutations = [lambda p:p[-1]['usage'].update(completion_tokens=8,total_tokens=11),
+            lambda p:p[-1].update(id='response-2'), lambda p:p[-1].pop('id'),
+            lambda p:p[-1].update(choices=[{'index':0,'finish_reason':'tool_calls'}]),
+            lambda p:p.insert(1,dict(id='response-1',model='test-model',choices=[])),
+            lambda p:p.append(copy.deepcopy(p[-1])),
+            lambda p:p.insert(0,dict(id='another-response',model='test-model',choices=[]))]
+        for mutate in mutations:
+            rows=copy.deepcopy([ending,usage_only]);mutate(rows)
+            with self.subTest(mutation=mutations.index(mutate)), self.assertRaises(BudgetError):
+                response_usage(encode(rows),True,'test-model')
 
 
 if __name__ == '__main__': unittest.main()

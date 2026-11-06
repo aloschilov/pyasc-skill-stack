@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import json
 import math
 from pathlib import Path
+import re
 import signal
 import subprocess
 import sys
@@ -17,6 +18,12 @@ from generation_protocols import BASELINE, CONTRASTS, PROTOCOLS, audit_trace, co
 from generation_provider import known_budget_exhaustion
 
 SPEC = 'tests/generation/paired.json'
+MODELS_SPEC = 'tests/generation/models.json'
+
+
+def specification(experiment):
+    require(experiment in ('paired', 'models'), 'Unknown paired experiment')
+    return MODELS_SPEC if experiment == 'models' else SPEC
 
 
 def read(path):
@@ -27,7 +34,12 @@ def ordered_trials(cells, spec):
     # Hash ordering is reproducible across Python versions; the seed affects
     # order only, never claims control of provider sampling.
     def rank(label): return digest((str(spec['order_seed'])+'/'+label).encode())
-    labels = sorted(PROTOCOLS, key=lambda p: rank('protocol/'+p))
+    labels = sorted(spec['protocols'], key=lambda p: rank('protocol/'+p))
+    if spec['schema_version'] == 3:
+        # Mirror the complete model × context block on the second repetition,
+        # so neither model systematically runs before its matched control.
+        labels = sorted(((m['id'], p) for m in spec['models'] for p in labels),
+                        key=lambda item: rank('arm/'+'/'.join(item)))
     cells = sorted(cells, key=lambda c: rank('cell/'+c['id']))
     blocks = []
     for repetition in range(spec['repetitions']):
@@ -37,24 +49,58 @@ def ordered_trials(cells, spec):
             if repetition % 2: order = list(reversed(order))
             blocks.append((cell['id'], repetition+1, order))
     blocks.sort(key=lambda b: rank(f'block/{b[0]}/{b[1]}'))
+    if spec['schema_version'] == 3:
+        return [{'id': f'{cell}-r{rep:02d}-{arm}-{pid.lower()}', 'cell': cell,
+                 'repetition': rep, 'protocol': pid, 'model_arm': arm}
+                for cell, rep, order in blocks for arm, pid in order]
     return [{'id': f'{cell}-r{rep:02d}-{pid.lower()}', 'cell': cell, 'repetition': rep, 'protocol': pid}
             for cell, rep, order in blocks for pid in order]
 
 
-def build_pairs(root=ROOT):
-    spec = json.loads(resource(root, SPEC))
-    require(type(spec['schema_version']) is int and spec['schema_version'] in (1, 2), 'Unknown paired schema')
+def build_pairs(root=ROOT, experiment='paired'):
+    path = specification(experiment)
+    spec = json.loads(resource(root, path))
+    models = experiment == 'models'
+    require(type(spec['schema_version']) is int and spec['schema_version'] in ((3,) if models else (1, 2)), 'Unknown paired schema')
     keys = ('schema_version', 'matrix', 'protocols', 'repetitions', 'order_seed',
             'generation_seconds_per_attempt', 'max_output_tokens', 'max_execution_seconds', 'periodic')
-    if spec['schema_version'] == 2 and 'context_path_format' in spec: keys += ('context_path_format',)
-    exact_keys(spec, keys + (('model',) if spec['schema_version'] == 2 else ()), 'paired specification')
+    if spec['schema_version'] >= 2 and 'context_path_format' in spec: keys += ('context_path_format',)
+    if models and 'auxiliary_agents' in spec:
+        keys += ('auxiliary_agents',)
+        require(spec['auxiliary_agents'] is False, 'Explicitly disable comparison auxiliary agents')
+    exact_keys(spec, keys + (('models', 'output_tokens_per_response') if models else
+                           ('model',) if spec['schema_version'] == 2 else ()), 'paired specification')
     if spec['schema_version'] == 2: exact_keys(spec['model'], ('profile', 'response_model'), 'paired model')
     require(spec.get('context_path_format', 'absolute-v1') in ('absolute-v1', 'relative-read-call-v1'), 'Invalid context path format')
-    require(spec['protocols'] == list(PROTOCOLS), 'Declare all four protocols in canonical order')
+    require(spec['protocols'] == (['P3', 'P6'] if models else list(PROTOCOLS)), 'Declare canonical protocols for this experiment')
     reps = spec['repetitions']
     require(type(reps) is int and 2 <= reps <= 8 and reps % 2 == 0, 'Use an even number of repetitions, 2..8')
     require(type(spec['order_seed']) is int and 0 <= spec['order_seed'] < 2**32, 'Explicit order seed required')
-    common = build_plan(root, spec['matrix'], model_override=spec.get('model'))
+    arms = {}
+    if models:
+        require(isinstance(spec['models'], list) and len(spec['models']) == 2, 'Declare exactly two model arms')
+        for model in spec['models']:
+            exact_keys(model, ('id', 'profile', 'response_model'), 'model arm')
+            require(isinstance(model['id'], str) and re.fullmatch(r'[a-z][a-z0-9-]{0,31}', model['id'])
+                and model['id'] not in arms, 'Invalid or duplicate model arm')
+            arms[model['id']] = build_plan(root, spec['matrix'], model_override={k: model[k] for k in ('profile', 'response_model')})
+        for key in ('requested', 'expected_response'):
+            require(len({p['model'][key] for p in arms.values()}) == 2, 'Model arms need distinct '+key+' identities')
+        common = deepcopy(next(iter(arms.values())))
+        settings = common['model']['configuration']['model_options']
+        cap = spec['output_tokens_per_response']
+        require(type(cap) is int and 1 <= cap <= LIMITS['output_tokens_per_response'], 'Invalid model-comparison output cap')
+        for arm in arms.values():
+            require(arm['model']['configuration']['model_options'] == settings, 'Model reasoning/sampling settings must match')
+            require(arm['model']['configuration']['model_limits'] == common['model']['configuration']['model_limits'],
+                    'Configured OpenCode context/output limits must match')
+            require(cap <= arm['model']['configuration']['model_limits']['output'], 'Model response cap exceeds profile')
+            common['source_sha256'].update(arm['source_sha256'])
+        common['limits']['output_tokens_per_response'] = cap
+        common['maximum_work']['output_tokens'] = len(common['cells'])*common['limits']['attempts_per_cell']*common['limits']['rounds_per_attempt']*cap
+        common['limits']['max_output_tokens'] = common['maximum_work']['output_tokens']
+    else:
+        common = build_plan(root, spec['matrix'], model_override=spec.get('model'))
     seconds = spec['generation_seconds_per_attempt']
     require(type(seconds) is int and 1 <= seconds <= LIMITS['generation_seconds_per_attempt'], 'Invalid paired generation deadline')
     # This experiment has its own predeclared deadline. Keep the qualified
@@ -63,7 +109,7 @@ def build_pairs(root=ROOT):
     common['maximum_work']['execution_seconds'] = len(common['cells'])*common['limits']['attempts_per_cell']*(
         seconds+common['limits']['qualification_seconds_per_attempt'])
     common['limits']['max_execution_seconds'] = common['maximum_work']['execution_seconds']
-    for name in (SPEC, BASELINE, '.github/workflows/generation-paired.yml', 'scripts/generation_operations.py'):
+    for name in (path, BASELINE, '.github/workflows/generation-'+experiment+'.yml', 'scripts/generation_operations.py'):
         common['source_sha256'][name] = digest(resource(root, name))
     trials = ordered_trials(common['cells'], spec)
     limits = common['limits']; attempts = len(trials)*limits['attempts_per_cell']
@@ -74,23 +120,28 @@ def build_pairs(root=ROOT):
         cap = spec['max_'+field]
         require(type(cap) is int and cap > 0 and maximum[field] <= cap, 'Paired aggregate '+field+' budget exceeded')
     require(spec['max_execution_seconds'] <= 28800, 'Paired execution must fit the 600-minute CI job including setup/collection')
-    return {'schema_version': 1, 'kind': 'paired-generation-plan', 'spec': spec, 'common': common,
-        'protocols': PROTOCOLS, 'contrasts': CONTRASTS, 'trials': trials, 'maximum_work': maximum,
+    return {'schema_version': 2 if models else 1, 'kind': 'paired-generation-plan', 'spec': spec, 'common': common,
+        **({'models': {name: arm['model'] for name, arm in arms.items()}} if models else {}),
+        'protocols': {p: PROTOCOLS[p] for p in spec['protocols']},
+        'contrasts': (('P6', 'P3'),) if models else CONTRASTS, 'trials': trials, 'maximum_work': maximum,
         'order_design': 'seeded-mirrored-rotations-v1', 'generation_seed': None,
         'generation_seed_note': 'Only execution order is seeded; the provider has no qualified reproducible sampling seed.',
         'schedule_enabled': False, 'hardware_invoked': False}
 
 
-def validate_pairs(path):
+def validate_pairs(path, experiment='paired'):
     signed = read(path); unsigned = dict(signed); signature = unsigned.pop('plan_sha256')
     require(digest(canonical(unsigned)) == signature, 'Paired plan digest mismatch')
     unsigned.pop('checkout_revision', None)
-    require(canonical(unsigned) == canonical(build_pairs()), 'Paired plan differs from current inputs')
+    require(canonical(unsigned) == canonical(build_pairs(experiment=experiment)), 'Paired plan differs from current inputs')
     return signed
 
 
 def trial_plan(plan, trial):
     common = deepcopy(plan['common']); selected = common['skills']
+    if plan['schema_version'] == 2:
+        require(trial in plan['trials'], 'Unknown model-comparison trial')
+        common['model'] = deepcopy(plan['models'][trial['model_arm']])
     common['cells'] = [c for c in common['cells'] if c['id'] == trial['cell']]
     require(len(common['cells']) == 1, 'Unknown paired task')
     common['skills'] = selected if PROTOCOLS[trial['protocol']]['skills'] else []
@@ -98,6 +149,9 @@ def trial_plan(plan, trial):
         'selected_skills': selected, 'experiment_sha256': plan['plan_sha256'], 'trial': trial}
     if 'context_path_format' in plan['spec']:
         common['intervention']['context_path_format'] = plan['spec']['context_path_format']
+    if plan['schema_version'] == 2: common['intervention']['model_comparison'] = True
+    if 'auxiliary_agents' in plan['spec']:
+        common['intervention']['auxiliary_agents'] = plan['spec']['auxiliary_agents']
     common['checkout_revision'] = plan.get('checkout_revision')
     limits = common['limits']; attempts = limits['attempts_per_cell']
     common['maximum_work'] = {'model_attempts': attempts,
@@ -125,7 +179,7 @@ def run_pairs(plan, output, state_dir):
         limits = plan['common']['limits']; n = limits['attempts_per_cell']
         tokens = n*limits['rounds_per_attempt']*limits['output_tokens_per_response']
         seconds = n*(limits['generation_seconds_per_attempt']+limits['qualification_seconds_per_attempt'])
-        sessions = set(); schema = None; version = None
+        sessions = set(); schema = None; version = None; settings = None
         try:
             for trial, item in zip(plan['trials'], state['trials']):
                 require(state['reserved_output_tokens']+tokens <= plan['spec']['max_output_tokens'], 'Paired token budget exhausted')
@@ -144,6 +198,9 @@ def run_pairs(plan, output, state_dir):
                     require(version is None or version == observed['opencode_version'], 'OpenCode versions differ between protocols')
                     sessions.update(observed['sessions']); schema = observed['tool_schema_sha256']
                     version = observed['opencode_version']
+                    if plan['schema_version'] == 2:
+                        require(settings is None or settings == observed['request_settings'], 'Wire settings differ between model arms')
+                        settings = observed['request_settings']
                 except (OSError, ValueError, KeyError, TypeError) as exc:
                     item.update(status='invalid-instrumentation', reason=str(exc)); save(output/'state.json', state)
                     raise Blocked('Invalid paired instrumentation; remaining trials not run') from exc
@@ -164,7 +221,7 @@ def inspect_trial(root, expected, status):
     require(bundle.plan == expected, 'Trial plan/provenance mismatch')
     require(bundle.state['checkout_revision'] == expected['checkout_revision'], 'Trial revision mismatch')
     require(bundle.state['status'] == status and status in ('passed', 'failed'), 'Unresolved/inconsistent trial status')
-    cell = bundle.state['cells'][0]; rows = []; schemas = set(); sessions = set()
+    cell = bundle.state['cells'][0]; rows = []; schemas = set(); sessions = set(); settings = {}; candidates = []
     for attempt in cell['attempts']:
         prefix = cell['id']+f'/attempt-{attempt["number"]}/'
         isolation = bundle.json(prefix+'isolation.json')
@@ -201,10 +258,19 @@ def inspect_trial(root, expected, status):
             and (usage['error'] is None or budget_failure), 'Unknown trial usage')
         require(0 < len(usage['requests']) <= expected['limits']['rounds_per_attempt'], 'Missing/excess provider requests')
         for req in usage['requests']:
+            from generation_models import inspect_request_settings
+            wire = inspect_request_settings(req, expected['limits']['output_tokens_per_response'], bundle.wire_settings_required)
+            if expected['intervention'].get('model_comparison'):
+                require(wire is not None, 'Model comparison requires recorded request settings')
+                from generation_models import inspect_comparison_settings
+                inspect_comparison_settings(expected['model'], wire)
+                settings[digest(canonical(wire))] = wire
             require((req['status'] == 'complete' or budget_failure and req['status'] == 'rejected'
                 and req['usage'].get('finish_reason') == 'length')
                 and req['usage']['observed_model'] == expected['model']['expected_response'], 'Request model/outcome mismatch')
             require(req['audit']['protocol'] == expected['intervention']['id'], 'Request protocol mismatch')
+            if expected['intervention'].get('auxiliary_agents') is False:
+                require(req['audit']['tool_schema_sha256'], 'Unexpected auxiliary request in model comparison')
             require(req['audit']['prompt_encoding'] == 'opencode-1.19-single-argument'
                 and req['audit']['provided_prompt_sha256'] == digest(expected_prompt.encode())
                 and req['audit']['provider_prompt_sha256'] == digest(provider_prompt(expected_prompt).encode()), 'Provider prompt encoding drift')
@@ -253,12 +319,18 @@ def inspect_trial(root, expected, status):
         for value in (attempt['duration_seconds'], usage['provider_cost']):
             require(value is None or type(value) in (int, float) and math.isfinite(value) and value >= 0, 'Invalid duration/cost')
         require(attempt['duration_seconds'] is not None, 'Missing duration')
+        candidates.append(attempt.get('candidate_sha256'))
         rows.append({'attempts': 1, 'seconds': attempt['duration_seconds'], 'budget_exhausted': bool(budget_failure),
             'output_tokens': usage['observed_output_tokens'],
             'input_tokens': sum(req['usage']['prompt_tokens'] for req in usage['requests']),
             'cost': usage['provider_cost']})
     require(len(schemas) == 1 and rows, 'Tool schema absent or changed within a trial')
+    if expected['intervention'].get('model_comparison'):
+        require(len(settings) == 1, 'Wire settings changed within model trial')
     return {'status': 'valid', 'qualified': cell['status'] == 'passed', 'sessions': sorted(sessions),
+        **({'model': dict(expected['model'], observed=expected['model']['expected_response']),
+            'request_settings': next(iter(settings.values())), 'candidate_sha256': candidates}
+           if expected['intervention'].get('model_comparison') else {}),
         'opencode_version': bundle.version,
         'outcome': 'qualified' if cell['status'] == 'passed' else 'budget-exhausted' if rows[-1]['budget_exhausted'] else 'candidate-failed',
         'tool_schema_sha256': schemas.pop(), 'attempts': len(rows), 'repair_attempts': 0,
@@ -271,10 +343,11 @@ def summarize(plan, observations):
     """Paired denominator is fixed in advance. Invalid controls never imply gain."""
     ids = [t['id'] for t in plan['trials']]
     require(set(observations) == set(ids), 'Missing/extra trial records')
+    if plan['schema_version'] == 2: return summarize_models(plan, observations)
     pairs = {}
     for t in plan['trials']: pairs.setdefault((t['cell'], t['repetition']), {})[t['protocol']] = observations[t['id']]
     comparisons = {}
-    for treatment, control in CONTRASTS:
+    for treatment, control in plan.get('contrasts', CONTRASTS):
         rows = []; gaps = []
         for (cell, rep), legs in pairs.items():
             a, b = legs[treatment], legs[control]
@@ -301,11 +374,41 @@ def summarize(plan, observations):
         'note': 'Generation/qualification duration is not kernel performance. P6-P4 replaces context packages. Unknown cost remains null.'}
 
 
+def summarize_models(plan, observations):
+    """Keep each model/context denominator; never pool or select the best repetition."""
+    comparisons = {}; arms = {}
+    names = [m['id'] for m in plan['spec']['models']]
+    for name in names:
+        trials = [t for t in plan['trials'] if t['model_arm'] == name]
+        values = {t['id']: observations[t['id']] for t in trials}
+        report = summarize(dict(plan, schema_version=1, trials=trials), values)
+        comparisons.update({name+':'+key: value for key, value in report['comparisons'].items()})
+        arms[name] = {'model': plan['models'][name], 'protocols': {}}
+        for protocol in plan['spec']['protocols']:
+            rows = [observations[t['id']] for t in trials if t['protocol'] == protocol]
+            valid = [r for r in rows if r['status'] == 'valid']
+            arms[name]['protocols'][protocol] = {'denominator': len(rows), 'auditable': len(valid),
+                'qualified': sum(r['qualified'] for r in valid),
+                'candidate_failed': sum(r.get('outcome') == 'candidate-failed' for r in valid),
+                'budget_exhausted': sum(r.get('outcome') == 'budget-exhausted' for r in valid),
+                'coverage_gaps': len(rows)-len(valid)}
+    for protocol in plan['spec']['protocols']:
+        trials = [dict(t, protocol=t['model_arm']) for t in plan['trials'] if t['protocol'] == protocol]
+        report = summarize(dict(plan, schema_version=1, trials=trials, contrasts=[(names[1], names[0])]),
+                           {t['id']: observations[t['id']] for t in trials})
+        comparisons.update({protocol+':'+key: value for key, value in report['comparisons'].items()})
+    return {'status': 'complete' if all(o['status'] == 'valid' for o in observations.values()) else 'incomplete',
+        'trial_denominator': len(observations), 'observations': observations, 'comparisons': comparisons, 'models': arms,
+        'skills_effect_contrast': 'P6-P3 within each model', 'general_skills_benefit_claim': False, 'performance_claim': False,
+        'note': 'Two model IDs do not imply independent providers. Revision/defaults may be unknown. No pooling across models or cohorts; duration is not kernel performance.'}
+
+
 def report_pairs(root):
     root = Path(root).resolve(); plan = read(root/'plan.json'); unsigned = dict(plan); sha = unsigned.pop('plan_sha256')
     require(digest(canonical(unsigned)) == sha and plan['kind'] == 'paired-generation-plan', 'Invalid paired plan')
-    require(plan['schema_version'] == 1 and plan['protocols'] == PROTOCOLS
-        and plan['contrasts'] == [list(c) for c in CONTRASTS], 'Unrecognized paired definitions')
+    models = plan['schema_version'] == 2
+    require(plan['schema_version'] in (1, 2) and plan['protocols'] == ({p: PROTOCOLS[p] for p in ('P3', 'P6')} if models else PROTOCOLS)
+        and plan['contrasts'] == ([['P6', 'P3']] if models else [list(c) for c in CONTRASTS]), 'Unrecognized paired definitions')
     require(plan['spec'].get('context_path_format', 'absolute-v1') in ('absolute-v1', 'relative-read-call-v1'), 'Invalid context path format')
     require(plan['trials'] == ordered_trials(plan['common']['cells'], plan['spec']), 'Predeclared order changed')
     index = read(root/'files.json')
@@ -319,8 +422,16 @@ def report_pairs(root):
             and path.resolve().is_relative_to(root.resolve()) and not any(p.is_symlink() for p in [path, *path.parents]), 'Unsafe paired index')
         require(digest(path.read_bytes()) == expected, 'Paired evidence changed: '+name)
     state = read(root/'state.json'); require(state['plan_sha256'] == sha, 'Paired state/plan mismatch')
-    require([{k: t[k] for k in ('id', 'cell', 'repetition', 'protocol')} for t in state['trials']] == plan['trials'], 'Trial inventory/order changed')
-    observations = {}; sessions = set(); schema = None; version = None
+    keys = ('id', 'cell', 'repetition', 'protocol') + (('model_arm',) if models else ())
+    require([{k: t[k] for k in keys} for t in state['trials']] == plan['trials'], 'Trial inventory/order changed')
+    # Rebuild the new multi-model envelope from its retained source closure.
+    # Old single-model archives keep their original reporting contract.
+    source = next((root/t['id']/'source' for t in plan['trials'] if (root/t['id']/'source').is_dir()), None)
+    if models and source is not None:
+        rebuilt = build_pairs(source, 'models')
+        require(canonical({k: v for k, v in unsigned.items() if k != 'checkout_revision'}) == canonical(rebuilt),
+                'Model-comparison plan differs from retained inputs')
+    observations = {}; sessions = set(); schema = None; version = None; settings = None
     for trial, item in zip(plan['trials'], state['trials']):
         if item['status'] not in ('passed', 'failed'):
             value = {'status': item['status'], 'outcome': item['status']}
@@ -339,6 +450,9 @@ def report_pairs(root):
             require(version is None or version == value['opencode_version'], 'OpenCode versions differ between protocols')
             schema = value['tool_schema_sha256']; sessions.update(value['sessions'])
             version = value['opencode_version']
+            if models:
+                require(settings is None or settings == value['request_settings'], 'Wire settings differ between model arms')
+                settings = value['request_settings']
             observations[trial['id']] = value
         except (OSError, ValueError, KeyError, TypeError) as exc:
             observations[trial['id']] = {'status': 'invalid-instrumentation', 'reason': str(exc)}
@@ -359,15 +473,16 @@ def main():
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--plan', type=Path)
     parser.add_argument('--approve-plan', default='')
+    parser.add_argument('--experiment', choices=('paired', 'models'), default='paired')
     parser.add_argument('--state-dir', type=Path, default=Path.home()/'.local/state/pyasc-generation')
     args = parser.parse_args(); root = external(args.root)
     if args.action == 'plan':
-        plan = build_pairs(); plan['checkout_revision'] = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
+        plan = build_pairs(experiment=args.experiment); plan['checkout_revision'] = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
         result = write_plan(plan, root)
         print(json.dumps({'status': 'not-run', 'plan_sha256': result['plan_sha256'], 'maximum_work': result['maximum_work']})); return 0
     if args.action == 'report': result = report_pairs(root)
     else:
-        plan = validate_pairs(args.plan); require(args.approve_plan == plan['plan_sha256'], 'Exact paired plan approval required')
+        plan = validate_pairs(args.plan, args.experiment); require(args.approve_plan == plan['plan_sha256'], 'Exact paired plan approval required')
         result = run_pairs(plan, root, args.state_dir)
     print(json.dumps(result)); return 0 if result['status'] == 'complete' else 2
 

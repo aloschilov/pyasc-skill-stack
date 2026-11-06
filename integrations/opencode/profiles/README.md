@@ -28,6 +28,42 @@ by the renderer. Rendered configs can therefore contain credentials. Keep them
 outside the repository and out of evidence archives; do not print them into CI
 logs. Use `--out /dev/null` for a credential-presence check.
 
+### Shared executor binding
+
+The shared generation executor selects its profile and exact expected response
+model in the versioned generation matrix. Its plan binds the profile bytes,
+selected provider, declared endpoint/credential references and model settings.
+It resolves only those references: a DashScope profile cannot borrow
+`OPENCODE_API_KEY`, and an Ollama profile cannot inherit a cloud credential.
+Missing variables, changed profile bytes or unsupported provider configuration
+stop before commands and requests. No model fallback is performed.
+
+Bounded profiles must select one explicitly declared provider using
+`@ai-sdk/openai-compatible`, an explicit output limit, and `baseURL`/`apiKey`
+options. Endpoint values may be fixed URLs or `{env:NAME}` / `${NAME}` references;
+credentials must use a reference, except the public `ollama` placeholder.
+References use uppercase environment-variable names. The gate owns the resolved
+credential; the isolated OpenCode process receives only a local gate token.
+Secrets and values resolved from the environment are not added to the public plan.
+
+Historical templates without an output limit still need an explicit bounded
+configuration and actual qualification. This binding does not establish model
+availability or multi-model coverage. The exact response model ID is checked
+separately; an immutable provider revision remains unknown unless independently
+established. A profile alias is not treated as such a revision.
+
+Retained results from before this binding contract remain readable, with no claim
+that their credential binding was validated. New-source receipts require the
+binding fields; removing them is an error. Execution always requires a plan
+rebuilt and approved against the current source, including its profile binding.
+
+Each new request also retains an allowlisted public `request_settings` record:
+the effective token cap, explicitly supplied sampling/seed and reasoning fields,
+and the names of fields present on the wire. Omitted fields stay `null` with no
+claim about provider defaults; these are sent settings, not evidence that the
+provider honored them. Raw prompts, tool arguments and arbitrary request metadata
+are excluded. Older receipts lacking this record do not establish those settings.
+
 ## Profile families
 
 | Templates | Configuration |

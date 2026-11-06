@@ -30,15 +30,16 @@ concurrency:
 
 jobs:
   qualify:
-    if: github.repository == 'aloschilov/pyasc-skill-stack' && (inputs.experiment == 'single' || inputs.experiment == 'paired' || inputs.experiment == 'review') && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && inputs.experiment != 'review' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && inputs.experiment == 'paired' && inputs.action == 'plan'))
+    if: github.repository == 'aloschilov/pyasc-skill-stack' && (inputs.experiment == 'single' || (inputs.experiment == 'paired' || inputs.experiment == 'models') || inputs.experiment == 'review') && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && inputs.experiment != 'review' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && (inputs.experiment == 'paired' || inputs.experiment == 'models') && inputs.action == 'plan'))
     runs-on: [self-hosted, arm64]
-    timeout-minutes: ${{ inputs.experiment == 'paired' && 600 || inputs.experiment == 'review' && 120 || 40 }}
+    timeout-minutes: ${{ (inputs.experiment == 'paired' || inputs.experiment == 'models') && 600 || inputs.experiment == 'review' && 120 || 40 }}
     permissions:
       contents: read
       actions: read
     env:
-      GENERATION_HELPER: ${{ inputs.experiment == 'paired' && 'tests/tools/generation_pairs_ci.py' || inputs.experiment == 'review' && 'tests/tools/generation_review.py' || 'tests/tools/generation_ci.py' }}
+      GENERATION_HELPER: ${{ (inputs.experiment == 'paired' || inputs.experiment == 'models') && 'tests/tools/generation_pairs_ci.py' || inputs.experiment == 'review' && 'tests/tools/generation_review.py' || 'tests/tools/generation_ci.py' }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      GENERATION_EXPERIMENT: ${{ inputs.experiment }}
       GENERATION_ACTION: ${{ inputs.action }}
       APPROVE_PLAN: ${{ inputs.approve_plan }}
       BASELINE_REF: ${{ inputs.baseline_ref }}
@@ -85,11 +86,20 @@ jobs:
         if: inputs.action == 'execute'
         run: |
           tool_dir="$RUNNER_TEMP/pyasc-opencode-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          mkdir -p "$tool_dir"
-          curl --fail --location --max-time 180 \
-            https://github.com/anomalyco/opencode/releases/download/v1.19.0/opencode-linux-arm64.tar.gz \
-            --output "$tool_dir/opencode.tar.gz"
-          echo "e9841d43d3e1a8f36ed2691592d3b8b4fb097e606c8b559a277a1b845840e26b  $tool_dir/opencode.tar.gz" | sha256sum --check
+          checksum=e9841d43d3e1a8f36ed2691592d3b8b4fb097e606c8b559a277a1b845840e26b
+          cache_dir="$(dirname "$RUNNER_WORKSPACE")/.pyasc-generation/tools"
+          archive="$cache_dir/opencode-$checksum.tar.gz"
+          mkdir -p "$tool_dir" "$cache_dir"
+          if ! echo "$checksum  $archive" | sha256sum --check --status; then
+            curl --fail --location --connect-timeout 20 --max-time 600 \
+              https://github.com/anomalyco/opencode/releases/download/v1.19.0/opencode-linux-arm64.tar.gz \
+              --output "$tool_dir/opencode.tar.gz"
+            echo "$checksum  $tool_dir/opencode.tar.gz" | sha256sum --check
+            cp "$tool_dir/opencode.tar.gz" "$archive.$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.tmp"
+            mv "$archive.$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.tmp" "$archive"
+          fi
+          cp "$archive" "$tool_dir/opencode.tar.gz"
+          echo "$checksum  $tool_dir/opencode.tar.gz" | sha256sum --check
           tar -xzf "$tool_dir/opencode.tar.gz" -C "$tool_dir" opencode
           "$tool_dir/opencode" --version
           echo "$tool_dir" >> "$GITHUB_PATH"

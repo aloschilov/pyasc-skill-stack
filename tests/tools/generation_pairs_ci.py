@@ -16,7 +16,9 @@ from generation_plan import ROOT, write_plan
 
 def prepare(root):
     root.mkdir(parents=True, exist_ok=False)
-    request = {'experiment': 'paired', 'action': os.environ.get('GENERATION_ACTION', 'plan'),
+    experiment = os.environ.get('GENERATION_EXPERIMENT', 'paired')
+    require(experiment in ('paired', 'models'), 'Unknown paired experiment')
+    request = {'experiment': experiment, 'action': os.environ.get('GENERATION_ACTION', 'plan'),
         'approve_plan': os.environ.get('APPROVE_PLAN', ''),
         'state_dir': str(external(os.environ.get('GENERATION_STATE_DIR', str(Path.home()/'.local/state/pyasc-generation')))),
         'context': {k: os.environ.get(k) for k in ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT',
@@ -29,18 +31,19 @@ def prepare(root):
     if request['action'] == 'execute':
         require(context['GITHUB_EVENT_NAME'] in ('workflow_dispatch', 'schedule')
             and context['GITHUB_REPOSITORY'] == 'aloschilov/pyasc-skill-stack'
-            and context['GITHUB_WORKFLOW_REF'] == 'aloschilov/pyasc-skill-stack/.github/workflows/generation-paired.yml@'+os.environ.get('GITHUB_REF', ''),
+            and context['GITHUB_WORKFLOW_REF'] == 'aloschilov/pyasc-skill-stack/.github/workflows/generation-'+experiment+'.yml@'+os.environ.get('GITHUB_REF', ''),
             'Paired execution requires the explicit controller')
     if context['GITHUB_EVENT_NAME'] == 'schedule':
         sys.path.insert(0, str(ROOT/'scripts'))
         from generation_operations import paired_due, policy
-        config = policy(datetime.now(timezone.utc), paired=True)
+        lane = 'models' if experiment == 'models' else True
+        config = policy(datetime.now(timezone.utc), paired=lane)
         require(request['action'] == 'execute' and config['enabled']
             and os.environ.get('GITHUB_REF') == 'refs/heads/main', 'Paired scheduling is not activated')
-        due, history = paired_due(config, datetime.now(timezone.utc))
+        due, history = paired_due(config, datetime.now(timezone.utc), paired=lane)
         request.update(periodic_policy=config, cadence_history=history); save(root/'ci.json', request)
         require(due, 'Paired interval already consumed; no automatic retry')
-    plan = build_pairs()
+    plan = build_pairs(experiment=experiment)
     plan['checkout_revision'] = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
     if context['GITHUB_SHA']: require(plan['checkout_revision'] == context['GITHUB_SHA'], 'Checkout differs from dispatched revision')
     plan = write_plan(plan, root/'plan')
@@ -53,13 +56,13 @@ def prepare(root):
 def run(root):
     request = read(root/'ci.json')
     require(request['action'] == 'execute', 'Execution not requested')
-    plan = validate_pairs(root/'plan/plan.json')
+    plan = validate_pairs(root/'plan/plan.json', request['experiment'])
     require(plan['plan_sha256'] == request['approve_plan'], 'Execution approval mismatch')
     subprocess.run(['opencode', '--version'], check=True, timeout=20)
     subprocess.run(['docker', 'image', 'inspect', plan['common']['runtime']['image']], check=True,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
     report = run_pairs(plan, root/'run', external(request['state_dir']))
-    save(root/'result.json', {'status': report['status'], 'experiment': 'paired',
+    save(root/'result.json', {'status': report['status'], 'experiment': request['experiment'],
         'plan_sha256': plan['plan_sha256'], 'model_invoked': True if report['status'] == 'complete' else None, 'hardware_invoked': False,
         'trial_denominator': report['trial_denominator'],
         'cells': {k: v['outcome'] if v['status'] == 'valid' else v['status'] for k, v in report['observations'].items()},

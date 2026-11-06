@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT/'tests/tools'))
 from generation_compare import Bundle, compare
 from generation_plan import build_plan, canonical, digest
+from generation_provider import request_settings
 
 NOW = datetime(2026, 11, 6, 6, tzinfo=timezone.utc)
 
@@ -65,7 +66,9 @@ class Comparisons(unittest.TestCase):
             write(p/'attribution.json', {'session_id': 'baseline-'+name, 'loaded_skills': plan['skills'],
                 'requested_model': plan['model']['requested'], 'observed_model': plan['model']['expected_response']})
             usage = {'usage_complete': True, 'error': None, 'requests': [
-                {'status': 'complete', 'usage': {'observed_model': plan['model']['expected_response']}}]}
+                {'status': 'complete', 'max_tokens': plan['limits']['output_tokens_per_response'],
+                 'request_settings': request_settings({'max_tokens': plan['limits']['output_tokens_per_response']}),
+                 'usage': {'observed_model': plan['model']['expected_response']}}]}
             write(p/'usage.json', usage)
             state['cells'].append({'id': name, 'status': 'passed', 'attempts': [
                 {'number': 1, 'status': 'passed', 'candidate_sha256': sha, 'usage': usage}]})
@@ -91,6 +94,29 @@ class Comparisons(unittest.TestCase):
         result = self.compare()
         self.assertEqual((result['status'], result['passed'], result['denominator']), ('passed', 3, 3))
         self.assertEqual(result['alerts'], [])
+
+    def test_resealed_new_receipt_cannot_drop_request_settings(self):
+        state = json.loads((self.new/'state.json').read_text())
+        cell = state['cells'][0]; usage = cell['attempts'][0]['usage']
+        usage['requests'][0].pop('request_settings')
+        write(self.new/cell['id']/'attempt-1/usage.json', usage)
+        write(self.new/'state.json', state); seal(self.new)
+        with self.assertRaisesRegex(ValueError, 'Missing recorded wire settings'): Bundle(self.new)
+
+    def test_new_binding_cannot_be_removed_but_legacy_receipts_remain_readable(self):
+        plan = json.loads((self.base/'plan.json').read_text())
+        for field in ('profile_sha256', 'configuration'): plan['model'].pop(field)
+        write(self.base/'plan.json', plan); seal(self.base)
+        with self.assertRaisesRegex(ValueError, 'Missing model profile binding'): Bundle(self.base)
+        helper = 'tests/tools/generation_models.py'
+        plan['source_sha256'].pop(helper); (self.base/'source'/helper).unlink()
+        write(self.base/'plan.json', plan); seal(self.base)
+        with self.assertRaisesRegex(ValueError, 'source closure'): Bundle(self.base)
+        planner = 'tests/tools/generation_plan.py'
+        source = b'# Synthetic pre-binding planner source, not live evidence.\n'
+        (self.base/'source'/planner).write_bytes(source); plan['source_sha256'][planner] = digest(source)
+        write(self.base/'plan.json', plan); seal(self.base)
+        self.assertIsNone(Bundle(self.base).model_binding_schema_version)
 
     def test_one_lost_pass_is_regression_not_an_arbitrary_aggregate_threshold(self):
         def fail(s):
@@ -156,12 +182,19 @@ class Comparisons(unittest.TestCase):
         for key, change in [
             ('limits', lambda p: p['limits'].update(rounds_per_attempt=9)),
             ('runtime', lambda p: p['runtime'].update(image='different@sha256:'+'f'*64)),
-            ('model', lambda p: p['model'].update(profile='different-config')),
         ]:
             original = (self.new/'plan.json').read_text()
             self.edit('plan.json', change)
             self.assertIn(key, self.compare()['incompatible_fields'])
             (self.new/'plan.json').write_text(original); seal(self.new)
+        plan = json.loads((self.new/'plan.json').read_text())
+        old = 'integrations/opencode/profiles/'+plan['model']['profile']+'.json'
+        new = 'integrations/opencode/profiles/different-config.json'
+        shutil.copyfile(self.new/'source'/old, self.new/'source'/new)
+        plan['model']['profile'] = 'different-config'; plan['source_sha256'][new] = plan['source_sha256'][old]
+        write(self.new/'plan.json', plan); seal(self.new)
+        self.assertIn('model', self.compare()['incompatible_fields'])
+        (self.new/'plan.json').write_text(original); (self.new/'source'/new).unlink(); seal(self.new)
         self.command(self.new, 'opencode-version', '1.20.0\n'); seal(self.new)
         self.assertIn('opencode_version', self.compare()['incompatible_fields'])
         self.command(self.new, 'opencode-version', '1.19.0\n')

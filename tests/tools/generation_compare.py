@@ -53,6 +53,10 @@ class Bundle:
         require(self.plan['schema_version'] == 2 and self.plan['kind'] == 'generation-plan', 'Unsupported plan')
         for name, sha in self.plan['source_sha256'].items():
             require(digest(self.read('source/'+name)) == sha, 'Source snapshot mismatch: '+name)
+        from generation_models import inspect_binding, records_wire_settings
+        self.model_binding_schema_version = inspect_binding(self.plan['model'], self.plan['source_sha256'],
+            lambda name: self.read('source/'+name))
+        self.wire_settings_required = records_wire_settings(self.read('source/tests/tools/generation_provider.py'))
         self.state = self.json('state.json')
         require(self.state['plan_sha256'] == signature, 'State/plan mismatch')
         require(self.state['status'] in ('passed', 'failed', 'blocked'), 'Run is not terminal')
@@ -134,6 +138,8 @@ class Bundle:
         require(0 < len(usage['requests']) <= self.plan['limits']['rounds_per_attempt'], 'Missing/excess requests')
         for request in usage['requests']:
             require(request['status'] == 'complete' and request['usage']['observed_model'] == self.plan['model']['expected_response'], 'Unknown/different response model')
+            from generation_models import inspect_request_settings
+            inspect_request_settings(request, self.plan['limits']['output_tokens_per_response'], self.wire_settings_required)
 
     def compatibility(self):
         return compatibility(self.plan, self.version)

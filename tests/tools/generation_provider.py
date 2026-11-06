@@ -7,8 +7,10 @@ records contain hashes and safe diagnostics, never credentials. This is a budget
 """
 from contextlib import contextmanager
 import hashlib
+from http.client import IncompleteRead
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import math
 import secrets
 import re
 import threading
@@ -54,7 +56,21 @@ def response_usage(raw, streaming, model):
             or endings[0]['finish_reason'] not in ('stop', 'tool_calls', 'length')):
         raise BudgetError('Incomplete/truncated model completion')
     usages = [p['usage'] for p in parts if p.get('usage')]
-    if len(usages) != 1: raise BudgetError('Missing/ambiguous provider usage')
+    if len(usages) != 1:
+        # Some Chat Completions gateways repeat the same cumulative counters
+        # on the finishing choice and on the following usage-only chunk. Count
+        # that one completion once; conflicting, interleaved or different-ID
+        # counters remain ambiguous. This never relaxes model identity checks.
+        repeated_final = (streaming and len(usages) == 2 and len(parts) >= 2
+            and all(p.get('usage') is None for p in parts[:-2])
+            and all(p.get('usage') for p in parts[-2:])
+            and json.dumps(usages[0], sort_keys=True) == json.dumps(usages[1], sort_keys=True)
+            and isinstance(parts[-1].get('id'), str) and bool(parts[-1]['id'])
+            and all(p.get('id') == parts[-1]['id'] for p in parts)
+            and parts[-1].get('choices') == []
+            and len(parts[-2].get('choices', [])) == 1
+            and bool(parts[-2]['choices'][0].get('finish_reason')))
+        if not repeated_final: raise BudgetError('Missing/ambiguous provider usage')
     usage = usages[0]
     for key in ('prompt_tokens', 'completion_tokens', 'total_tokens'):
         if type(usage.get(key)) is not int or usage[key] < 0: raise BudgetError('Invalid token usage')
@@ -70,6 +86,42 @@ def response_usage(raw, streaming, model):
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise BudgetError('Provider redirect rejected')
+
+
+def request_settings(body):
+    """Public wire settings only; omitted values mean unknown provider defaults.
+
+    Never copy arbitrary request fields, prompts, tool arguments or metadata.
+    This describes what was sent, not whether a provider honored each setting.
+    """
+    sampling = {}
+    for name in ('temperature', 'top_p', 'top_k', 'min_p', 'seed', 'frequency_penalty', 'presence_penalty', 'repetition_penalty'):
+        value = body.get(name)
+        if value is not None and (type(value) not in (int, float) or not math.isfinite(value)):
+            raise BudgetError('Invalid public sampling setting')
+        if name == 'seed' and value is not None and type(value) is not int:
+            raise BudgetError('Invalid public sampling seed')
+        sampling[name] = value
+    reasoning = {}
+    value = body.get('reasoning_effort')
+    if value is not None and value not in ('none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'auto'):
+        raise BudgetError('Unsupported public reasoning setting')
+    reasoning['reasoning_effort'] = value
+    value = body.get('enable_thinking')
+    if value is not None and type(value) is not bool: raise BudgetError('Invalid public thinking setting')
+    reasoning['enable_thinking'] = value
+    value = body.get('thinking')
+    if value is not None:
+        if not isinstance(value, dict) or not set(value) <= {'type', 'budget_tokens'} or value.get('type') not in ('enabled', 'disabled', 'adaptive'):
+            raise BudgetError('Unsupported public thinking settings')
+        budget = value.get('budget_tokens')
+        if budget is not None and (type(budget) is not int or budget < 0): raise BudgetError('Invalid public thinking budget')
+        value = dict(value)
+    reasoning['thinking'] = value
+    return {'schema_version': 1, 'sampling': sampling, 'reasoning': reasoning,
+        'present_fields': sorted(set(body).intersection(set(sampling) | set(reasoning))),
+        'max_tokens': body['max_tokens'],
+        'interpretation': 'Absent settings use unobserved provider defaults; provider compliance is not asserted.'}
 
 
 class BudgetGate:
@@ -115,6 +167,7 @@ class BudgetGate:
             self.save(self.snapshot())  # durable reservation BEFORE network input
             try:
                 record['dispatch_started'] = False
+                record['request_settings'] = request_settings(body)
                 if self.observe_request:
                     record['audit'] = self.observe_request(len(self.records), body, payload)
                     self.save(self.snapshot())
@@ -126,13 +179,34 @@ class BudgetGate:
                     record['http_status'] = response.status
                     record['response_ids'] = {name: value for name in ('x-request-id', 'x-requestid', 'x-tt-logid')
                         if (value := response.headers.get(name)) and re.fullmatch(r'[A-Za-z0-9_.:-]{1,256}', value)}
-                    raw = response.read(MAX_RESPONSE + 1)
                     content_type = response.headers.get('Content-Type', 'application/json')
+                    received = bytearray(); read_error = None
+                    try:
+                        # HTTPResponse.read() can discard the partial final HTTP
+                        # chunk when it wraps IncompleteRead. Drain bounded read1
+                        # pieces so every returned body byte survives that error.
+                        while len(received) <= MAX_RESPONSE:
+                            if time.monotonic() >= self.deadline: raise TimeoutError()
+                            chunk = response.read1(min(65536, MAX_RESPONSE+1-len(received)))
+                            if not chunk:
+                                if response.length: raise IncompleteRead(b'')
+                                break
+                            received.extend(chunk)
+                    except (IncompleteRead, OSError) as exc:
+                        # read1 returns body fragments directly. IncompleteRead's
+                        # partial value here can instead be a broken chunk CRLF;
+                        # never append HTTP framing bytes to the captured body.
+                        read_error = exc
+                        record.update(transport_error=type(exc).__name__, http_body_complete=False)
+                    raw = bytes(received)
                 record['response_sha256'] = hashlib.sha256(raw).hexdigest()
                 record['response_bytes'] = len(raw)
                 if self.capture_response:
                     self.capture_response(len(self.records), raw)
                 if len(raw) > MAX_RESPONSE: raise BudgetError('Provider response too large')
+                if read_error is not None and not isinstance(read_error, IncompleteRead): raise read_error
+                if record.get('transport_error') and not body.get('stream'):
+                    raise BudgetError('Incomplete non-streaming HTTP response')
                 usage = response_usage(raw, bool(body.get('stream')), self.response_model)
                 record['usage'] = usage
                 if usage['completion_tokens'] > cap: raise BudgetError('Provider exceeded output-token cap')

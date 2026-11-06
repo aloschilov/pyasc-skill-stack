@@ -118,6 +118,11 @@ def configure(config, plan, context, project):
     config['small_model'] = model  # Auxiliary/title calls share the same gate and budget.
     config['skills'] = {'paths': [str(context/'skills')]}
     config['agent'] = {'build': {'steps': limits['rounds_per_attempt']}}
+    if plan.get('intervention', {}).get('auxiliary_agents') is False:
+        # A versioned experiment choice, equal in all model/context arms.
+        # These calls are not kernel generation and can have different response
+        # aliases. Disable them rather than accepting an alias allowlist.
+        config['agent'].update(title={'disable': True}, summary={'disable': True})
     config['compaction'] = {'auto': False}
     config['permission'] = {'*': 'deny', 'read': 'allow', 'glob': 'allow', 'grep': 'allow', 'skill': 'allow',
         'edit': {'*': 'deny', 'candidate.py': 'allow', str(project/'candidate.py'): 'allow'},
@@ -140,6 +145,19 @@ def configure(config, plan, context, project):
     return config
 
 
+def provider_credentials(plan):
+    """Validate the selected profile again before accessing only its variables."""
+    from generation_models import resolve
+    name = 'integrations/opencode/profiles/'+plan['model']['profile']+'.json'
+    try:
+        raw = resource(ROOT, name)
+        if digest(raw) != plan['source_sha256'][name] or digest(raw) != plan['model']['profile_sha256']:
+            raise ValueError('Selected provider profile changed after planning')
+        return resolve(json.loads(raw), plan['model'], os.environ)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise Blocked('Provider configuration unavailable: '+str(exc)) from exc
+
+
 def run_session(attempt, plan, project, config, prompt, observe_request=None):
     """One fresh OpenCode session using the shared measured provider gate."""
     limits = plan['limits']; model = plan['model']['requested']; provider, model_id = model.split('/')
@@ -158,12 +176,14 @@ def run_session(attempt, plan, project, config, prompt, observe_request=None):
         path = state/f'provider-response-{number}.bin'
         with path.open('xb') as handle: handle.write(raw)
         path.chmod(0o600)
-    gate = BudgetGate(os.environ['OPENCODE_BASE_URL'], os.environ['OPENCODE_API_KEY'], model_id,
+    base_url, api_key = provider_credentials(plan)
+    gate = BudgetGate(base_url, api_key, model_id,
                       limits, lambda value: save(attempt/'usage.json', value), deadline, capture_response,
                       response_model=plan['model']['expected_response'], observe_request=observe_request)
     save(attempt/'usage.json', gate.snapshot())
     # No inherited credentials/config/plugins: only the gate knows the provider key.
-    env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
+    provider_variables = {plan['model']['configuration'][k].get('environment') for k in ('endpoint', 'credential')}
+    env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ and k not in provider_variables}
     env.update(HOME=str(state), XDG_DATA_HOME=str(state/'data'), XDG_CONFIG_HOME=str(state/'config'),
         XDG_CACHE_HOME=str(state/'cache'), OPENCODE_DISABLE_EXTERNAL_SKILLS='1',
         OPENCODE_DISABLE_CLAUDE_CODE_SKILLS='1', OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX=str(limits['output_tokens_per_response']))
@@ -256,7 +276,7 @@ def generate(attempt, plan, contract, context):
     observed = {r['usage']['observed_model'] for r in usage['requests']}
     if observed != {plan['model']['expected_response']}: raise Blocked('Provider model attribution mismatch')
     trace.update(requested_model=model, observed_model=plan['model']['expected_response'],
-                 provider_model_revision=plan['model']['expected_response'])
+                 provider_model_revision=plan['model']['configuration']['provider_revision'])
     save(attempt/'attribution.json', trace)
     if budget_failure:
         save(attempt/'generation-outcome.json', {'status': 'budget-exhausted', 'reason': budget_failure})
@@ -300,8 +320,7 @@ def execute(plan, output, state_dir, *, _lease=None):
     """Run cells; a paired coordinator may retain its already-held shared lease."""
     output = external(output)
     if output.exists(): raise ValueError('Use a new results directory; existing attempts are never replayed')
-    for key in ('OPENCODE_API_KEY', 'OPENCODE_BASE_URL'):
-        if not os.environ.get(key): raise Blocked('Missing '+key)
+    provider_credentials(plan)  # No unrelated provider fallback, before any command or reservation.
     contracts = {c['id']: task_contract(ROOT, c) for c in plan['cells']}
     with (exclusive(state_dir, output) if _lease is None else nullcontext(_lease)) as latch:
         output.mkdir(parents=True)
