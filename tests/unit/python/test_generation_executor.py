@@ -194,6 +194,14 @@ class ProviderContracts(unittest.TestCase):
         self.assertEqual(self.gate.snapshot()['observed_output_tokens'], 14)  # reasoning not double-counted
         self.assertNotIn('fixture-key', json.dumps(self.saves))
 
+    def test_context_audit_failure_never_reaches_provider_and_is_not_unknown_delivery(self):
+        self.gate.observe_request = lambda *args: (_ for _ in ()).throw(ValueError('bad local context'))
+        with self.assertRaises(BudgetError): self.gate.dispatch({'model': 'test-model'})
+        self.assertEqual(self.requests, [])
+        record = self.gate.snapshot()['requests'][0]
+        self.assertEqual(record['status'], 'not-sent');self.assertFalse(record['dispatch_started'])
+        self.assertIsNotNone(self.gate.error)
+
     def test_missing_usage_or_excess_tokens_blocks_retry(self):
         for payload in ({'model':'test-model'}, {'model':'test-model','choices':[{'index':0,'finish_reason':'stop'}],'usage':{'prompt_tokens':3,'completion_tokens':17,'total_tokens':20}}):
             with self.subTest(payload=payload):

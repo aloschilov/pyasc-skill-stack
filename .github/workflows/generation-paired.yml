@@ -1,0 +1,30 @@
+name: Paired generation experiment
+
+# PRs plan only. Periodic activation is a separate reviewed change: no cron.
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Plan only by default; execute all predeclared pairs'
+        type: choice
+        options: [plan, execute]
+        default: plan
+      approve_plan:
+        description: 'Exact reviewed paired plan digest required to execute'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  paired:
+    uses: ./.github/workflows/generation-simulator.yml
+    with:
+      experiment: paired
+      action: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'plan' }}
+      approve_plan: ${{ inputs.approve_plan || '' }}
+    secrets:
+      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
