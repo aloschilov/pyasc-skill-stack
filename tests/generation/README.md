@@ -131,10 +131,10 @@ API must be classified as a candidate failure, not an unavailable simulator.
 `examples-gate` retains these reports in a separate artifact. This is verification
 of the adapters/executor, **not** newly generated-kernel or hardware qualification.
 
-Remaining #22 work: verify live alert/recovery delivery and end-to-end controller
-execution. On 2026-11-06 the user accepted manual dispatch instead of waiting for
-cron; those receipts must remain explicitly manual, not scheduled qualification. The controller and health
-observer are described below. #23 skills-effect comparisons and #24 model diversity should
+The controller and independent alert/recovery path passed the revised manual
+acceptance on 2026-11-06; see the [retained results](#manual-controller-acceptance-2026-11-06).
+Actual cron delivery remains unverified. The controller and health observer are
+described below. #23 skills-effect comparisons and #24 model diversity
 reuse these contracts; #20 owns separate reviewer/tuner handoffs.
 
 ## Manual CI dispatch
@@ -349,8 +349,8 @@ coverage. Legacy runs can be inspected or selected explicitly, but cannot prove
 fresh coverage without recorded completion time. This tool produces alert records
 and nonzero exits; it does not itself monitor a schedule, send notifications or
 prove that a scheduled job ran. The health observer implements the independent
-checks and explicit issue-update path, but live delivery and scheduled acceptance
-remain unqualified until their actual execution and delivery receipts are verified.
+checks and explicit issue-update path. Subsequent manual controller and live
+alert/recovery acceptance is recorded below; actual cron delivery remains unverified.
 
 ## Manual pilot, 2026-11-06
 
@@ -427,3 +427,58 @@ Copies also remain outside checkout on Mac and Linux VM under
 `~/pyasc-qualification-runs/issue22-comparison-20261106/`. Both public archives
 exclude private response/application state; their source hashes and attribution
 were independently verified after download.
+
+## Manual controller acceptance, 2026-11-06
+
+The user accepted manual dispatch instead of waiting for cron for #22/#23/#24.
+Single and paired production controllers ran on `ab28634`; the model controller
+used `42b2e84` with explicit low reasoning for both arms. Hosted recovery
+retains each observer's exact revision in the archive. Schedules remain enabled,
+but actual cron delivery is **unverified**.
+The hourly observer retains missing/stale scheduled-coverage checks.
+
+| Experiment | Run | Complete inventory | Qualified candidates | Qualified Model launches / numerical checks / rejecting controls | Executor time |
+| --- | --- | --- | --- | --- | --- |
+| Single + baseline comparison | [42267022076](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42267022076) | 3/3 | 3 | 9 / 21 / 3 | 253.91 s |
+| Paired context | [42268541914](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42268541914) | 24/24 | 4 | 12 / 27 / 4 | 1447.44 s |
+| Two models | [42282303554](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42282303554) | 24/24 | 7 | 21 / 51 / 7 | 1494.50 s |
+
+Single generation lost no PASS against the compatible, explicitly selected
+baseline. Paired P6 qualified 4/6;
+P2/P3/P4 each qualified 0/6. All 18 candidate
+failures and 2 known budget failures remain counted.
+Model outcomes: deepseek41: P3 0/6, P6 6/6; glm53: P3 0/6, P6 1/6.
+The low-reasoning GLM P6 result is 1/6, compared with 5/6 in the separately
+retained historical high-reasoning cohort; these are different conditions and
+are not a controlled reasoning-level comparison.
+All paired/model conditional intervals include zero: no general skills benefit,
+model ranking, independent-provider or kernel-performance claim. Provider cost
+and immutable weights revisions are unknown. Source/candidate hashes and native
+session/context attribution were checked for these complete cohorts. Own
+processes/containers were absent after execution. No NPU was invoked.
+
+The [HTTP 401 observer drill](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42254492779)
+reopened #37/#38/#39. Hosted observers then verified these exact manual runs and
+closed those issues with confirmed fingerprints and bot events:
+[single](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42268779343), [paired](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42272661300), [models](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42287699312).
+Two separate high-reasoning cohorts
+([42272623803](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42272623803),
+[42277416458](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42277416458))
+stopped on incomplete GLM streams after 12 and 11 valid trials. Each retained
+one UNKNOWN request and its 24,000-token reservation; 11 and 12 trials were
+unrun. Both original archives and process-cleanup receipts are preserved. The
+new low-reasoning cohort uses isolated sessions and does not pool these results.
+This is a changed experimental condition, not evidence of a repaired transport.
+The [first](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42277095472)
+and [second](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42281939427)
+real-failure observers also confirmed the #39 alert before recovery. The second
+failed archive was recovered from persistent runner storage after an Actions
+upload DNS error; its checksum matched the collection log.
+
+This proves GitHub stored the updates, not that anyone read them. The drill
+exercises observation failure, not candidate failure; no fault hook is deployed.
+
+[Durable archive](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/manual-controller-acceptance-20261106): `manual-controller-acceptance-20261106.tar.gz`, SHA256
+`d912a26cd55a2a11b0ad9ee3ef928e190c48866dfb15ebd2f59881ec015a8ad8`. All 8,291 indexed files and anonymous-download bytes
+were verified; copies remain on both qualification hosts outside checkout. Full
+results, timings and usage are in the archive; private provider bodies are excluded.

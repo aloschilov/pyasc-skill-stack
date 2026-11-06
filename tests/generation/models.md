@@ -27,7 +27,8 @@ plan preparation was 3 s. There were 88 provider requests (47 DeepSeek, 41 GLM),
 All 100 source hashes and the archived report were independently rechecked;
 the local GET-only observer returned `verified-manual`. All 118 own process
 groups and 22 qualification containers were absent, and the executor lease
-was released. Hosted/scheduled observation and alerts remain unqualified.
+was released. This cohort did not qualify hosted observation or alerts; subsequent manual
+controller acceptance is recorded below. Actual cron delivery remains unverified.
 
 Each contrast has six fixed task/repetition pairs. P6−P3 is +1.0 for DeepSeek
 (conditional 95% interval −0.1089 to 1) and +0.8333 for GLM (−0.2756 to 1).
@@ -151,3 +152,10 @@ lease. Its daily cadence check runs at 18:47 UTC (21:47 Moscow), with a
 coverage use separate histories and cannot satisfy each other's observers.
 `generation-health.yml` accepts `experiment=models` for manual inspection.
 Hosted/scheduled observation is not qualified merely by these offline tests.
+
+## Integrated controller acceptance
+
+The current integrated manual run and hosted failure/recovery receipts are
+recorded in the [shared acceptance result](README.md#manual-controller-acceptance-2026-11-06).
+The user accepted manual dispatch instead of cron for closure. The earlier
+cohort above keeps its original scope; actual cron delivery remains unverified.
