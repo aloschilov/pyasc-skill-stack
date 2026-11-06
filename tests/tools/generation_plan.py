@@ -68,7 +68,7 @@ def declared_cases(data):
     return result
 
 
-def build_plan(root=ROOT, matrix=DEFAULT_MATRIX):
+def build_plan(root=ROOT, matrix=DEFAULT_MATRIX, model_override=None):
     root = Path(root)
     inputs = {}
     def read(name):
@@ -79,6 +79,11 @@ def build_plan(root=ROOT, matrix=DEFAULT_MATRIX):
     exact_keys(spec, ('schema_version', 'profile', 'response_model', 'skills', 'limits', 'cells'), 'matrix')
     if type(spec['schema_version']) is not int or spec['schema_version'] != 2:
         raise ValueError('Unsupported matrix schema')
+    if model_override is not None:
+        # A parent experiment binds this explicit choice in its hashed spec.
+        # Task/runtime/limits are still inherited unchanged from the seed matrix.
+        exact_keys(model_override, ('profile', 'response_model'), 'model override')
+        spec = dict(spec, **model_override)
     response_model = spec['response_model']
     if not isinstance(response_model, str) or not re.fullmatch(r'[A-Za-z0-9_.:/-]{1,128}', response_model):
         raise ValueError('Explicit expected provider response model required')

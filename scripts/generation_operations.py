@@ -39,7 +39,7 @@ def policy_path(paired=False):
 def policy(now, paired=False):
     value = read(policy_path(paired))
     if paired:
-        require(type(value['schema_version']) is int and value['schema_version'] == 1, 'Invalid paired policy version')
+        require(type(value['schema_version']) is int and value['schema_version'] in (1, 2), 'Invalid paired policy version')
         value = value['periodic']
         require(set(value) == {'enabled', 'enabled_since', 'min_interval_hours', 'max_age_hours',
             'max_run_hours', 'alert_issue'}, 'Unexpected paired periodic policy fields')

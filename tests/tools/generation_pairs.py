@@ -43,14 +43,16 @@ def ordered_trials(cells, spec):
 
 def build_pairs(root=ROOT):
     spec = json.loads(resource(root, SPEC))
-    exact_keys(spec, ('schema_version', 'matrix', 'protocols', 'repetitions', 'order_seed',
-                     'generation_seconds_per_attempt', 'max_output_tokens', 'max_execution_seconds', 'periodic'), 'paired specification')
-    require(type(spec['schema_version']) is int and spec['schema_version'] == 1, 'Unknown paired schema')
+    require(type(spec['schema_version']) is int and spec['schema_version'] in (1, 2), 'Unknown paired schema')
+    keys = ('schema_version', 'matrix', 'protocols', 'repetitions', 'order_seed',
+            'generation_seconds_per_attempt', 'max_output_tokens', 'max_execution_seconds', 'periodic')
+    exact_keys(spec, keys + (('model',) if spec['schema_version'] == 2 else ()), 'paired specification')
+    if spec['schema_version'] == 2: exact_keys(spec['model'], ('profile', 'response_model'), 'paired model')
     require(spec['protocols'] == list(PROTOCOLS), 'Declare all four protocols in canonical order')
     reps = spec['repetitions']
     require(type(reps) is int and 2 <= reps <= 8 and reps % 2 == 0, 'Use an even number of repetitions, 2..8')
     require(type(spec['order_seed']) is int and 0 <= spec['order_seed'] < 2**32, 'Explicit order seed required')
-    common = build_plan(root, spec['matrix'])
+    common = build_plan(root, spec['matrix'], model_override=spec.get('model'))
     seconds = spec['generation_seconds_per_attempt']
     require(type(seconds) is int and 1 <= seconds <= LIMITS['generation_seconds_per_attempt'], 'Invalid paired generation deadline')
     # This experiment has its own predeclared deadline. Keep the qualified
