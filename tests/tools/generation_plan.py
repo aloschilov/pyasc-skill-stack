@@ -98,6 +98,8 @@ def build_plan(root=ROOT, matrix=DEFAULT_MATRIX):
     if not isinstance(profile, str) or not re.fullmatch(r'[a-z][a-z0-9_.-]*', profile):
         raise ValueError('Invalid profile')
     config = json.loads(read(f'integrations/opencode/profiles/{profile}.json'))
+    from generation_models import configuration
+    model_configuration = configuration(config)
     model = config.get('model')
     if not isinstance(model, str) or model.count('/') != 1:
         raise ValueError('Profile must select an explicit provider/model')
@@ -159,7 +161,9 @@ def build_plan(root=ROOT, matrix=DEFAULT_MATRIX):
     return {
         'schema_version': 2, 'kind': 'generation-plan', 'status': 'not-run',
         'execution_enabled': False, 'schedule_enabled': False,
-        'model': {'requested': model, 'observed': None, 'expected_response': response_model, 'profile': profile},
+        'model': {'requested': model, 'observed': None, 'expected_response': response_model, 'profile': profile,
+                  'profile_sha256': inputs[f'integrations/opencode/profiles/{profile}.json'],
+                  'configuration': model_configuration},
         'runtime': {'backend': 'Model', 'image': ref, 'source_revision': image['source_sha']},
         'skills': skills, 'cells': planned, 'limits': limits,
         'maximum_work': {'model_attempts': attempts, 'output_tokens': tokens, 'execution_seconds': seconds},

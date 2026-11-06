@@ -122,11 +122,20 @@ def report_review(directory):
     e = Evidence(directory); plan = e.json('plan.json'); unsigned = dict(plan); signature = unsigned.pop('plan_sha256')
     require(digest(canonical(unsigned)) == signature, 'Invalid review plan')
     unsigned.pop('checkout_revision', None)
-    require(canonical(unsigned) == canonical(build_review(e.root/'source', tuning=plan['tuning'])), 'Review specification/source drift')
     for name, sha in plan['common']['source_sha256'].items(): require(digest(e.bytes('source/'+name)) == sha, 'Review source hash mismatch')
+    from generation_models import inspect_binding
+    binding_version = inspect_binding(plan['common']['model'], plan['common']['source_sha256'],
+        lambda name: e.bytes('source/'+name))
+    expected = build_review(e.root/'source', tuning=plan['tuning'])
+    if binding_version is None:
+        # Read old receipts with their original scope, without a new credential
+        # binding claim. Current execution validation has no such downgrade.
+        for field in ('profile_sha256', 'configuration'): expected['common']['model'].pop(field)
+    require(canonical(unsigned) == canonical(expected), 'Review specification/source drift')
     state = e.json('state.json')
     require(state['plan_sha256'] == signature and state['status'] in ('accepted', 'rejected', 'blocked'), 'Nonterminal review state')
     result = {'status': state['status'], 'validated_acceptance': False, 'plan_sha256': signature,
+        'model_binding_schema_version': binding_version,
         'hardware_invoked': False, 'performance_claim': False, 'independent_model': False,
         'reporter_sha256': digest(Path(__file__).read_bytes()), 'checked_at': datetime.now(timezone.utc).isoformat()}
     if state['status'] != 'accepted':

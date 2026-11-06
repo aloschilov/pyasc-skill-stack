@@ -53,6 +53,9 @@ class Bundle:
         require(self.plan['schema_version'] == 2 and self.plan['kind'] == 'generation-plan', 'Unsupported plan')
         for name, sha in self.plan['source_sha256'].items():
             require(digest(self.read('source/'+name)) == sha, 'Source snapshot mismatch: '+name)
+        from generation_models import inspect_binding
+        self.model_binding_schema_version = inspect_binding(self.plan['model'], self.plan['source_sha256'],
+            lambda name: self.read('source/'+name))
         self.state = self.json('state.json')
         require(self.state['plan_sha256'] == signature, 'State/plan mismatch')
         require(self.state['status'] in ('passed', 'failed', 'blocked'), 'Run is not terminal')

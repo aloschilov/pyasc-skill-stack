@@ -92,6 +92,16 @@ class Comparisons(unittest.TestCase):
         self.assertEqual((result['status'], result['passed'], result['denominator']), ('passed', 3, 3))
         self.assertEqual(result['alerts'], [])
 
+    def test_new_binding_cannot_be_removed_but_legacy_receipts_remain_readable(self):
+        plan = json.loads((self.base/'plan.json').read_text())
+        for field in ('profile_sha256', 'configuration'): plan['model'].pop(field)
+        write(self.base/'plan.json', plan); seal(self.base)
+        with self.assertRaisesRegex(ValueError, 'Missing model profile binding'): Bundle(self.base)
+        helper = 'tests/tools/generation_models.py'
+        plan['source_sha256'].pop(helper); (self.base/'source'/helper).unlink()
+        write(self.base/'plan.json', plan); seal(self.base)
+        self.assertIsNone(Bundle(self.base).model_binding_schema_version)
+
     def test_one_lost_pass_is_regression_not_an_arbitrary_aggregate_threshold(self):
         def fail(s):
             s['status'] = 'failed'; s['cells'][0]['status'] = 'failed'
@@ -156,12 +166,19 @@ class Comparisons(unittest.TestCase):
         for key, change in [
             ('limits', lambda p: p['limits'].update(rounds_per_attempt=9)),
             ('runtime', lambda p: p['runtime'].update(image='different@sha256:'+'f'*64)),
-            ('model', lambda p: p['model'].update(profile='different-config')),
         ]:
             original = (self.new/'plan.json').read_text()
             self.edit('plan.json', change)
             self.assertIn(key, self.compare()['incompatible_fields'])
             (self.new/'plan.json').write_text(original); seal(self.new)
+        plan = json.loads((self.new/'plan.json').read_text())
+        old = 'integrations/opencode/profiles/'+plan['model']['profile']+'.json'
+        new = 'integrations/opencode/profiles/different-config.json'
+        shutil.copyfile(self.new/'source'/old, self.new/'source'/new)
+        plan['model']['profile'] = 'different-config'; plan['source_sha256'][new] = plan['source_sha256'][old]
+        write(self.new/'plan.json', plan); seal(self.new)
+        self.assertIn('model', self.compare()['incompatible_fields'])
+        (self.new/'plan.json').write_text(original); (self.new/'source'/new).unlink(); seal(self.new)
         self.command(self.new, 'opencode-version', '1.20.0\n'); seal(self.new)
         self.assertIn('opencode_version', self.compare()['incompatible_fields'])
         self.command(self.new, 'opencode-version', '1.19.0\n')

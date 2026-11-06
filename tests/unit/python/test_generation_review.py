@@ -283,6 +283,33 @@ class ReviewReceipts(unittest.TestCase):
         self.assertTrue(report['validated_acceptance']); self.assertEqual(len(report['sessions']), 2)
         self.assertEqual(report['repair_attempts'], 0); self.assertEqual(report['output_tokens'], 40)
         self.assertFalse(report['performance_claim']); self.assertFalse(report['independent_model'])
+        self.assertEqual(report['model_binding_schema_version'], 1)
+
+    def reseal_plan(self, plan):
+        plan.pop('plan_sha256')
+        plan['plan_sha256'] = digest(canonical(plan))
+        review.save(self.run/'plan.json', plan)
+        state = review.read(self.run/'state.json'); state['plan_sha256'] = plan['plan_sha256']
+        review.save(self.run/'state.json', state); review.seal(self.run)
+
+    def test_legacy_receipt_is_readable_without_claiming_new_binding_or_allowing_execution(self):
+        # Synthetic old closure/schema, never evidence of a real model run.
+        plan = review.read(self.run/'plan.json')
+        for field in ('profile_sha256', 'configuration'): plan['common']['model'].pop(field)
+        helper = 'tests/tools/generation_models.py'
+        plan['common']['source_sha256'].pop(helper); (self.run/'source'/helper).unlink()
+        self.reseal_plan(plan)
+        report = receipts.report_review(self.run)
+        self.assertTrue(report['validated_acceptance']); self.assertIsNone(report['model_binding_schema_version'])
+        with self.assertRaisesRegex(ValueError, 'inputs changed'): review.validate_plan(self.run/'plan.json')
+
+    def test_rehashed_new_binding_cannot_be_removed_or_changed(self):
+        original = review.read(self.run/'plan.json')
+        for mutate in (lambda model: model.pop('configuration'),
+                       lambda model: model['configuration'].update(provider_revision='invented'),
+                       lambda model: model.update(profile_sha256='0'*64)):
+            plan = deepcopy(original); mutate(plan['common']['model']); self.reseal_plan(plan)
+            with self.assertRaisesRegex(ValueError, 'binding'): receipts.report_review(self.run)
 
     def test_rehashed_stale_review_cannot_accept_the_candidate(self):
         self.edit('cycle-1/reviewer/review.json', lambda v: v['binding'].update(candidate_sha256='0'*64))
