@@ -208,19 +208,22 @@ exact Release baseline and checksum are checked before any generation. The polic
 snapshot/hash and controller hash are retained separately from execution inputs;
 changing the enable flag does not silently requalify an incompatible executor.
 
-The changed CI executor uses a separately reviewed baseline:
-[run 42134641956](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42134641956)
-on `d7b92c4`, OpenCode 1.19.0 / GLM-5.3, **3/3** fresh candidates,
-nine Model launches, 21 output/input checks and three rejecting controls.
-Executor wall time was 250.38 s (315 s CI job); 15 requests used 13,772 output
-and 165,497 input tokens, with monetary cost unavailable. Its
-[durable Release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-42134641956)
+The integrated `asctile-*` context uses a separately reviewed baseline:
+[run 42237343185](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42237343185)
+on `e2f4c31`, OpenCode 1.19.0 / GLM-5.3 (reported `glm-5-3-260814`),
+**3/3** fresh add/reduce/broadcast candidates, nine Model launches,
+21 output/input checks and three rejecting controls. Executor wall time was
+209.67 s (231 s qualification job); 13 completed requests used 6,920 output and
+118,554 input tokens, with monetary cost unavailable. Its
+[durable Release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/verification-integration-e2f4c31)
 retains `generation.tar.gz`, SHA256
-`e0611c1c17005d076e3a16396efaa3eb77dbe4b319ea0d917c21797436094e85`.
-All 216 archive members, 87 execution-source hashes and container cleanup were
-verified before selection. Older baselines remain historical evidence; the
-policy names this compatible baseline explicitly. This is manual simulator
-qualification, not scheduled or hardware coverage.
+`0f5e68b989e1fd5d89d2ec0a9d16113f52d8bc1353094678d82b214b95fe7e71`.
+All 227 archive members, 98 execution-source hashes, native skill/session traces
+and container cleanup were verified before selection; the anonymous download
+and separate VM copy matched. This qualifies the final context without a new
+baseline comparison, scheduled coverage or NPU claim. The earlier
+[42134641956 baseline](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-42134641956)
+remains immutable historical evidence and is not compatible with this context.
 
 ```bash
 gh workflow run generation-nightly.yml --ref <reviewed-branch> -f mode=plan
@@ -386,7 +389,8 @@ suppressed-launch controls. Executor wall time: **246.42 s**; qualification job:
 **305 s**. Usage: **15 requests / 7,671 completion / 154,866 input tokens**;
 provider cost unavailable. This single same-skills comparison validates the
 comparison path and repeatability for these cells, not a skills-effect estimate
-or scheduled coverage. The selected baseline remains unchanged.
+or scheduled coverage. This describes the historical selection; the current
+policy baseline is recorded in the inactive controller section above.
 
 The same Release retains `comparison-42129712051.tar.gz` (217 checked members),
 SHA256 `125a6119a3cb14eb6c430a224db9da4c1b7e0771a898827cf42066d9ac289408`.
