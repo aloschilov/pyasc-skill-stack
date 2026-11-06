@@ -110,7 +110,7 @@ def run_pairs(plan, output, state_dir):
         limits = plan['common']['limits']; n = limits['attempts_per_cell']
         tokens = n*limits['rounds_per_attempt']*limits['output_tokens_per_response']
         seconds = n*(limits['generation_seconds_per_attempt']+limits['qualification_seconds_per_attempt'])
-        sessions = set(); schema = None
+        sessions = set(); schema = None; version = None
         try:
             for trial, item in zip(plan['trials'], state['trials']):
                 require(state['reserved_output_tokens']+tokens <= plan['spec']['max_output_tokens'], 'Paired token budget exhausted')
@@ -126,7 +126,9 @@ def run_pairs(plan, output, state_dir):
                     observed = inspect_trial(output/trial['id'], trial_plan(plan, trial), result['status'])
                     require(not sessions.intersection(observed['sessions']), 'Reused paired session')
                     require(schema is None or schema == observed['tool_schema_sha256'], 'Tool schemas differ between protocols')
+                    require(version is None or version == observed['opencode_version'], 'OpenCode versions differ between protocols')
                     sessions.update(observed['sessions']); schema = observed['tool_schema_sha256']
+                    version = observed['opencode_version']
                 except (OSError, ValueError, KeyError, TypeError) as exc:
                     item.update(status='invalid-instrumentation', reason=str(exc)); save(output/'state.json', state)
                     raise Blocked('Invalid paired instrumentation; remaining trials not run') from exc
@@ -217,6 +219,7 @@ def inspect_trial(root, expected, status):
             'cost': usage['provider_cost']})
     require(len(schemas) == 1 and rows, 'Tool schema absent or changed within a trial')
     return {'status': 'valid', 'qualified': cell['status'] == 'passed', 'sessions': sorted(sessions),
+        'opencode_version': bundle.version,
         'outcome': 'qualified' if cell['status'] == 'passed' else 'candidate-failed',
         'tool_schema_sha256': schemas.pop(), 'attempts': len(rows), 'repair_attempts': 0,
         'seconds': sum(r['seconds'] for r in rows), 'output_tokens': sum(r['output_tokens'] for r in rows),
@@ -276,7 +279,7 @@ def report_pairs(root):
         require(digest(path.read_bytes()) == expected, 'Paired evidence changed: '+name)
     state = read(root/'state.json'); require(state['plan_sha256'] == sha, 'Paired state/plan mismatch')
     require([{k: t[k] for k in ('id', 'cell', 'repetition', 'protocol')} for t in state['trials']] == plan['trials'], 'Trial inventory/order changed')
-    observations = {}; sessions = set(); schema = None
+    observations = {}; sessions = set(); schema = None; version = None
     for trial, item in zip(plan['trials'], state['trials']):
         if item['status'] not in ('passed', 'failed'):
             value = {'status': item['status'], 'outcome': item['status']}
@@ -292,7 +295,9 @@ def report_pairs(root):
             value = inspect_trial(root/trial['id'], trial_plan(plan, trial), item['status'])
             require(not sessions.intersection(value['sessions']), 'Reused paired session')
             require(schema is None or schema == value['tool_schema_sha256'], 'Tool schemas differ between protocols')
+            require(version is None or version == value['opencode_version'], 'OpenCode versions differ between protocols')
             schema = value['tool_schema_sha256']; sessions.update(value['sessions'])
+            version = value['opencode_version']
             observations[trial['id']] = value
         except (OSError, ValueError, KeyError, TypeError) as exc:
             observations[trial['id']] = {'status': 'invalid-instrumentation', 'reason': str(exc)}

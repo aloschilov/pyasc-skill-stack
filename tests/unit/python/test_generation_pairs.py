@@ -267,6 +267,13 @@ class PairedReceipts(unittest.TestCase):
         receipts.write(root/'state.json', s);receipts.seal(root);pairs.seal(self.root)
         self.assertEqual(pairs.report_pairs(self.root)['status'], 'incomplete')
 
+    def test_changed_client_version_invalidates_the_pair(self):
+        t = self.plan['trials'][1];root = self.root/t['id']
+        self.fixture.command(root, 'opencode-version', 'different-client\n');receipts.seal(root);pairs.seal(self.root)
+        r = pairs.report_pairs(self.root)
+        self.assertEqual(r['observations'][t['id']]['status'], 'invalid-instrumentation')
+        self.assertIn('OpenCode versions differ', r['observations'][t['id']]['reason'])
+
     def test_reused_session_is_not_an_independent_pair(self):
         first, t = self.plan['trials'][:2]
         p = self.root/t['id']/t['cell']/'attempt-1'

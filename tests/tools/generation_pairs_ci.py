@@ -52,7 +52,7 @@ def run(root):
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
     report = run_pairs(plan, root/'run', external(request['state_dir']))
     save(root/'result.json', {'status': report['status'], 'experiment': 'paired',
-        'plan_sha256': plan['plan_sha256'], 'model_invoked': None, 'hardware_invoked': False,
+        'plan_sha256': plan['plan_sha256'], 'model_invoked': True if report['status'] == 'complete' else None, 'hardware_invoked': False,
         'trial_denominator': report['trial_denominator'],
         'cells': {k: v['outcome'] if v['status'] == 'valid' else v['status'] for k, v in report['observations'].items()},
         'note': 'Complete means an auditable experiment, not that every candidate passed or that skills helped.'})
