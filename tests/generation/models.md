@@ -1,58 +1,69 @@
 # Controlled model comparison
 
 This is the model axis of the [paired experiment](paired.md), using its executor,
-credential binding, session/context audit and numerical adapters. It is not a
-second campaign runner. The manual comparative run is **not yet qualified**;
-the policy is disabled and the workflows execute only when explicitly dispatched.
+credential binding, session/context audit and numerical adapters. One complete
+manual comparison is qualified below. The periodic policy remains disabled;
+workflows execute only when explicitly dispatched.
 
-Two GLM-5.2 cohorts stopped on response-identity drift before a comparison was
-possible. Each retained one candidate failure, one unresolved request and 22
-unrun trials. The second, with auxiliary agents disabled, still received the
-short alias instead of the expected dated ID. These are gaps, not model or
-skills scores. Completed delivery and cleanup were reconciled; original
-UNKNOWN accounting and 24,000-token reservations remain unchanged.
+## Manual qualification, 2026-11-06
 
-| Incomplete cohort | External archive | SHA256 |
+[Run 42209794583](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42209794583)
+on `68bffbc6bc4400d4c25e369cb4a009d6a724a2a1` completed all 24 predeclared
+trials with known usage and no coverage gaps. The denominator includes all
+13 candidate failures; no candidates were repaired or selected after the run.
+
+| Model | P3: tool schema, no selected skills | P6: four selected skills |
 | --- | --- | --- |
-| [42189411115](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42189411115) | `model-42189411115-blocked.tar.gz` | `807ecc9bdce1dfd6b757a9c206d6b3bc7aace86588d9629f575f04f0d747f72b` |
-| [42192207099](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42192207099) | `model-42192207099-blocked.tar.gz` | `736f35a8ee975566254c0903dd6e15c7a91610edfeafd8d07320e078e9af9a68` |
+| DeepSeek V4.1 Flash | 0/6 qualified | 6/6 qualified |
+| GLM-5.3 | 0/6 qualified | 5/6 qualified |
 
-Both archives are retained outside the checkout on the qualification Mac and VM.
-The current plan selects the separately configured DeepSeek model instead of
-relaxing identity checks or pooling the incomplete cohorts. A small tool request
-observed its response ID below; that is discovery, not OpenCode qualification.
+The 11 accepted candidates produced 33 JIT and 33 actual Model launches,
+75 output/input numerical checks and 11 rejecting suppressed-launch controls.
+The failures were two static contract violations and eleven JIT failures from
+unsupported APIs or tensor-address operations. The executor took 2,130.112573 s;
+the generation job took 2,178 s, including setup and collection. Its wait after
+plan preparation was 3 s. There were 88 provider requests (47 DeepSeek, 41 GLM),
+133,420 output and 954,823 input tokens. Monetary cost is unavailable.
+All 100 source hashes and the archived report were independently rechecked;
+the local GET-only observer returned `verified-manual`. All 118 own process
+groups and 22 qualification containers were absent, and the executor lease
+was released. Hosted/scheduled observation and alerts remain unqualified.
 
-The first [DeepSeek/GLM cohort, 42195347301](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42195347301),
-also remains incomplete: five candidates qualified, ten failed, one request had
-unknown delivery after `IncompleteRead`, and eight trials were not run. It
-established no complete paired comparison. Its archive
-`model-42195347301-blocked.tar.gz`, SHA256
-`759c3c48fbc0e9032d080d94e792529311ec7d3b3f3c84ca5391020b4f7d0f96`,
-is retained on both qualification hosts. All 77 local process groups and 13 owned
-containers were absent before abandoning the request without replay. Its
-24,000-token reservation remains unknown; the missing partial response cannot
-be reconstructed or retroactively accepted.
+Each contrast has six fixed task/repetition pairs. P6−P3 is +1.0 for DeepSeek
+(conditional 95% interval −0.1089 to 1) and +0.8333 for GLM (−0.2756 to 1).
+GLM−DeepSeek is 0 under P3 (−1 to 1) and −0.1667 under P6 (−1 to 0.9422).
+All four conservative Hoeffding intervals include zero. This small fixed-task
+comparison establishes the measurement path, not general skills benefit,
+model ranking, independent providers, kernel performance or NPU qualification.
 
-The subsequent [run 42204519269](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42204519269)
-on `3bd20950dfee61723bf1a154eaa40b9f26c8dfaf` retained one qualified DeepSeek/P6
-candidate, one GLM/P3 JIT failure, one unresolved DeepSeek/P3 request and 21 unrun
-trials. Execution took 204.749164 seconds. Nine requests contain eight known
-usages (9,271 output and 108,037 input tokens) and one unknown 24,000-token
-reservation. The accepted candidate has three JIT/Model launches, nine numerical
-checks and one rejecting control; no comparative effect can be reported.
-The gate preserved 243,334 partial response bytes privately: 808 valid SSE events,
-but no `DONE`, finish reason or usage. Those retained bytes cannot qualify a
-response; the original reader may also have discarded part of the final HTTP
-chunk. All 14 local process groups and two owned
-containers were absent before releasing the lease; the original request was
-abandoned without replay and retains UNKNOWN accounting.
+[Durable qualification archive](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-models-42209794583):
+`qualification-models-42209794583.tar.gz`, SHA256
+`1244eaefad5760fdc1a3e955fcbc267023af71d3bb6e2a9f8d597d9652c78edb`.
+Copies are retained on both qualification hosts outside checkout. The archive
+contains unchanged candidates, plan/source hashes, public request metadata,
+reports, observer, timings and cleanup; private provider bodies are excluded.
 
-Archive `model-42204519269-blocked.tar.gz`, SHA256
-`37db7a1304355b121993bb80272340b0e677b5a373182ea82fdd335e0738e6b0`,
-is verified on both qualification hosts. The earlier CLI-download-only failure
-42202423456 made no provider request; a checksum-verified external OpenCode cache
-removed that preflight blocker. A complete model comparison still requires a
-reliable provider response path; no unchanged cohort is automatically retried.
+## Separate unsuccessful attempts
+
+Earlier attempts remain preserved outside checkout on both qualification hosts.
+Their UNKNOWN requests retain their original accounting and 24,000-token
+reservations; they were abandoned without replay after own-process cleanup.
+They are never pooled into the accepted comparison. The CLI-download failure
+made no provider request.
+
+| Run | Outcome | Archive SHA256 (`model-RUN-blocked.tar.gz`, except the preflight archive) |
+| --- | --- | --- |
+| 42189411115 | GLM-5.2 identity drift; 1 failed, 1 unknown, 22 unrun | `807ecc9bdce1dfd6b757a9c206d6b3bc7aace86588d9629f575f04f0d747f72b` |
+| 42192207099 | GLM-5.2 identity drift; 1 failed, 1 unknown, 22 unrun | `736f35a8ee975566254c0903dd6e15c7a91610edfeafd8d07320e078e9af9a68` |
+| 42195347301 | Incomplete response; 5 qualified, 10 failed, 1 unknown, 8 unrun | `759c3c48fbc0e9032d080d94e792529311ec7d3b3f3c84ca5391020b4f7d0f96` |
+| 42202423456 | CLI download timeout; `model-42202423456-preflight.tar.gz` | `7018fadc2baf26e24b26f3990b981eec41892b91c897b3eefff07500be4ffcc4` |
+| 42204519269 | Incomplete response; 1 qualified, 1 failed, 1 unknown, 21 unrun | `37db7a1304355b121993bb80272340b0e677b5a373182ea82fdd335e0738e6b0` |
+
+The accepted cohort uses the independently configured DeepSeek profile and a
+repaired incremental HTTP reader, with regression controls. It does not
+reinterpret missing bytes or relax identity checks in earlier attempts.
+
+## Fixed protocol
 
 `models.json` selects two distinct requested and expected response identities:
 
