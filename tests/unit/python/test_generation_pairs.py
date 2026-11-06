@@ -113,6 +113,19 @@ class PairedDesign(unittest.TestCase):
                 self.assertEqual(config['permission']['glob'], 'deny')
                 self.assertEqual(config['permission']['grep'], 'deny')
 
+    def test_baseline_call_uses_short_project_relative_argument_and_retains_legacy_format(self):
+        root = Path('/long/evidence/path/trial'); context = root/'context'; project = root/'cell/attempt-1/project'
+        contract = task_contract(ROOT, self.plan['common']['cells'][0])
+        message = protocols.prompt(contract, 'P4', [], context, project=project)
+        args = json.loads(message.split('arguments: ', 1)[1].split('. The path', 1)[0])
+        self.assertEqual(args, {'filePath': '../../../context/'+protocols.BASELINE})
+        self.assertEqual((project/args['filePath']).resolve(), (context/protocols.BASELINE).resolve())
+        legacy = protocols.prompt(contract, 'P4', [], context)
+        self.assertIn(str(context/protocols.BASELINE), legacy); self.assertNotEqual(legacy, message)
+        for protocol in ('P2', 'P3', 'P6'):
+            self.assertEqual(protocols.prompt(contract, protocol, [], context),
+                protocols.prompt(contract, protocol, [], context, project=project))
+
     def test_control_generation_does_not_require_unselected_skill_files(self):
         # Exercise generate itself with a fake client, not merely context_files.
         with tempfile.TemporaryDirectory() as d:
@@ -292,7 +305,8 @@ class PairedReceipts(unittest.TestCase):
         event('write', {'filePath': str(project/'candidate.py'), 'content': 'offline double'}, {})
         raw = '\n'.join(json.dumps(e) for e in events)
         self.fixture.command(p, 'generation', raw)
-        text = protocols.prompt(task_contract(ROOT, plan['cells'][0]), t['protocol'], plan['skills'], context)
+        text = protocols.prompt(task_contract(ROOT, plan['cells'][0]), t['protocol'], plan['skills'], context,
+            project=project if plan['intervention'].get('context_path_format') == 'relative-read-call-v1' else None)
         (p/'prompt.txt').write_text(text)
         attribution = protocols.audit_trace(raw, project, context, plan, source_context=root/'context')
         attribution.update(requested_model=plan['model']['requested'], observed_model=plan['model']['expected_response'],
@@ -432,6 +446,24 @@ class PairedReceipts(unittest.TestCase):
         r = pairs.report_pairs(self.root)
         self.assertEqual(r['observations'][t['id']]['status'], 'invalid-instrumentation')
         self.assertIsNone(r['comparisons']['P6-P3']['qualification_delta'])
+
+    def test_relative_baseline_read_is_valid_but_guessed_attempt_context_is_not(self):
+        t = next(t for t in self.plan['trials'] if t['protocol'] == 'P4')
+        p = self.root/t['id']/t['cell']/'attempt-1'
+        isolation = pairs.read(p/'isolation.json'); project, context = Path(isolation['project']), Path(isolation['context'])
+        events = [json.loads(line) for line in (p/'generation.stdout').read_text().splitlines()]
+        read = next(e['part']['state'] for e in events if e.get('part', {}).get('tool') == 'read')
+        read['input']['filePath'] = os.path.relpath(context/protocols.BASELINE, project)
+        def store():
+            self.fixture.command(p, 'generation', '\n'.join(json.dumps(e) for e in events))
+            receipts.seal(self.root/t['id']); pairs.seal(self.root)
+        store(); self.assertEqual(pairs.report_pairs(self.root)['status'], 'complete')
+        read.update(status='error', metadata=None, error='The user has specified a rule which prevents you from using this specific tool call.')
+        read['input']['filePath'] = str(project.parent/'context'/protocols.BASELINE)
+        store(); report = pairs.report_pairs(self.root)
+        self.assertEqual(report['observations'][t['id']]['status'], 'invalid-instrumentation')
+        self.assertIn('Complete baseline context read', report['observations'][t['id']]['reason'])
+        self.assertIsNone(report['comparisons']['P4-P3']['qualification_delta'])
 
     def test_unexpected_global_instruction_load_and_unindexed_records_fail_closed(self):
         t = next(t for t in self.plan['trials'] if t['protocol'] == 'P4')
