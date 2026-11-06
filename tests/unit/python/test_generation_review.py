@@ -54,11 +54,11 @@ class Handoffs(unittest.TestCase):
         self.verifications.append(path)
         review.save(path/'qualification.json', {'status': 'passed'})
 
-    def run_double(self, session=None, qualify=None):
+    def run_double(self, session=None, qualify=None, validated=True):
         with patch.dict(os.environ, OPENCODE_API_KEY='offline', OPENCODE_BASE_URL='http://127.0.0.1'), \
              patch.object(review.subprocess, 'check_output', return_value='offline-fixture\n'), \
              patch.object(review, 'command', return_value={'exit_code': 0}), \
-             patch.object(receipts, 'report_review', return_value={'validated_acceptance': True}), \
+             patch.object(receipts, 'report_review', return_value={'validated_acceptance': validated}), \
              patch.object(review, 'session', side_effect=session or self.fake_session), \
              patch.object(review, 'qualify', side_effect=qualify or self.fake_qualify):
             return review.run_review(self.plan, self.root/'run', self.root/'state')
@@ -138,6 +138,11 @@ class Handoffs(unittest.TestCase):
         self.assertEqual(result['status'], 'rejected'); self.assertEqual(result['observed_output_tokens'], 8192)
         self.assertFalse((self.root/'state/active.json').exists()); self.assertFalse(self.verifications)
 
+    def test_failed_evidence_recheck_clears_tentative_acceptance_and_keeps_latch(self):
+        result=self.run_double(validated=False)
+        self.assertEqual(result['status'],'blocked');self.assertIsNone(result['accepted_candidate_sha256'])
+        self.assertTrue((self.root/'state/active.json').exists())
+
     def test_mutation_or_reused_session_blocks_acceptance(self):
         self.mutate = True; result = self.run_double()
         self.assertEqual(result['status'], 'blocked'); self.assertFalse(self.verifications)
@@ -155,6 +160,8 @@ class Handoffs(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'dispositions'): review.validate_review(valid, bound, prior)
         repaired = self.verdict(bound, repaired=True); review.validate_review(repaired, bound, prior)
         with self.assertRaisesRegex(ValueError, 'predecessor'): review.validate_review(repaired, bound)
+        downgraded=self.verdict(bound,reject=True);downgraded['verdict']='accept';downgraded['findings'][0]['severity']='advisory'
+        with self.assertRaisesRegex(ValueError,'severity downgrade'):review.validate_review(downgraded,bound,prior)
 
     def test_native_role_context_is_readonly_complete_and_attributed(self):
         contract = review.task_contract(ROOT, self.plan['common']['cells'][0])

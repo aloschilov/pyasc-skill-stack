@@ -100,13 +100,16 @@ def validate_review(value, binding, prior=None):
     require(value['binding'] == binding and value['verdict'] in ('accept', 'reject'), 'Stale/unbound review verdict')
     require(isinstance(value['scope'], str) and value['scope'].strip(), 'Review evidence scope required')
     rows = value['findings']; require(isinstance(rows, list) and len(rows) <= 50, 'Invalid review findings')
-    ids = set(); prior_ids = {r['id'] for r in prior['findings']} if prior else set()
+    ids = set(); prior_rows = {r['id']: r for r in prior['findings']} if prior else {}; prior_ids = set(prior_rows)
     for row in rows:
         exact_keys(row, ('id', 'severity', 'location', 'problem', 'repair', 'disposition'), 'finding')
         require(all(isinstance(row[k], str) and row[k].strip() for k in row), 'Empty/nontext finding')
         require(row['id'] not in ids, 'Duplicate finding ID'); ids.add(row['id'])
         require(row['severity'] in ('blocking', 'advisory') and row['disposition'] in ('open', 'fixed', 'not-applicable'), 'Invalid finding disposition')
         require(row['disposition'] != 'fixed' or row['id'] in prior_ids, 'Fixed finding has no predecessor')
+        previous = prior_rows.get(row['id'])
+        require(not previous or previous['severity'] != 'blocking' or previous['disposition'] != 'open'
+            or row['disposition'] != 'open' or row['severity'] == 'blocking', 'Open prior blocker needs an explicit disposition, not a severity downgrade')
     require(prior_ids <= ids, 'Prior findings need explicit dispositions')
     blocking = any(r['severity'] == 'blocking' and r['disposition'] == 'open' for r in rows)
     require(value['verdict'] != 'accept' or not blocking, 'Accepted review has unresolved blockers')
@@ -341,7 +344,7 @@ def run_review(plan, output, state_dir, *, initial_inputs=None):
             if state['status'] == 'running': state['status'] = 'rejected'
             require(all(digest(resource(ROOT, n)) == sha for n, sha in plan['common']['source_sha256'].items()), 'Review source changed during execution')
         except BaseException as exc:
-            state.update(status='blocked', error=type(exc).__name__+': '+str(exc))
+            state.update(status='blocked', accepted_candidate_sha256=None, error=type(exc).__name__+': '+str(exc))
         finally:
             usage = [read(p) for p in output.glob('cycle-*/*/usage.json')]
             state['usage_complete'] = bool(usage) and all(u['usage_complete'] for u in usage)
@@ -354,7 +357,7 @@ def run_review(plan, output, state_dir, *, initial_inputs=None):
                 require(report['validated_acceptance'], 'Review acceptance did not verify')
                 save(output/'report.json', report); seal(output)
             except (OSError, ValueError, KeyError, TypeError) as exc:
-                state.update(status='blocked', error='Acceptance evidence: '+str(exc)); checkpoint(); seal(output)
+                state.update(status='blocked', accepted_candidate_sha256=None, error='Acceptance evidence: '+str(exc)); checkpoint(); seal(output)
         if state['status'] != 'blocked': latch.unlink()
         return state
 

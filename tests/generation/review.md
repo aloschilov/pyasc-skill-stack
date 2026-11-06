@@ -29,7 +29,8 @@ Rejection or a genuine candidate verification failure can use the one declared
 repair. The next writer receives the previous candidate/design and concrete
 review/verifier feedback. An unchanged repair stops. Every changed candidate
 needs another fresh reviewer and another qualification; previous finding IDs need
-explicit dispositions. Unknown requests, process interruption, changed inputs or
+explicit dispositions. An open prior blocker cannot disappear through a severity
+downgrade. Unknown requests, process interruption, changed inputs or
 invalid attribution stop execution and keep the shared unresolved-run latch.
 Existing runs are never replayed automatically.
 
