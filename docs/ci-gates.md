@@ -57,6 +57,13 @@ This is compile-only, not exhaustive specialization or numerical coverage. The s
 resource-blocked checks, but either makes coverage incomplete and the job nonzero.
 No discovered modules also fails. See [manual procedure](review-order.md).
 
+The separate [target numerical census](../tests/target-suite/README.md) derives
+all 1,155 official case IDs and runs explicit bounded simulator shards with
+unchanged assertions and suppressed-launch controls. It is a manual CLI lane;
+ordinary PRs run its offline contract tests only. Selected-subset success cannot
+make the full-suite completeness gate green: excluded, unrun, unsupported,
+failed and resource-blocked cases remain visible in the denominator.
+
 ## Explicit model and hardware evaluation
 
 The [shared workflow](../.github/workflows/cannbench-generated.yml) accepts an
