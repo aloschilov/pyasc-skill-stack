@@ -3,9 +3,37 @@
 This optional research command restores the bounded comparison in
 [#21](https://github.com/aloschilov/pyasc-skill-stack/issues/21). It selects one
 official Ascend C Add sample: float32 `[8,2048]`, eight blocks. It does not restore
-the retired global capabilities catalog or generate candidates. Initial support
-requires an actual numerical/timing qualification; implementation alone is not
-evidence of a completed experiment.
+the retired global capabilities catalog or generate candidates.
+
+## Recorded initial experiment
+
+At `b3bca27`, the fixed repository candidate completed the experiment in
+**62.00 seconds**, on native ARM64 Docker with the pinned CANN 9.2.0/PyASC
+`d0f64a6` image. Each variant had one warm-up and five measured launches:
+**18 Model launches, 54 numerical checks and three rejected suppressed-launch
+controls**. All **176 runtime/compiler hashes**, including the loaded runtime
+wrapper, matched between variants.
+
+| Variant | Compile seconds | Median launch ticks |
+| --- | ---: | ---: |
+| Official Ascend C sample | 0.930 | 3612 |
+| PyASC, fusion disabled | 0.906 | 3476 |
+| Same PyASC, fusion enabled | 0.890 | 3476 |
+
+The reference/candidate median ratio is **1.0391**. Fusion produced the **same
+binary bytes**, with median ratio **1.0**; this sample demonstrates no fusion
+benefit. Five samples do not establish statistical significance, generalized
+optimization benefit or NPU performance. This qualifies the fixed comparison
+protocol, not other operators, inputs or architectures.
+
+[Durable experiment archive](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-timing-b3bca27/qualification-timing-b3bca27.tar.gz)
+contains both attempts, original reference/license, compiler commands, binaries,
+per-launch samples, input/runtime hashes and 199 indexed files.
+SHA256: `da7e7b2f84d93ccb0e380704db457989302d622928eccc28e53b8994f303c795`.
+The initial successful attempt predates the enforced loaded-wrapper check and
+is retained separately from the accepted second attempt.
+
+## Inputs and protocol
 
 The canonical source is `cann/asc-devkit` commit
 `a63d5261c7c8077a0081e867f43a0e884fec066b` (v9.2.0),

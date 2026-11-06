@@ -19,3 +19,9 @@ remain in the [immutable historical index](https://github.com/aloschilov/pyasc-s
 Those records do not qualify later revisions or expand hardware coverage.
 Full run artifacts remain outside checkout; see the [storage and attribution
 contract](verification-contract.md).
+
+The optional [simulator timing comparison](simulator-comparison.md) has one
+qualified fixed Add experiment: canonical Ascend C versus PyASC with fusion
+off/on, matching runtime bytes, per-launch ticks, numerics and negative controls.
+Its descriptive ratios are not NPU performance claims; fusion emitted an
+identical binary in this sample.
