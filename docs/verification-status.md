@@ -46,3 +46,12 @@ revision `597a915e`. The same accepted bytes also passed the evaluator at
 | [Three-case pilot](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-cannbench-camodel-pilot-20261107/cannbench-camodel-three-cases-20261107.tar.gz) | `3f72113b64b49759d55f37fc07c69f8b24315bf9284cdab2e8c30d0edc466efb` |
 | [Ordinary OpenCode walkthrough](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-cannbench-camodel-pilot-20261107/cannbench-readme-walkthrough-20261107.tar.gz) | `608869092674c2bed822ea84b3c2105ae09d1ce33c83a4deba3118369eee1740` |
 | [Two-case skill comparison](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-cannbench-camodel-pilot-20261107/cannbench-skill-scope-comparison-20261107.tar.gz) | `af02bfb6dde8916a86abc18e77944855df9f540e12b4896c88281cf60bf55286` |
+
+At `08d519c5`, a second cohort tried Maximum 01, StridedSlice 01 and Gather
+01. Maximum passed on its first attempt. StridedSlice passed from a written
+file on its fourth attempt. Both passed two official seeds and both
+suppressed-launch controls. Gather reached the 600-second limit on its first
+seed. With the original three cases, coverage within the recorded limits is
+5/1,060 cases from 5/53 operators. The eight new generation attempts used
+106,837 completion tokens. The [cohort archive](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-cannbench-breadth-49/cannbench-camodel-breadth-49.tar.gz)
+has SHA256 `b675dc41c9f1f2ef0327e3a05981b19f177bfcfb4c18356138cce0b435807ef6`.
