@@ -76,6 +76,12 @@ storage or unrolling can bring the kernel within the compiler budget.
 The [three-case pilot](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-cannbench-camodel-pilot-20261107)
 includes accepted sources, failed attempts, per-seed comparisons and checksum
 receipts. It covers 3 of the catalog's 1,060 cases across 3 of its 53 operators.
+A separate
+[skill comparison](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-cannbench-camodel-pilot-20261107/cannbench-skill-scope-comparison-20261107.tar.gz)
+tested Exp 01 and Transpose 02 with one fresh attempt per case and skill version.
+Both candidates produced with the case-scoped instructions passed. With the
+earlier instructions, Exp passed and Transpose reached the generation deadline
+without producing a candidate. Its last response has incomplete usage.
 
 ## Requirements
 
