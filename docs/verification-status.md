@@ -8,7 +8,7 @@ prerequisites or resource blocks do not count as successful coverage.
 | Offline checks and shipped simulator fixtures | Required on each PR head by `pr-gate` and `examples-gate`; inspect that head's Actions results. These do not invoke a model or NPU. |
 | Optional source-built runtime | **Passed** for one pinned native CPython 3.12/x86_64 build: two clean imports, exact submission-runtime bytes, fixed add[128] compile/Model/numerics and suppressed-launch rejection. [Evidence and narrow scope](source-runtime.md#recorded-qualification); default runtime unchanged, no NPU qualification. |
 | Fresh multi-operator generation in simulator | **Passed** for three GLM-5.3 candidates (add/reduce/broadcast), three deterministic patterns each, unchanged bytes and suppressed-launch controls. [Manual pilot, limits and archive checksum](../tests/generation/README.md#manual-pilot-2026-11-06). No NPU, performance or nightly claim. |
-| Generated official CANNBench cases in CaModel | Each accepted case passed both official input seeds and both suppressed-launch controls. The first cohort passed 1/3 on the first attempt and 3/3 in five attempts. [Case coverage by catalog revision and archive checksums](#cannbench-camodel-pilot) |
+| Generated official CANNBench cases in CaModel | Each accepted case passed the official comparison at seeds 19 and 23 and rejected both suppressed launches. The first cohort passed 1/3 on the first attempt and 3/3 in five attempts. [Case coverage by catalog revision and archive checksums](#cannbench-camodel-pilot) |
 | Fresh generation and hardware measurement | **Passed** for one GLM-5.3 SwiGlu candidate: 20/20 official cases, zero reported anti-cheat failures, device timings. [Durable result, revisions and checksum](hardware-lane.md). |
 | Performance improvement | **Not established**: the generated candidate's baseline/candidate geometric timing ratio is 0.017450287921005128x (slower). Service score is a separate metric. |
 | Other profile and recipe combinations | Offline regression scope only. The shared CANNBench recipe driver has no new hardware qualification; the manual simulator pilot above qualifies only its recorded executor/configuration. Historical results retain their original configurations. |
@@ -50,8 +50,8 @@ revision `597a915e`. The same accepted bytes also passed the evaluator at
 
 At `08d519c5`, a second cohort tried Maximum 01, StridedSlice 01 and Gather
 01. Maximum passed on its first attempt. StridedSlice passed from a written
-file on its fourth attempt. Both passed two official seeds and both
-suppressed-launch controls. Gather reached the 600-second limit on its first
+file on its fourth attempt. Both passed at seeds 19 and 23 and rejected both
+suppressed launches. Gather reached the 600-second limit on its first
 seed. With the original three cases, coverage within the recorded limits is
 5/1,060 cases from 5/53 operators. The eight new generation attempts used
 106,837 completion tokens. The [cohort archive](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-cannbench-breadth-49/cannbench-camodel-breadth-49.tar.gz)
