@@ -144,6 +144,25 @@ passed the official CaModel comparator on both seeds. A local tile shaped
 failed numerical comparison. Recompute the offsets and bounds for other
 slices. Negative strides and masked axes need their own checks.
 
+## Gather
+
+Check the indexing formula in the task. For 2-D `dim=0` elementwise gather,
+each index selects a row **at its own column**. The pinned AscTile
+`gather` takes a rank-one local index vector and copies trailing subtensors
+from GM. Calling it on a matrix with the original 2-D indices implements a
+different contract. A scalar GM read/write loop also made no numerical
+result available within five minutes on the original case 01 shapes.
+
+One device-only route transposes the index into a scratch tensor in square
+tiles. For column `c`, load a contiguous vector of row indices and compute
+`row * input_width + c` in the tile. View the input as GM
+`[input_numel, 1]` and gather along dimension zero, retaining a static
+trailing dimension. Copy the valid column into the output at its original
+row and column. Preserve the declared integer index dtype and account for
+padding when choosing a tile size. This route matched Torch on a reduced
+fp16/int32 case with two real kernel calls per seed. Full-size checks and
+runtime costs must be recorded separately.
+
 ## MaskedScale
 
 Cover every cross-product present in `cases.yaml`: x is f16/bf16/f32; mask is
