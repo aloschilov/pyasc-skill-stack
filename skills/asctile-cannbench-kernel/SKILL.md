@@ -9,8 +9,12 @@ Use the supplied task contract and the requested output path. For a named
 simulator case, write the public operator for that row's shape, dtype and
 attributes. The evaluator imports your module and checks the entire file.
 Put test inputs, the Torch oracle and assertions in the evaluator, including
-when you would normally use a standalone `__main__` self-test. Packaging,
-performance tuning and the full-operator workflow below apply when requested.
+when you would normally use a standalone `__main__` self-test. If the caller
+owns verification, read the named case, its public signature and the relevant
+operator pattern, then write the complete module at the requested path. The
+local-validation and submission guides apply when you own those steps. Check
+that the wrapper defines its launch grid and bounds every store by the
+allocated output shape before handing the file back.
 
 ## AscTile snapshot
 
