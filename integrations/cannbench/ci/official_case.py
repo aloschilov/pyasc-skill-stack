@@ -27,7 +27,9 @@ def sha(path):
 
 
 def write(path, data):
-    path.write_text(json.dumps(data, indent=2, allow_nan=False) + '\n')
+    temporary = path.with_suffix('.tmp')
+    temporary.write_text(json.dumps(data, indent=2, allow_nan=False) + '\n')
+    temporary.replace(path)
 
 
 def verify(key, candidate, benchmark, output):
@@ -39,7 +41,9 @@ def verify(key, candidate, benchmark, output):
     start = time.monotonic()
     pin = json.loads((ROOT / 'reference/images/ENV.json').read_text())
     task, revision = CASES[key]
-    report = dict(case=key, backend='Model', benchmark_revision=revision,
+    # Full-size strided copies can take close to five minutes for the two seeds.
+    phase_seconds = 600 if revision == BREADTH_REV else 300
+    report = dict(case=key, backend='Model', benchmark_revision=revision, phase_timeout_seconds=phase_seconds,
                   image=pin['dev_image']['ref'], runtime_revision=pin['source_sha'],
                   platform='Ascend950PR_9599', status='failed', stage='inputs', phases={})
     try:
@@ -72,18 +76,21 @@ def verify(key, candidate, benchmark, output):
                     '-e', 'PYASC_CACHE_DIR=/tmp/cache', '-e', 'PYASC_DUMP_PATH=/tmp/dumps', '-w', '/tmp',
                     '-v', f'{checker}:/stack:ro', '-v', f'{archive}:/bench.tar:ro',
                     '-v', f'{frozen}:/candidate.py:ro', '-v', f'{phase_dir}:/results',
-                    report['image'], 'timeout', '-k', '5', '300', 'sh', '-ec',
+                    report['image'], 'timeout', '-k', '5', str(phase_seconds), 'sh', '-ec',
                     'tar -xf /bench.tar && exec python3.11 /stack/integrations/cannbench/ci/official_case.py "$@"',
                     'probe', key, mode], stdout=log, stderr=subprocess.STDOUT)
             result = phase_dir / 'probe.json'
-            if not result.exists():
-                raise ValueError(f'{mode} stopped with exit {proc.returncode}; see {mode}/simulator.log')
-            phase = json.loads(result.read_text())
+            phase = json.loads(result.read_text()) if result.exists() else {'status': 'failed', 'stage': 'setup'}
+            phase['exit_code'] = proc.returncode
             phase['elapsed_seconds'] = round(time.monotonic() - phase_start, 3)
             report['phases'][mode] = phase
             report['stage'] = mode + '/' + phase['stage']
+            if proc.returncode == 124:
+                phase['status'] = 'timed_out'
+                raise ValueError(f'{mode} exceeded {phase_seconds}s; see {mode}/simulator.log')
             if proc.returncode or phase['status'] != 'passed':
-                raise ValueError(phase.get('error', f'{mode} failed'))
+                phase['status'] = 'failed'
+                raise ValueError(phase.get('error', f'{mode} stopped with exit {proc.returncode}; see {mode}/simulator.log'))
             if phase['candidate_sha256'] != report['candidate_sha256']:
                 raise ValueError('Candidate changed between checks')
         if sha(frozen) != report['candidate_sha256']:
@@ -185,7 +192,8 @@ def probe(key, mode, result):
         else:
             fp64 = oracle_fn(**builder.build_call_params(oracle_fn, case, tensors_to_fp64_cpu(xs)))
         before = counter['calls']
-        result['stage'] = 'compile-and-launch'
+        result.update(stage='compile-and-launch', active_seed=seed)
+        write(Path('/results/probe.json'), result)
         with torch.no_grad():
             output = getattr(module, op)(**params)
         result['stage'] = 'numerics'
@@ -206,15 +214,16 @@ def probe(key, mode, result):
                                      threshold=verdict.threshold, mere=str(mere), mare=str(mare)))
         if verdict.passed != (mode == 'real'):
             raise ValueError('Official numerical comparison failed' if mode == 'real' else 'Suppressed launch passed comparison')
+    result.pop('active_seed', None)
     result.update(status='passed', stage='control-rejected' if mode == 'suppressed' else 'numerically_verified')
 
 
 if __name__ == '__main__':
-    report = {'status': 'failed', 'stage': 'setup'}
+    report = {'status': 'running', 'stage': 'setup'}
     try:
         probe(sys.argv[1], sys.argv[2], report)
     except Exception as exc:
-        report['error'] = f'{type(exc).__name__}: {exc}'
+        report.update(status='failed', error=f'{type(exc).__name__}: {exc}')
         raise
     finally:
         write(Path('/results/probe.json'), report)

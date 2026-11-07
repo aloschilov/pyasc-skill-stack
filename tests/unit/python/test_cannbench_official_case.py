@@ -1,10 +1,12 @@
 """The local case check can fail before Docker and never needs service credentials."""
+import importlib.util
 import json
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 SMOKE = Path(__file__).resolve().parents[3] / 'integrations/cannbench/smoke.py'
@@ -45,6 +47,36 @@ class OfficialCaseTests(unittest.TestCase):
                 self.assertEqual(report['case'], key)
                 self.assertEqual(report['benchmark_revision'], '08d519c503843bce5fd4672ffa2259abeb22fb00')
                 self.assertIn('missing.py', report['error'])
+
+    def test_simulator_timeout_retains_completed_seed(self):
+        spec = importlib.util.spec_from_file_location('official_case', SMOKE.parent / 'ci/official_case.py')
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            candidate = base / 'candidate.py'
+            candidate.write_text('# test input')
+            run = base / 'run'
+
+            def simulate(argv, **kwargs):
+                if argv[0] == 'git':
+                    Path(argv[argv.index('--output') + 1]).write_bytes(b'fixture')
+                    return subprocess.CompletedProcess(argv, 0)
+                self.assertEqual(argv[0], 'docker')
+                self.assertIn('600', argv)
+                checker.write(run / 'real/probe.json', {
+                    'stage': 'compile-and-launch', 'status': 'running', 'active_seed': 23,
+                    'checks': [{'seed': 19, 'numerical_pass': True}],
+                })
+                return subprocess.CompletedProcess(argv, 124)
+
+            with patch.object(checker.subprocess, 'run', side_effect=simulate):
+                self.assertEqual(checker.verify('gather/1', candidate, base, run), 1)
+            report = json.loads((run / 'result.json').read_text())
+            real = report['phases']['real']
+            self.assertEqual((real['status'], real['active_seed'], real['exit_code']), ('timed_out', 23, 124))
+            self.assertEqual(real['checks'], [{'seed': 19, 'numerical_pass': True}])
+            self.assertNotIn('suppressed', report['phases'])
 
     def test_unknown_case_does_not_create_a_run(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -63,7 +63,9 @@ OPENCODE_CONFIG="$PROJECT/opencode.case.json" opencode run \
 Check the emitted bytes in two fresh network-isolated simulator processes. The
 first Docker pull needs network access. If OpenCode wrote the module in a
 subdirectory, pass its actual path to `--candidate`. Use a new output directory
-for each check.
+for each check. The three original cases allow five minutes per phase. Maximum,
+StridedSlice and Gather allow ten minutes per phase. A timeout records the
+active seed and any completed comparisons in the result.
 
 ```sh
 RUN="$HOME/pyasc-qualification-runs/case-$(date +%Y%m%d-%H%M%S)"
