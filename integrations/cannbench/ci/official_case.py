@@ -32,9 +32,11 @@ def write(path, data):
     temporary.replace(path)
 
 
-def verify(key, candidate, benchmark, output):
+def verify(key, candidate, benchmark, output, phase_seconds=None):
     if key not in CASES:
         raise ValueError('Supported cases: ' + ', '.join(CASES))
+    if phase_seconds is not None and (type(phase_seconds) is not int or phase_seconds < 1):
+        raise ValueError('The simulator phase timeout must be a positive number of seconds')
     if output.exists():
         raise ValueError('Choose a new results directory: ' + str(output))
     output.mkdir(parents=True, exist_ok=False)
@@ -42,7 +44,8 @@ def verify(key, candidate, benchmark, output):
     pin = json.loads((ROOT / 'reference/images/ENV.json').read_text())
     task, revision = CASES[key]
     # Full-size strided copies can take close to five minutes for the two seeds.
-    phase_seconds = 600 if revision == BREADTH_REV else 300
+    if phase_seconds is None:
+        phase_seconds = 600 if revision == BREADTH_REV else 300
     report = dict(case=key, backend='Model', benchmark_revision=revision, phase_timeout_seconds=phase_seconds,
                   image=pin['dev_image']['ref'], runtime_revision=pin['source_sha'],
                   platform='Ascend950PR_9599', status='failed', stage='inputs', phases={})
