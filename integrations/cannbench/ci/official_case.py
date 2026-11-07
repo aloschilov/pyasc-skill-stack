@@ -85,6 +85,14 @@ def verify(key, candidate, benchmark, output):
     report['elapsed_seconds'] = round(time.monotonic() - start, 3)
     write(output / 'result.json', report)
     print(f"{key} | CaModel | {report['status']} | {report['stage']} | {output / 'result.json'}")
+    if 'candidate_sha256' in report:
+        print(f"Candidate {report['candidate_sha256']} | PyASC {report['runtime_revision'][:12]}")
+    real = report['phases'].get('real', {})
+    if 'input_shapes' in real:
+        print(f"Inputs {real['input_shapes']} {real['dtypes']} | attributes {real['attributes']}")
+    if report['status'] == 'passed':
+        seeds = ', '.join(str(check['seed']) for check in real['checks'])
+        print(f"Seeds {seeds} | real launches passed | suppressed launches rejected")
     if 'error' in report:
         print(report['error'], file=sys.stderr)
     return int(report['status'] != 'passed')
