@@ -149,9 +149,12 @@ slices. Negative strides and masked axes need their own checks.
 Check the indexing formula in the task. For 2-D `dim=0` elementwise gather,
 each index selects a row **at its own column**. The pinned AscTile
 `gather` takes a rank-one local index vector and copies trailing subtensors
-from GM. Calling it on a matrix with the original 2-D indices implements a
-different contract. A scalar GM read/write loop also made no numerical
-result available within five minutes on the original case 01 shapes.
+from GM. For a flattened `[input_numel, 1]` source the call is
+`asctile.gather(src_gm, [0], 0, flat_indices)`. The second argument is a
+list of base offsets through the selected dimension; the fourth is the local
+index vector. Pass `num_indices=valid` when only a prefix of the tile is valid.
+The original 2-D index cannot be passed directly. A scalar GM read/write loop
+did not finish the first seed in 600 seconds on the original case 01 shapes.
 
 One device-only route transposes the index into a scratch tensor in square
 tiles. For column `c`, load a contiguous vector of row indices and compute
