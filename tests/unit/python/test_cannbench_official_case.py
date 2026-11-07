@@ -12,6 +12,13 @@ from unittest.mock import patch
 SMOKE = Path(__file__).resolve().parents[3] / 'integrations/cannbench/smoke.py'
 
 
+def load_checker():
+    spec = importlib.util.spec_from_file_location('official_case', SMOKE.parent / 'ci/official_case.py')
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+    return checker
+
+
 class OfficialCaseTests(unittest.TestCase):
     def command(self, base, key):
         return subprocess.run([
@@ -48,10 +55,20 @@ class OfficialCaseTests(unittest.TestCase):
                 self.assertEqual(report['benchmark_revision'], '08d519c503843bce5fd4672ffa2259abeb22fb00')
                 self.assertIn('missing.py', report['error'])
 
+    @unittest.skipUnless(importlib.util.find_spec('torch'), 'requires the simulator image’s CPU torch')
+    def test_suppression_supports_integer_scratch_and_poisons_float_output(self):
+        import torch
+
+        candidate_torch = load_checker().PoisonAllocations(torch)
+        index = candidate_torch.empty((2, 3), dtype=torch.int32)
+        self.assertEqual(index.dtype, torch.int32)
+        self.assertEqual(index.count_nonzero().item(), 0)
+        source = torch.ones((2, 3), dtype=torch.float16)
+        self.assertTrue(candidate_torch.empty_like(source).isnan().all().item())
+        self.assertTrue(source.eq(1).all().item())
+
     def test_simulator_timeout_retains_completed_seed(self):
-        spec = importlib.util.spec_from_file_location('official_case', SMOKE.parent / 'ci/official_case.py')
-        checker = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(checker)
+        checker = load_checker()
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
             candidate = base / 'candidate.py'

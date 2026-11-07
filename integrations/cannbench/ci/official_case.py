@@ -114,6 +114,25 @@ def verify(key, candidate, benchmark, output):
     return int(report['status'] != 'passed')
 
 
+class PoisonAllocations:
+    """Fill candidate scratch on suppressed launches while preserving the oracle's Torch."""
+
+    def __init__(self, torch):
+        self.torch = torch
+
+    def __getattr__(self, name):
+        allocate = getattr(self.torch, name)
+        if name not in ('empty', 'empty_like'):
+            return allocate
+
+        def poisoned(*args, **kwargs):
+            tensor = allocate(*args, **kwargs)
+            value = float('nan') if tensor.is_floating_point() or tensor.is_complex() else 0
+            return tensor.fill_(value)
+
+        return poisoned
+
+
 def probe(key, mode, result):
     import torch
     import asc
@@ -169,16 +188,8 @@ def probe(key, mode, result):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    # Poison candidate allocations for the negative control; keep the oracle's Torch unchanged.
-    class PoisonAllocations:
-        def __getattr__(self, name):
-            original = getattr(torch, name)
-            if name in ('empty', 'empty_like'):
-                return lambda *args, **kwargs: original(*args, **kwargs).fill_(float('nan'))
-            return original
-
     if mode == 'suppressed' and getattr(module, 'torch', None) is torch:
-        module.torch = PoisonAllocations()
+        module.torch = PoisonAllocations(torch)
     result.update(stage='numerics', checks=[], input_shapes=case.input_shapes, dtypes=case.dtypes,
                   attributes=case.attrs, task_hashes={f: sha(Path('/tmp/tasks') / task / f)
                   for f in ('cases.yaml', 'proto.yaml', 'golden.py')})
