@@ -10,8 +10,16 @@ import time
 import types
 
 ROOT = Path(__file__).resolve().parents[3]
-BENCH_REV = '597a915ec49735ee7d53057554bde426ef8c1d96'
-CASES = {'exp/1': 'level1/exp', 'softmax/1': 'level2/softmax', 'transpose/2': 'level3/transpose'}
+PILOT_REV = '597a915ec49735ee7d53057554bde426ef8c1d96'
+BREADTH_REV = '08d519c503843bce5fd4672ffa2259abeb22fb00'
+CASES = {
+    'exp/1': ('level1/exp', PILOT_REV),
+    'softmax/1': ('level2/softmax', PILOT_REV),
+    'transpose/2': ('level3/transpose', PILOT_REV),
+    'maximum/1': ('level2/maximum', BREADTH_REV),
+    'strided_slice/1': ('level3/strided_slice', BREADTH_REV),
+    'gather/1': ('level2/gather', BREADTH_REV),
+}
 
 
 def sha(path):
@@ -30,7 +38,8 @@ def verify(key, candidate, benchmark, output):
     output.mkdir(parents=True, exist_ok=False)
     start = time.monotonic()
     pin = json.loads((ROOT / 'reference/images/ENV.json').read_text())
-    report = dict(case=key, backend='Model', benchmark_revision=BENCH_REV,
+    task, revision = CASES[key]
+    report = dict(case=key, backend='Model', benchmark_revision=revision,
                   image=pin['dev_image']['ref'], runtime_revision=pin['source_sha'],
                   platform='Ascend950PR_9599', status='failed', stage='inputs', phases={})
     try:
@@ -40,7 +49,7 @@ def verify(key, candidate, benchmark, output):
         # Export committed evaluator and task code only. Ignore working-tree overrides.
         archive = output / 'benchmark.tar'
         subprocess.run(['git', '-C', str(benchmark), 'archive', '--output', str(archive),
-                        BENCH_REV, 'src/kernel_eval', 'tasks/' + CASES[key]], check=True)
+                        revision, 'src/kernel_eval', 'tasks/' + task], check=True)
         report['benchmark_archive_sha256'] = sha(archive)
         # Snapshot the checker. A local checkout can also contain credentials and user files.
         checker = output / 'checker'
@@ -104,29 +113,43 @@ def probe(key, mode, result):
     import asc.runtime.config as config
     from asc.experimental import asctile
     sys.path[:0] = ['/tmp/src', str(ROOT / 'tests/tools'), str(ROOT / 'integrations/cannbench/workers')]
-    from kernel_eval.data.case_loader import CaseLoader
     from kernel_eval.data.data_generator import DataGenerator
-    from kernel_eval.data.golden_loader import GoldenLoader
-    from kernel_eval.data.operator_loader import OperatorLoader
     from kernel_eval.eval.accuracy_eval import AccuracyEvaluator
     from kernel_eval.utils.param_builder import ParamBuilder
     from contracts import static_check
     from execute_kernel import _install_launch_spy
 
     op, number = key.split('/')
-    task = CASES[key]
+    task, revision = CASES[key]
+    if revision == PILOT_REV:
+        from kernel_eval.data.case_loader import CaseLoader
+        from kernel_eval.data.golden_loader import GoldenLoader
+        from kernel_eval.data.operator_loader import OperatorLoader
+        case_number = 'case_id'
+    else:
+        from kernel_eval.benches.cann_loader import CannCaseLoader as CaseLoader
+        from kernel_eval.benches.cann_loader import CannTaskLoader as OperatorLoader
+        from kernel_eval.benches.cann_loader import GoldenLoader
+        from kernel_eval.utils.tensor_utils import tensors_to_fp64_cpu
+        case_number = 'case_num'
+
     source = Path('/candidate.py')
     result['candidate_sha256'] = sha(source)
     result['stage'] = 'static'
     problems = static_check(source, op, Path('/tmp/tasks') / task)
     if problems:
         raise ValueError('; '.join(problems))
-    case, = [c for c in CaseLoader('/tmp/tasks').scan_by_rel_path(task) if c.case_id == int(number)]
+    case, = [c for c in CaseLoader('/tmp/tasks').scan_by_rel_path(task) if getattr(c, case_number) == int(number)]
     loader = GoldenLoader('/tmp/tasks')
     info = OperatorLoader('/tmp/tasks').get_operator(task)
-    if loader.get_input_function(task) or len(info.outputs) != 1 or not info.outputs[0].compare:
+    custom_output = revision == BREADTH_REV and loader.get_output_function(task)
+    if loader.get_input_function(task) or custom_output or len(info.outputs) != 1 or not info.outputs[0].compare:
         raise ValueError('Unsupported official input or output contract')
     golden = loader.get_golden_function(task)
+    native_fn = golden
+    if revision == BREADTH_REV:
+        native_fn = loader.get_bench_function(task) or golden
+        oracle_fn = loader.get_oracle_function(task) or golden
     builder, oracle = ParamBuilder(), AccuracyEvaluator()
     config.set_platform(config.Backend.Model, config.Platform.Ascend950PR_9599)
     _, _, counter = _install_launch_spy(asc, mode == 'suppressed')
@@ -156,8 +179,11 @@ def probe(key, mode, result):
         xs = DataGenerator(seed=seed).generate_input_tensors_from_case(case.input_shapes, case.dtypes, case.value_ranges)
         originals = [x.clone() for x in xs]
         params = builder.build_call_params(golden, case, xs)
-        native = golden(**params)
-        fp64 = oracle.compute_golden_fp64(golden, xs, builder, case)
+        native = native_fn(**builder.build_call_params(native_fn, case, xs))
+        if revision == PILOT_REV:
+            fp64 = oracle.compute_golden_fp64(golden, xs, builder, case)
+        else:
+            fp64 = oracle_fn(**builder.build_call_params(oracle_fn, case, tensors_to_fp64_cpu(xs)))
         before = counter['calls']
         result['stage'] = 'compile-and-launch'
         with torch.no_grad():
@@ -168,10 +194,16 @@ def probe(key, mode, result):
             raise ValueError('Missing launch or incorrect output shape/dtype')
         if not all(torch.equal(x, saved) for x, saved in zip(xs, originals)):
             raise ValueError('Candidate modified an input')
+        native_arg = 'cpu_output' if revision == PILOT_REV else 'native_output'
         verdict = oracle.evaluate(output, fp64, case.dtypes[0], custom_thresholds=info.precision_thresholds,
-                                 cpu_output=native)
+                                 **{native_arg: native})
+        if revision == PILOT_REV:
+            mere, mare = verdict.mere, verdict.mare
+        else:
+            metrics = verdict.get_metadata()
+            mere, mare = metrics.get('mere'), metrics.get('mare')
         result['checks'].append(dict(seed=seed, launcher_calls=calls, numerical_pass=verdict.passed,
-                                     threshold=verdict.threshold, mere=str(verdict.mere), mare=str(verdict.mare)))
+                                     threshold=verdict.threshold, mere=str(mere), mare=str(mare)))
         if verdict.passed != (mode == 'real'):
             raise ValueError('Official numerical comparison failed' if mode == 'real' else 'Suppressed launch passed comparison')
     result.update(status='passed', stage='control-rejected' if mode == 'suppressed' else 'numerically_verified')
