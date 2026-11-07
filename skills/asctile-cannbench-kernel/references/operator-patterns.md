@@ -1,7 +1,6 @@
 # CANNBench operator patterns
 
-These patterns describe the eleven vendored operators. Task files remain the
-normative source.
+Use the task’s public signature and case attributes to select a pattern.
 
 At the host/JIT boundary pass torch tensors directly. Do not call
 `Tensor.data_ptr()`: the pinned JIT derives pointer dtype specialization from
@@ -128,6 +127,22 @@ actually supported operand kinds against the current run's pinned runtime
 before relying on either form, and do not require
 extra full tiles solely to reproduce an older API restriction. Alignment
 and measured compare/select lowering limitations still need verification.
+
+## StridedSlice
+
+For a contiguous 1-D input with a positive stride `s`, a selected residue
+can be read as one column of a logical GM tensor with `s` columns. For an
+aligned start and complete rows, use a destination with one column. Tile
+along the row dimension. For fp16 the local tile's last dimension needs 16
+lanes (32 bytes), even when only one element in each row is valid. Set
+`real_shape=[valid_rows, 1]` on both the padded `copy_in` and the
+`copy_out`. This keeps adjacent output elements contiguous.
+
+Case 01 uses zero start, stride two and no masks. The padded column copy
+passed the official CaModel comparator on both seeds. A local tile shaped
+`[rows, 1]` failed lowering; reshaping contiguous pairs and transposing them
+failed numerical comparison. Recompute the offsets and bounds for other
+slices. Negative strides and masked axes need their own checks.
 
 ## MaskedScale
 
