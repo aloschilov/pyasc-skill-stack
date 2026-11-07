@@ -1,4 +1,4 @@
-# One-operator CANNBench hardware smoke
+# CANNBench kernel checks
 
 CANNBench provides external NPU evaluation without access to a hardware host.
 The shared CI path checks one selected operator recipe against its current
@@ -13,6 +13,60 @@ kernel is a historical PyASC reference, not a newly generated candidate. A pass
 establishes packaged-kernel correctness and timings on the reported runner only.
 It does not qualify fresh generation, all operators, local hardware, or the
 simulator's suppressed-launch numerical-control contract.
+
+## Verify an official case in CaModel
+
+Start in the stack checkout with Git, Python 3.10+, Docker and a configured OpenCode provider.
+The pilot covers `exp/1` (elementwise), `softmax/1` (last-axis reduction) and
+`transpose/2` (2-D permutation). The checker exports the selected task and
+the official evaluator from CANNBench revision `597a915ec49735ee7d53057554bde426ef8c1d96`.
+Use a full clone that contains that commit.
+
+```sh
+STACK=$(pwd)
+BENCH="$HOME/cann-bench"
+git clone https://gitcode.com/cann/cann-bench.git "$BENCH"  # once
+PROJECT=$(mktemp -d)  # use PROJECT="$STACK" to work in a fresh stack checkout
+CASE=exp/1
+TASK=level1/exp  # softmax/1 uses level2/softmax, transpose/2 uses level3/transpose
+PIN=597a915ec49735ee7d53057554bde426ef8c1d96
+mkdir "$PROJECT/task"
+for file in desc.md cases.yaml proto.yaml; do
+  git -C "$BENCH" show "$PIN:tasks/$TASK/$file" > "$PROJECT/task/$file" || exit 1
+done
+```
+
+In a separate project, link the skills and render the provider profile there.
+This requires your configured `OPENCODE_BASE_URL` and `OPENCODE_API_KEY`.
+A stack checkout already contains the skills. Keep the generated candidate and
+provider configuration local.
+
+```sh
+if [ "$PROJECT" != "$STACK" ]; then "$STACK/install.sh" --target "$PROJECT/skills"; fi
+python3 "$STACK/tests/tools/opencode_profile.py" --profile cloud-glm-5.3-low \
+  --skills on --require-credentials --out "$PROJECT/opencode.case.json"
+cd "$PROJECT"
+OPENCODE_CONFIG="$PROJECT/opencode.case.json" opencode run \
+  "Write candidate.py for CANNBench $CASE using the contract in task/. Use asc.experimental.asctile. Load the asctile-cannbench-kernel, asctile-api-patterns, asctile-syntax-constraints and asctile-build-run-verify skills. I will verify the result in CaModel."
+```
+
+Check the emitted bytes in two fresh network-isolated simulator processes. The
+first Docker pull needs network access. Use a new output directory for each check.
+
+```sh
+RUN="$HOME/pyasc-qualification-runs/case-$(date +%Y%m%d-%H%M%S)"
+python3 "$STACK/integrations/cannbench/smoke.py" verify-case \
+  --case "$CASE" --candidate "$PROJECT/candidate.py" --benchmark "$BENCH" --run-dir "$RUN"
+```
+
+The command prints the case, verification stage and path to `result.json`.
+Exit zero requires the public signature, real launches with preserved inputs,
+correct shape and dtype, official numerical comparisons on two seeds and
+rejection on both seeds when the launcher is suppressed. Per-phase logs identify
+a compile or runtime failure. An absent candidate stops at the input stage.
+The report records the candidate and checker hashes, benchmark and runtime pins.
+Generation provenance comes from the OpenCode session that produced the file.
+This local check uses simulator time and no CANNBench submissions.
 
 ## Requirements
 

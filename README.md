@@ -49,6 +49,8 @@ This checks the kernel's observed comparisons, not an independent correctness
 oracle. It proves neither untested shapes nor NPU behavior or performance.
 See the [verification contract](docs/verification-contract.md).
 
+For an official CANNBench case, follow the [OpenCode and CaModel walkthrough](integrations/cannbench/README.md#verify-an-official-case-in-camodel). It checks the generated file against the benchmark's original inputs and golden output.
+
 ## Develop your own kernel
 
 Keep the checkout available: the skills use its references and verification
