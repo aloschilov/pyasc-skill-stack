@@ -1,0 +1,2281 @@
+<?xml version='1.0' encoding='utf-8'?>
+<b:definitions xmlns:b="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bd="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions" targetNamespace="urn:pyasc:asctile-november-detailed" exporter="Camunda Modeler" exporterVersion="5.47.0">
+  <b:process id="Workflow" name="asctile-november-detailed" isExecutable="false">
+    <b:documentation>Source: https://github.com/aloschilov/pyasc-skill-stack/blob/4f6dae49c7a16f8a55911d2276d2f02408fa16b4/skills/asctile-codegen-workflow/SKILL.md . Read phase reference documents alongside the main skill. Five responsibility lanes show handoffs within one coordinated process. Phase entry and outcome events mark the boundaries of each phase. This diagram describes the skill instructions.</b:documentation>
+    <b:laneSet id="Responsibilities">
+      <b:lane id="Lane_Tuner" name="Tuner">
+        <b:flowNodeRef>N_p4_c</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_h</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_alt_endh</b:flowNodeRef>
+      </b:lane>
+      <b:lane id="Lane_Verifier" name="Verifier">
+        <b:flowNodeRef>N_p0_alt_stop</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_alt_endstop</b:flowNodeRef>
+        <b:flowNodeRef>N_p3</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_a</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_b</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_c_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_c</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_d</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_e</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_f</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_g_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_g</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_j</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_k_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_k</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_l</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_z</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_alt_fix</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_alt_endfix</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_alt_block</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_alt_endblock</b:flowNodeRef>
+        <b:flowNodeRef>N_valid_check</b:flowNodeRef>
+        <b:flowNodeRef>N_valid</b:flowNodeRef>
+      </b:lane>
+      <b:lane id="Lane_Reviewer" name="Reviewer">
+        <b:flowNodeRef>N_p2_k</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_l</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_m</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_n</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_o</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_p</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_g_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_g</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_z</b:flowNodeRef>
+      </b:lane>
+      <b:lane id="Lane_Author" name="Author">
+        <b:flowNodeRef>N_p0_d</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_e</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_j_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_j</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_f</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_k_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_k</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_m</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_z</b:flowNodeRef>
+        <b:flowNodeRef>N_p1</b:flowNodeRef>
+        <b:flowNodeRef>N_p1_a</b:flowNodeRef>
+        <b:flowNodeRef>N_p1_b</b:flowNodeRef>
+        <b:flowNodeRef>N_p1_c</b:flowNodeRef>
+        <b:flowNodeRef>N_p1_d</b:flowNodeRef>
+        <b:flowNodeRef>N_p1_e</b:flowNodeRef>
+        <b:flowNodeRef>N_p1_f</b:flowNodeRef>
+        <b:flowNodeRef>N_p1_h</b:flowNodeRef>
+        <b:flowNodeRef>N_p1_i</b:flowNodeRef>
+        <b:flowNodeRef>N_p1_g_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p1_g</b:flowNodeRef>
+        <b:flowNodeRef>N_p1_z</b:flowNodeRef>
+        <b:flowNodeRef>N_p2</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_a</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_b</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_c</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_d</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_e_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_e</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_f</b:flowNodeRef>
+        <b:flowNodeRef>N_repair</b:flowNodeRef>
+      </b:lane>
+      <b:lane id="Lane_Caller" name="Caller">
+        <b:flowNodeRef>N_s</b:flowNodeRef>
+        <b:flowNodeRef>N_load</b:flowNodeRef>
+        <b:flowNodeRef>N_p0</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_a</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_g_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_g</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_alt_ask</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_b</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_h_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_h</b:flowNodeRef>
+        <b:flowNodeRef>N_p0_c</b:flowNodeRef>
+        <b:flowNodeRef>N_env_check</b:flowNodeRef>
+        <b:flowNodeRef>N_env</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_h</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_i_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_i</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_alt_lim</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_alt_endlim</b:flowNodeRef>
+        <b:flowNodeRef>N_p2_j</b:flowNodeRef>
+        <b:flowNodeRef>N_review_check</b:flowNodeRef>
+        <b:flowNodeRef>N_review</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_h_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_h</b:flowNodeRef>
+        <b:flowNodeRef>N_p3_i</b:flowNodeRef>
+        <b:flowNodeRef>N_tune_check</b:flowNodeRef>
+        <b:flowNodeRef>N_tune</b:flowNodeRef>
+        <b:flowNodeRef>N_p4</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_a</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_b_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_b</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_d_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_d</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_e</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_alt_keep</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_f_check</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_f</b:flowNodeRef>
+        <b:flowNodeRef>N_p4_z</b:flowNodeRef>
+        <b:flowNodeRef>N_pick_check</b:flowNodeRef>
+        <b:flowNodeRef>N_pick</b:flowNodeRef>
+        <b:flowNodeRef>N_deliver</b:flowNodeRef>
+        <b:flowNodeRef>N_z</b:flowNodeRef>
+        <b:flowNodeRef>N_limited</b:flowNodeRef>
+        <b:flowNodeRef>N_limitend</b:flowNodeRef>
+      </b:lane>
+    </b:laneSet>
+    <b:startEvent id="N_s">
+      <b:documentation>Example: A user opens a kernel request for row-wise sum.</b:documentation>
+      <b:outgoing>N_flow0</b:outgoing>
+    </b:startEvent>
+    <b:task id="N_load" name="Load the kernel development workflow">
+      <b:documentation>Example: In OpenCode the caller asks the active session to invoke the native skill tool with the installed name asctile-codegen-workflow. The returned SKILL.md supplies the phase instructions. Record the loaded skill directory and hash with the run.</b:documentation>
+      <b:incoming>N_flow0</b:incoming>
+      <b:outgoing>N_flow1</b:outgoing>
+    </b:task>
+    <b:intermediateThrowEvent id="N_p0" name="Phase 0  /  Request, contract and pinned environment">
+      <b:documentation>Example: Agree on row-wise sum over the last axis and identify the image that will compile the kernel. Example: The request says “implement row-wise sum” and leaves output dtype unspecified.</b:documentation>
+      <b:incoming>N_flow1</b:incoming>
+      <b:outgoing>N_p0_flow0</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_p0_a" name="Clarify operator, dtype, shapes, outputs and tolerance">
+      <b:documentation>Example: The caller is the coordinating agent or harness for the run. It gathers user answers and arranges author, reviewer and verifier handoffs. Here it confirms whether FP16 input rows produce FP32 sums.</b:documentation>
+      <b:incoming>N_p0_flow0</b:incoming>
+      <b:incoming>N_p0_flow10</b:incoming>
+      <b:outgoing>N_p0_flow1</b:outgoing>
+    </b:task>
+    <b:task id="N_p0_g_check" name="Essential fields supplied?">
+      <b:documentation>Example: For row-wise sum, require FP16 input of shapes (2,64) and (2,65), FP32 output of shape (2,), last-axis reduction and user-agreed tolerances. If tolerance is missing, ask.</b:documentation>
+      <b:incoming>N_p0_flow1</b:incoming>
+      <b:outgoing>N_p0_flow18</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p0_g">
+      <b:documentation>Example: Route the recorded decision. For row-wise sum, require FP16 input of shapes (2,64) and (2,65), FP32 output of shape (2,), last-axis reduction and user-agreed tolerances. If tolerance is missing, ask.</b:documentation>
+      <b:incoming>N_p0_flow18</b:incoming>
+      <b:outgoing>N_p0_flow8</b:outgoing>
+      <b:outgoing>N_p0_flow9</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p0_alt_ask" name="Ask user for missing contract fields">
+      <b:documentation>Example: Ask the user “For FP16 rows of widths 64 and 65, should each row produce one FP32 sum? What absolute and relative tolerances should we use?” Resume clarification when the user answers.</b:documentation>
+      <b:incoming>N_p0_flow9</b:incoming>
+      <b:outgoing>N_p0_flow10</b:outgoing>
+    </b:task>
+    <b:task id="N_p0_b" name="Determine requested scope and whether optimization is requested">
+      <b:documentation>Example: Record whether the user wants correctness qualification alone or also an official latency comparison.</b:documentation>
+      <b:incoming>N_p0_flow8</b:incoming>
+      <b:outgoing>N_p0_flow2</b:outgoing>
+    </b:task>
+    <b:task id="N_p0_h_check" name="Include tuning in contract?">
+      <b:documentation>Example: Identify whether performance is part of the requested deliverable. If yes, agree the baseline and budget now. Measurements and variant changes belong to Phase 4 after correctness qualification.</b:documentation>
+      <b:incoming>N_p0_flow2</b:incoming>
+      <b:outgoing>N_p0_flow19</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p0_h">
+      <b:documentation>Example: Route the recorded decision. Identify whether performance is part of the requested deliverable. If yes, agree the baseline and budget now. Measurements and variant changes belong to Phase 4 after correctness qualification.</b:documentation>
+      <b:incoming>N_p0_flow19</b:incoming>
+      <b:outgoing>N_p0_flow11</b:outgoing>
+      <b:outgoing>N_p0_flow12</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p0_c" name="Agree baseline and time or attempt budget">
+      <b:documentation>Example: For a speed request, confirm the baseline job and a limit of three variant attempts with the user.</b:documentation>
+      <b:incoming>N_p0_flow11</b:incoming>
+      <b:outgoing>N_p0_flow3</b:outgoing>
+    </b:task>
+    <b:task id="N_p0_d" name="Read ENV.json and PIN.json or identify explicitly selected runtime">
+      <b:documentation>Example: For the repository image, read reference/images/ENV.json and reference/asctile/PIN.json and record the digest and matching source revision.</b:documentation>
+      <b:incoming>N_p0_flow3</b:incoming>
+      <b:incoming>N_p0_flow12</b:incoming>
+      <b:outgoing>N_p0_flow4</b:outgoing>
+    </b:task>
+    <b:task id="N_p0_e" name="Record backend, platform, image or wheel identity; preflight selected interpreter">
+      <b:documentation>Example: In the selected interpreter, record Python, module path and distribution version. Check that the imported AscTile module exposes jit and global_tensor.</b:documentation>
+      <b:incoming>N_p0_flow4</b:incoming>
+      <b:outgoing>N_p0_flow5</b:outgoing>
+    </b:task>
+    <b:task id="N_p0_j_check" name="Required runtime available?">
+      <b:documentation>Example: A successful import from the selected artifact with jit and global_tensor takes Available. A missing symbol or a supplied unavailable-runtime fact takes Unavailable.</b:documentation>
+      <b:incoming>N_p0_flow5</b:incoming>
+      <b:outgoing>N_p0_flow20</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p0_j">
+      <b:documentation>Example: Route the recorded decision. A successful import from the selected artifact with jit and global_tensor takes Available. A missing symbol or a supplied unavailable-runtime fact takes Unavailable.</b:documentation>
+      <b:incoming>N_p0_flow20</b:incoming>
+      <b:outgoing>N_p0_flow13</b:outgoing>
+      <b:outgoing>N_p0_flow14</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p0_alt_stop" name="Record blocked stage and runtime diagnostic">
+      <b:documentation>Example: Record blocked, the selected interpreter and its missing global_tensor diagnostic.</b:documentation>
+      <b:incoming>N_p0_flow14</b:incoming>
+      <b:outgoing>N_p0_flow17</b:outgoing>
+    </b:task>
+    <b:intermediateThrowEvent id="N_p0_alt_endstop" name="Preflight blocked">
+      <b:documentation>Example: The required import failed in the selected image. Return the blocked result to the parent workflow.</b:documentation>
+      <b:incoming>N_p0_flow17</b:incoming>
+      <b:outgoing>return_N_p0_alt_endstop</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_p0_f" name="Read nearest target test and operator contract">
+      <b:documentation>Example: Compare the requested last-axis sum and output dtype with the nearest shipped reduction test.</b:documentation>
+      <b:incoming>N_p0_flow13</b:incoming>
+      <b:outgoing>N_p0_flow6</b:outgoing>
+    </b:task>
+    <b:task id="N_p0_k_check" name="Shipped references sufficient?">
+      <b:documentation>Example: If a shipped reduction test answers the API question, proceed. If the transfer rank remains unclear, inspect matching upstream source.</b:documentation>
+      <b:incoming>N_p0_flow6</b:incoming>
+      <b:outgoing>N_p0_flow21</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p0_k">
+      <b:documentation>Example: Route the recorded decision. If a shipped reduction test answers the API question, proceed. If the transfer rank remains unclear, inspect matching upstream source.</b:documentation>
+      <b:incoming>N_p0_flow21</b:incoming>
+      <b:outgoing>N_p0_flow15</b:outgoing>
+      <b:outgoing>N_p0_flow16</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p0_m" name="Consult matching upstream source">
+      <b:documentation>Example: If the shipped test omits the required descriptor form, inspect its implementation at the pinned upstream revision. July: pyasc-codegen-workflow/SKILL.md, Phase 1 step 2, requires golden/kernels/abs_f16.py and, if available, the upstream asc2/test_vadd.py. November: start with reference/asctile/target/test_reduce_sum.py for row sums. Consult source matching reference/asctile/PIN.json only if the shipped tests leave a question open.</b:documentation>
+      <b:incoming>N_p0_flow16</b:incoming>
+      <b:outgoing>N_p0_flow7</b:outgoing>
+    </b:task>
+    <b:intermediateThrowEvent id="N_p0_z" name="Preflight ready">
+      <b:documentation>Example: The contract, selected image and shipped reduction reference are identified. The runtime probe succeeded. Author hands Caller the agreed case matrix, tolerance, runtime identity and preflight result. Caller checks readiness and releases the same inputs to the design task. The skill specifies no separate Phase 0 handoff file.</b:documentation>
+      <b:incoming>N_p0_flow7</b:incoming>
+      <b:incoming>N_p0_flow15</b:incoming>
+      <b:outgoing>return_N_p0_z</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_env_check" name="Preflight outcome?">
+      <b:documentation>Example: Read Phase 0's recorded result. Ready requires an agreed contract, the selected runtime identity and a successful import exposing jit and global_tensor there. If unavailable, route the recorded diagnostic to the limited report. This is the exit gate for starting design.</b:documentation>
+      <b:incoming>return_N_p0_z</b:incoming>
+      <b:incoming>return_N_p0_alt_endstop</b:incoming>
+      <b:outgoing>N_flow21</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_env">
+      <b:documentation>Example: Route the recorded decision. Read Phase 0's recorded result. Ready requires an agreed contract, the selected runtime identity and a successful import exposing jit and global_tensor there. If unavailable, route the recorded diagnostic to the limited report. This is the exit gate for starting design.</b:documentation>
+      <b:incoming>N_flow21</b:incoming>
+      <b:outgoing>N_flow3</b:outgoing>
+      <b:outgoing>N_flow4</b:outgoing>
+    </b:exclusiveGateway>
+    <b:intermediateThrowEvent id="N_p1" name="Phase 1  /  Design and API selection">
+      <b:documentation>Example: Design FP32 accumulation and an explicit device route for the last partial tile. Example: Start from the agreed FP16 row-sum contract and pinned source.</b:documentation>
+      <b:incoming>N_flow4</b:incoming>
+      <b:outgoing>N_p1_flow0</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_p1_a" name="Specify semantics and public signature">
+      <b:documentation>Example: Specify sum_rows(x) returning one FP32 sum per input row over the last axis. Example: sum_rows(x) accepts a two-dimensional FP16 tensor and returns one FP32 sum per row. Select any flow node to read its worked example in the HTML viewer or its BPMN Documentation field.</b:documentation>
+      <b:incoming>N_p1_flow0</b:incoming>
+      <b:outgoing>N_p1_flow1</b:outgoing>
+    </b:task>
+    <b:task id="N_p1_b" name="Enumerate shapes, dtypes, attributes and special values">
+      <b:documentation>Example: List (2,64) and (2,65), output (2,), cancellation inputs and the agreed NaN behavior.</b:documentation>
+      <b:incoming>N_p1_flow1</b:incoming>
+      <b:outgoing>N_p1_flow2</b:outgoing>
+    </b:task>
+    <b:task id="N_p1_c" name="Plan host dispatch and JIT specializations">
+      <b:documentation>Example: Map width 64 to a full-tile path and width 65 to a device path handling a partial tile.</b:documentation>
+      <b:incoming>N_p1_flow2</b:incoming>
+      <b:incoming>N_p1_flow10</b:incoming>
+      <b:outgoing>N_p1_flow3</b:outgoing>
+    </b:task>
+    <b:task id="N_p1_d" name="Select descriptors and match local, offset and transfer ranks">
+      <b:documentation>Example: For a rank-two tile, check that its descriptor, offsets and copy operands use the ranks required by the pinned API.</b:documentation>
+      <b:incoming>N_p1_flow3</b:incoming>
+      <b:outgoing>N_p1_flow4</b:outgoing>
+    </b:task>
+    <b:task id="N_p1_e" name="Plan tiles, tails, neutral padding, cores and UB capacity">
+      <b:documentation>Example: For width 65 with a 64-element tile, plan one full tile and one valid tail element. Zero-pad inactive sum lanes and account for temporary buffers. Design establishes feasible tile sizes, UB bounds, tail padding and dispatch rules. For width 65, try 64 columns plus a masked tail. Compile or dry-run specializations to check feasibility; the host can select a qualified route at runtime. Revise failed plans and measure tuning variants after correctness.</b:documentation>
+      <b:incoming>N_p1_flow4</b:incoming>
+      <b:outgoing>N_p1_flow5</b:outgoing>
+    </b:task>
+    <b:task id="N_p1_f" name="Choose precision, reduction and fallback device routes">
+      <b:documentation>Example: Accumulate FP16 values in FP32. Keep the tail reduction on the device. Example: accumulate FP16 rows in FP32, using zero for padded sum lanes. Evaluate a single-tile reduction or combine per-tile partials on device for wider rows. Select using the contract, pinned API support and numerical checks.</b:documentation>
+      <b:incoming>N_p1_flow5</b:incoming>
+      <b:outgoing>N_p1_flow6</b:outgoing>
+    </b:task>
+    <b:task id="N_p1_h" name="Define static, compile, numerical and hardware validation scope">
+      <b:documentation>Example: In design.md map contract cases to gates and pass criteria. For widths 64 and 65, check signature and syntax, compile both dispatch paths on the pin and compare seeded CaModel outputs to FP32 reference sums at the agreed tolerances. If NPU evidence is requested, require official per-case results there.</b:documentation>
+      <b:incoming>N_p1_flow6</b:incoming>
+      <b:outgoing>N_p1_flow7</b:outgoing>
+    </b:task>
+    <b:task id="N_p1_i" name="Write design.md">
+      <b:documentation>Example: Save the dispatch table, tile and tail diagrams, buffer budget and validation matrix in design.md.</b:documentation>
+      <b:incoming>N_p1_flow7</b:incoming>
+      <b:outgoing>N_p1_flow8</b:outgoing>
+    </b:task>
+    <b:task id="N_p1_g_check" name="Complete contract, supported APIs and device numerical routes?">
+      <b:documentation>Example: Reject a design that sends width 65 to a host sum. Accept once every case has a supported device route and validation plan.</b:documentation>
+      <b:incoming>N_p1_flow8</b:incoming>
+      <b:outgoing>N_p1_flow11</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p1_g">
+      <b:documentation>Example: Route the recorded decision. Reject a design that sends width 65 to a host sum. Accept once every case has a supported device route and validation plan.</b:documentation>
+      <b:incoming>N_p1_flow11</b:incoming>
+      <b:outgoing>N_p1_flow9</b:outgoing>
+      <b:outgoing>N_p1_flow10</b:outgoing>
+    </b:exclusiveGateway>
+    <b:intermediateThrowEvent id="N_p1_z" name="Design accepted">
+      <b:documentation>Example: The design covers both widths and uses reduction and transfer APIs present at the pin.</b:documentation>
+      <b:incoming>N_p1_flow9</b:incoming>
+      <b:outgoing>return_N_p1_z</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:intermediateThrowEvent id="N_p2" name="Phase 2  /  Implementation, handoff and acceptance review">
+      <b:documentation>Example: Implement the sum kernel, hash it, and hand those exact bytes to a fresh reviewer session. Example: The accepted design specifies both full-tile and tail cases.</b:documentation>
+      <b:incoming>N_flow11</b:incoming>
+      <b:incoming>N_flow17</b:incoming>
+      <b:incoming>return_N_p1_z</b:incoming>
+      <b:outgoing>N_p2_flow0</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_p2_a" name="Load asctile-api-patterns and asctile-syntax-constraints">
+      <b:documentation>Example: Load the pinned API and syntax skills before selecting the reduction implementation.</b:documentation>
+      <b:incoming>N_p2_flow0</b:incoming>
+      <b:outgoing>N_p2_flow1</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_b" name="Select matching template or target test and runtime import">
+      <b:documentation>Example: Start with the closest target reduction test and check its import against the chosen runtime. Start from skills/asctile-codegen-workflow/templates/kernel-template.py for the common skeleton, or reference/asctile/target/test_reduce_sum.py for a matching row-reduction pattern. Verify the import against the pinned runtime.</b:documentation>
+      <b:incoming>N_p2_flow1</b:incoming>
+      <b:outgoing>N_p2_flow2</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_c" name="Implement global_tensor, copy_in, compute and copy_out">
+      <b:documentation>Example: Create the input descriptor, copy the row tile in, reduce on device and copy the valid output back. Example: wrap a 2-D input with global_tensor, copy_in the row tile with zero padding, accumulate in the agreed precision, reduce along axis 1, then copy_out one sum per valid row.</b:documentation>
+      <b:incoming>N_p2_flow2</b:incoming>
+      <b:incoming>N_p2_flow15</b:incoming>
+      <b:incoming>N_p2_flow19</b:incoming>
+      <b:outgoing>N_p2_flow3</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_d" name="Run py_compile and static contract checks">
+      <b:documentation>Example: Run python3 -m py_compile kernel.py and check the public signature and device computation path.</b:documentation>
+      <b:incoming>N_p2_flow3</b:incoming>
+      <b:outgoing>N_p2_flow4</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_e_check" name="Syntax and contract checks passed?">
+      <b:documentation>Example: A malformed kernel.py returns to implementation. Successful syntax and contract checks continue to self-review.</b:documentation>
+      <b:incoming>N_p2_flow4</b:incoming>
+      <b:outgoing>N_p2_flow21</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p2_e">
+      <b:documentation>Example: Route the recorded decision. A malformed kernel.py returns to implementation. Successful syntax and contract checks continue to self-review.</b:documentation>
+      <b:incoming>N_p2_flow21</b:incoming>
+      <b:outgoing>N_p2_flow14</b:outgoing>
+      <b:outgoing>N_p2_flow15</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p2_f" name="Self-review routes, ranks, casts, tails and output shapes">
+      <b:documentation>Example: Trace the final one-element tile for width 65 and check accumulator dtype and output index.</b:documentation>
+      <b:incoming>N_p2_flow14</b:incoming>
+      <b:outgoing>N_p2_flow5</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_h" name="Bind task, design, source, skills and candidate hashes">
+      <b:documentation>Example: Record SHA-256 values for the task, design, loaded skills and kernel together with the source commit.</b:documentation>
+      <b:incoming>N_p2_flow5</b:incoming>
+      <b:outgoing>N_p2_flow6</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_i_check" name="Fresh reviewer session available?">
+      <b:documentation>Example: Use a distinct reviewer session if available. Otherwise record that only self-review ran.</b:documentation>
+      <b:incoming>N_p2_flow6</b:incoming>
+      <b:outgoing>N_p2_flow22</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p2_i">
+      <b:documentation>Example: Route the recorded decision. Use a distinct reviewer session if available. Otherwise record that only self-review ran.</b:documentation>
+      <b:incoming>N_p2_flow22</b:incoming>
+      <b:outgoing>N_p2_flow16</b:outgoing>
+      <b:outgoing>N_p2_flow17</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p2_alt_lim" name="Record self-review only; separate acceptance unverified">
+      <b:documentation>Example: Record the author's self-review and identify independent session review as unverified.</b:documentation>
+      <b:incoming>N_p2_flow17</b:incoming>
+      <b:outgoing>N_p2_flow20</b:outgoing>
+    </b:task>
+    <b:intermediateThrowEvent id="N_p2_alt_endlim" name="Self-review only">
+      <b:documentation>Example: End this phase with a self-review-only result for the limited report.</b:documentation>
+      <b:incoming>N_p2_flow20</b:incoming>
+      <b:outgoing>return_N_p2_alt_endlim</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_p2_j" name="Transfer candidate and design to a fresh session; record model and session IDs">
+      <b:documentation>Example: Give the reviewer the kernel and design by hash in a new session and record the actual author and reviewer session and model IDs.</b:documentation>
+      <b:incoming>N_p2_flow16</b:incoming>
+      <b:outgoing>N_p2_flow7</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_k" name="Load asctile-code-review; check public contract and every case">
+      <b:documentation>Example: Verify the reviewed module accepts both promised shapes and returns two FP32 sums.</b:documentation>
+      <b:incoming>N_p2_flow7</b:incoming>
+      <b:outgoing>N_p2_flow8</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_l" name="Check host/device boundary and exact-runtime API">
+      <b:documentation>Example: Check that width selection runs on the host while arithmetic runs on device through APIs in the pinned source.</b:documentation>
+      <b:incoming>N_p2_flow8</b:incoming>
+      <b:outgoing>N_p2_flow9</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_m" name="Check memory ranks, alignment, neutral padding and buffer capacity">
+      <b:documentation>Example: Check the width-65 tail offset, valid transfer extent and space for the FP32 accumulator.</b:documentation>
+      <b:incoming>N_p2_flow9</b:incoming>
+      <b:outgoing>N_p2_flow10</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_n" name="Check precision, special values and cross-core reductions">
+      <b:documentation>Example: Check cancellation and NaN behavior against the contract and confirm that each row has a single final writer.</b:documentation>
+      <b:incoming>N_p2_flow10</b:incoming>
+      <b:outgoing>N_p2_flow11</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_o" name="Inspect occupancy, DMA, tiling and evidence claims">
+      <b:documentation>Example: Flag a timing claim supported only by simulator runs and inspect whether small row counts leave cores idle.</b:documentation>
+      <b:incoming>N_p2_flow11</b:incoming>
+      <b:outgoing>N_p2_flow12</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_p" name="Return findings with location, affected cases, repair and residual risks">
+      <b:documentation>Example: Report the copy_out location, width-65 reproducer and expected fix if the tail writes outside its output row.</b:documentation>
+      <b:incoming>N_p2_flow12</b:incoming>
+      <b:outgoing>N_p2_flow13</b:outgoing>
+    </b:task>
+    <b:task id="N_p2_g_check" name="Contract preserved and blocking findings resolved?">
+      <b:documentation>Example: An open tail-store blocker returns to implementation. A fresh review accepting the current bytes releases them to qualification.</b:documentation>
+      <b:incoming>N_p2_flow13</b:incoming>
+      <b:outgoing>N_p2_flow23</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p2_g">
+      <b:documentation>Example: Route the recorded decision. An open tail-store blocker returns to implementation. A fresh review accepting the current bytes releases them to qualification.</b:documentation>
+      <b:incoming>N_p2_flow23</b:incoming>
+      <b:outgoing>N_p2_flow18</b:outgoing>
+      <b:outgoing>N_p2_flow19</b:outgoing>
+    </b:exclusiveGateway>
+    <b:intermediateThrowEvent id="N_p2_z" name="Review accepted">
+      <b:documentation>Example: The reviewer accepts the SHA-256 of the candidate that now goes to qualification.</b:documentation>
+      <b:incoming>N_p2_flow18</b:incoming>
+      <b:outgoing>return_N_p2_z</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_review_check" name="Review evidence?">
+      <b:documentation>Example: A fresh review names the current SHA-256 and has no open blocker. A self-review alone takes the limited-report path.</b:documentation>
+      <b:incoming>return_N_p2_z</b:incoming>
+      <b:incoming>return_N_p2_alt_endlim</b:incoming>
+      <b:outgoing>N_flow22</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_review">
+      <b:documentation>Example: Route the recorded decision. A fresh review names the current SHA-256 and has no open blocker. A self-review alone takes the limited-report path.</b:documentation>
+      <b:incoming>N_flow22</b:incoming>
+      <b:outgoing>N_flow7</b:outgoing>
+      <b:outgoing>N_flow8</b:outgoing>
+    </b:exclusiveGateway>
+    <b:intermediateThrowEvent id="N_p3" name="Phase 3  /  Qualification of the reviewed bytes">
+      <b:documentation>Example: Compile both widths, run seeded comparisons and report each requested gate against the reviewed hash. Example: Retrieve the accepted kernel and confirm its hash before testing.</b:documentation>
+      <b:incoming>N_flow8</b:incoming>
+      <b:outgoing>N_p3_flow0</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_p3_a" name="Check syntax, static contract and anti-cheat rules">
+      <b:documentation>Example: Check the signature and reject a kernel that computes row sums on the host.</b:documentation>
+      <b:incoming>N_p3_flow0</b:incoming>
+      <b:outgoing>N_p3_flow1</b:outgoing>
+    </b:task>
+    <b:task id="N_p3_b" name="Dispatch and compile every case and specialization on the exact runtime">
+      <b:documentation>Example: Compile the full-tile and tail dispatch cases on the recorded runtime and retain both outcomes.</b:documentation>
+      <b:incoming>N_p3_flow1</b:incoming>
+      <b:outgoing>N_p3_flow2</b:outgoing>
+    </b:task>
+    <b:task id="N_p3_c_check" name="All required static and lowering checks pass?">
+      <b:documentation>Example: A lowering error for width 65 is a candidate failure. An unavailable compiler blocks execution. Successful compilation of both paths permits smoke testing.</b:documentation>
+      <b:incoming>N_p3_flow2</b:incoming>
+      <b:outgoing>N_p3_flow22</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p3_c">
+      <b:documentation>Example: Route the recorded decision. A lowering error for width 65 is a candidate failure. An unavailable compiler blocks execution. Successful compilation of both paths permits smoke testing.</b:documentation>
+      <b:incoming>N_p3_flow22</b:incoming>
+      <b:outgoing>N_p3_flow9</b:outgoing>
+      <b:outgoing>N_p3_flow10</b:outgoing>
+      <b:outgoing>N_p3_flow11</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p3_d" name="Execute ordinary and adversarial CaModel inputs">
+      <b:documentation>Example: Run seeded ordinary rows and a cancellation-heavy width-65 row in CaModel.</b:documentation>
+      <b:incoming>N_p3_flow9</b:incoming>
+      <b:outgoing>N_p3_flow3</b:outgoing>
+    </b:task>
+    <b:task id="N_p3_e" name="Compare outputs, shapes, dtypes, NaN/Inf positions and tolerances">
+      <b:documentation>Example: Compare FP32 values against a seeded reference at the agreed tolerances, checking output shape and special-value positions separately.</b:documentation>
+      <b:incoming>N_p3_flow3</b:incoming>
+      <b:outgoing>N_p3_flow4</b:outgoing>
+    </b:task>
+    <b:task id="N_p3_f" name="Run full feasible CaModel matrix and record scope">
+      <b:documentation>Example: Record each feasible shape and seed, mismatches, and any case left unrun.</b:documentation>
+      <b:incoming>N_p3_flow4</b:incoming>
+      <b:outgoing>N_p3_flow5</b:outgoing>
+    </b:task>
+    <b:task id="N_p3_g_check" name="Required numerical comparisons pass?">
+      <b:documentation>Example: Continue when all required comparisons meet tolerance. Route a mismatch to repair or a missing simulator to the blocked report.</b:documentation>
+      <b:incoming>N_p3_flow5</b:incoming>
+      <b:outgoing>N_p3_flow23</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p3_g">
+      <b:documentation>Example: Route the recorded decision. Continue when all required comparisons meet tolerance. Route a mismatch to repair or a missing simulator to the blocked report.</b:documentation>
+      <b:incoming>N_p3_flow23</b:incoming>
+      <b:outgoing>N_p3_flow12</b:outgoing>
+      <b:outgoing>N_p3_flow13</b:outgoing>
+      <b:outgoing>N_p3_flow14</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p3_h_check" name="Hardware qualification in scope?">
+      <b:documentation>Example: A request for NPU qualification enters the hardware path. Simulator-only scope goes directly to recording results.</b:documentation>
+      <b:incoming>N_p3_flow12</b:incoming>
+      <b:outgoing>N_p3_flow24</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p3_h">
+      <b:documentation>Example: Route the recorded decision. A request for NPU qualification enters the hardware path. Simulator-only scope goes directly to recording results.</b:documentation>
+      <b:incoming>N_p3_flow24</b:incoming>
+      <b:outgoing>N_p3_flow15</b:outgoing>
+      <b:outgoing>N_p3_flow16</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p3_i" name="Apply asctile-cannbench-kernel contract and submit privately">
+      <b:documentation>Example: For a requested, authorized hardware run, package the reviewed kernel for its benchmark contract and record the private job identity.</b:documentation>
+      <b:incoming>N_p3_flow15</b:incoming>
+      <b:outgoing>N_p3_flow6</b:outgoing>
+    </b:task>
+    <b:task id="N_p3_j" name="Collect official case outcomes, device timings and job identity">
+      <b:documentation>Example: Attach the official job result with per-case correctness and device latency for the reviewed artifact.</b:documentation>
+      <b:incoming>N_p3_flow6</b:incoming>
+      <b:outgoing>N_p3_flow7</b:outgoing>
+    </b:task>
+    <b:task id="N_p3_k_check" name="Official hardware checks pass?">
+      <b:documentation>Example: An official job passing all required cases goes to reporting. A wrong answer needs repair. An unavailable result is recorded as blocked.</b:documentation>
+      <b:incoming>N_p3_flow7</b:incoming>
+      <b:outgoing>N_p3_flow25</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p3_k">
+      <b:documentation>Example: Route the recorded decision. An official job passing all required cases goes to reporting. A wrong answer needs repair. An unavailable result is recorded as blocked.</b:documentation>
+      <b:incoming>N_p3_flow25</b:incoming>
+      <b:outgoing>N_p3_flow17</b:outgoing>
+      <b:outgoing>N_p3_flow18</b:outgoing>
+      <b:outgoing>N_p3_flow19</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p3_l" name="Record passed gates, provenance and evidence scope">
+      <b:documentation>Example: Report which cases compiled and passed in CaModel, then attach NPU outcomes if hardware was in scope.</b:documentation>
+      <b:incoming>N_p3_flow16</b:incoming>
+      <b:incoming>N_p3_flow17</b:incoming>
+      <b:outgoing>N_p3_flow8</b:outgoing>
+    </b:task>
+    <b:intermediateThrowEvent id="N_p3_z" name="Requested gates passed">
+      <b:documentation>Example: All requested cases have evidence at the agreed qualification scope.</b:documentation>
+      <b:incoming>N_p3_flow8</b:incoming>
+      <b:outgoing>return_N_p3_z</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_p3_alt_fix" name="Record candidate failure, affected cases and reproduction">
+      <b:documentation>Example: Record the failing width, seed, expected and observed value, runtime identity and candidate hash.</b:documentation>
+      <b:incoming>N_p3_flow10</b:incoming>
+      <b:incoming>N_p3_flow13</b:incoming>
+      <b:incoming>N_p3_flow18</b:incoming>
+      <b:outgoing>N_p3_flow20</b:outgoing>
+    </b:task>
+    <b:intermediateThrowEvent id="N_p3_alt_endfix" name="Repair required">
+      <b:documentation>Example: Return the width-65 mismatch and reproducer to the repair path.</b:documentation>
+      <b:incoming>N_p3_flow20</b:incoming>
+      <b:outgoing>return_N_p3_alt_endfix</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_p3_alt_block" name="Record unavailable prerequisite and blocked gate">
+      <b:documentation>Example: Record simulator unavailable and identify the numerical gate and cases awaiting execution.</b:documentation>
+      <b:incoming>N_p3_flow11</b:incoming>
+      <b:incoming>N_p3_flow14</b:incoming>
+      <b:incoming>N_p3_flow19</b:incoming>
+      <b:outgoing>N_p3_flow21</b:outgoing>
+    </b:task>
+    <b:intermediateThrowEvent id="N_p3_alt_endblock" name="Gate blocked">
+      <b:documentation>Example: Return the unavailable hardware result to the limited-report path.</b:documentation>
+      <b:incoming>N_p3_flow21</b:incoming>
+      <b:outgoing>return_N_p3_alt_endblock</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_valid_check" name="Qualification outcome?">
+      <b:documentation>Example: A wrong sum at width 65 needs repair. An unavailable simulator blocks the gate. Passing all requested gates allows the workflow to consider tuning.</b:documentation>
+      <b:incoming>return_N_p3_z</b:incoming>
+      <b:incoming>return_N_p3_alt_endfix</b:incoming>
+      <b:incoming>return_N_p3_alt_endblock</b:incoming>
+      <b:outgoing>N_flow23</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_valid">
+      <b:documentation>Example: Route the recorded decision. A wrong sum at width 65 needs repair. An unavailable simulator blocks the gate. Passing all requested gates allows the workflow to consider tuning.</b:documentation>
+      <b:incoming>N_flow23</b:incoming>
+      <b:outgoing>N_flow10</b:outgoing>
+      <b:outgoing>N_flow12</b:outgoing>
+      <b:outgoing>N_flow13</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_repair" name="Repair from measured failure; preserve affected cases">
+      <b:documentation>Example: For a mismatch at width 65, fix the tail path and retain width 65 in the regression matrix.</b:documentation>
+      <b:incoming>N_flow10</b:incoming>
+      <b:outgoing>N_flow11</b:outgoing>
+    </b:task>
+    <b:task id="N_tune_check" name="Optimization requested?">
+      <b:documentation>Example: A correctness-only request goes to delivery. An explicit speed request with an agreed baseline and budget enters Phase 4 after qualification.</b:documentation>
+      <b:incoming>N_flow13</b:incoming>
+      <b:outgoing>N_flow24</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_tune">
+      <b:documentation>Example: Route the recorded decision. A correctness-only request goes to delivery. An explicit speed request with an agreed baseline and budget enters Phase 4 after qualification.</b:documentation>
+      <b:incoming>N_flow24</b:incoming>
+      <b:outgoing>N_flow14</b:outgoing>
+      <b:outgoing>N_flow15</b:outgoing>
+    </b:exclusiveGateway>
+    <b:intermediateThrowEvent id="N_p4" name="Phase 4  /  Bounded performance tuning">
+      <b:documentation>Example: With an agreed baseline and three attempts, compare one tile-width change at a time. Example: Begin with a qualified baseline and the user-agreed tuning budget.</b:documentation>
+      <b:incoming>N_flow14</b:incoming>
+      <b:outgoing>N_p4_flow0</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_p4_a" name="Identify best correct incumbent and agreed budget">
+      <b:documentation>Example: Select the accepted incumbent by hash and read its official baseline job and remaining attempt count.</b:documentation>
+      <b:incoming>N_p4_flow0</b:incoming>
+      <b:outgoing>N_p4_flow1</b:outgoing>
+    </b:task>
+    <b:task id="N_p4_b_check" name="Qualified proposal with comparable official measurement?">
+      <b:documentation>Example: A reviewed, qualified proposal with comparable official timings can be compared. With only an incumbent, check the remaining budget.</b:documentation>
+      <b:incoming>N_p4_flow1</b:incoming>
+      <b:outgoing>N_p4_flow12</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p4_b">
+      <b:documentation>Example: Route the recorded decision. A reviewed, qualified proposal with comparable official timings can be compared. With only an incumbent, check the remaining budget.</b:documentation>
+      <b:incoming>N_p4_flow12</b:incoming>
+      <b:outgoing>N_p4_flow4</b:outgoing>
+      <b:outgoing>N_p4_flow5</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p4_c" name="Compare performance on preserved cases against incumbent">
+      <b:documentation>Example: Compare both official jobs on the same cases, device and measurement protocol. Match the proposal and incumbent to their reviewed hashes and official jobs. Compare the same preserved cases, device and measurement protocol. Check every case for correctness and compare the official metric against observed timing variation.</b:documentation>
+      <b:incoming>N_p4_flow4</b:incoming>
+      <b:outgoing>N_p4_flow2</b:outgoing>
+    </b:task>
+    <b:task id="N_p4_d_check" name="All cases correct and official improvement exceeds noise?">
+      <b:documentation>Example: If the agreed noise band is 2%, an otherwise comparable 1% gain keeps the incumbent. A 5% gain with every case correct can replace it.</b:documentation>
+      <b:incoming>N_p4_flow2</b:incoming>
+      <b:outgoing>N_p4_flow13</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p4_d">
+      <b:documentation>Example: Route the recorded decision. If the agreed noise band is 2%, an otherwise comparable 1% gain keeps the incumbent. A 5% gain with every case correct can replace it.</b:documentation>
+      <b:incoming>N_p4_flow13</b:incoming>
+      <b:outgoing>N_p4_flow6</b:outgoing>
+      <b:outgoing>N_p4_flow7</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p4_e" name="Retain improved candidate as incumbent">
+      <b:documentation>Example: Save the correct, measurably faster variant hash and official job as the new incumbent.</b:documentation>
+      <b:incoming>N_p4_flow6</b:incoming>
+      <b:outgoing>N_p4_flow3</b:outgoing>
+    </b:task>
+    <b:task id="N_p4_alt_keep" name="Keep existing incumbent">
+      <b:documentation>Example: Keep the previous kernel hash when the measured gain is within observed run-to-run variation.</b:documentation>
+      <b:incoming>N_p4_flow7</b:incoming>
+      <b:outgoing>N_p4_flow8</b:outgoing>
+    </b:task>
+    <b:task id="N_p4_f_check" name="Budget and another tuning attempt available?">
+      <b:documentation>Example: With one attempt remaining and a tile-width hypothesis, propose another variant. At zero remaining attempts, deliver the incumbent.</b:documentation>
+      <b:incoming>N_p4_flow3</b:incoming>
+      <b:incoming>N_p4_flow5</b:incoming>
+      <b:incoming>N_p4_flow8</b:incoming>
+      <b:outgoing>N_p4_flow14</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_p4_f">
+      <b:documentation>Example: Route the recorded decision. With one attempt remaining and a tile-width hypothesis, propose another variant. At zero remaining attempts, deliver the incumbent.</b:documentation>
+      <b:incoming>N_p4_flow14</b:incoming>
+      <b:outgoing>N_p4_flow9</b:outgoing>
+      <b:outgoing>N_p4_flow10</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_p4_h" name="Change one lever: tiles, occupancy, buffering, layout, casts or specialization">
+      <b:documentation>Example: Change only the tile width, preserve the case matrix and return the new kernel for fresh review.</b:documentation>
+      <b:incoming>N_p4_flow9</b:incoming>
+      <b:outgoing>N_p4_flow11</b:outgoing>
+    </b:task>
+    <b:intermediateThrowEvent id="N_p4_alt_endh" name="Proposal ready for review">
+      <b:documentation>Example: Hand the changed bytes to Phase 2 for review before requalification and comparison.</b:documentation>
+      <b:incoming>N_p4_flow11</b:incoming>
+      <b:outgoing>return_N_p4_alt_endh</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:intermediateThrowEvent id="N_p4_z" name="Incumbent selected">
+      <b:documentation>Example: With the budget exhausted, return the incumbent and its official evidence.</b:documentation>
+      <b:incoming>N_p4_flow10</b:incoming>
+      <b:outgoing>return_N_p4_z</b:outgoing>
+    </b:intermediateThrowEvent>
+    <b:task id="N_pick_check" name="Tuning outcome?">
+      <b:documentation>Example: A changed tile width produces new bytes and returns to review. An exhausted budget returns the correct incumbent for delivery.</b:documentation>
+      <b:incoming>return_N_p4_z</b:incoming>
+      <b:incoming>return_N_p4_alt_endh</b:incoming>
+      <b:outgoing>N_flow25</b:outgoing>
+    </b:task>
+    <b:exclusiveGateway id="N_pick">
+      <b:documentation>Example: Route the recorded decision. A changed tile width produces new bytes and returns to review. An exhausted budget returns the correct incumbent for delivery.</b:documentation>
+      <b:incoming>N_flow25</b:incoming>
+      <b:outgoing>N_flow17</b:outgoing>
+      <b:outgoing>N_flow18</b:outgoing>
+    </b:exclusiveGateway>
+    <b:task id="N_deliver" name="Deliver candidate, design, review, provenance, per-case results and available job links">
+      <b:documentation>Example: Hand back kernel.py, design.md, the review of its SHA-256 and per-case results with any official job ID.</b:documentation>
+      <b:incoming>N_flow15</b:incoming>
+      <b:incoming>N_flow18</b:incoming>
+      <b:outgoing>N_flow19</b:outgoing>
+    </b:task>
+    <b:endEvent id="N_z">
+      <b:documentation>Example: The caller hands back the selected kernel and the report for the requested cases.</b:documentation>
+      <b:incoming>N_flow19</b:incoming>
+    </b:endEvent>
+    <b:task id="N_limited" name="Report blocked or limited scope with diagnostic">
+      <b:documentation>Example: Report the missing AscTile import, the selected interpreter and the gates left unrun.</b:documentation>
+      <b:incoming>N_flow3</b:incoming>
+      <b:incoming>N_flow7</b:incoming>
+      <b:incoming>N_flow12</b:incoming>
+      <b:outgoing>N_flow20</b:outgoing>
+    </b:task>
+    <b:endEvent id="N_limitend" name="Limited or blocked report delivered">
+      <b:documentation>Example: The user receives the exact runtime diagnostic and a report identifying numerical qualification as blocked.</b:documentation>
+      <b:incoming>N_flow20</b:incoming>
+    </b:endEvent>
+    <b:sequenceFlow id="N_flow0" sourceRef="N_s" targetRef="N_load" />
+    <b:sequenceFlow id="N_flow1" sourceRef="N_load" targetRef="N_p0" />
+    <b:sequenceFlow id="N_p0_flow0" sourceRef="N_p0" targetRef="N_p0_a" />
+    <b:sequenceFlow id="N_p0_flow10" name="Answer received" sourceRef="N_p0_alt_ask" targetRef="N_p0_a" />
+    <b:sequenceFlow id="N_p0_flow1" sourceRef="N_p0_a" targetRef="N_p0_g_check" />
+    <b:sequenceFlow id="N_p0_flow18" sourceRef="N_p0_g_check" targetRef="N_p0_g" />
+    <b:sequenceFlow id="N_p0_flow8" name="Contract complete" sourceRef="N_p0_g" targetRef="N_p0_b" />
+    <b:sequenceFlow id="N_p0_flow9" name="Fields missing" sourceRef="N_p0_g" targetRef="N_p0_alt_ask" />
+    <b:sequenceFlow id="N_p0_flow2" sourceRef="N_p0_b" targetRef="N_p0_h_check" />
+    <b:sequenceFlow id="N_p0_flow19" sourceRef="N_p0_h_check" targetRef="N_p0_h" />
+    <b:sequenceFlow id="N_p0_flow11" name="Yes" sourceRef="N_p0_h" targetRef="N_p0_c" />
+    <b:sequenceFlow id="N_p0_flow12" name="No" sourceRef="N_p0_h" targetRef="N_p0_d" />
+    <b:sequenceFlow id="N_p0_flow3" sourceRef="N_p0_c" targetRef="N_p0_d" />
+    <b:sequenceFlow id="N_p0_flow4" sourceRef="N_p0_d" targetRef="N_p0_e" />
+    <b:sequenceFlow id="N_p0_flow5" sourceRef="N_p0_e" targetRef="N_p0_j_check" />
+    <b:sequenceFlow id="N_p0_flow20" sourceRef="N_p0_j_check" targetRef="N_p0_j" />
+    <b:sequenceFlow id="N_p0_flow13" name="Available" sourceRef="N_p0_j" targetRef="N_p0_f" />
+    <b:sequenceFlow id="N_p0_flow14" name="Unavailable" sourceRef="N_p0_j" targetRef="N_p0_alt_stop" />
+    <b:sequenceFlow id="N_p0_flow17" sourceRef="N_p0_alt_stop" targetRef="N_p0_alt_endstop" />
+    <b:sequenceFlow id="return_N_p0_alt_endstop" sourceRef="N_p0_alt_endstop" targetRef="N_env_check" />
+    <b:sequenceFlow id="N_p0_flow6" sourceRef="N_p0_f" targetRef="N_p0_k_check" />
+    <b:sequenceFlow id="N_p0_flow21" sourceRef="N_p0_k_check" targetRef="N_p0_k" />
+    <b:sequenceFlow id="N_p0_flow15" name="Yes" sourceRef="N_p0_k" targetRef="N_p0_z" />
+    <b:sequenceFlow id="N_p0_flow16" name="No" sourceRef="N_p0_k" targetRef="N_p0_m" />
+    <b:sequenceFlow id="N_p0_flow7" sourceRef="N_p0_m" targetRef="N_p0_z" />
+    <b:sequenceFlow id="return_N_p0_z" sourceRef="N_p0_z" targetRef="N_env_check" />
+    <b:sequenceFlow id="N_flow21" sourceRef="N_env_check" targetRef="N_env" />
+    <b:sequenceFlow id="N_flow3" name="Unavailable" sourceRef="N_env" targetRef="N_limited" />
+    <b:sequenceFlow id="N_flow4" name="Ready" sourceRef="N_env" targetRef="N_p1" />
+    <b:sequenceFlow id="N_p1_flow0" sourceRef="N_p1" targetRef="N_p1_a" />
+    <b:sequenceFlow id="N_p1_flow1" sourceRef="N_p1_a" targetRef="N_p1_b" />
+    <b:sequenceFlow id="N_p1_flow2" sourceRef="N_p1_b" targetRef="N_p1_c" />
+    <b:sequenceFlow id="N_p1_flow10" name="Reject and revise design" sourceRef="N_p1_g" targetRef="N_p1_c" />
+    <b:sequenceFlow id="N_p1_flow3" sourceRef="N_p1_c" targetRef="N_p1_d" />
+    <b:sequenceFlow id="N_p1_flow4" sourceRef="N_p1_d" targetRef="N_p1_e" />
+    <b:sequenceFlow id="N_p1_flow5" sourceRef="N_p1_e" targetRef="N_p1_f" />
+    <b:sequenceFlow id="N_p1_flow6" sourceRef="N_p1_f" targetRef="N_p1_h" />
+    <b:sequenceFlow id="N_p1_flow7" sourceRef="N_p1_h" targetRef="N_p1_i" />
+    <b:sequenceFlow id="N_p1_flow8" sourceRef="N_p1_i" targetRef="N_p1_g_check" />
+    <b:sequenceFlow id="N_p1_flow11" sourceRef="N_p1_g_check" targetRef="N_p1_g" />
+    <b:sequenceFlow id="N_p1_flow9" name="Design accepted" sourceRef="N_p1_g" targetRef="N_p1_z" />
+    <b:sequenceFlow id="return_N_p1_z" sourceRef="N_p1_z" targetRef="N_p2" />
+    <b:sequenceFlow id="N_flow11" name="Changed bytes require fresh review" sourceRef="N_repair" targetRef="N_p2" />
+    <b:sequenceFlow id="N_flow17" name="New proposal: review and requalify" sourceRef="N_pick" targetRef="N_p2" />
+    <b:sequenceFlow id="N_p2_flow0" sourceRef="N_p2" targetRef="N_p2_a" />
+    <b:sequenceFlow id="N_p2_flow1" sourceRef="N_p2_a" targetRef="N_p2_b" />
+    <b:sequenceFlow id="N_p2_flow2" sourceRef="N_p2_b" targetRef="N_p2_c" />
+    <b:sequenceFlow id="N_p2_flow15" name="Fix syntax or contract" sourceRef="N_p2_e" targetRef="N_p2_c" />
+    <b:sequenceFlow id="N_p2_flow19" name="Repair findings and re-review" sourceRef="N_p2_g" targetRef="N_p2_c" />
+    <b:sequenceFlow id="N_p2_flow3" sourceRef="N_p2_c" targetRef="N_p2_d" />
+    <b:sequenceFlow id="N_p2_flow4" sourceRef="N_p2_d" targetRef="N_p2_e_check" />
+    <b:sequenceFlow id="N_p2_flow21" sourceRef="N_p2_e_check" targetRef="N_p2_e" />
+    <b:sequenceFlow id="N_p2_flow14" name="Passed" sourceRef="N_p2_e" targetRef="N_p2_f" />
+    <b:sequenceFlow id="N_p2_flow5" sourceRef="N_p2_f" targetRef="N_p2_h" />
+    <b:sequenceFlow id="N_p2_flow6" sourceRef="N_p2_h" targetRef="N_p2_i_check" />
+    <b:sequenceFlow id="N_p2_flow22" sourceRef="N_p2_i_check" targetRef="N_p2_i" />
+    <b:sequenceFlow id="N_p2_flow16" name="Available" sourceRef="N_p2_i" targetRef="N_p2_j" />
+    <b:sequenceFlow id="N_p2_flow17" name="Unavailable" sourceRef="N_p2_i" targetRef="N_p2_alt_lim" />
+    <b:sequenceFlow id="N_p2_flow20" sourceRef="N_p2_alt_lim" targetRef="N_p2_alt_endlim" />
+    <b:sequenceFlow id="return_N_p2_alt_endlim" sourceRef="N_p2_alt_endlim" targetRef="N_review_check" />
+    <b:sequenceFlow id="N_p2_flow7" sourceRef="N_p2_j" targetRef="N_p2_k" />
+    <b:sequenceFlow id="N_p2_flow8" sourceRef="N_p2_k" targetRef="N_p2_l" />
+    <b:sequenceFlow id="N_p2_flow9" sourceRef="N_p2_l" targetRef="N_p2_m" />
+    <b:sequenceFlow id="N_p2_flow10" sourceRef="N_p2_m" targetRef="N_p2_n" />
+    <b:sequenceFlow id="N_p2_flow11" sourceRef="N_p2_n" targetRef="N_p2_o" />
+    <b:sequenceFlow id="N_p2_flow12" sourceRef="N_p2_o" targetRef="N_p2_p" />
+    <b:sequenceFlow id="N_p2_flow13" sourceRef="N_p2_p" targetRef="N_p2_g_check" />
+    <b:sequenceFlow id="N_p2_flow23" sourceRef="N_p2_g_check" targetRef="N_p2_g" />
+    <b:sequenceFlow id="N_p2_flow18" name="Accepted hash" sourceRef="N_p2_g" targetRef="N_p2_z" />
+    <b:sequenceFlow id="return_N_p2_z" sourceRef="N_p2_z" targetRef="N_review_check" />
+    <b:sequenceFlow id="N_flow22" sourceRef="N_review_check" targetRef="N_review" />
+    <b:sequenceFlow id="N_flow7" name="Self-review only: report limitation" sourceRef="N_review" targetRef="N_limited" />
+    <b:sequenceFlow id="N_flow8" name="Fresh review accepted" sourceRef="N_review" targetRef="N_p3" />
+    <b:sequenceFlow id="N_p3_flow0" sourceRef="N_p3" targetRef="N_p3_a" />
+    <b:sequenceFlow id="N_p3_flow1" sourceRef="N_p3_a" targetRef="N_p3_b" />
+    <b:sequenceFlow id="N_p3_flow2" sourceRef="N_p3_b" targetRef="N_p3_c_check" />
+    <b:sequenceFlow id="N_p3_flow22" sourceRef="N_p3_c_check" targetRef="N_p3_c" />
+    <b:sequenceFlow id="N_p3_flow9" name="Passed" sourceRef="N_p3_c" targetRef="N_p3_d" />
+    <b:sequenceFlow id="N_p3_flow10" name="Candidate failure" sourceRef="N_p3_c" targetRef="N_p3_alt_fix" />
+    <b:sequenceFlow id="N_p3_flow11" name="Prerequisite unavailable" sourceRef="N_p3_c" targetRef="N_p3_alt_block" />
+    <b:sequenceFlow id="N_p3_flow3" sourceRef="N_p3_d" targetRef="N_p3_e" />
+    <b:sequenceFlow id="N_p3_flow4" sourceRef="N_p3_e" targetRef="N_p3_f" />
+    <b:sequenceFlow id="N_p3_flow5" sourceRef="N_p3_f" targetRef="N_p3_g_check" />
+    <b:sequenceFlow id="N_p3_flow23" sourceRef="N_p3_g_check" targetRef="N_p3_g" />
+    <b:sequenceFlow id="N_p3_flow12" name="Passed" sourceRef="N_p3_g" targetRef="N_p3_h_check" />
+    <b:sequenceFlow id="N_p3_flow13" name="Numerical failure" sourceRef="N_p3_g" targetRef="N_p3_alt_fix" />
+    <b:sequenceFlow id="N_p3_flow14" name="Execution blocked" sourceRef="N_p3_g" targetRef="N_p3_alt_block" />
+    <b:sequenceFlow id="N_p3_flow24" sourceRef="N_p3_h_check" targetRef="N_p3_h" />
+    <b:sequenceFlow id="N_p3_flow15" name="Hardware requested" sourceRef="N_p3_h" targetRef="N_p3_i" />
+    <b:sequenceFlow id="N_p3_flow16" name="Simulator scope completed" sourceRef="N_p3_h" targetRef="N_p3_l" />
+    <b:sequenceFlow id="N_p3_flow6" sourceRef="N_p3_i" targetRef="N_p3_j" />
+    <b:sequenceFlow id="N_p3_flow7" sourceRef="N_p3_j" targetRef="N_p3_k_check" />
+    <b:sequenceFlow id="N_p3_flow25" sourceRef="N_p3_k_check" targetRef="N_p3_k" />
+    <b:sequenceFlow id="N_p3_flow17" name="Passed" sourceRef="N_p3_k" targetRef="N_p3_l" />
+    <b:sequenceFlow id="N_p3_flow18" name="Candidate failure" sourceRef="N_p3_k" targetRef="N_p3_alt_fix" />
+    <b:sequenceFlow id="N_p3_flow19" name="Hardware result unavailable" sourceRef="N_p3_k" targetRef="N_p3_alt_block" />
+    <b:sequenceFlow id="N_p3_flow8" sourceRef="N_p3_l" targetRef="N_p3_z" />
+    <b:sequenceFlow id="return_N_p3_z" sourceRef="N_p3_z" targetRef="N_valid_check" />
+    <b:sequenceFlow id="N_p3_flow20" sourceRef="N_p3_alt_fix" targetRef="N_p3_alt_endfix" />
+    <b:sequenceFlow id="return_N_p3_alt_endfix" sourceRef="N_p3_alt_endfix" targetRef="N_valid_check" />
+    <b:sequenceFlow id="N_p3_flow21" sourceRef="N_p3_alt_block" targetRef="N_p3_alt_endblock" />
+    <b:sequenceFlow id="return_N_p3_alt_endblock" sourceRef="N_p3_alt_endblock" targetRef="N_valid_check" />
+    <b:sequenceFlow id="N_flow23" sourceRef="N_valid_check" targetRef="N_valid" />
+    <b:sequenceFlow id="N_flow10" name="Repairable candidate failure" sourceRef="N_valid" targetRef="N_repair" />
+    <b:sequenceFlow id="N_flow12" name="Gate blocked" sourceRef="N_valid" targetRef="N_limited" />
+    <b:sequenceFlow id="N_flow13" name="Requested gates passed" sourceRef="N_valid" targetRef="N_tune_check" />
+    <b:sequenceFlow id="N_flow24" sourceRef="N_tune_check" targetRef="N_tune" />
+    <b:sequenceFlow id="N_flow14" name="Yes" sourceRef="N_tune" targetRef="N_p4" />
+    <b:sequenceFlow id="N_flow15" name="No" sourceRef="N_tune" targetRef="N_deliver" />
+    <b:sequenceFlow id="N_p4_flow0" sourceRef="N_p4" targetRef="N_p4_a" />
+    <b:sequenceFlow id="N_p4_flow1" sourceRef="N_p4_a" targetRef="N_p4_b_check" />
+    <b:sequenceFlow id="N_p4_flow12" sourceRef="N_p4_b_check" targetRef="N_p4_b" />
+    <b:sequenceFlow id="N_p4_flow4" name="Comparable proposal" sourceRef="N_p4_b" targetRef="N_p4_c" />
+    <b:sequenceFlow id="N_p4_flow5" name="No proposal to compare" sourceRef="N_p4_b" targetRef="N_p4_f_check" />
+    <b:sequenceFlow id="N_p4_flow2" sourceRef="N_p4_c" targetRef="N_p4_d_check" />
+    <b:sequenceFlow id="N_p4_flow13" sourceRef="N_p4_d_check" targetRef="N_p4_d" />
+    <b:sequenceFlow id="N_p4_flow6" name="Improvement established" sourceRef="N_p4_d" targetRef="N_p4_e" />
+    <b:sequenceFlow id="N_p4_flow7" name="Insufficient improvement" sourceRef="N_p4_d" targetRef="N_p4_alt_keep"><b:documentation>Keep the incumbent when any case regresses or a comparable official gain stays within measurement noise. A 1% gain inside an observed 2% noise band is insufficient. The skill sets no universal percentage. Missing comparable official measurements follow the earlier evidence gate.</b:documentation></b:sequenceFlow>
+    <b:sequenceFlow id="N_p4_flow3" sourceRef="N_p4_e" targetRef="N_p4_f_check" />
+    <b:sequenceFlow id="N_p4_flow8" name="Continue with incumbent" sourceRef="N_p4_alt_keep" targetRef="N_p4_f_check" />
+    <b:sequenceFlow id="N_p4_flow14" sourceRef="N_p4_f_check" targetRef="N_p4_f" />
+    <b:sequenceFlow id="N_p4_flow9" name="Another attempt" sourceRef="N_p4_f" targetRef="N_p4_h" />
+    <b:sequenceFlow id="N_p4_flow10" name="Finish with incumbent" sourceRef="N_p4_f" targetRef="N_p4_z" />
+    <b:sequenceFlow id="N_p4_flow11" sourceRef="N_p4_h" targetRef="N_p4_alt_endh" />
+    <b:sequenceFlow id="return_N_p4_alt_endh" sourceRef="N_p4_alt_endh" targetRef="N_pick_check" />
+    <b:sequenceFlow id="return_N_p4_z" sourceRef="N_p4_z" targetRef="N_pick_check" />
+    <b:sequenceFlow id="N_flow25" sourceRef="N_pick_check" targetRef="N_pick" />
+    <b:sequenceFlow id="N_flow18" name="Finished: selected incumbent" sourceRef="N_pick" targetRef="N_deliver" />
+    <b:sequenceFlow id="N_flow19" sourceRef="N_deliver" targetRef="N_z" />
+    <b:sequenceFlow id="N_flow20" sourceRef="N_limited" targetRef="N_limitend" />
+  </b:process>
+  <b:collaboration id="Collaboration">
+    <b:participant id="Pool" name="AscTile kernel development" processRef="Workflow" />
+    <b:textAnnotation id="TextAnnotation_0fwizfb">
+      <b:text>July: pyasc-codegen-workflow/SKILL.md, Phase 1 step 2, requires golden/kernels/abs_f16.py and, if available, the upstream asc2/test_vadd.py. November: start with reference/asctile/target/test_reduce_sum.py for row sums. Consult source matching reference/asctile/PIN.json only if the shipped tests leave a question open.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_TaskTool">
+      <b:text>OpenCode example: the coordinating agent calls the native skill tool with asctile-codegen-workflow and reads the returned instructions before Phase 0.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_0wvkyj6">
+      <b:text>Caller is the agent or harness coordinating the run. It gathers user answers and arranges worker handoffs. Follow the arrows between lanes to see who takes over.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_1hylb8w">
+      <b:text>Example: FP16 rows (2,64) and (2,65) → FP32 sums (2,). Ask if tolerance is missing. Every flow node has an example in its Documentation field.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_0fzfuc8">
+      <b:text>“For FP16 rows of widths 64 and 65, should each row produce one FP32 sum? What absolute and relative tolerances should we use?”</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_1q4kwgg">
+      <b:text>Phase 0 agrees scope: if the user requests tuning, confirm the baseline and time or attempt budget. Phase 4 measures variants after correctness qualification.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_0vr71f6">
+      <b:text>Phase 0 exit gate. Ready: agreed contract and selected runtime identified; its import exposes jit and global_tensor. Blocked: record the missing prerequisite and diagnostic, then issue the limited report.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_0xxgl7w">
+      <b:text>In design.md map each case to checks: static contract, exact-runtime compile, seeded CaModel comparison at agreed tolerance, and official per-case NPU results when requested.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_0ucicx8">
+      <b:text>Author hands Caller the agreed case matrix, tolerance, runtime identity and preflight result. Caller checks readiness and releases the same inputs to the design task. The skill specifies no separate Phase 0 handoff file.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_0hrlont">
+      <b:text>Example: sum_rows(x) accepts a two-dimensional FP16 tensor and returns one FP32 sum per row. Select any flow node to read its worked example in the HTML viewer or its BPMN Documentation field.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_1vg9eja">
+      <b:text>Design establishes feasible tile sizes, UB bounds, tail padding and dispatch rules. For width 65, try 64 columns plus a masked tail. Compile or dry-run specializations to check feasibility; the host can select a qualified route at runtime. Revise failed plans and measure tuning variants after correctness.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_0ewvl07">
+      <b:text>Example: accumulate FP16 rows in FP32, using zero for padded sum lanes. Evaluate a single-tile reduction or combine per-tile partials on device for wider rows. Select using the contract, pinned API support and numerical checks.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_1udldj3">
+      <b:text>Start from skills/asctile-codegen-workflow/templates/kernel-template.py for the common skeleton, or reference/asctile/target/test_reduce_sum.py for a matching row-reduction pattern. Verify the import against the pinned runtime.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_13j6o2d">
+      <b:text>Example: wrap a 2-D input with global_tensor, copy_in the row tile with zero padding, accumulate in the agreed precision, reduce along axis 1, then copy_out one sum per valid row.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_047kqnn">
+      <b:text>Match the proposal and incumbent to their reviewed hashes and official jobs. Compare the same preserved cases, device and measurement protocol. Check every case for correctness and compare the official metric against observed timing variation.</b:text>
+    </b:textAnnotation>
+    <b:textAnnotation id="TextAnnotation_1wfe2et">
+      <b:text>Keep the incumbent when any case regresses or a comparable official gain stays within measurement noise. A 1% gain inside an observed 2% noise band is insufficient. The skill sets no universal percentage. Missing comparable official measurements follow the earlier evidence gate.</b:text>
+    </b:textAnnotation>
+    <b:association id="Association_1a7nnuu" associationDirection="None" sourceRef="N_p4_flow7" targetRef="TextAnnotation_1wfe2et" />
+    <b:association id="Association_14bikrt" associationDirection="None" sourceRef="TextAnnotation_TaskTool" targetRef="N_load" />
+    <b:association id="Association_0qql3kp" associationDirection="None" sourceRef="TextAnnotation_0wvkyj6" targetRef="N_p0_a" />
+    <b:association id="Association_04x5hcm" associationDirection="None" sourceRef="TextAnnotation_1hylb8w" targetRef="N_p0_g_check" />
+    <b:association id="Association_09ylhao" associationDirection="None" sourceRef="TextAnnotation_0fzfuc8" targetRef="N_p0_alt_ask" />
+    <b:association id="Association_0nbsl3x" associationDirection="None" sourceRef="TextAnnotation_1q4kwgg" targetRef="N_p0_h_check" />
+    <b:association id="Association_1osp2aw" associationDirection="None" sourceRef="TextAnnotation_0vr71f6" targetRef="N_env_check" />
+    <b:association id="Association_154tksf" associationDirection="None" sourceRef="TextAnnotation_0xxgl7w" targetRef="N_p1_h" />
+    <b:association id="Association_186iirw" associationDirection="None" sourceRef="N_p0_m" targetRef="TextAnnotation_0fwizfb" />
+    <b:association id="Association_0o92tw0" associationDirection="None" sourceRef="N_p0_z" targetRef="TextAnnotation_0ucicx8" />
+    <b:association id="Association_1kaw26v" associationDirection="None" sourceRef="N_p1_a" targetRef="TextAnnotation_0hrlont" />
+    <b:association id="Association_1pkeupy" associationDirection="None" sourceRef="N_p1_e" targetRef="TextAnnotation_1vg9eja" />
+    <b:association id="Association_0wga2nx" associationDirection="None" sourceRef="N_p1_f" targetRef="TextAnnotation_0ewvl07" />
+    <b:association id="Association_184v6ar" associationDirection="None" sourceRef="N_p2_b" targetRef="TextAnnotation_1udldj3" />
+    <b:association id="Association_0i1qfmq" associationDirection="None" sourceRef="N_p2_c" targetRef="TextAnnotation_13j6o2d" />
+    <b:association id="Association_01abd1j" associationDirection="None" sourceRef="N_p4_c" targetRef="TextAnnotation_047kqnn" />
+  </b:collaboration>
+  <bd:BPMNDiagram id="Diagram">
+    <bd:BPMNPlane id="Plane" bpmnElement="Collaboration">
+      <bd:BPMNShape id="shape_Pool" bpmnElement="Pool" isHorizontal="false">
+        <dc:Bounds x="0.0" y="0.0" width="1600" height="14618" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_Lane_Tuner" bpmnElement="Lane_Tuner" isHorizontal="false" color:background-color="#f7f7fd">
+        <dc:Bounds x="1280.0" y="30.0" width="320" height="14588" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_Lane_Verifier" bpmnElement="Lane_Verifier" isHorizontal="false" color:background-color="#fff9ee">
+        <dc:Bounds x="960.0" y="30.0" width="320" height="14588" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_Lane_Reviewer" bpmnElement="Lane_Reviewer" isHorizontal="false" color:background-color="#faf5fc">
+        <dc:Bounds x="640.0" y="30.0" width="320" height="14588" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_Lane_Author" bpmnElement="Lane_Author" isHorizontal="false" color:background-color="#f2f9f7">
+        <dc:Bounds x="320.0" y="30.0" width="320" height="14588" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_Lane_Caller" bpmnElement="Lane_Caller" isHorizontal="false" color:background-color="#f4f9fd">
+        <dc:Bounds x="0.0" y="30.0" width="320" height="14588" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_s" bpmnElement="N_s">
+        <dc:Bounds x="144.0" y="134.0" width="32" height="32" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_load" bpmnElement="N_load">
+        <dc:Bounds x="63.0" y="242.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0" bpmnElement="N_p0">
+        <dc:Bounds x="144.0" y="382.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="191.0" y="376.0" width="87" height="66" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_a" bpmnElement="N_p0_a">
+        <dc:Bounds x="63.0" y="490.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_g_check" bpmnElement="N_p0_g_check">
+        <dc:Bounds x="63.0" y="614.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_g" bpmnElement="N_p0_g" isMarkerVisible="true">
+        <dc:Bounds x="137.0" y="747.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_alt_ask" bpmnElement="N_p0_alt_ask">
+        <dc:Bounds x="63.0" y="906.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_b" bpmnElement="N_p0_b">
+        <dc:Bounds x="63.0" y="1030.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_h_check" bpmnElement="N_p0_h_check">
+        <dc:Bounds x="63.0" y="1154.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_h" bpmnElement="N_p0_h" isMarkerVisible="true">
+        <dc:Bounds x="137.0" y="1287.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_c" bpmnElement="N_p0_c">
+        <dc:Bounds x="63.0" y="1446.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_d" bpmnElement="N_p0_d">
+        <dc:Bounds x="383.0" y="1570.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_e" bpmnElement="N_p0_e">
+        <dc:Bounds x="383.0" y="1694.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_j_check" bpmnElement="N_p0_j_check">
+        <dc:Bounds x="383.0" y="1818.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_j" bpmnElement="N_p0_j" isMarkerVisible="true">
+        <dc:Bounds x="457.0" y="1951.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_alt_stop" bpmnElement="N_p0_alt_stop">
+        <dc:Bounds x="1023.0" y="2110.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_alt_endstop" bpmnElement="N_p0_alt_endstop">
+        <dc:Bounds x="1104.0" y="2250.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1154.0" y="2244.0" width="82" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_f" bpmnElement="N_p0_f">
+        <dc:Bounds x="383.0" y="2358.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_k_check" bpmnElement="N_p0_k_check">
+        <dc:Bounds x="383.0" y="2482.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_k" bpmnElement="N_p0_k" isMarkerVisible="true">
+        <dc:Bounds x="457.0" y="2615.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_m" bpmnElement="N_p0_m">
+        <dc:Bounds x="383.0" y="2774.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p0_z" bpmnElement="N_p0_z">
+        <dc:Bounds x="464.0" y="2914.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="519.0" y="2908.0" width="71" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_env_check" bpmnElement="N_env_check">
+        <dc:Bounds x="63.0" y="3022.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_env" bpmnElement="N_env" isMarkerVisible="true">
+        <dc:Bounds x="137.0" y="3155.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1" bpmnElement="N_p1">
+        <dc:Bounds x="464.0" y="3330.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="516.0" y="3324.0" width="77" height="53" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1_a" bpmnElement="N_p1_a">
+        <dc:Bounds x="383.0" y="3438.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1_b" bpmnElement="N_p1_b">
+        <dc:Bounds x="383.0" y="3562.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1_c" bpmnElement="N_p1_c">
+        <dc:Bounds x="383.0" y="3686.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1_d" bpmnElement="N_p1_d">
+        <dc:Bounds x="383.0" y="3810.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1_e" bpmnElement="N_p1_e">
+        <dc:Bounds x="383.0" y="3934.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1_f" bpmnElement="N_p1_f">
+        <dc:Bounds x="383.0" y="4058.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1_h" bpmnElement="N_p1_h">
+        <dc:Bounds x="383.0" y="4182.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1_i" bpmnElement="N_p1_i">
+        <dc:Bounds x="383.0" y="4306.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1_g_check" bpmnElement="N_p1_g_check">
+        <dc:Bounds x="383.0" y="4430.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1_g" bpmnElement="N_p1_g" isMarkerVisible="true">
+        <dc:Bounds x="457.0" y="4563.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p1_z" bpmnElement="N_p1_z">
+        <dc:Bounds x="464.0" y="4738.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="514.0" y="4732.0" width="82" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2" bpmnElement="N_p2">
+        <dc:Bounds x="464.0" y="4862.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="515.0" y="4856.0" width="79" height="80" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_a" bpmnElement="N_p2_a">
+        <dc:Bounds x="383.0" y="4970.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_b" bpmnElement="N_p2_b">
+        <dc:Bounds x="383.0" y="5094.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_c" bpmnElement="N_p2_c">
+        <dc:Bounds x="383.0" y="5218.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_d" bpmnElement="N_p2_d">
+        <dc:Bounds x="383.0" y="5342.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_e_check" bpmnElement="N_p2_e_check">
+        <dc:Bounds x="383.0" y="5466.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_e" bpmnElement="N_p2_e" isMarkerVisible="true">
+        <dc:Bounds x="457.0" y="5599.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_f" bpmnElement="N_p2_f">
+        <dc:Bounds x="383.0" y="5758.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_h" bpmnElement="N_p2_h">
+        <dc:Bounds x="63.0" y="5882.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_i_check" bpmnElement="N_p2_i_check">
+        <dc:Bounds x="63.0" y="6006.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_i" bpmnElement="N_p2_i" isMarkerVisible="true">
+        <dc:Bounds x="137.0" y="6139.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_alt_lim" bpmnElement="N_p2_alt_lim">
+        <dc:Bounds x="63.0" y="6298.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_alt_endlim" bpmnElement="N_p2_alt_endlim">
+        <dc:Bounds x="144.0" y="6438.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="196.0" y="6432.0" width="78" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_j" bpmnElement="N_p2_j">
+        <dc:Bounds x="63.0" y="6546.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_k" bpmnElement="N_p2_k">
+        <dc:Bounds x="703.0" y="6670.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_l" bpmnElement="N_p2_l">
+        <dc:Bounds x="703.0" y="6794.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_m" bpmnElement="N_p2_m">
+        <dc:Bounds x="703.0" y="6918.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_n" bpmnElement="N_p2_n">
+        <dc:Bounds x="703.0" y="7042.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_o" bpmnElement="N_p2_o">
+        <dc:Bounds x="703.0" y="7166.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_p" bpmnElement="N_p2_p">
+        <dc:Bounds x="703.0" y="7290.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_g_check" bpmnElement="N_p2_g_check">
+        <dc:Bounds x="703.0" y="7414.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_g" bpmnElement="N_p2_g" isMarkerVisible="true">
+        <dc:Bounds x="777.0" y="7547.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p2_z" bpmnElement="N_p2_z">
+        <dc:Bounds x="784.0" y="7722.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="833.0" y="7716.0" width="84" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_review_check" bpmnElement="N_review_check">
+        <dc:Bounds x="63.0" y="7830.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_review" bpmnElement="N_review" isMarkerVisible="true">
+        <dc:Bounds x="137.0" y="7963.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3" bpmnElement="N_p3">
+        <dc:Bounds x="1104.0" y="8138.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1158.0" y="8132.0" width="73" height="66" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_a" bpmnElement="N_p3_a">
+        <dc:Bounds x="1023.0" y="8246.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_b" bpmnElement="N_p3_b">
+        <dc:Bounds x="1023.0" y="8370.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_c_check" bpmnElement="N_p3_c_check">
+        <dc:Bounds x="1023.0" y="8494.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_c" bpmnElement="N_p3_c" isMarkerVisible="true">
+        <dc:Bounds x="1097.0" y="8627.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_d" bpmnElement="N_p3_d">
+        <dc:Bounds x="1023.0" y="8830.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_e" bpmnElement="N_p3_e">
+        <dc:Bounds x="1023.0" y="8954.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_f" bpmnElement="N_p3_f">
+        <dc:Bounds x="1023.0" y="9078.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_g_check" bpmnElement="N_p3_g_check">
+        <dc:Bounds x="1023.0" y="9202.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_g" bpmnElement="N_p3_g" isMarkerVisible="true">
+        <dc:Bounds x="1097.0" y="9335.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_h_check" bpmnElement="N_p3_h_check">
+        <dc:Bounds x="63.0" y="9538.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_h" bpmnElement="N_p3_h" isMarkerVisible="true">
+        <dc:Bounds x="137.0" y="9671.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_i" bpmnElement="N_p3_i">
+        <dc:Bounds x="63.0" y="9830.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_j" bpmnElement="N_p3_j">
+        <dc:Bounds x="1023.0" y="9954.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_k_check" bpmnElement="N_p3_k_check">
+        <dc:Bounds x="1023.0" y="10078.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_k" bpmnElement="N_p3_k" isMarkerVisible="true">
+        <dc:Bounds x="1097.0" y="10211.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_l" bpmnElement="N_p3_l">
+        <dc:Bounds x="1023.0" y="10414.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_z" bpmnElement="N_p3_z">
+        <dc:Bounds x="1104.0" y="10554.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1153.0" y="10548.0" width="84" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_alt_fix" bpmnElement="N_p3_alt_fix">
+        <dc:Bounds x="1023.0" y="10662.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_alt_endfix" bpmnElement="N_p3_alt_endfix">
+        <dc:Bounds x="1104.0" y="10802.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1157.0" y="10796.0" width="76" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_alt_block" bpmnElement="N_p3_alt_block">
+        <dc:Bounds x="1023.0" y="10910.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p3_alt_endblock" bpmnElement="N_p3_alt_endblock">
+        <dc:Bounds x="1104.0" y="11050.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1162.0" y="11044.0" width="65" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_valid_check" bpmnElement="N_valid_check">
+        <dc:Bounds x="1023.0" y="11158.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_valid" bpmnElement="N_valid" isMarkerVisible="true">
+        <dc:Bounds x="1097.0" y="11291.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_repair" bpmnElement="N_repair">
+        <dc:Bounds x="383.0" y="11494.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_tune_check" bpmnElement="N_tune_check">
+        <dc:Bounds x="63.0" y="11618.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_tune" bpmnElement="N_tune" isMarkerVisible="true">
+        <dc:Bounds x="137.0" y="11751.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4" bpmnElement="N_p4">
+        <dc:Bounds x="144.0" y="11926.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="204.0" y="11920.0" width="62" height="66" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_a" bpmnElement="N_p4_a">
+        <dc:Bounds x="63.0" y="12034.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_b_check" bpmnElement="N_p4_b_check">
+        <dc:Bounds x="63.0" y="12158.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_b" bpmnElement="N_p4_b" isMarkerVisible="true">
+        <dc:Bounds x="137.0" y="12291.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_c" bpmnElement="N_p4_c">
+        <dc:Bounds x="1343.0" y="12450.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_d_check" bpmnElement="N_p4_d_check">
+        <dc:Bounds x="63.0" y="12574.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_d" bpmnElement="N_p4_d" isMarkerVisible="true">
+        <dc:Bounds x="137.0" y="12707.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_e" bpmnElement="N_p4_e">
+        <dc:Bounds x="63.0" y="12866.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_alt_keep" bpmnElement="N_p4_alt_keep">
+        <dc:Bounds x="63.0" y="12990.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_f_check" bpmnElement="N_p4_f_check">
+        <dc:Bounds x="63.0" y="13114.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_f" bpmnElement="N_p4_f" isMarkerVisible="true">
+        <dc:Bounds x="137.0" y="13247.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_h" bpmnElement="N_p4_h">
+        <dc:Bounds x="1343.0" y="13406.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_alt_endh" bpmnElement="N_p4_alt_endh">
+        <dc:Bounds x="1424.0" y="13546.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1470.0" y="13540.0" width="90" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_p4_z" bpmnElement="N_p4_z">
+        <dc:Bounds x="144.0" y="13670.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="209.0" y="13664.0" width="52" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_pick_check" bpmnElement="N_pick_check">
+        <dc:Bounds x="63.0" y="13778.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_pick" bpmnElement="N_pick" isMarkerVisible="true">
+        <dc:Bounds x="137.0" y="13911.0" width="46" height="46" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_deliver" bpmnElement="N_deliver">
+        <dc:Bounds x="63.0" y="14070.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_z" bpmnElement="N_z">
+        <dc:Bounds x="144.0" y="14210.0" width="32" height="32" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_limited" bpmnElement="N_limited">
+        <dc:Bounds x="63.0" y="14318.0" width="194" height="64" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_N_limitend" bpmnElement="N_limitend">
+        <dc:Bounds x="144.0" y="14458.0" width="32" height="32" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="190.0" y="14452.0" width="90" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNShape>
+      <bd:BPMNEdge id="edge_N_flow0" bpmnElement="N_flow0">
+        <di:waypoint x="160.0" y="166.0" />
+        <di:waypoint x="160.0" y="242.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow1" bpmnElement="N_flow1">
+        <di:waypoint x="160.0" y="306.0" />
+        <di:waypoint x="160.0" y="382.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow0" bpmnElement="N_p0_flow0">
+        <di:waypoint x="160.0" y="414.0" />
+        <di:waypoint x="160.0" y="460.0" />
+        <di:waypoint x="156.0" y="460.0" />
+        <di:waypoint x="156.0" y="490.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow10" bpmnElement="N_p0_flow10">
+        <di:waypoint x="160.0" y="970.0" />
+        <di:waypoint x="160.0" y="1000.0" />
+        <di:waypoint x="44.0" y="1000.0" />
+        <di:waypoint x="44.0" y="472.0" />
+        <di:waypoint x="164.0" y="472.0" />
+        <di:waypoint x="164.0" y="490.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="61.0" y="961.0" width="82" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow1" bpmnElement="N_p0_flow1">
+        <di:waypoint x="160.0" y="554.0" />
+        <di:waypoint x="160.0" y="614.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow18" bpmnElement="N_p0_flow18">
+        <di:waypoint x="160.0" y="678.0" />
+        <di:waypoint x="160.0" y="747.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow8" bpmnElement="N_p0_flow8">
+        <di:waypoint x="155.0" y="788.0" />
+        <di:waypoint x="155.0" y="832.0" />
+        <di:waypoint x="50.0" y="832.0" />
+        <di:waypoint x="50.0" y="1017.0" />
+        <di:waypoint x="160.0" y="1017.0" />
+        <di:waypoint x="160.0" y="1030.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="58.0" y="793.0" width="90" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow9" bpmnElement="N_p0_flow9">
+        <di:waypoint x="165.0" y="788.0" />
+        <di:waypoint x="165.0" y="876.0" />
+        <di:waypoint x="160.0" y="876.0" />
+        <di:waypoint x="160.0" y="906.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="197.0" y="837.0" width="70" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow2" bpmnElement="N_p0_flow2">
+        <di:waypoint x="160.0" y="1094.0" />
+        <di:waypoint x="160.0" y="1154.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow19" bpmnElement="N_p0_flow19">
+        <di:waypoint x="160.0" y="1218.0" />
+        <di:waypoint x="160.0" y="1287.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow11" bpmnElement="N_p0_flow11">
+        <di:waypoint x="155.0" y="1328.0" />
+        <di:waypoint x="155.0" y="1372.0" />
+        <di:waypoint x="160.0" y="1372.0" />
+        <di:waypoint x="160.0" y="1446.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="213.0" y="1333.0" width="18" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow12" bpmnElement="N_p0_flow12" color:border-color="#00678a">
+        <di:waypoint x="165.0" y="1328.0" />
+        <di:waypoint x="165.0" y="1416.0" />
+        <di:waypoint x="50.0" y="1416.0" />
+        <di:waypoint x="50.0" y="1552.0" />
+        <di:waypoint x="484.0" y="1552.0" />
+        <di:waypoint x="484.0" y="1570.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="100.0" y="1377.0" width="15" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow3" bpmnElement="N_p0_flow3" color:border-color="#00678a">
+        <di:waypoint x="160.0" y="1510.0" />
+        <di:waypoint x="160.0" y="1540.0" />
+        <di:waypoint x="476.0" y="1540.0" />
+        <di:waypoint x="476.0" y="1570.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow4" bpmnElement="N_p0_flow4">
+        <di:waypoint x="480.0" y="1634.0" />
+        <di:waypoint x="480.0" y="1694.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow5" bpmnElement="N_p0_flow5">
+        <di:waypoint x="480.0" y="1758.0" />
+        <di:waypoint x="480.0" y="1818.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow20" bpmnElement="N_p0_flow20">
+        <di:waypoint x="480.0" y="1882.0" />
+        <di:waypoint x="480.0" y="1951.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow13" bpmnElement="N_p0_flow13">
+        <di:waypoint x="475.0" y="1992.0" />
+        <di:waypoint x="475.0" y="2036.0" />
+        <di:waypoint x="370.0" y="2036.0" />
+        <di:waypoint x="370.0" y="2345.0" />
+        <di:waypoint x="480.0" y="2345.0" />
+        <di:waypoint x="480.0" y="2358.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="400.0" y="1997.0" width="45" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow14" bpmnElement="N_p0_flow14" color:border-color="#00678a">
+        <di:waypoint x="485.0" y="1992.0" />
+        <di:waypoint x="485.0" y="2080.0" />
+        <di:waypoint x="1120.0" y="2080.0" />
+        <di:waypoint x="1120.0" y="2110.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="774.0" y="2041.0" width="58" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow17" bpmnElement="N_p0_flow17">
+        <di:waypoint x="1120.0" y="2174.0" />
+        <di:waypoint x="1120.0" y="2250.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_return_N_p0_alt_endstop" bpmnElement="return_N_p0_alt_endstop" color:border-color="#00678a">
+        <di:waypoint x="1120.0" y="2282.0" />
+        <di:waypoint x="1120.0" y="2328.0" />
+        <di:waypoint x="1010.0" y="2328.0" />
+        <di:waypoint x="1010.0" y="3004.0" />
+        <di:waypoint x="164.0" y="3004.0" />
+        <di:waypoint x="164.0" y="3022.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow6" bpmnElement="N_p0_flow6">
+        <di:waypoint x="480.0" y="2422.0" />
+        <di:waypoint x="480.0" y="2482.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow21" bpmnElement="N_p0_flow21">
+        <di:waypoint x="480.0" y="2546.0" />
+        <di:waypoint x="480.0" y="2615.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow15" bpmnElement="N_p0_flow15">
+        <di:waypoint x="475.0" y="2656.0" />
+        <di:waypoint x="475.0" y="2700.0" />
+        <di:waypoint x="370.0" y="2700.0" />
+        <di:waypoint x="370.0" y="2896.0" />
+        <di:waypoint x="484.0" y="2896.0" />
+        <di:waypoint x="484.0" y="2914.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="414.0" y="2661.0" width="18" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow16" bpmnElement="N_p0_flow16">
+        <di:waypoint x="485.0" y="2656.0" />
+        <di:waypoint x="485.0" y="2744.0" />
+        <di:waypoint x="480.0" y="2744.0" />
+        <di:waypoint x="480.0" y="2774.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="545.0" y="2705.0" width="15" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p0_flow7" bpmnElement="N_p0_flow7">
+        <di:waypoint x="480.0" y="2838.0" />
+        <di:waypoint x="480.0" y="2868.0" />
+        <di:waypoint x="476.0" y="2868.0" />
+        <di:waypoint x="476.0" y="2914.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_return_N_p0_z" bpmnElement="return_N_p0_z" color:border-color="#00678a">
+        <di:waypoint x="480.0" y="2946.0" />
+        <di:waypoint x="480.0" y="2992.0" />
+        <di:waypoint x="156.0" y="2992.0" />
+        <di:waypoint x="156.0" y="3022.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow21" bpmnElement="N_flow21">
+        <di:waypoint x="160.0" y="3086.0" />
+        <di:waypoint x="160.0" y="3155.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow3" bpmnElement="N_flow3">
+        <di:waypoint x="155.0" y="3196.0" />
+        <di:waypoint x="155.0" y="3240.0" />
+        <di:waypoint x="14.0" y="3240.0" />
+        <di:waypoint x="14.0" y="14305.0" />
+        <di:waypoint x="152.0" y="14305.0" />
+        <di:waypoint x="152.0" y="14318.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="56.0" y="3201.0" width="58" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow4" bpmnElement="N_flow4" color:border-color="#00678a">
+        <di:waypoint x="165.0" y="3196.0" />
+        <di:waypoint x="165.0" y="3284.0" />
+        <di:waypoint x="480.0" y="3284.0" />
+        <di:waypoint x="480.0" y="3330.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="307.0" y="3245.0" width="32" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow0" bpmnElement="N_p1_flow0">
+        <di:waypoint x="480.0" y="3362.0" />
+        <di:waypoint x="480.0" y="3438.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow1" bpmnElement="N_p1_flow1">
+        <di:waypoint x="480.0" y="3502.0" />
+        <di:waypoint x="480.0" y="3562.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow2" bpmnElement="N_p1_flow2">
+        <di:waypoint x="480.0" y="3626.0" />
+        <di:waypoint x="480.0" y="3656.0" />
+        <di:waypoint x="476.0" y="3656.0" />
+        <di:waypoint x="476.0" y="3686.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow10" bpmnElement="N_p1_flow10">
+        <di:waypoint x="485.0" y="4604.0" />
+        <di:waypoint x="485.0" y="4692.0" />
+        <di:waypoint x="370.0" y="4692.0" />
+        <di:waypoint x="370.0" y="3668.0" />
+        <di:waypoint x="484.0" y="3668.0" />
+        <di:waypoint x="484.0" y="3686.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="385.0" y="4653.0" width="85" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow3" bpmnElement="N_p1_flow3">
+        <di:waypoint x="480.0" y="3750.0" />
+        <di:waypoint x="480.0" y="3810.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow4" bpmnElement="N_p1_flow4">
+        <di:waypoint x="480.0" y="3874.0" />
+        <di:waypoint x="480.0" y="3934.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow5" bpmnElement="N_p1_flow5">
+        <di:waypoint x="480.0" y="3998.0" />
+        <di:waypoint x="480.0" y="4058.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow6" bpmnElement="N_p1_flow6">
+        <di:waypoint x="480.0" y="4122.0" />
+        <di:waypoint x="480.0" y="4182.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow7" bpmnElement="N_p1_flow7">
+        <di:waypoint x="480.0" y="4246.0" />
+        <di:waypoint x="480.0" y="4306.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow8" bpmnElement="N_p1_flow8">
+        <di:waypoint x="480.0" y="4370.0" />
+        <di:waypoint x="480.0" y="4430.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow11" bpmnElement="N_p1_flow11">
+        <di:waypoint x="480.0" y="4494.0" />
+        <di:waypoint x="480.0" y="4563.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p1_flow9" bpmnElement="N_p1_flow9">
+        <di:waypoint x="475.0" y="4604.0" />
+        <di:waypoint x="475.0" y="4648.0" />
+        <di:waypoint x="480.0" y="4648.0" />
+        <di:waypoint x="480.0" y="4738.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="501.0" y="4609.0" width="82" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_return_N_p1_z" bpmnElement="return_N_p1_z">
+        <di:waypoint x="480.0" y="4770.0" />
+        <di:waypoint x="480.0" y="4816.0" />
+        <di:waypoint x="488.0" y="4816.0" />
+        <di:waypoint x="488.0" y="4862.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow11" bpmnElement="N_flow11">
+        <di:waypoint x="480.0" y="11558.0" />
+        <di:waypoint x="480.0" y="11588.0" />
+        <di:waypoint x="364.0" y="11588.0" />
+        <di:waypoint x="364.0" y="4849.0" />
+        <di:waypoint x="472.0" y="4849.0" />
+        <di:waypoint x="472.0" y="4862.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="385.0" y="11549.0" width="74" height="40" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow17" bpmnElement="N_flow17" color:border-color="#00678a">
+        <di:waypoint x="155.0" y="13952.0" />
+        <di:waypoint x="155.0" y="13996.0" />
+        <di:waypoint x="20.0" y="13996.0" />
+        <di:waypoint x="20.0" y="4844.0" />
+        <di:waypoint x="480.0" y="4844.0" />
+        <di:waypoint x="480.0" y="4862.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="52.0" y="13957.0" width="71" height="40" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow0" bpmnElement="N_p2_flow0">
+        <di:waypoint x="480.0" y="4894.0" />
+        <di:waypoint x="480.0" y="4970.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow1" bpmnElement="N_p2_flow1">
+        <di:waypoint x="480.0" y="5034.0" />
+        <di:waypoint x="480.0" y="5094.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow2" bpmnElement="N_p2_flow2">
+        <di:waypoint x="480.0" y="5158.0" />
+        <di:waypoint x="480.0" y="5188.0" />
+        <di:waypoint x="472.0" y="5188.0" />
+        <di:waypoint x="472.0" y="5218.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow15" bpmnElement="N_p2_flow15">
+        <di:waypoint x="485.0" y="5640.0" />
+        <di:waypoint x="485.0" y="5728.0" />
+        <di:waypoint x="370.0" y="5728.0" />
+        <di:waypoint x="370.0" y="5200.0" />
+        <di:waypoint x="480.0" y="5200.0" />
+        <di:waypoint x="480.0" y="5218.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="396.0" y="5689.0" width="63" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow19" bpmnElement="N_p2_flow19" color:border-color="#00678a">
+        <di:waypoint x="805.0" y="7588.0" />
+        <di:waypoint x="805.0" y="7676.0" />
+        <di:waypoint x="690.0" y="7676.0" />
+        <di:waypoint x="690.0" y="5195.0" />
+        <di:waypoint x="488.0" y="5195.0" />
+        <di:waypoint x="488.0" y="5218.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="711.0" y="7637.0" width="74" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow3" bpmnElement="N_p2_flow3">
+        <di:waypoint x="480.0" y="5282.0" />
+        <di:waypoint x="480.0" y="5342.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow4" bpmnElement="N_p2_flow4">
+        <di:waypoint x="480.0" y="5406.0" />
+        <di:waypoint x="480.0" y="5466.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow21" bpmnElement="N_p2_flow21">
+        <di:waypoint x="480.0" y="5530.0" />
+        <di:waypoint x="480.0" y="5599.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow14" bpmnElement="N_p2_flow14">
+        <di:waypoint x="475.0" y="5640.0" />
+        <di:waypoint x="475.0" y="5684.0" />
+        <di:waypoint x="480.0" y="5684.0" />
+        <di:waypoint x="480.0" y="5758.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="524.0" y="5645.0" width="37" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow5" bpmnElement="N_p2_flow5" color:border-color="#00678a">
+        <di:waypoint x="480.0" y="5822.0" />
+        <di:waypoint x="480.0" y="5852.0" />
+        <di:waypoint x="160.0" y="5852.0" />
+        <di:waypoint x="160.0" y="5882.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow6" bpmnElement="N_p2_flow6">
+        <di:waypoint x="160.0" y="5946.0" />
+        <di:waypoint x="160.0" y="6006.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow22" bpmnElement="N_p2_flow22">
+        <di:waypoint x="160.0" y="6070.0" />
+        <di:waypoint x="160.0" y="6139.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow16" bpmnElement="N_p2_flow16">
+        <di:waypoint x="155.0" y="6180.0" />
+        <di:waypoint x="155.0" y="6224.0" />
+        <di:waypoint x="50.0" y="6224.0" />
+        <di:waypoint x="50.0" y="6533.0" />
+        <di:waypoint x="160.0" y="6533.0" />
+        <di:waypoint x="160.0" y="6546.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="80.0" y="6185.0" width="45" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow17" bpmnElement="N_p2_flow17">
+        <di:waypoint x="165.0" y="6180.0" />
+        <di:waypoint x="165.0" y="6268.0" />
+        <di:waypoint x="160.0" y="6268.0" />
+        <di:waypoint x="160.0" y="6298.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="203.0" y="6229.0" width="58" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow20" bpmnElement="N_p2_flow20">
+        <di:waypoint x="160.0" y="6362.0" />
+        <di:waypoint x="160.0" y="6438.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_return_N_p2_alt_endlim" bpmnElement="return_N_p2_alt_endlim">
+        <di:waypoint x="160.0" y="6470.0" />
+        <di:waypoint x="160.0" y="6516.0" />
+        <di:waypoint x="44.0" y="6516.0" />
+        <di:waypoint x="44.0" y="7812.0" />
+        <di:waypoint x="164.0" y="7812.0" />
+        <di:waypoint x="164.0" y="7830.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow7" bpmnElement="N_p2_flow7" color:border-color="#00678a">
+        <di:waypoint x="160.0" y="6610.0" />
+        <di:waypoint x="160.0" y="6640.0" />
+        <di:waypoint x="800.0" y="6640.0" />
+        <di:waypoint x="800.0" y="6670.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow8" bpmnElement="N_p2_flow8">
+        <di:waypoint x="800.0" y="6734.0" />
+        <di:waypoint x="800.0" y="6794.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow9" bpmnElement="N_p2_flow9">
+        <di:waypoint x="800.0" y="6858.0" />
+        <di:waypoint x="800.0" y="6918.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow10" bpmnElement="N_p2_flow10">
+        <di:waypoint x="800.0" y="6982.0" />
+        <di:waypoint x="800.0" y="7042.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow11" bpmnElement="N_p2_flow11">
+        <di:waypoint x="800.0" y="7106.0" />
+        <di:waypoint x="800.0" y="7166.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow12" bpmnElement="N_p2_flow12">
+        <di:waypoint x="800.0" y="7230.0" />
+        <di:waypoint x="800.0" y="7290.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow13" bpmnElement="N_p2_flow13">
+        <di:waypoint x="800.0" y="7354.0" />
+        <di:waypoint x="800.0" y="7414.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow23" bpmnElement="N_p2_flow23">
+        <di:waypoint x="800.0" y="7478.0" />
+        <di:waypoint x="800.0" y="7547.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p2_flow18" bpmnElement="N_p2_flow18">
+        <di:waypoint x="795.0" y="7588.0" />
+        <di:waypoint x="795.0" y="7632.0" />
+        <di:waypoint x="800.0" y="7632.0" />
+        <di:waypoint x="800.0" y="7722.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="826.0" y="7593.0" width="73" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_return_N_p2_z" bpmnElement="return_N_p2_z" color:border-color="#00678a">
+        <di:waypoint x="800.0" y="7754.0" />
+        <di:waypoint x="800.0" y="7800.0" />
+        <di:waypoint x="156.0" y="7800.0" />
+        <di:waypoint x="156.0" y="7830.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow22" bpmnElement="N_flow22">
+        <di:waypoint x="160.0" y="7894.0" />
+        <di:waypoint x="160.0" y="7963.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow7" bpmnElement="N_flow7">
+        <di:waypoint x="155.0" y="8004.0" />
+        <di:waypoint x="155.0" y="8048.0" />
+        <di:waypoint x="26.0" y="8048.0" />
+        <di:waypoint x="26.0" y="14300.0" />
+        <di:waypoint x="160.0" y="14300.0" />
+        <di:waypoint x="160.0" y="14318.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="50.0" y="8009.0" width="81" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow8" bpmnElement="N_flow8" color:border-color="#00678a">
+        <di:waypoint x="165.0" y="8004.0" />
+        <di:waypoint x="165.0" y="8092.0" />
+        <di:waypoint x="1120.0" y="8092.0" />
+        <di:waypoint x="1120.0" y="8138.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="611.0" y="8053.0" width="63" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow0" bpmnElement="N_p3_flow0">
+        <di:waypoint x="1120.0" y="8170.0" />
+        <di:waypoint x="1120.0" y="8246.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow1" bpmnElement="N_p3_flow1">
+        <di:waypoint x="1120.0" y="8310.0" />
+        <di:waypoint x="1120.0" y="8370.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow2" bpmnElement="N_p3_flow2">
+        <di:waypoint x="1120.0" y="8434.0" />
+        <di:waypoint x="1120.0" y="8494.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow22" bpmnElement="N_p3_flow22">
+        <di:waypoint x="1120.0" y="8558.0" />
+        <di:waypoint x="1120.0" y="8627.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow9" bpmnElement="N_p3_flow9">
+        <di:waypoint x="1110.0" y="8663.0" />
+        <di:waypoint x="1110.0" y="8712.0" />
+        <di:waypoint x="1120.0" y="8712.0" />
+        <di:waypoint x="1120.0" y="8830.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1159.0" y="8673.0" width="37" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow10" bpmnElement="N_p3_flow10">
+        <di:waypoint x="1120.0" y="8673.0" />
+        <di:waypoint x="1120.0" y="8756.0" />
+        <di:waypoint x="980.0" y="8756.0" />
+        <di:waypoint x="980.0" y="10649.0" />
+        <di:waypoint x="1112.0" y="10649.0" />
+        <di:waypoint x="1112.0" y="10662.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1008.0" y="8717.0" width="84" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow11" bpmnElement="N_p3_flow11">
+        <di:waypoint x="1130.0" y="8663.0" />
+        <di:waypoint x="1130.0" y="8800.0" />
+        <di:waypoint x="974.0" y="8800.0" />
+        <di:waypoint x="974.0" y="10897.0" />
+        <di:waypoint x="1112.0" y="10897.0" />
+        <di:waypoint x="1112.0" y="10910.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1023.0" y="8761.0" width="59" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow3" bpmnElement="N_p3_flow3">
+        <di:waypoint x="1120.0" y="8894.0" />
+        <di:waypoint x="1120.0" y="8954.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow4" bpmnElement="N_p3_flow4">
+        <di:waypoint x="1120.0" y="9018.0" />
+        <di:waypoint x="1120.0" y="9078.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow5" bpmnElement="N_p3_flow5">
+        <di:waypoint x="1120.0" y="9142.0" />
+        <di:waypoint x="1120.0" y="9202.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow23" bpmnElement="N_p3_flow23">
+        <di:waypoint x="1120.0" y="9266.0" />
+        <di:waypoint x="1120.0" y="9335.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow12" bpmnElement="N_p3_flow12" color:border-color="#00678a">
+        <di:waypoint x="1110.0" y="9371.0" />
+        <di:waypoint x="1110.0" y="9420.0" />
+        <di:waypoint x="160.0" y="9420.0" />
+        <di:waypoint x="160.0" y="9538.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="617.0" y="9381.0" width="37" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow13" bpmnElement="N_p3_flow13">
+        <di:waypoint x="1120.0" y="9381.0" />
+        <di:waypoint x="1120.0" y="9464.0" />
+        <di:waypoint x="992.0" y="9464.0" />
+        <di:waypoint x="992.0" y="10644.0" />
+        <di:waypoint x="1120.0" y="10644.0" />
+        <di:waypoint x="1120.0" y="10662.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1015.0" y="9425.0" width="83" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow14" bpmnElement="N_p3_flow14">
+        <di:waypoint x="1130.0" y="9371.0" />
+        <di:waypoint x="1130.0" y="9508.0" />
+        <di:waypoint x="986.0" y="9508.0" />
+        <di:waypoint x="986.0" y="10892.0" />
+        <di:waypoint x="1120.0" y="10892.0" />
+        <di:waypoint x="1120.0" y="10910.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1013.0" y="9469.0" width="90" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow24" bpmnElement="N_p3_flow24">
+        <di:waypoint x="160.0" y="9602.0" />
+        <di:waypoint x="160.0" y="9671.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow15" bpmnElement="N_p3_flow15">
+        <di:waypoint x="155.0" y="9712.0" />
+        <di:waypoint x="155.0" y="9756.0" />
+        <di:waypoint x="160.0" y="9756.0" />
+        <di:waypoint x="160.0" y="9830.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="198.0" y="9717.0" width="49" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow16" bpmnElement="N_p3_flow16" color:border-color="#00678a">
+        <di:waypoint x="165.0" y="9712.0" />
+        <di:waypoint x="165.0" y="9800.0" />
+        <di:waypoint x="50.0" y="9800.0" />
+        <di:waypoint x="50.0" y="10401.0" />
+        <di:waypoint x="1116.0" y="10401.0" />
+        <di:waypoint x="1116.0" y="10414.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="68.0" y="9761.0" width="79" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow6" bpmnElement="N_p3_flow6" color:border-color="#00678a">
+        <di:waypoint x="160.0" y="9894.0" />
+        <di:waypoint x="160.0" y="9924.0" />
+        <di:waypoint x="1120.0" y="9924.0" />
+        <di:waypoint x="1120.0" y="9954.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow7" bpmnElement="N_p3_flow7">
+        <di:waypoint x="1120.0" y="10018.0" />
+        <di:waypoint x="1120.0" y="10078.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow25" bpmnElement="N_p3_flow25">
+        <di:waypoint x="1120.0" y="10142.0" />
+        <di:waypoint x="1120.0" y="10211.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow17" bpmnElement="N_p3_flow17">
+        <di:waypoint x="1110.0" y="10247.0" />
+        <di:waypoint x="1110.0" y="10296.0" />
+        <di:waypoint x="1124.0" y="10296.0" />
+        <di:waypoint x="1124.0" y="10414.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1159.0" y="10257.0" width="37" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow18" bpmnElement="N_p3_flow18">
+        <di:waypoint x="1120.0" y="10257.0" />
+        <di:waypoint x="1120.0" y="10340.0" />
+        <di:waypoint x="1010.0" y="10340.0" />
+        <di:waypoint x="1010.0" y="10639.0" />
+        <di:waypoint x="1128.0" y="10639.0" />
+        <di:waypoint x="1128.0" y="10662.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1023.0" y="10301.0" width="84" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow19" bpmnElement="N_p3_flow19">
+        <di:waypoint x="1130.0" y="10247.0" />
+        <di:waypoint x="1130.0" y="10384.0" />
+        <di:waypoint x="998.0" y="10384.0" />
+        <di:waypoint x="998.0" y="10887.0" />
+        <di:waypoint x="1128.0" y="10887.0" />
+        <di:waypoint x="1128.0" y="10910.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1025.0" y="10345.0" width="78" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow8" bpmnElement="N_p3_flow8">
+        <di:waypoint x="1120.0" y="10478.0" />
+        <di:waypoint x="1120.0" y="10554.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_return_N_p3_z" bpmnElement="return_N_p3_z">
+        <di:waypoint x="1120.0" y="10586.0" />
+        <di:waypoint x="1120.0" y="10632.0" />
+        <di:waypoint x="1004.0" y="10632.0" />
+        <di:waypoint x="1004.0" y="11145.0" />
+        <di:waypoint x="1112.0" y="11145.0" />
+        <di:waypoint x="1112.0" y="11158.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow20" bpmnElement="N_p3_flow20">
+        <di:waypoint x="1120.0" y="10726.0" />
+        <di:waypoint x="1120.0" y="10802.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_return_N_p3_alt_endfix" bpmnElement="return_N_p3_alt_endfix">
+        <di:waypoint x="1120.0" y="10834.0" />
+        <di:waypoint x="1120.0" y="10880.0" />
+        <di:waypoint x="1010.0" y="10880.0" />
+        <di:waypoint x="1010.0" y="11140.0" />
+        <di:waypoint x="1120.0" y="11140.0" />
+        <di:waypoint x="1120.0" y="11158.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p3_flow21" bpmnElement="N_p3_flow21">
+        <di:waypoint x="1120.0" y="10974.0" />
+        <di:waypoint x="1120.0" y="11050.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_return_N_p3_alt_endblock" bpmnElement="return_N_p3_alt_endblock">
+        <di:waypoint x="1120.0" y="11082.0" />
+        <di:waypoint x="1120.0" y="11128.0" />
+        <di:waypoint x="1128.0" y="11128.0" />
+        <di:waypoint x="1128.0" y="11158.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow23" bpmnElement="N_flow23">
+        <di:waypoint x="1120.0" y="11222.0" />
+        <di:waypoint x="1120.0" y="11291.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow10" bpmnElement="N_flow10" color:border-color="#00678a">
+        <di:waypoint x="1110.0" y="11327.0" />
+        <di:waypoint x="1110.0" y="11376.0" />
+        <di:waypoint x="480.0" y="11376.0" />
+        <di:waypoint x="480.0" y="11494.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="755.0" y="11337.0" width="81" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow12" bpmnElement="N_flow12" color:border-color="#00678a">
+        <di:waypoint x="1120.0" y="11337.0" />
+        <di:waypoint x="1120.0" y="11420.0" />
+        <di:waypoint x="1004.0" y="11420.0" />
+        <di:waypoint x="1004.0" y="14295.0" />
+        <di:waypoint x="168.0" y="14295.0" />
+        <di:waypoint x="168.0" y="14318.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1030.0" y="11381.0" width="65" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow13" bpmnElement="N_flow13" color:border-color="#00678a">
+        <di:waypoint x="1130.0" y="11327.0" />
+        <di:waypoint x="1130.0" y="11464.0" />
+        <di:waypoint x="1010.0" y="11464.0" />
+        <di:waypoint x="1010.0" y="11605.0" />
+        <di:waypoint x="160.0" y="11605.0" />
+        <di:waypoint x="160.0" y="11618.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="1028.0" y="11425.0" width="84" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow24" bpmnElement="N_flow24">
+        <di:waypoint x="160.0" y="11682.0" />
+        <di:waypoint x="160.0" y="11751.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow14" bpmnElement="N_flow14">
+        <di:waypoint x="155.0" y="11792.0" />
+        <di:waypoint x="155.0" y="11836.0" />
+        <di:waypoint x="160.0" y="11836.0" />
+        <di:waypoint x="160.0" y="11926.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="213.0" y="11797.0" width="18" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow15" bpmnElement="N_flow15">
+        <di:waypoint x="165.0" y="11792.0" />
+        <di:waypoint x="165.0" y="11880.0" />
+        <di:waypoint x="32.0" y="11880.0" />
+        <di:waypoint x="32.0" y="14057.0" />
+        <di:waypoint x="156.0" y="14057.0" />
+        <di:waypoint x="156.0" y="14070.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="91.0" y="11841.0" width="15" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow0" bpmnElement="N_p4_flow0">
+        <di:waypoint x="160.0" y="11958.0" />
+        <di:waypoint x="160.0" y="12034.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow1" bpmnElement="N_p4_flow1">
+        <di:waypoint x="160.0" y="12098.0" />
+        <di:waypoint x="160.0" y="12158.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow12" bpmnElement="N_p4_flow12">
+        <di:waypoint x="160.0" y="12222.0" />
+        <di:waypoint x="160.0" y="12291.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow4" bpmnElement="N_p4_flow4" color:border-color="#00678a">
+        <di:waypoint x="155.0" y="12332.0" />
+        <di:waypoint x="155.0" y="12376.0" />
+        <di:waypoint x="1440.0" y="12376.0" />
+        <di:waypoint x="1440.0" y="12450.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="768.0" y="12337.0" width="60" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow5" bpmnElement="N_p4_flow5">
+        <di:waypoint x="165.0" y="12332.0" />
+        <di:waypoint x="165.0" y="12420.0" />
+        <di:waypoint x="38.0" y="12420.0" />
+        <di:waypoint x="38.0" y="13096.0" />
+        <di:waypoint x="160.0" y="13096.0" />
+        <di:waypoint x="160.0" y="13114.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="66.0" y="12381.0" width="72" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow2" bpmnElement="N_p4_flow2" color:border-color="#00678a">
+        <di:waypoint x="1440.0" y="12514.0" />
+        <di:waypoint x="1440.0" y="12544.0" />
+        <di:waypoint x="160.0" y="12544.0" />
+        <di:waypoint x="160.0" y="12574.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow13" bpmnElement="N_p4_flow13">
+        <di:waypoint x="160.0" y="12638.0" />
+        <di:waypoint x="160.0" y="12707.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow6" bpmnElement="N_p4_flow6">
+        <di:waypoint x="155.0" y="12748.0" />
+        <di:waypoint x="155.0" y="12792.0" />
+        <di:waypoint x="160.0" y="12792.0" />
+        <di:waypoint x="160.0" y="12866.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="190.0" y="12753.0" width="65" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow7" bpmnElement="N_p4_flow7">
+        <di:waypoint x="165.0" y="12748.0" />
+        <di:waypoint x="165.0" y="12836.0" />
+        <di:waypoint x="44.0" y="12836.0" />
+        <di:waypoint x="44.0" y="12977.0" />
+        <di:waypoint x="160.0" y="12977.0" />
+        <di:waypoint x="160.0" y="12990.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="73.0" y="12797.0" width="64" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow3" bpmnElement="N_p4_flow3">
+        <di:waypoint x="160.0" y="12930.0" />
+        <di:waypoint x="160.0" y="12960.0" />
+        <di:waypoint x="50.0" y="12960.0" />
+        <di:waypoint x="50.0" y="13101.0" />
+        <di:waypoint x="152.0" y="13101.0" />
+        <di:waypoint x="152.0" y="13114.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow8" bpmnElement="N_p4_flow8">
+        <di:waypoint x="160.0" y="13054.0" />
+        <di:waypoint x="160.0" y="13084.0" />
+        <di:waypoint x="168.0" y="13084.0" />
+        <di:waypoint x="168.0" y="13114.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="194.0" y="13045.0" width="67" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow14" bpmnElement="N_p4_flow14">
+        <di:waypoint x="160.0" y="13178.0" />
+        <di:waypoint x="160.0" y="13247.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow9" bpmnElement="N_p4_flow9" color:border-color="#00678a">
+        <di:waypoint x="155.0" y="13288.0" />
+        <di:waypoint x="155.0" y="13332.0" />
+        <di:waypoint x="1440.0" y="13332.0" />
+        <di:waypoint x="1440.0" y="13406.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="758.0" y="13293.0" width="79" height="14" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow10" bpmnElement="N_p4_flow10">
+        <di:waypoint x="165.0" y="13288.0" />
+        <di:waypoint x="165.0" y="13376.0" />
+        <di:waypoint x="50.0" y="13376.0" />
+        <di:waypoint x="50.0" y="13657.0" />
+        <di:waypoint x="160.0" y="13657.0" />
+        <di:waypoint x="160.0" y="13670.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="82.0" y="13337.0" width="52" height="27" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_p4_flow11" bpmnElement="N_p4_flow11">
+        <di:waypoint x="1440.0" y="13470.0" />
+        <di:waypoint x="1440.0" y="13546.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_return_N_p4_alt_endh" bpmnElement="return_N_p4_alt_endh" color:border-color="#00678a">
+        <di:waypoint x="1440.0" y="13578.0" />
+        <di:waypoint x="1440.0" y="13624.0" />
+        <di:waypoint x="1330.0" y="13624.0" />
+        <di:waypoint x="1330.0" y="13760.0" />
+        <di:waypoint x="164.0" y="13760.0" />
+        <di:waypoint x="164.0" y="13778.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_return_N_p4_z" bpmnElement="return_N_p4_z">
+        <di:waypoint x="160.0" y="13702.0" />
+        <di:waypoint x="160.0" y="13748.0" />
+        <di:waypoint x="156.0" y="13748.0" />
+        <di:waypoint x="156.0" y="13778.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow25" bpmnElement="N_flow25">
+        <di:waypoint x="160.0" y="13842.0" />
+        <di:waypoint x="160.0" y="13911.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow18" bpmnElement="N_flow18">
+        <di:waypoint x="165.0" y="13952.0" />
+        <di:waypoint x="165.0" y="14040.0" />
+        <di:waypoint x="164.0" y="14040.0" />
+        <di:waypoint x="164.0" y="14070.0" />
+        <bd:BPMNLabel>
+          <dc:Bounds x="207.0" y="14001.0" width="51" height="40" />
+        </bd:BPMNLabel>
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow19" bpmnElement="N_flow19">
+        <di:waypoint x="160.0" y="14134.0" />
+        <di:waypoint x="160.0" y="14210.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_N_flow20" bpmnElement="N_flow20">
+        <di:waypoint x="160.0" y="14382.0" />
+        <di:waypoint x="160.0" y="14458.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_Association_14bikrt" bpmnElement="Association_14bikrt">
+        <di:waypoint x="339.2" y="274.0" />
+        <di:waypoint x="257.0" y="274.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_Association_0qql3kp" bpmnElement="Association_0qql3kp">
+        <di:waypoint x="339.2" y="522.0" />
+        <di:waypoint x="257.0" y="522.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_Association_04x5hcm" bpmnElement="Association_04x5hcm">
+        <di:waypoint x="339.2" y="646.0" />
+        <di:waypoint x="257.0" y="646.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_Association_09ylhao" bpmnElement="Association_09ylhao">
+        <di:waypoint x="339.2" y="938.0" />
+        <di:waypoint x="257.0" y="938.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_Association_0nbsl3x" bpmnElement="Association_0nbsl3x">
+        <di:waypoint x="339.2" y="1186.0" />
+        <di:waypoint x="257.0" y="1186.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="Association_186iirw_di" bpmnElement="Association_186iirw">
+        <di:waypoint x="577.0" y="2798.0" />
+        <di:waypoint x="695.0" y="2821.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_Association_1osp2aw" bpmnElement="Association_1osp2aw">
+        <di:waypoint x="339.0" y="3054.0" />
+        <di:waypoint x="257.0" y="3054.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="edge_Association_154tksf" bpmnElement="Association_154tksf">
+        <di:waypoint x="659.0" y="4214.0" />
+        <di:waypoint x="577.0" y="4214.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="Association_0o92tw0_di" bpmnElement="Association_0o92tw0">
+        <di:waypoint x="496.0" y="2930.0" />
+        <di:waypoint x="695.0" y="2965.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="Association_1kaw26v_di" bpmnElement="Association_1kaw26v">
+        <di:waypoint x="577.0" y="3480.0" />
+        <di:waypoint x="695.0" y="3530.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="Association_1pkeupy_di" bpmnElement="Association_1pkeupy">
+        <di:waypoint x="577.0" y="3951.0" />
+        <di:waypoint x="695.0" y="3960.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="Association_0wga2nx_di" bpmnElement="Association_0wga2nx">
+        <di:waypoint x="577.0" y="4099.0" />
+        <di:waypoint x="695.0" y="4150.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="Association_184v6ar_di" bpmnElement="Association_184v6ar">
+        <di:waypoint x="577.0" y="5116.0" />
+        <di:waypoint x="695.0" y="5134.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="Association_0i1qfmq_di" bpmnElement="Association_0i1qfmq">
+        <di:waypoint x="577.0" y="5248.0" />
+        <di:waypoint x="695.0" y="5280.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="Association_01abd1j_di" bpmnElement="Association_01abd1j">
+        <di:waypoint x="1343.0" y="12482.0" />
+        <di:waypoint x="1310.0" y="12480.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNEdge id="Association_1a7nnuu_di" bpmnElement="Association_1a7nnuu">
+        <di:waypoint x="165.0" y="12836.0" />
+        <di:waypoint x="350.0" y="12815.0" />
+      </bd:BPMNEdge>
+      <bd:BPMNShape id="shape_TextAnnotation_TaskTool" bpmnElement="TextAnnotation_TaskTool">
+        <dc:Bounds x="339.0" y="233.0" width="220" height="82" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_TextAnnotation_0wvkyj6" bpmnElement="TextAnnotation_0wvkyj6">
+        <dc:Bounds x="339.0" y="481.0" width="220" height="82" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_TextAnnotation_1hylb8w" bpmnElement="TextAnnotation_1hylb8w">
+        <dc:Bounds x="339.0" y="605.0" width="220" height="82" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_TextAnnotation_0fzfuc8" bpmnElement="TextAnnotation_0fzfuc8">
+        <dc:Bounds x="339.0" y="897.0" width="220" height="82" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_TextAnnotation_1q4kwgg" bpmnElement="TextAnnotation_1q4kwgg">
+        <dc:Bounds x="339.0" y="1145.0" width="220" height="82" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_TextAnnotation_0vr71f6" bpmnElement="TextAnnotation_0vr71f6">
+        <dc:Bounds x="339.0" y="3013.0" width="220" height="117" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="shape_TextAnnotation_0xxgl7w" bpmnElement="TextAnnotation_0xxgl7w">
+        <dc:Bounds x="659.0" y="4173.0" width="220" height="117" />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="TextAnnotation_0fwizfb_di" bpmnElement="TextAnnotation_0fwizfb">
+        <dc:Bounds x="695.0" y="2771.0" width="360" height="108" />
+        <bd:BPMNLabel />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="TextAnnotation_0ucicx8_di" bpmnElement="TextAnnotation_0ucicx8">
+        <dc:Bounds x="695.0" y="2915.0" width="360" height="108" />
+        <bd:BPMNLabel />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="TextAnnotation_0hrlont_di" bpmnElement="TextAnnotation_0hrlont">
+        <dc:Bounds x="695.0" y="3480.0" width="360" height="108" />
+        <bd:BPMNLabel />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="TextAnnotation_1vg9eja_di" bpmnElement="TextAnnotation_1vg9eja">
+        <dc:Bounds x="695.0" y="3910.0" width="360" height="108" />
+        <bd:BPMNLabel />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="TextAnnotation_0ewvl07_di" bpmnElement="TextAnnotation_0ewvl07">
+        <dc:Bounds x="695.0" y="4100.0" width="360" height="108" />
+        <bd:BPMNLabel />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="TextAnnotation_1udldj3_di" bpmnElement="TextAnnotation_1udldj3">
+        <dc:Bounds x="695.0" y="5084.0" width="360" height="108" />
+        <bd:BPMNLabel />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="TextAnnotation_13j6o2d_di" bpmnElement="TextAnnotation_13j6o2d">
+        <dc:Bounds x="695.0" y="5230.0" width="360" height="108" />
+        <bd:BPMNLabel />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="TextAnnotation_047kqnn_di" bpmnElement="TextAnnotation_047kqnn">
+        <dc:Bounds x="950.0" y="12430.0" width="360" height="108" />
+        <bd:BPMNLabel />
+      </bd:BPMNShape>
+      <bd:BPMNShape id="TextAnnotation_1wfe2et_di" bpmnElement="TextAnnotation_1wfe2et">
+        <dc:Bounds x="350.0" y="12765.0" width="360" height="108" />
+        <bd:BPMNLabel />
+      </bd:BPMNShape>
+    </bd:BPMNPlane>
+  </bd:BPMNDiagram>
+</b:definitions>
