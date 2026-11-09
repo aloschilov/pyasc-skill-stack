@@ -8,6 +8,7 @@ prerequisites or resource blocks do not count as successful coverage.
 | Offline checks and shipped simulator fixtures | Required on each PR head by `pr-gate` and `examples-gate`; inspect that head's Actions results. These do not invoke a model or NPU. |
 | Optional source-built runtime | **Passed** for one pinned native CPython 3.12/x86_64 build: two clean imports, exact submission-runtime bytes, fixed add[128] compile/Model/numerics and suppressed-launch rejection. [Evidence and narrow scope](source-runtime.md#recorded-qualification); default runtime unchanged, no NPU qualification. |
 | Fresh multi-operator generation in simulator | **Passed** for three GLM-5.3 candidates (add/reduce/broadcast), three deterministic patterns each, unchanged bytes and suppressed-launch controls. [Manual pilot, limits and archive checksum](../tests/generation/README.md#manual-pilot-2026-11-06). No NPU, performance or nightly claim. |
+| Generated official CANNBench cases in CaModel | Exp 01, Softmax 01 and Transpose 02 passed on two seeds with suppressed-launch rejection. The original profile/skill cohort passed one of three cases on its first attempt and all three in five attempts. [Archive checksums](#cannbench-camodel-pilot) |
 | Fresh generation and hardware measurement | **Passed** for one GLM-5.3 SwiGlu candidate: 20/20 official cases, zero reported anti-cheat failures, device timings. [Durable result, revisions and checksum](hardware-lane.md). |
 | Performance improvement | **Not established**: the generated candidate's baseline/candidate geometric timing ratio is 0.017450287921005128x (slower). Service score is a separate metric. |
 | Other profile and recipe combinations | Offline regression scope only. The shared CANNBench recipe driver has no new hardware qualification; the manual simulator pilot above qualifies only its recorded executor/configuration. Historical results retain their original configurations. |
@@ -33,3 +34,15 @@ qualified fixed Add experiment: canonical Ascend C versus PyASC with fusion
 off/on, matching runtime bytes, per-launch ticks, numerics and negative controls.
 Its descriptive ratios are not NPU performance claims; fusion emitted an
 identical binary in this sample.
+
+## CANNBench CaModel pilot
+
+The November 7 pilot covered 3 of 1,060 cases from 3 of 53 operators at CANNBench
+revision `597a915e`. The same accepted bytes also passed the evaluator at
+`08d519c5`. Each archive includes its own member checksums.
+
+| Evidence | Archive SHA256 |
+|---|---|
+| [Three-case pilot](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-cannbench-camodel-pilot-20261107/cannbench-camodel-three-cases-20261107.tar.gz) | `3f72113b64b49759d55f37fc07c69f8b24315bf9284cdab2e8c30d0edc466efb` |
+| [Ordinary OpenCode walkthrough](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-cannbench-camodel-pilot-20261107/cannbench-readme-walkthrough-20261107.tar.gz) | `608869092674c2bed822ea84b3c2105ae09d1ce33c83a4deba3118369eee1740` |
+| [Two-case skill comparison](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-cannbench-camodel-pilot-20261107/cannbench-skill-scope-comparison-20261107.tar.gz) | `af02bfb6dde8916a86abc18e77944855df9f540e12b4896c88281cf60bf55286` |

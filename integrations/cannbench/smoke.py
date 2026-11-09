@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One external operator hardware check: prepare, submit once, collect by GET.
+"""Verify a local official case or prepare, submit and collect a hardware smoke.
 
 No generation campaign, remote shell, automatic retries or in-repo evidence.
 The runtime bundle is supplied separately; never download it implicitly.
@@ -296,7 +296,7 @@ def collect(queue, run, ledger):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('action', choices=('prepare', 'submit', 'collect'))
+    ap.add_argument('action', choices=('verify-case', 'prepare', 'submit', 'collect'))
     ap.add_argument('--run-dir', type=external, required=True)
     ap.add_argument('--state-dir', type=external, default=Path.home()/'.local/state/pyasc-cannbench-smoke')
     ap.add_argument('--credentials-file', type=Path)
@@ -304,7 +304,19 @@ def main():
     ap.add_argument('--runtime-sha256')
     ap.add_argument('--aggregation-token', default=os.environ.get('CANNBENCH_AGGREGATION_TOKEN'))
     ap.add_argument('--kernel-dir', type=Path, default=HERE/'smoke-kernel')
+    ap.add_argument('--case', metavar='OP/ID', help='Official simulator pilot case, e.g. exp/1')
+    ap.add_argument('--candidate', type=Path, help='Generated Python module for verify-case')
+    ap.add_argument('--benchmark', type=Path, help='CANNBench Git checkout for verify-case')
     args = ap.parse_args()
+    if args.action == 'verify-case':
+        if not (args.case and args.candidate and args.benchmark):
+            ap.error('verify-case requires --case, --candidate and --benchmark')
+        from official_case import verify
+        try:
+            return verify(args.case, args.candidate, args.benchmark, args.run_dir)
+        except (OSError, ValueError) as exc:
+            print(f'CaModel check stopped: {exc}', file=sys.stderr)
+            return 1
     if args.action == 'prepare' and (not args.runtime_bundle or not args.runtime_sha256 or not args.aggregation_token):
         ap.error('prepare requires --runtime-bundle, --runtime-sha256 and --aggregation-token')
     queue = client(args.credentials_file)

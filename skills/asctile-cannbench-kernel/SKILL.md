@@ -1,13 +1,16 @@
 ---
 name: asctile-cannbench-kernel
-description: Generate, review, and locally qualify PyASC/AscTile operator modules for the vendored CANNBench contract. Use for CANNBench kernels, full benchmark coverage, exact-runtime compile checks, submission preparation, or investigation of CANNBench failures.
+description: Generate, review, and locally qualify PyASC/AscTile operator modules for official CANNBench operator contracts. Use for a single simulator case, full operator submissions, exact-runtime compile checks, submission preparation, or investigation of CANNBench failures.
 ---
 
 # PyASC/AscTile CANNBench kernel workflow
 
-Use this skill only for the vendored benchmark under
-`integrations/cannbench/`. Its compact module contract overrides the generic
-standalone-kernel workflow.
+Use the supplied task contract and the requested output path. For a named
+simulator case, write the public operator for that row's shape, dtype and
+attributes. The evaluator imports your module and checks the entire file.
+Put test inputs, the Torch oracle and assertions in the evaluator, including
+when you would normally use a standalone `__main__` self-test. Packaging,
+performance tuning and the full-operator workflow below apply when requested.
 
 ## AscTile snapshot
 
@@ -34,12 +37,14 @@ from public tile operations is allowed.
 
 ## Non-negotiable contract
 
-- Treat the selected task's `proto.yaml`, `golden.py`, and every entry in
-  `cases.yaml` as one indivisible specification. CI uses its live task snapshot;
-  `tasks/<op>/` holds reusable local contracts, not a current service catalog.
+- Read the selected row of `cases.yaml` alongside `proto.yaml` and the public
+  signature. A service submission must implement every row of the operator
+  in its live task snapshot.
 - Produce one `candidate.py` with the exact top-level callable and defaults.
-- Use `torch` only for allocation, metadata views, and launches. Numerical work
-  belongs in public `@asctile.jit` kernels.
+- Tensor inputs already have the declared dtype and shape. Pass them directly
+  to the kernel. A fallback such as `torch.as_tensor(x)` fails the static check
+  even when unreachable. Use Torch for output allocation and metadata views.
+  Numerical work belongs in public `@asctile.jit` kernels.
 - Import and call `ensure_npu_platform` from `._pyasc_runtime`.
 - Record the actual target/platform and qualified resource query. The local
   `Ascend950PR_9599` compiler budget is 253952 B; this does not establish a
