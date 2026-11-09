@@ -1,7 +1,6 @@
 # CANNBench operator patterns
 
-These patterns describe the eleven vendored operators. Task files remain the
-normative source.
+Use the task’s public signature and case attributes to select a pattern.
 
 At the host/JIT boundary pass torch tensors directly. Do not call
 `Tensor.data_ptr()`: the pinned JIT derives pointer dtype specialization from
@@ -128,6 +127,44 @@ actually supported operand kinds against the current run's pinned runtime
 before relying on either form, and do not require
 extra full tiles solely to reproduce an older API restriction. Alignment
 and measured compare/select lowering limitations still need verification.
+
+## StridedSlice
+
+For a contiguous 1-D input with a positive stride `s`, a selected residue
+can be read as one column of a logical GM tensor with `s` columns. For an
+aligned start and complete rows, use a destination with one column. Tile
+along the row dimension. For fp16 the local tile's last dimension needs 16
+lanes (32 bytes), even when only one element in each row is valid. Set
+`real_shape=[valid_rows, 1]` on both the padded `copy_in` and the
+`copy_out`. This keeps adjacent output elements contiguous.
+
+Case 01 uses zero start, stride two and no masks. The padded column copy
+passed the official CaModel comparator on both seeds. A local tile shaped
+`[rows, 1]` failed lowering; reshaping contiguous pairs and transposing them
+failed numerical comparison. Recompute the offsets and bounds for other
+slices. Negative strides and masked axes need their own checks.
+
+## Gather
+
+Check the indexing formula in the task. For 2-D `dim=0` elementwise gather,
+each index selects a row **at its own column**. The pinned AscTile
+`gather` takes a rank-one local index vector and copies trailing subtensors
+from GM. For a flattened `[input_numel, 1]` source the call is
+`asctile.gather(src_gm, [0], 0, flat_indices)`. The second argument is a
+list of base offsets through the selected dimension; the fourth is the local
+index vector. Pass `num_indices=valid` when only a prefix of the tile is valid.
+The original 2-D index cannot be passed directly. A scalar GM read/write loop
+did not finish the first seed in 600 seconds on the original case 01 shapes.
+
+One device-only route transposes the index into a scratch tensor in square
+tiles. For column `c`, load a contiguous vector of row indices and compute
+`row * input_width + c` in the tile. View the input as GM
+`[input_numel, 1]` and gather along dimension zero, retaining a static
+trailing dimension. Copy the valid column into the output at its original
+row and column. Preserve the declared integer index dtype and account for
+padding when choosing a tile size. This route matched Torch on a reduced
+fp16/int32 case with two real kernel calls per seed. Full-size checks and
+runtime costs must be recorded separately.
 
 ## MaskedScale
 

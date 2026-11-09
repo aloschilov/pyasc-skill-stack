@@ -17,10 +17,20 @@ simulator's suppressed-launch numerical-control contract.
 ## Verify an official case in CaModel
 
 Start in the stack checkout with Git, Python 3.10+, Docker and a configured OpenCode provider.
-The pilot covers `exp/1` (elementwise), `softmax/1` (last-axis reduction) and
-`transpose/2` (2-D permutation). The checker exports the selected task and
-the official evaluator from CANNBench revision `597a915ec49735ee7d53057554bde426ef8c1d96`.
-Use a full clone that contains that commit.
+Choose a case below. The checker exports its task and official evaluator from
+the same pinned commit in your CANNBench clone.
+
+| Case | Task under `tasks/` | CANNBench commit |
+| --- | --- | --- |
+| `exp/1` | `level1/exp` | `597a915ec49735ee7d53057554bde426ef8c1d96` |
+| `softmax/1` | `level2/softmax` | `597a915ec49735ee7d53057554bde426ef8c1d96` |
+| `transpose/2` | `level3/transpose` | `597a915ec49735ee7d53057554bde426ef8c1d96` |
+| `maximum/1` | `level2/maximum` | `08d519c503843bce5fd4672ffa2259abeb22fb00` |
+| `strided_slice/1` | `level3/strided_slice` | `08d519c503843bce5fd4672ffa2259abeb22fb00` |
+| `gather/1` | `level2/gather` | `08d519c503843bce5fd4672ffa2259abeb22fb00` |
+
+Gather receives the declared int32 indices. At `08d519c5` the official
+reference converts them to int64 internally for the CPU comparison.
 
 ```sh
 STACK=$(pwd)
@@ -28,7 +38,7 @@ BENCH="$HOME/cann-bench"
 git clone https://gitcode.com/cann/cann-bench.git "$BENCH"  # once
 PROJECT=$(mktemp -d)  # use PROJECT="$STACK" to work in a fresh stack checkout
 CASE=exp/1
-TASK=level1/exp  # softmax/1 uses level2/softmax, transpose/2 uses level3/transpose
+TASK=level1/exp
 PIN=597a915ec49735ee7d53057554bde426ef8c1d96
 mkdir "$PROJECT/task"
 for file in desc.md cases.yaml proto.yaml golden.py; do
@@ -53,7 +63,13 @@ OPENCODE_CONFIG="$PROJECT/opencode.case.json" opencode run \
 Check the emitted bytes in two fresh network-isolated simulator processes. The
 first Docker pull needs network access. If OpenCode wrote the module in a
 subdirectory, pass its actual path to `--candidate`. Use a new output directory
-for each check.
+for each check. The three original cases allow five minutes per phase. Maximum,
+StridedSlice and Gather allow ten minutes per phase. A timeout records the
+active seed and any completed comparisons in the result. For a longer check of
+the same candidate, select a new run directory and pass a positive
+`--phase-timeout-seconds`. For example, the [verified full-size Gather 01 candidate](../../docs/verification-status.md#cannbench-camodel-pilot)
+used `--phase-timeout-seconds 5400` and spent about 43 minutes in the real
+phase. The report records the chosen limit.
 
 ```sh
 RUN="$HOME/pyasc-qualification-runs/case-$(date +%Y%m%d-%H%M%S)"

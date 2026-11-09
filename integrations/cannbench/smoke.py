@@ -307,13 +307,16 @@ def main():
     ap.add_argument('--case', metavar='OP/ID', help='Official simulator pilot case, e.g. exp/1')
     ap.add_argument('--candidate', type=Path, help='Generated Python module for verify-case')
     ap.add_argument('--benchmark', type=Path, help='CANNBench Git checkout for verify-case')
+    ap.add_argument('--phase-timeout-seconds', type=int, help='Wall-clock limit per verify-case simulator phase')
     args = ap.parse_args()
+    if args.phase_timeout_seconds is not None and args.action != 'verify-case':
+        ap.error('--phase-timeout-seconds applies only to verify-case')
     if args.action == 'verify-case':
         if not (args.case and args.candidate and args.benchmark):
             ap.error('verify-case requires --case, --candidate and --benchmark')
         from official_case import verify
         try:
-            return verify(args.case, args.candidate, args.benchmark, args.run_dir)
+            return verify(args.case, args.candidate, args.benchmark, args.run_dir, args.phase_timeout_seconds)
         except (OSError, ValueError) as exc:
             print(f'CaModel check stopped: {exc}', file=sys.stderr)
             return 1
