@@ -428,6 +428,13 @@ def build(catalog_path, output, loader=fetch, now=None):
     for path in (ROOT/'dashboard').glob('*.html'): shutil.copy2(path, output/path.name)
     for path in (ROOT/'dashboard').glob('*.js'): shutil.copy2(path, output/path.name)
     for path in (ROOT/'dashboard').glob('*.css'): shutil.copy2(path, output/path.name)
+    workflow_dir = output / 'workflows'
+    workflow_dir.mkdir()
+    assets = ['viewer.css', 'viewer.js']
+    for version in ('asc2-july-detailed', 'asctile-november-detailed'):
+        assets.extend(version + extension for extension in ('.html', '.bpmn', '.svg'))
+    for asset in assets:
+        shutil.copy2(ROOT / 'dashboard' / 'workflows' / asset, workflow_dir / asset)
     (output/'data.json').write_text(json.dumps(payload, indent=2, allow_nan=False)+'\n')
     return payload
 

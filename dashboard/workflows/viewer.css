@@ -1,0 +1,112 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  color: #152d3c;
+  font:
+    15px system-ui,
+    sans-serif;
+}
+header {
+  padding: 12px 20px;
+  background: white;
+  border-bottom: 1px solid #b7cbd1;
+}
+h1 {
+  font-size: 21px;
+  margin: 0 0 8px;
+}
+nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+button,
+select,
+a {
+  font: inherit;
+  color: inherit;
+}
+button,
+select {
+  border: 1px solid #9fb5be;
+  border-radius: 5px;
+  background: #fff;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+button[aria-current="true"] {
+  background: #134c60;
+  color: white;
+}
+a {
+  color: #005b7d;
+}
+#sheet {
+  height: 70vh;
+  min-height: 350px;
+  overflow: auto;
+  border-bottom: 1px solid #c1ced5;
+  scrollbar-gutter: stable;
+}
+#paper {
+  min-width: 1050px;
+}
+#heads {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  background: white;
+}
+#heads b {
+  text-align: center;
+  padding: 9px 0;
+  border: 1px solid #b7c8ce;
+  color: #173a4c;
+}
+svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+#example {
+  padding: 8px 20px;
+  min-height: 42px;
+  margin: 0;
+  border-left: 4px solid #207fa1;
+}
+h2 {
+  font-size: 16px;
+  margin: 10px 20px;
+}
+details {
+  padding: 8px 20px;
+}
+summary {
+  cursor: pointer;
+  color: #086381;
+}
+li {
+  margin: 5px 0;
+}
+li button {
+  border: 0;
+  text-align: left;
+  color: #125973;
+  padding: 1px 4px;
+  text-decoration: underline;
+}
+svg g[tabindex] {
+  cursor: pointer;
+}
+svg g[tabindex]:focus .djs-visual > rect,
+svg g.chosen .djs-visual > :first-child {
+  stroke: #08789a !important;
+  stroke-width: 4px !important;
+}
+nav a[aria-current="page"] { font-weight: 700; text-decoration-thickness: 2px; }
