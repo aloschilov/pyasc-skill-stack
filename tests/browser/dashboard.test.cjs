@@ -42,8 +42,9 @@ async function accessibility() {
 before(async () => {
   server = http.createServer((req,res) => {
     const filename = req.url === '/' ? 'index.html' : req.url.slice(1);
-    if (!['index.html','style.css','app.js'].includes(filename)) {res.writeHead(404);res.end();return;}
-    res.setHeader('Content-Type', {'index.html':'text/html','style.css':'text/css','app.js':'text/javascript'}[filename]);
+    const workflow = /^workflows\/(?:viewer\.(?:css|js)|(?:asc2-july|asctile-november)-detailed\.html)$/.test(filename);
+    if (!workflow && !['index.html','style.css','app.js'].includes(filename)) {res.writeHead(404);res.end();return;}
+    res.setHeader('Content-Type', {'.html':'text/html','.css':'text/css','.js':'text/javascript'}[path.extname(filename)]);
     res.end(fs.readFileSync(path.join(root,filename)));
   });
   await new Promise(resolve => server.listen(0,'127.0.0.1',resolve)); origin = `http://127.0.0.1:${server.address().port}/`;
@@ -192,4 +193,18 @@ test('malformed kernel source projection fails closed', async () => {
   const payload=data();payload.records[0].kernel_sources={status:'available',files:[{id:'x',outcome:'qualified',member:'x.py',sha256:'bad',text:'print(1)'}],missing:[]};
   await load(payload);assert.match(await page.locator('#freshness').innerText(),/EVIDENCE UNAVAILABLE/);
   assert.equal(await page.getByRole('button',{name:/View generated kernels/}).count(),0);
+});
+
+test('workflow navigation preserves the distinct July and November assignments', async () => {
+  await load();
+  await page.getByRole('link', {name:'BPMN workflows'}).click();
+  assert.deepEqual(await page.locator('#heads b').allTextContents(), ['Caller','Author','Reviewer','Verifier','Tuner']);
+  await page.getByRole('button', {name:'Phase 4', exact:true}).click();
+  assert.match(await page.locator('#phase').innerText(), /tuning/i);
+  await page.getByRole('link', {name:'July · Asc2'}).click();
+  assert.deepEqual(await page.locator('#heads b').allTextContents(), ['Main Agent','Design','Evaluation','Implementation','Acceptance Review','Verification']);
+  await page.getByRole('button', {name:'Phase 2', exact:true}).click();
+  await page.locator('#count').click();
+  await page.locator('#handoffs button').first().click();
+  assert.match(await page.locator('#example').innerText(), /July assignment:/);
 });

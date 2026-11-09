@@ -534,6 +534,7 @@ footer {
     gap: 12px;
   }
   nav {
+    flex-wrap: wrap;
     gap: 20px;
   }
   main {
