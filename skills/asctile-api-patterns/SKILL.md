@@ -68,7 +68,14 @@ match. Static local shapes must be literals or compile-time values.
 For a sum reduction, the pinned API is `asctile.reduce_sum(tile, axis)`;
 `asctile.sum` is not exported. Reducing a padded local tile of shape `[1, C]`
 along axis `1` produces shape `[1]`, suitable for a one-element GM output.
-Pad with zero and preserve the task's output dtype and logical reduction axis.
+For a contiguous vector of length `n` that fits in one padded row, declare
+`x_gm = asctile.global_tensor(x_ptr, [1, n])` **before** the 2-D load.
+Use `copy_in(x_gm, [0, 0], [1, width], real_shape=[1, n], pad_value=0)`
+with an aligned compile-time `width >= n`. A descriptor declared with `[n]`
+accepts only one offset. Reducing a rank-one local tile on its only axis
+fails to lower on this pin (`Reduction along all dimensions is not supported`).
+The leading singleton preserves one result per row. Preserve the output dtype
+and logical reduction axis.
 
 ## Tails and padding
 
@@ -90,8 +97,14 @@ exceptions produced while computing padded lanes.
 
 ## Host/JIT boundary
 
-- Host code owns shape normalization, allocation, dtype/attribute dispatch,
-  metadata-only `view`/`reshape`, and kernel launches.
+- Check the caller's host signature first. For a fixed-shape task that requires
+  one call with literal launch parameters, pass the declared tensors unchanged.
+  For example, a two-block task with a fixed length of 96 could have just
+  `kernel[2](x, out, 96)` in the host function. Derive these literals from the
+  task contract when writing the code.
+  Assignments, `x.numel()`, and `x.shape[0]` violate that contract even when
+  they give the right number. In a general-purpose wrapper the host can
+  normalize shapes, allocate outputs, and dispatch on dtypes and attributes.
 - Numerical work belongs inside one or more `@asctile.jit` kernels.
 - Pass a `torch.Tensor`/`numpy.ndarray` directly to a JIT launch. Do not call
   `Tensor.data_ptr()`; the JIT needs pointer dtype specialization.
@@ -169,6 +182,16 @@ AscTile dtype constraints observed by the CANNBench integration:
   their aligned byte size is not a multiple of 256. Prefer a 256-byte-safe
   destination shape or a counted operation such as `maximum`/`minimum` when it
   expresses the same operation. See `references/api-jit-options.md`.
+
+## Broadcast work partition
+
+For a leading singleton expanded to several copies of a contiguous row,
+distribute **output rows** across blocks. A block can iterate
+`asctile.range(asctile.block_idx(), copies, asctile.block_num())` and
+process every tile of each assigned row. A tile starting at column `c`
+reads source offset `c` and writes destination offset `row * row_length + c`.
+If the row fits in one tile, each assigned row still needs a store. Starting
+the inner source-tile loop at the block index as well skips entire rows.
 
 ## Reduction pattern
 
