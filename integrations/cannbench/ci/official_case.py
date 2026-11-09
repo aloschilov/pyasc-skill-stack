@@ -19,6 +19,10 @@ CASES = {
     'maximum/1': ('level2/maximum', BREADTH_REV),
     'strided_slice/1': ('level3/strided_slice', BREADTH_REV),
     'gather/1': ('level2/gather', BREADTH_REV),
+    'maximum/7': ('level2/maximum', BREADTH_REV),
+    'masked_scale/8': ('level1/masked_scale', BREADTH_REV),
+    'resize_bilinear/1': ('level2/resize_bilinear', BREADTH_REV),
+    'unsorted_segment_sum/1': ('level2/unsorted_segment_sum', BREADTH_REV),
 }
 
 
