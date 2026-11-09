@@ -65,3 +65,29 @@ verification added zero model requests. At `08d519c5` the two cohorts now
 cover **6/1,060 cases across 6/53 operators**, one case per operator.
 The [Gather archive](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-cannbench-breadth-49/cannbench-gather-01-long-verification.tar.gz)
 has SHA256 `3fb794ab548fa13f4d3081ab4ff3604b1e63977879d61fe9d74952099c20f1df`.
+
+## Held-out transfer of the Maximum tuning guide
+
+At catalog `08d519c5`, #50 (`2203f28`) passed **1/3** first attempts and the
+reviewed #52 guidance (`097ebbd`) passed **0/3**. Each arm received one fresh
+GLM-5.3-low session per case with the same checker and budgets.
+
+- **MaskedScale 08.** The #50 file passed seeds 19 and 23 with a real launch
+  and failed both comparisons with launch suppressed. The #52 file called a
+  dtype object and failed compilation.
+- **ResizeBilinear 01 and UnsortedSegmentSum 01.** All four sessions reached
+  900 seconds without writing a file. Their final streams lack terminal usage.
+
+None of the three pairs qualified for the paired UB and warmed-tick comparison.
+MaskedScale 08 brings generated coverage to **7/1,060 official cases across
+7/53 operators**.
+
+Maximum 01 and the uneven-tail Maximum 07 supplied the worked example. On both,
+changing the tile from 1,024 to 1,536 at fixed allocation reuse 1 reduced warmed
+CaModel ticks by about 32%. The original 1,024-element tile at reuse 0 still
+used fewer ticks. All six configurations passed both seeds and both
+suppressed-launch controls on both shapes.
+
+[Six-session journal](https://cannbench-qualification-lab.minty-book-0921.chatgpt.site) ·
+[Reproduction inputs, compiler layouts and session receipts](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-cannbench-transfer-52/cannbench-maximum-transfer-52.tar.gz) ·
+SHA256 `6ad38bdc97349611b0e4c31f32d8e41d5a46b12f402e48a150cfc597f6b092d0`.
