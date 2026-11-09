@@ -2,7 +2,7 @@ name: Evidence dashboard
 
 on:
   pull_request:
-    paths: ['dashboard/**', 'scripts/evidence_dashboard.py', 'tests/unit/python/test_evidence_dashboard.py', '.github/workflows/evidence-pages.yml']
+    paths: ['dashboard/**', 'scripts/evidence_dashboard.py', 'tests/unit/python/test_evidence_dashboard.py', 'tests/browser/**', '.github/workflows/evidence-pages.yml']
   workflow_dispatch:
     inputs:
       publish:
@@ -29,7 +29,18 @@ jobs:
         with:
           python-version: '3.10'
       - run: python3 -m unittest discover -s tests/unit/python -p test_evidence_dashboard.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/browser/package-lock.json
       - run: node --check dashboard/app.js
+      - run: npm ci
+        working-directory: tests/browser
+      - run: npx playwright install --with-deps chromium
+        working-directory: tests/browser
+      - run: npm test
+        working-directory: tests/browser
 
   build:
     needs: test

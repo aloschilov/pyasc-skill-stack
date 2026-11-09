@@ -302,6 +302,86 @@ def summarize(archive, entry):
     raise ValueError('Unknown lane')
 
 
+MAX_KERNEL_SOURCE = 128 * 1024
+
+
+def kernel_sources(archive, entry):
+    """Project only named, hash-bound candidate Python files, never archive code execution.
+
+    Missing source is independent of numerical acceptance: it cannot create a new
+    pass or remove a failed trial from the original cohort denominator.
+    """
+    if entry['kind'] == 'target':
+        return {'status': 'not-applicable', 'files': [], 'missing': []}
+    files, missing = [], []
+
+    def source(bundle, member, sha, identity, outcome, twin=None):
+        require(isinstance(sha, str) and re.fullmatch(r'[0-9a-f]{64}', sha), 'Missing source hash')
+        raw = bundle.raw(member, MAX_KERNEL_SOURCE)
+        require(digest(raw) == sha and (twin is None or digest(bundle.raw(twin, MAX_KERNEL_SOURCE)) == sha), 'Candidate source mismatch')
+        text = raw.decode('utf-8')
+        require(text and all(ord(c) >= 32 or c in '\n\r\t' for c in text), 'Invalid source text')
+        require(sum(len(f['text'].encode('utf-8')) for f in files)+len(raw) <= 4*MAX_JSON, 'Source projection too large')
+        files.append({'id': identity, 'outcome': outcome, 'member': member, 'sha256': sha, 'text': text})
+
+    def identifier(value):
+        require(isinstance(value, str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,150}', value), 'Invalid candidate identifier')
+        return value
+
+    try:
+        if entry['kind'] == 'hardware':
+            generation = archive.json('evidence/generation.json')
+            member = generation['original_candidate']
+            require(re.fullmatch(r'generation/attempt-[1-9][0-9]*/original-candidate\.py', member), 'Unknown hardware candidate path')
+            source(archive, 'evidence/'+member, generation['candidate_sha256'], 'original-candidate', 'qualified')
+        else:
+            bundle = Archive(archive.raw(archive.one('generation.tar.gz'), MAX_ARCHIVE))
+            plan = checked_plan(bundle.json('run/plan.json'))
+            report = bundle.json('run/report.json')
+            if entry['kind'] == 'review':
+                state = bundle.json('run/state.json')
+                require(state['accepted_candidate_sha256'] == report['candidate_sha256'], 'Review source binding mismatch')
+                cycles = [c for c in state['cycles'] if c['status'] == 'accepted' and c['candidate_sha256'] == report['candidate_sha256']]
+                require(len(cycles) == 1, 'Ambiguous accepted candidate')
+                member = cycles[0]['candidate']
+                require(re.fullmatch(r'cycle-[1-9][0-9]*/writer/candidate\.py', member), 'Unknown review candidate path')
+                source(bundle, 'run/'+member, report['candidate_sha256'], 'accepted-candidate', 'qualified',
+                       'run/'+member.replace('/writer/', '/verification/'))
+            else:
+                require(len(plan['trials']) <= 200, 'Too many source trials')
+                for trial in plan['trials']:
+                    identity, cell = identifier(trial['id']), identifier(trial['cell'])
+                    prefix = 'run/'+identity+'/'
+                    state = bundle.json(prefix+'state.json')
+                    child_plan = checked_plan(bundle.json(prefix+'plan.json'))
+                    require(state['plan_sha256'] == child_plan['plan_sha256'] and child_plan['checkout_revision'] == plan['checkout_revision'], 'Trial source binding mismatch')
+                    cells = [c for c in state['cells'] if c['id'] == cell]
+                    require(len(cells) == 1 and len(cells[0]['attempts']) <= 10, 'Invalid source attempts')
+                    attempts = cells[0]['attempts']
+                    if not attempts:
+                        missing.append({'id': identity, 'reason': 'No retained candidate attempt'})
+                    for attempt in attempts:
+                        number = attempt['number']
+                        require(type(number) is int and 1 <= number <= 10, 'Invalid attempt number')
+                        label = identity+'/attempt-'+str(number)
+                        if not attempt.get('candidate_sha256'):
+                            missing.append({'id': label, 'reason': 'No hash-bound candidate retained for this attempt'})
+                            continue
+                        require(attempt['status'] in ('passed', 'failed'), 'Unfinished candidate source')
+                        member = prefix+cell+'/attempt-'+str(number)+'/candidate.py'
+                        source(bundle, member, attempt['candidate_sha256'], label,
+                               'qualified' if attempt['status'] == 'passed' else 'failed',
+                               member.replace('/candidate.py', '/project/candidate.py'))
+        require(files or missing, 'No source entries')
+        require(len({f['id'] for f in files}) == len(files), 'Duplicate source entry')
+        return {'status': 'partial' if missing else 'available', 'files': files, 'missing': missing}
+    except (OSError, ValueError, LookupError, TypeError, AttributeError, ArithmeticError,
+            EOFError, RecursionError, zlib.error, tarfile.TarError):
+        # Never include parser exception strings or partially trusted source bytes.
+        return {'status': 'unavailable', 'files': [], 'missing': [],
+                'reason': 'Candidate source could not be retrieved or validated'}
+
+
 def validate_projection(value):
     require(value['category'] in ('fresh-generated', 'upstream-fixture')
         and value['level'] in ('simulator-numerical', 'npu-numerical-and-timing')
@@ -329,11 +409,13 @@ def build(catalog_path, output, loader=fetch, now=None):
         record = {'id': entry['id'], 'kind': entry['kind'], 'release_url': release, 'archive_url': url,
             'archive_sha256': entry['sha256'], 'ci_url': 'https://github.com/'+REPOSITORY+'/actions/runs/'+str(entry['run_id']) if entry['run_id'] else None}
         try:
-            projection = summarize(Archive(loader(url), entry['sha256']), entry)
+            archive = Archive(loader(url), entry['sha256'])
+            projection = summarize(archive, entry)
             validate_projection(projection)
             age = (now-timestamp(projection['finished_at'])).total_seconds()/3600
             require(age >= -1, 'Future result timestamp')
-            record.update(projection, availability='available', freshness='stale' if age > spec['max_age_hours'] else 'recent')
+            record.update(projection, availability='available', freshness='stale' if age > spec['max_age_hours'] else 'recent',
+                          kernel_sources=kernel_sources(archive, entry))
         except (OSError, ValueError, LookupError, TypeError, AttributeError, ArithmeticError,
                 EOFError, RecursionError, zlib.error, tarfile.TarError) as exc:
             # External payloads/error strings are never copied into public pages.
