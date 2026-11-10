@@ -190,6 +190,25 @@ generated candidates. The passing repair does not isolate the original NaN
 mismatch's cause. Avoid host copy fallbacks; independently qualify short rows,
 tails and NaN/Inf positions for every new candidate.
 
+On a wide split, budget the tile for the rows that actually contain data.
+The eight-block parent used a physical `16 × 64` tile even when only one
+or four rows were live. An OpenCode-generated host change retained the
+1,024-element budget, used the live row count as tile height and rounded the
+width down to a multiple of 16 elements. It also bounded the width so that
+eight full column tiles remained, then recomputed the tail offset and owner.
+On Ascend950PR_9599 with CANN 9.2.0 and PyASC `6b3447b4`, case 6 with
+one BF16 row improved from 1,294.781 to 74.646 µs, and case 19 with four
+BF16 rows and an uneven tail improved from 1,504.377 to 334.773 µs.
+These are medians of three warm device calls after a full-output golden check.
+
+Measure the grid separately at fixed geometry. With the parent's tile and
+the same inputs, 8 → 32 → 64 blocks took 1,294.781 → 307.247 → 162.471 µs
+on case 6 and 1,504.377 → 377.400 → 193.149 µs on case 19. The retained
+PyASC reference uses a `1 × 1024` wide tile, grid-strides over row/column
+tiles and launches up to 72 blocks. When an operator uses separate full-row
+and row-tail launches, sum their NPU task durations for each call before
+taking the median. The [20-case grid comparison](../../../docs/evidence/swiglu-vector-grid-20261110/README.md) records the actual launch sizes for the adaptive variant.
+
 ## ForeachAddcdivScalar
 
 Loop over tensor lists on the host and launch one elementwise kernel for each

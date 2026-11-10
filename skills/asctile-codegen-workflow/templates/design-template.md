@@ -24,9 +24,9 @@
 
 ## 3. Multi-core strategy
 
-- **Core count**: {e.g., 72 on Ascend950PR_9599}
+- **AIV resources**: {backend, active device, runtime query and applicable limits}
 - **Tile size**: {e.g., 128 elements}
-- **Core count**: `min(platform_cores, num_tiles)`
+- **Launch grid per route**: `min(available_aiv, independent_work_items)`. Skip empty work.
 - **Work distribution**: grid-stride from `block_idx()` with step `block_num()`
 
 ## 4. Tails and memory budget

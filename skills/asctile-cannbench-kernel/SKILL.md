@@ -52,8 +52,12 @@ from public tile operations is allowed.
 - Import and call `ensure_npu_platform` from `._pyasc_runtime`.
 - Record the actual target/platform and qualified resource query. The local
   `Ascend950PR_9599` compiler budget is 253952 B; this does not establish a
-  runner's physical resources. Bound launch blocks by available vector-core
-  resources and useful tiles, not a fixed 72 or a runner-name suffix.
+  runner's physical resources. After `ensure_npu_platform()`, use the vector
+  resource query in `asctile-api-patterns` and clamp every dispatch branch by
+  its useful work. Keep resource discovery in host code permitted by the runner.
+  For a compile-only gate without a runtime, inject a labeled test capacity in
+  the harness. Verify the live query, a small grid, and a saturating grid on
+  the requested backend. Record the cap separately from tile sizes and thresholds.
 - For the pinned runtime use `asctile.global_tensor`, `asctile.copy_in`, and
   `asctile.copy_out`; use `real_shape` for tails. Do not substitute the older
   `tensor/load/store` spelling.

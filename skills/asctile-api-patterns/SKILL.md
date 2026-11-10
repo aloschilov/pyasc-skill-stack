@@ -151,6 +151,15 @@ exceptions produced while computing padded lanes.
   `LaunchOptions(core_num, stream, ...)`; stream is not a removed v1 feature.
   Use the evaluator's current stream when required; do not force a default stream.
 
+For vector kernels, select the grid on the host after platform setup. Query
+`asc.lib.runtime.device_info(DeviceModuleType.RT_MODULE_TYPE_VECTOR_CORE,
+DeviceInfoType.INFO_TYPE_CORE_NUM)` using the enums from the same module.
+On NPU, apply the active device and calling thread's AIV limits. The CANN 9
+implementation is in `asctile-codegen-workflow/templates/kernel-template.py`
+(`vector_blocks`). Bound each launch by its independent row groups or column
+tiles, including any tail assigned to that launch. Skip empty work. A simulator
+can report a different count from hardware even with the same requested target.
+
 Supported current compile options include `always_compile`, `insert_sync`,
 `reuse_alloc` (`0`, `1`, `2`), `vf_fusion`, and `matmul_cube_only`. Do not use
 the removed `run_asc2_passes` option. Prefer an evidenced `reuse_alloc` value;
