@@ -180,6 +180,30 @@ fastest; UB fill is not the objective. Read
 [top-down tuning from CANN samples](references/cann-performance-tuning.md)
 before a performance iteration.
 
+### Batch short rows within the active UB budget
+
+For many rows whose useful width is smaller than a 32-byte transfer, choose
+the row count on the host after platform setup. On PyASC pins exposing
+`asc.runtime.launcher.get_platform_info`, query
+`get_platform_info(runtime.get_soc_version()).ub_size` in bytes. Use the
+smaller capacity if the active device or runner imposes a lower UB limit.
+Keep the row height a ConstExpr of each launched specialization.
+
+1. Round each local operand's width to its required transfer alignment.
+   Budget bytes per physical row across the simultaneously live inputs,
+   promoted intermediates, outputs, scratch and buffering. Include fixed
+   allocation overhead and reserve. Use the compiled allocation for the
+   exact JIT options to check the estimate before accepting a height.
+2. Compute the UB ceiling as `(ub_bytes - fixed_bytes) // bytes_per_row`.
+   Bound it also by useful rows per available AIV so small inputs retain
+   parallel work. Round down to a supported height (e.g. a power of two).
+   Ensure full-tile output boundaries meet the kernel's store alignment.
+   Handle a sub-tile input or final partial group with valid extents.
+3. Use the chosen height for tile shape, row offsets, group count, tail
+   and grid. Skip empty work. Check a short-row case at two modeled UB
+   budgets and record the selected height, compiled UB and actual launches
+   on hardware. Keep the tiling of wider rows independently qualified.
+
 AscTile dtype constraints observed by the CANNBench integration:
 
 - Direct int8 arithmetic/cast-to-f32 is incomplete; the measured route is
