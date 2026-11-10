@@ -29,5 +29,7 @@ Do not use host tensor indexing or an unqualified gather on the last axis.
 Assign whole tiles using the active vector grid and a block-stride loop.
 The tile and transpose dimensions form one layout: deriving a new tile size
 from UB alone does not preserve the permutation. Check compiled UB against the
-active capacity. Validate pair order on varying inputs, a partial tile,
+active capacity. The linked FP32-compute specialization used 23,104 UB bytes
+for both 256 and 67 valid pairs on the 950PR at PyASC 6b3447b4. Recheck on
+a different runtime or after changing the computation. Validate pair order on varying inputs, a partial tile,
 nonfinite lanes and the output write boundary before timing on hardware.
