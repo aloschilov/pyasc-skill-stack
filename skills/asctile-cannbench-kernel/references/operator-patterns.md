@@ -190,14 +190,14 @@ generated candidates. The passing repair does not isolate the original NaN
 mismatch's cause. Avoid host copy fallbacks; independently qualify short rows,
 tails and NaN/Inf positions for every new candidate.
 
-When one output row is shorter than a transfer block, use the short-row
-height selection in `asctile-api-patterns`. For BF16 input shaped [R, 2]
-and split on the last axis, each output row contains one value. A padded
-2-D implementation still budgets the physical width of each input, FP32
-temporary and output. A fixed height of 16 requires 62,500 full iterations
-across the grid for R = 1,000,003. Derive the height from available UB and
-live-row costs, then dispatch full groups and the remainder using that height.
-Check Inf/NaN positions against the golden with a partial final group.
+For SwiGLU, normalize the split axis first. When the contiguous BF16 input
+is split on its final axis of length two, each row is a neighbor pair
+`(gate, value)`. Choose the packed pair path in
+[AscTile API patterns](../../asctile-api-patterns/references/packed-bf16-pairs.md)
+before the short-row height selector. A last dimension of 14, for example,
+contains two adjacent **halves** of length seven, not seven interleaved pairs.
+Keep the UB-sized row path for other short rows. Dispatch from layout and dtype,
+never the case ID or a particular outer shape.
 
 For the padded SwiGLU kernel on PyASC `6b3447b4`, the BF16 specialization
 at height 512 and physical width 16 requested 655,360 UB bytes on the 950PR.

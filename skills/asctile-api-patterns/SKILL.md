@@ -182,7 +182,11 @@ before a performance iteration.
 
 ### Batch short rows within the active UB budget
 
-For many rows whose useful width is smaller than a 32-byte transfer, choose
+First check the physical layout. For contiguous, interleaved BF16 pairs
+consumed together, use the [packed pair pattern](references/packed-bf16-pairs.md)
+before padding the two one-element operands separately.
+
+For other layouts with many rows whose useful width is smaller than a 32-byte transfer, choose
 the row count on the host after platform setup. On PyASC pins exposing
 `asc.runtime.launcher.get_platform_info`, query
 `get_platform_info(runtime.get_soc_version()).ub_size` in bytes. Use the
