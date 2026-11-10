@@ -18,23 +18,13 @@ t = flat.reshape(16, 32).transpose(1, 0)
 planes = t.reshape(16, 32).transpose(1, 0).reshape(2, 256)
 ```
 
-For SwiGLU on pins without a public local slice, select the transformed gate
-plane and the original value plane. On the tested AscTile API, concat joins
-the two mask rows along axis zero and the reduction returns [1, 256]:
-
-```python
-xy = asctile.cast(planes, asctile.float32)
-gate_row = asctile.full([1, 256], 0.0, asctile.float32)
-value_row = asctile.full([1, 256], 1.0, asctile.float32)
-is_gate = asctile.concat(gate_row, value_row) < 0.5
-inv = asctile.div(1.0, asctile.add(asctile.exp(asctile.mul(xy, -1.0)), 1.0))
-selected = asctile.where(is_gate, asctile.mul(xy, inv), xy)
-product = asctile.cast(asctile.reduce_prod(selected, 0), asctile.bfloat16)
-asctile.copy_out(product.reshape(256), y, [first], real_shape=[valid])
-```
-
-Keep intermediates local. Never silently use host tensor indexing or an
-unqualified gather on the last axis.
+See the [complete pair kernel](../templates/packed-bf16-swiglu.py) for the exact
+public API calls. It selects SiLU of the gate plane and the original value
+plane with a two-row mask, then reduces their product along the plane axis.
+Its block-stride wrapper takes a first group, a count of groups and a single
+compile-time valid extent. Launch the full groups with valid = 256 and, if
+needed, the final group with its actual valid extent. Keep intermediates local.
+Do not use host tensor indexing or an unqualified gather on the last axis.
 
 Assign whole tiles using the active vector grid and a block-stride loop.
 The tile and transpose dimensions form one layout: deriving a new tile size
