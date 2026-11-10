@@ -193,7 +193,11 @@ Keep the row height a ConstExpr of each launched specialization.
    Budget bytes per physical row across the simultaneously live inputs,
    promoted intermediates, outputs, scratch and buffering. Include fixed
    allocation overhead and reserve. Use the compiled allocation for the
-   exact JIT options to check the estimate before accepting a height.
+   exact JIT options to check the estimate before accepting a height. A
+   compiler can allocate more buffers than Python-level liveness predicts.
+   On a UB overflow, retain the rejected height and consumed bytes. Use
+   the observed per-row allocation for that kernel, dtype and physical width
+   as a lower bound on the cost, then compile and validate the reduced height.
 2. Compute the UB ceiling as `(ub_bytes - fixed_bytes) // bytes_per_row`.
    Bound it also by useful rows per available AIV so small inputs retain
    parallel work. Round down to a supported height (e.g. a power of two).

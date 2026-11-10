@@ -199,6 +199,12 @@ across the grid for R = 1,000,003. Derive the height from available UB and
 live-row costs, then dispatch full groups and the remainder using that height.
 Check Inf/NaN positions against the golden with a partial final group.
 
+For the padded SwiGLU kernel on PyASC `6b3447b4`, the BF16 specialization
+at height 512 and physical width 16 requested 655,360 UB bytes on the 950PR.
+Budget at least 1,280 bytes per physical row (80 bytes per padded lane) for
+this path. Query the active SoC capacity after platform setup. Requalify the
+allocation when changing the kernel, dtype, padding, compiler or JIT flags.
+
 On a wide split, budget the tile for the rows that actually contain data.
 The eight-block parent used a physical `16 × 64` tile even when only one
 or four rows were live. An OpenCode-generated host change retained the
