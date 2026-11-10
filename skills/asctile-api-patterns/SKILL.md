@@ -200,13 +200,18 @@ Keep the row height a ConstExpr of each launched specialization.
    as a lower bound on the cost, then compile and validate the reduced height.
 2. Compute the UB ceiling as `(ub_bytes - fixed_bytes) // bytes_per_row`.
    Bound it also by useful rows per available AIV so small inputs retain
-   parallel work. Round down to a supported height (e.g. a power of two).
+   parallel work. For an unavailable capacity, use a separately qualified
+   conservative path or report the missing platform query. If a minimum tile
+   cannot fit, select a smaller qualified layout or report the budget error.
+   Round down to a supported height (e.g. a power of two).
    Ensure full-tile output boundaries meet the kernel's store alignment.
    Handle a sub-tile input or final partial group with valid extents.
 3. Use the chosen height for tile shape, row offsets, group count, tail
    and grid. Skip empty work. Check a short-row case at two modeled UB
    budgets and record the selected height, compiled UB and actual launches
    on hardware. Keep the tiling of wider rows independently qualified.
+   For the padded CANNBench SwiGLU kernel, use the matching measured
+   per-row cost in `asctile-cannbench-kernel/references/operator-patterns.md`.
 
 AscTile dtype constraints observed by the CANNBench integration:
 
