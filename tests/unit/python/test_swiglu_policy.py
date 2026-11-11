@@ -18,6 +18,7 @@ class Policy(unittest.TestCase):
         self.policy={d:[band(8,'slab',32),band(63,'rows',16),band(None,'flat',128)] for d in DTYPES}
 
     def test_all_dispatched_specializations_are_compiled(self):
+        self.policy['float32'][1]['width_step_bytes']=32
         specs=set(all_specs(self.policy))
         for dtype in DTYPES:
             for half in (1,2,7,8,9,48,63,64,129,12345):
@@ -28,8 +29,8 @@ class Policy(unittest.TestCase):
                         self.assertTrue(1<=blocks<=cores)
                         if route!='_swiglu_pair_groups':
                             self.assertLessEqual(blocks,5)
-        self.assertEqual(layout((528,100),1,'float32',self.policy,72)[-2:],((16,64,2),5))
-        self.assertEqual(layout((81,100),1,'float32',self.policy,72)[-2:],((16,64,1),3))
+        self.assertEqual(layout((528,100),1,'float32',self.policy,72)[-2:],((16,56,2),5))
+        self.assertEqual(layout((81,100),1,'float32',self.policy,72)[-2:],((16,56,1),3))
         self.assertEqual(layout((0,100),1,'float16',self.policy,4)[-1],0)
 
     def test_rejects_unbounded_or_case_specific_policy(self):

@@ -17,7 +17,8 @@ def validate(policy):
             raise ValueError('Expected 1..32 width bands for '+dtype)
         lower = 0
         for i,b in enumerate(bands):
-            if not isinstance(b,dict) or set(b) != {'through','route','tile','unroll','tiles_per_block','block_cap','unroll_waves'}:
+            required = {'through','route','tile','unroll','tiles_per_block','block_cap','unroll_waves'}
+            if not isinstance(b,dict) or not required <= b.keys() <= required | {'width_step_bytes'}:
                 raise ValueError('Invalid fields in geometry band for '+dtype)
             end = b['through']
             if i == len(bands)-1:
@@ -29,6 +30,9 @@ def validate(policy):
                 raise ValueError('Invalid route or tile')
             if b['route']=='slab' and end>32:
                 raise ValueError('Short gather domain too large')
+            if 'width_step_bytes' in b and (b['route']!='rows' or not natural(b['width_step_bytes'],65536)
+                                              or b['width_step_bytes']%32):
+                raise ValueError('Row width stepping must be a multiple of 32 bytes')
             if b['route']=='flat' and b['tile']*size%32:
                 raise ValueError('Flat physical tiles require DMA alignment')
             if (not natural(b['unroll'],2) or not natural(b['tiles_per_block'],128)
@@ -49,7 +53,9 @@ def specialization(dtype, half, band, unroll):
         return (half,tile,unroll)
     if route == 'rows':
         align=32//DTYPES[dtype]
-        return (tile,ceil(band['through']/align)*align,unroll)
+        limit=ceil(band['through']/align)*align
+        step=band.get('width_step_bytes',limit*DTYPES[dtype])//DTYPES[dtype]
+        return (tile,min(limit,ceil(half/step)*step),unroll)
     return (tile,unroll)
 
 
@@ -65,7 +71,13 @@ def all_specs(policy):
         start=1
         for b in bands:
             end=b['through'] or start
-            halves=range(start,end+1) if b['route']=='slab' else (end,)
+            if b['route']=='slab':
+                halves=range(start,end+1)
+            elif 'width_step_bytes' in b:
+                step=b['width_step_bytes']//DTYPES[dtype]
+                halves=[*range((start+step-1)//step*step,end,step),end]
+            else:
+                halves=(end,)
             for half in halves:
                 if dtype=='bfloat16' and half==1 and b['route']=='slab':
                     continue
