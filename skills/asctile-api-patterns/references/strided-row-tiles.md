@@ -16,11 +16,22 @@ padding. The copy's real shape still uses H.
   row count and the single-iteration UB budget. If a single row exceeds
   the budget, report that the row kernel cannot fit. A column-chunk
   fallback needs its own UB-qualified chunk size.
-- For the public swiglu_rows kernel with reuse_alloc=2, budget 16 bytes
-  per physical lane for unroll 1 and 28 for FP32 unroll 2. Use a conservative
-  32 bytes per lane for widened 16-bit inputs at unroll 2, and verify the
-  compiler allocation for each emitted dtype and build. Subtract any fixed
-  workspace before applying the bound.
+- Widen the two FP16 inputs to FP32. Compute the denominator from the
+  gate and divide the gate directly by it, then multiply by the value and
+  cast once to the output dtype. This saves the extra live FP32 tile in
+  the reciprocal-then-multiply expression. Check the full output with the
+  task's tolerance since the rounding order changes.
+- Size UB from the emitted expression, dtype and compiler configuration.
+  On the archive-bundled 950PR public build with `reuse_alloc=2`, the
+  direct-division FP16 row kernel used **20 bytes per physical lane** at
+  unroll 2 (163,840 bytes for 8,192 lanes). The reciprocal form used 24.
+  Use the qualified direct-division coefficient for FP16 and retain the
+  conservative 16 bytes/lane at unroll 1. Distinguish FP16 from BF16 in
+  the host selector. Keep the existing upper bounds of 28 bytes/lane
+  for FP32 and 32 for BF16 at unroll 2 until their emitted forms have
+  been qualified. Subtract fixed workspace from the available UB once.
+  Verify the compiled allocation on each new kernel/build before
+  reusing a smaller coefficient for dispatch.
 - At that height select unroll 2 if its footprint fits and ceil(rows/T)
   supplies at least two tiles per active AIV on average. Otherwise keep
   the height at unroll 1. Launch min(available AIVs, ceil(rows/T)) blocks.
