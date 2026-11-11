@@ -14,8 +14,8 @@ padding. The copy's real shape still uses H.
   useful half-tile payload. A whole row is the minimum. This gives less
   than 16 KiB when a row is smaller than 8 KiB. Halve T until it fits the
   row count and the single-iteration UB budget. If a single row exceeds
-  the budget, select a column-chunk implementation or report that the
-  row kernel cannot fit.
+  the budget, report that the row kernel cannot fit. A column-chunk
+  fallback needs its own UB-qualified chunk size.
 - For the public swiglu_rows kernel with reuse_alloc=2, budget 16 bytes
   per physical lane for unroll 1 and 28 for FP32 unroll 2. Use a conservative
   32 bytes per lane for widened 16-bit inputs at unroll 2, and verify the
