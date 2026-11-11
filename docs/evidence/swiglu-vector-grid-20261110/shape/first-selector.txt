@@ -1,0 +1,39 @@
+def select(rows, half, itemsize, is_bf16):
+    """SwiGLU split-axis route selection for UB=253952 B, 72 cores.
+
+    Routes (chosen from layout/dtype only, never case ID or outer shape):
+      packed_pairs  -- bf16 [R,2]: neighbor (gate,value) pairs on last axis
+      index_gather  -- very short half-rows: two reusable int32 index tiles
+      batched_rows  -- short half-rows: 2D tile, 32B-aligned physical width
+      flat_chunks   -- long contiguous half-rows split into flat chunks
+    """
+    UB = 253952          # usable unified-buffer bytes
+    CORES = 72           # independent tiles available
+    row_bytes = half * itemsize
+
+    # Packed (gate, value) neighbor pairs: bf16 final axis of extent two.
+    # Guard matches dtype + normalized axis semantics (half == 1 here means
+    # shape[d] == 2, not extent of d). One pair per lane, gate exp in-tile.
+    if is_bf16 and itemsize == 2 and half == 1:
+        # 8192 bf16 pairs = 16 KiB per half-buffer; two halves fit UB easily.
+        pairs = min(rows, 8192)
+        return ("packed_pairs", (pairs, 2), 1)
+
+    # Very short halves: gather complete rows via two local int32 index tiles.
+    # Budget: two data half-tiles + two int32 index tiles (4 bytes/index).
+    if row_bytes <= 32:
+        per_block = max(1, min(rows, (UB // 4) // (row_bytes + 4)))
+        per_block = min(per_block, 2 * CORES)   # bound block height vs grid
+        return ("index_gather", (per_block, half), 1)
+
+    # Short half-rows: batch into 2D tiles targeting ~12 KiB per half-tile,
+    # physical width 32-byte aligned, both height and logical width bounded.
+    if row_bytes <= 3072:
+        height = max(1, 12288 // ((row_bytes + 31) // 32 * 32))
+        height = min(height, rows, CORES)
+        return ("batched_rows", (height, (row_bytes + 31) // 32 * 32), 1)
+
+    # Long contiguous half-row: flat chunk stream, gate/value offsets H apart.
+    # Archive unroll comparison (compiled UB, exact dtype/tile/JIT) favored 2.
+    chunk = min(65536, ((row_bytes + 31) // 32) * 32)
+    return ("flat_chunks", (1, chunk), 2)
