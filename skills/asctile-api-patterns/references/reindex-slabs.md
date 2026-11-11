@@ -8,6 +8,8 @@ Read the effective UB capacity and available AIVs after platform selection.
 
 ## BF16 SwiGLU on the archive-bundled 950PR PyASC build
 
+Apply this geometry **inside the existing short-half-row gather branch**, after packed-pair dispatch. The measured SwiGLU selector enters that branch for `H*s <= 32` bytes. Route wider BF16 halves through their existing 2D or flat paths. Only an eligible short-half-row gather can take the bounded row fallback. Check route identity against the previous selector at narrow, medium and long half-row widths before launching.
+
 With `reuse_alloc=2`, the measured public gather kernels used 24 bytes per
 output lane at unroll 1 and 28 at unroll 2 for aligned BF16 half-rows of
 seven elements. These are compiled live-buffer costs. Recheck allocations
