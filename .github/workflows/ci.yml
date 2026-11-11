@@ -10,7 +10,7 @@ on:
         description: 'Optional single-model operator NPU evaluation (uses one credit); resume never submits'
         type: choice
         default: none
-        options: [none, generate, repair, continue, resume, performance-generate, performance, performance-evaluate, performance-resume]
+        options: [none, generate, repair, continue, resume, performance-generate, performance, performance-evaluate, performance-resume, performance-submit-prepared]
       operator:
         description: 'Checked-in operator recipe; ignored for continue/resume'
         type: string

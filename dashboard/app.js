@@ -278,7 +278,7 @@ function renderSwiGLU(study, official) {
     el('p', `All 20 cases passed. Six wide cases improved ${study.parent_over_wide.toFixed(3)}× (geometric mean). Service scores: parent ${study.scores.parent.toFixed(4)}, retiled ${study.scores.wide.toFixed(4)}, reference ${study.scores.reference.toFixed(4)}.`),
     link('Hardware reports and generation provenance',study.release),
     el('h3','Shape dispatch · retained hardware replay'),
-    ...(study.local_generated_ratio ? [el('p',`Исторический замер на David: ${study.local_generated_ratio.toLocaleString('ru-RU',{minimumFractionDigits:3,maximumFractionDigits:3})}× относительно базы CANNBench по 19 кейсам SwiGLU с вычислительными ядрами OpenCode. Это примерно на ${Math.round((1/study.local_generated_ratio-1)*100)}% больше времени. Время кандидата измерялось локально; время базы взято из CANNBench.`)] : []),
+    ...(study.local_generated_ratio ? [el('p',`Исторический замер на отдельном Ascend950PR: ${study.local_generated_ratio.toLocaleString('ru-RU',{minimumFractionDigits:3,maximumFractionDigits:3})}× относительно базы CANNBench по 19 кейсам SwiGLU с вычислительными ядрами OpenCode. Это примерно на ${Math.round((1/study.local_generated_ratio-1)*100)}% больше времени. Время кандидата измерялось локально, а время базы взято из CANNBench.`)] : []),
     el('p', `Archive / generated dispatch time: ${study.archive_over_shape.toFixed(5)}× across 20 cases on the same PyASC extension and CPython 3.12. Generation included geometry feedback, API repair and an existing BF16 template.`),
     link('Shape selection, sources and per-launch samples',study.shape_evidence));
   const details = el('details'); details.append(el('summary','Compare all 20 cases'));

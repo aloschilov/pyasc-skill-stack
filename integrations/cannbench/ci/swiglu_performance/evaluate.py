@@ -96,17 +96,29 @@ def package(root):
          'files':{p:sha(package/p) for p in ('submission.zip','catalog.json','task.json')}})
 
 
-def service(root, submit):
+def service(root, stage):
     package = root/'prepared'
     manifest = ci.smoke.verify(package)
     queue = ci.ci_client()
     LEDGER.mkdir(parents=True,exist_ok=True)
-    if submit:
-        require(os.environ.get('PREPARED_ARTIFACT_ID'), 'Missing central prepared checkpoint')
+    if stage in ('submit','reopen'):
+        if stage=='reopen':
+            origin = os.environ['EVALUATION_RUN']
+            require(re.fullmatch(r'[1-9][0-9]*',origin), 'Invalid prepared evaluation ID')
+            import tempfile
+            with tempfile.TemporaryDirectory() as folder:
+                subprocess.run(['gh','run','download',origin,'--repo',os.environ['GITHUB_REPOSITORY'],
+                                '--name','swiglu-prepared-'+origin,'--dir',folder],check=True)
+                archived, = Path(folder).rglob('submission.zip')
+                require(sha(archived)==manifest['files']['submission.zip'], 'Central prepared package differs')
+        else:
+            require(os.environ.get('PREPARED_ARTIFACT_ID'), 'Missing central prepared checkpoint')
+        status = queue._client._get_json('/api/public/service-status')['maintenance']
+        require(status['enabled'] is False, 'CANNBench maintenance active; retain the prepared package')
         ci.require_quota(queue._client.get_credits())
         with (LEDGER/'lock').open('a') as lock:
             fcntl.flock(lock,fcntl.LOCK_EX)
-            state = ci.smoke.submit_once(queue,package,LEDGER)
+            state = ci.smoke.submit_once(queue,package,LEDGER,retry_maintenance=stage=='reopen')
         print('CANNBench job',state.get('job_id'), 'submission',state.get('submission_id'),flush=True)
     end = time.monotonic()+4*3600
     visible_by = time.monotonic()+300
@@ -171,7 +183,7 @@ def service(root, submit):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('stage',choices=['restore','package','submit','resume'])
+    parser.add_argument('stage',choices=['restore','package','submit','resume','reopen'])
     parser.add_argument('root',type=Path)
     parser.add_argument('--origin',default='')
     args = parser.parse_args()
@@ -181,4 +193,4 @@ if __name__=='__main__':
     elif args.stage=='package':
         package(args.root)
     else:
-        service(args.root,args.stage=='submit')
+        service(args.root,args.stage)

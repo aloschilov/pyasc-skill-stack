@@ -218,7 +218,12 @@ exercises three useful candidates:
   `r * 2 * H + h` and `r * 2 * H + H + h`. They also work for H greater
   than one. The archive loads two reusable int32 index tiles per block.
   Include their transfers and UB allocation, and use an index-construction
-  method allowed by the candidate contract. For H=1, compare this public
+  method allowed by the candidate contract. On the CANNBench 950PR image,
+  SwiGLU case 9 stopped before its gather kernel because device-side
+  `torch.arange` required a missing `aclnnArange` binary. For a shape-only
+  address table, construct the two int32 arrays on the host, upload them
+  once per layout and device, and keep all input-dependent math in the
+  generated kernel. For H=1, compare this public
   route with the register specialization when native code is enabled.
   For this slab route, derive height and loop unroll from the input DMA
   bytes, compiled UB footprint and useful tiles per AIV. Apply the

@@ -59,7 +59,7 @@ jobs:
     if: >-
       always() && !cancelled() &&
       ((inputs.action == 'performance' && needs.generate.result == 'success') ||
-       inputs.action == 'performance-evaluate' || inputs.action == 'performance-resume')
+       inputs.action == 'performance-evaluate' || inputs.action == 'performance-resume' || inputs.action == 'performance-submit-prepared')
     runs-on: cannbench-vm
     timeout-minutes: 340
     permissions:
@@ -69,14 +69,14 @@ jobs:
       HELPER: integrations/cannbench/ci/swiglu_performance/evaluate.py
       IMAGE: ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:1efdcc8585b769715f640e9c9078c2e03cdf2157082d05b0c4b87974beea7407
       ORIGIN: ${{ inputs.origin || github.run_id }}
-      EVALUATION_RUN: ${{ inputs.action == 'performance-resume' && inputs.origin || github.run_id }}
+      EVALUATION_RUN: ${{ (inputs.action == 'performance-resume' || inputs.action == 'performance-submit-prepared') && inputs.origin || github.run_id }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Open evaluation directory and prepare benchmark client
         env:
-          RESUME: ${{ inputs.action == 'performance-resume' }}
+          RESUME: ${{ inputs.action == 'performance-resume' || inputs.action == 'performance-submit-prepared' }}
         run: |
           set -eu
           [[ "$EVALUATION_RUN" =~ ^[1-9][0-9]*$ ]]
@@ -89,12 +89,12 @@ jobs:
           bash integrations/cannbench/setup-site-mcp.sh
           echo "PYTHON=$CANNBENCH_VENV/bin/python" >> "$GITHUB_ENV"
       - name: Verify original GitHub Actions generation
-        if: inputs.action != 'performance-resume'
+        if: inputs.action != 'performance-resume' && inputs.action != 'performance-submit-prepared'
         env:
           GH_TOKEN: ${{ github.token }}
         run: '"$PYTHON" "$HELPER" restore "$ROOT" --origin "$ORIGIN"'
       - name: Run numerical CaModel controls and lower the same bytes to AscendC
-        if: inputs.action != 'performance-resume'
+        if: inputs.action != 'performance-resume' && inputs.action != 'performance-submit-prepared'
         run: |
           set -eu
           mkdir "$ROOT/qualification"
@@ -104,7 +104,7 @@ jobs:
             -v "$ROOT/generation:/generation:ro" -w /tmp "$IMAGE" \
             python3.12 /src/integrations/cannbench/ci/swiglu_performance/qualify.py /generation /result
       - name: Package source and reproduce its wheel build
-        if: inputs.action != 'performance-resume'
+        if: inputs.action != 'performance-resume' && inputs.action != 'performance-submit-prepared'
         env:
           CANNBENCH_AGGREGATION_TOKEN: ${{ vars.CANNBENCH_AGGREGATION_TOKEN }}
         run: |
@@ -116,7 +116,7 @@ jobs:
             -v "$ROOT/prepared/submission.zip:/submission.zip:ro" -v "$ROOT/build-test:/build" \
             -w /build "$IMAGE" bash -c 'python3 -m zipfile -e /submission.zip /build && bash build.sh && python3 -m zipfile -t dist/*.whl'
       - uses: actions/upload-artifact@v4
-        if: inputs.action != 'performance-resume'
+        if: inputs.action != 'performance-resume' && inputs.action != 'performance-submit-prepared'
         id: checkpoint
         with:
           name: swiglu-prepared-${{ github.run_id }}
@@ -127,7 +127,8 @@ jobs:
           if-no-files-found: error
       - name: Submit once and collect service timings
         env:
-          STAGE: ${{ inputs.action == 'performance-resume' && 'resume' || 'submit' }}
+          STAGE: ${{ inputs.action == 'performance-resume' && 'resume' || inputs.action == 'performance-submit-prepared' && 'reopen' || 'submit' }}
+          GH_TOKEN: ${{ inputs.action == 'performance-submit-prepared' && github.token || '' }}
           BENCHSITE_API_TOKEN: ${{ secrets.BENCHSITE_API_TOKEN }}
           PREPARED_ARTIFACT_ID: ${{ steps.checkpoint.outputs.artifact-id }}
         run: '"$PYTHON" "$HELPER" "$STAGE" "$ROOT"'
