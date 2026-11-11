@@ -255,9 +255,12 @@ function renderSwiGLU(study, official) {
   panel.replaceChildren();
   if (official?.status === 'available') {
     const change = (1/official.ratio-1)*100;
+    const serviceJob = el('a','CANNBench job '+official.job);
+    serviceJob.href = 'https://cannbench.com/jobs/'+official.job;
     panel.append(el('h3','CI-generated SwiGLU · CANNBench'),
       el('p',`${official.ratio.toFixed(3)}× baseline speed across the 19 cases that ran OpenCode-generated compute kernels, or ${Math.abs(change).toFixed(1)}% ${change >= 0 ? 'more' : 'less'} device time. All 20 passed. Case 12 ran the packed BF16 template.`),
       el('p',`Service score (20 cases): ${official.score.toFixed(4)} · ${official.job} · ${official.submission}`),
+      serviceJob, document.createTextNode(' · '),
       link('GitHub Actions generation',official.generation), document.createTextNode(' · '),
       link('CANNBench timings and evaluated source package',official.release));
     const details=el('details'); details.append(el('summary','Official timings for all 20 cases'));
@@ -333,7 +336,7 @@ function validate(data) {
   }
   if (data.swiglu_performance?.status === 'available') {
     const p=data.swiglu_performance; safeURL(p.generation); safeURL(p.release);
-    require(Number.isFinite(p.ratio) && p.ratio>0 && Number.isFinite(p.score) && p.cases.length===20 &&
+    require(/^job_[0-9a-f]+$/.test(p.job) && /^sub_[0-9a-f]+$/.test(p.submission) && Number.isFinite(p.ratio) && p.ratio>0 && Number.isFinite(p.score) && p.cases.length===20 &&
       p.cases.every((c,i)=>c.id===`level1/swi_glu_${i+1}` && ['elapsed_us','baseline_us'].every(k=>Number.isFinite(c[k]) && c[k]>0)));
   }
   const ids = new Set();

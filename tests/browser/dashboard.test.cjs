@@ -257,6 +257,7 @@ test('CI submission shows 19 generated cases and the independent historical comp
   const panel = page.locator('#swiglu-study');
   assert.match(await panel.textContent(),/0.800× baseline speed.*19 cases.*25.0% more device time/);
   assert.equal(await panel.getByRole('link',{name:'GitHub Actions generation'}).getAttribute('href'),payload.swiglu_performance.generation);
+  assert.equal(await panel.getByRole('link',{name:'CANNBench job job_abc'}).getAttribute('href'),'https://cannbench.com/jobs/job_abc');
   await panel.getByText('Official timings for all 20 cases').click();
   assert.equal(await panel.locator('tbody tr').count(),20);
 });

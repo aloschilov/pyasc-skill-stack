@@ -223,7 +223,10 @@ exercises three useful candidates:
   `torch.arange` required a missing `aclnnArange` binary. For a shape-only
   address table, construct the two int32 arrays on the host, upload them
   once per layout and device, and keep all input-dependent math in the
-  generated kernel. For H=1, compare this public
+  generated kernel. With the same generated source, this host change let the
+  H=7 slab run in 14.77 µs and all 20 cases pass.
+  [CI-generated source and service measurements](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-performance-43061369765).
+  For H=1, compare this public
   route with the register specialization when native code is enabled.
   For this slab route, derive height and loop unroll from the input DMA
   bytes, compiled UB footprint and useful tiles per AIV. Apply the

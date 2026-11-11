@@ -53,5 +53,9 @@
     "release": "qualification-cannbench-transfer-52",
     "asset": "cannbench-maximum-transfer-52.tar.gz",
     "sha256": "6ad38bdc97349611b0e4c31f32d8e41d5a46b12f402e48a150cfc597f6b092d0"
+  },
+  "swiglu_performance": {
+    "release": "qualification-swiglu-performance-43061369765",
+    "sha256": "708277739387dd0a001243a8b52d49c858e26f2aedc86fc5ca3a0352350bdd4f"
   }
 }
