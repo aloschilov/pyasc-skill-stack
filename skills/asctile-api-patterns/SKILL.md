@@ -185,7 +185,9 @@ before a performance iteration.
 First check the physical layout. For contiguous, interleaved BF16 pairs
 consumed together, use the [packed pair pattern](references/packed-bf16-pairs.md)
 to choose a tile from active UB, give the tail one owner in the same grid,
-and apply expensive unary operations to the consuming plane.
+and apply expensive unary operations to the consuming plane. For native-enabled
+950PR generation, select register deinterleaving and keep SwiGLU in FP32
+registers through the final BF16 conversion.
 
 For other layouts with many rows whose useful width is smaller than a 32-byte transfer, choose
 the row count on the host after platform setup. On PyASC pins exposing

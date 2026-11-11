@@ -2,9 +2,34 @@
 
 For SwiGLU on a contiguous final axis of length two, flatten the outer
 dimensions into a pair count. One contiguous BF16 read covers both operands.
-Use the [public AscTile template](../templates/packed-bf16-swiglu.py) for
-the device kernel and its host tile selector. Adapt the AscTile import to the
+Select the implementation according to the target and the candidate contract.
+For a native-enabled hardware build on the qualified 950PR, prefer the
+[register kernel and selector](../templates/register-bf16-swiglu.py) ahead
+of the [public tile path](../templates/packed-bf16-swiglu.py). For a
+public-AscTile-only campaign, include just the public template. Separate the
+choice of source allowed in the artifact from run-time dispatch on that source. Adapt the AscTile import to the
 active runtime. Keep the existing dispatch for other layouts.
+
+### Native BF16 register path
+
+Inside the contiguous BF16, normalized-last-axis, width-two branch, query UB
+and the active vector count. Pass both to
+`_register_pair_tile_size(rows, ub_bytes, vector_count)`. A returned tile
+selects `_swiglu_register_pairs[vector_blocks(groups)](input, out, rows, groups)`
+where groups is ceil(rows / tile). Return the output after launch. On a
+declined tile, try the public packed path and then the general row path.
+The qualified specialization takes four arguments and fixes its physical
+tile at 2048 pairs. Its compiled UB requirement was 12288 bytes on PyASC
+`6b3447b4` with CANN 9.2. Requalify for other compiler or register targets.
+
+Load the interleaved input once. Two consecutive 128-lane BF16 registers
+contain 128 complete pairs. `DeInterleave` separates even and odd lanes.
+Widen both register layouts to FP32, evaluate the exponential on each gate
+lane once, multiply by its value, round to BF16 and combine the disjoint
+output lanes. Only the input and output tiles occupy UB. Keep the valid
+extents on the copies so the last block writes exactly the remaining rows.
+
+### Public tile path
 
 After platform setup and empty-input handling, integrate the template at the
 start of the existing contiguous SwiGLU dispatch. The surrounding operator
