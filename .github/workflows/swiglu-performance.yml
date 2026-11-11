@@ -1,0 +1,55 @@
+name: SwiGLU generated performance
+on:
+  workflow_call:
+    inputs:
+      action:
+        type: string
+        required: true
+      origin:
+        type: string
+        required: false
+    secrets:
+      OPENCODE_API_KEY:
+        required: true
+      BENCHSITE_API_TOKEN:
+        required: true
+      QUALIFICATION_PUBLISH_TOKEN:
+        required: false
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    if: inputs.action == 'performance' || inputs.action == 'performance-generate'
+    runs-on: cannbench-vm
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned OpenCode
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_dir=$(mktemp -d)
+          curl --fail --location --retry 2 --max-time 240 -o "$tool_dir/cli.tar.gz" https://github.com/anomalyco/opencode/releases/download/v1.19.0/opencode-linux-arm64.tar.gz
+          echo "e9841d43d3e1a8f36ed2691592d3b8b4fb097e606c8b559a277a1b845840e26b  $tool_dir/cli.tar.gz" | sha256sum --check
+          tar xzf "$tool_dir/cli.tar.gz" -C "$tool_dir"
+          echo "$tool_dir" >> "$GITHUB_PATH"
+      - name: Prepare benchmark client
+        run: |
+          export CANNBENCH_VENV="$RUNNER_TEMP/perf-client-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          bash integrations/cannbench/setup-site-mcp.sh
+          echo "PYTHON=$CANNBENCH_VENV/bin/python" >> "$GITHUB_ENV"
+      - name: Generate fresh PyASC compute kernels with OpenCode
+        env:
+          OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          BENCHSITE_API_TOKEN: ${{ secrets.BENCHSITE_API_TOKEN }}
+        run: '"$PYTHON" integrations/cannbench/ci/swiglu_performance/generate.py "$RUNNER_TEMP/swiglu-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: swiglu-generation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/swiglu-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
