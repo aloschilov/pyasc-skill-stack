@@ -190,6 +190,80 @@ generated candidates. The passing repair does not isolate the original NaN
 mismatch's cause. Avoid host copy fallbacks; independently qualify short rows,
 tails and NaN/Inf positions for every new candidate.
 
+For SwiGLU, normalize the split axis first. When the contiguous BF16 input
+is split on its final axis of length two, each row is a neighbor pair
+`(gate, value)`. Choose the packed pair path in
+[AscTile API patterns](../../asctile-api-patterns/references/packed-bf16-pairs.md)
+before the short-row height selector. Include the UB-selected tile, the single
+block-stride launch with a bounded final copy, and the gate-only exponential
+from that pattern. Confirm the observed launch count and compiled UB allocation.
+For an already validated contiguous
+tensor the guard is `dtype == torch.bfloat16 and d == rank - 1 and shape[d] == 2`.
+Here `d` is the normalized **axis index**, not its extent. Verify the launched
+kernel on a rank-two [R, 2] input; golden values alone also pass on the old
+row route. A last dimension of 14, for example,
+contains two adjacent **halves** of length seven, not seven interleaved pairs.
+Keep the UB-sized row path for other short rows. Dispatch from layout and dtype,
+never the case ID or a particular outer shape.
+
+For other contiguous splits, express the input as `[R, 2H]`, where
+`R = prod(shape[:d])` and `H = (shape[d] // 2) * prod(shape[d+1:])`.
+Choose the DMA layout from the half-row byte count and available independent
+tiles. The [950PR archive replay](../../../docs/evidence/swiglu-vector-grid-20261110/README.md#register-swiglu-and-archived-submission-replay)
+exercises three useful candidates:
+
+- For very short halves, load a contiguous slab of complete rows. On pins
+  supporting public `asctile.reindex`, compare two local gathers with
+  padded strided copies. For output lane `r * H + h`, the two indices are
+  `r * 2 * H + h` and `r * 2 * H + H + h`. They also work for H greater
+  than one. The archive loads two reusable int32 index tiles per block.
+  Include their transfers and UB allocation, and use an index-construction
+  method allowed by the candidate contract. For H=1, compare this public
+  route with the register specialization when native code is enabled.
+  For this slab route, derive height and loop unroll from the input DMA
+  bytes, compiled UB footprint and useful tiles per AIV. Apply the
+  [reindex slab geometry](../../asctile-api-patterns/references/reindex-slabs.md)
+  for the matching build.
+- When several half-rows fit in UB, batch them into a two-dimensional tile
+  with a 32-byte-aligned physical width. Bound both the row count and the
+  logical width on reads and stores. The archive targets roughly 8–16 KiB
+  per half-tile for short rows. Tune the height against both DMA size and
+  grid occupancy.
+- When a half-row is already a long contiguous stream, split it into flat
+  chunks. Load gate and value from offsets separated by H, and include
+  useful column chunks when choosing the grid. Compare loop unroll 1, 2
+  and 3 using compiled UB for the exact dtype, tile and JIT options.
+
+Use the active vector-resource query for these routes. Recheck warm and
+cache-flushed timings under the runner's actual sampling convention before
+transferring a threshold or unroll choice from another runtime.
+
+For the padded SwiGLU kernel on PyASC `6b3447b4`, the BF16 specialization
+at height 512 and physical width 16 requested 655,360 UB bytes on the 950PR.
+Budget at least 1,280 bytes per physical row (80 bytes per padded lane) for
+this path. The 128-row specialization used 163,840 bytes in both the full
+and tail launches. Query the active SoC capacity after platform setup. Requalify the
+allocation when changing the kernel, dtype, padding, compiler or JIT flags.
+
+On a wide split, budget the tile for the rows that actually contain data.
+The eight-block parent used a physical `16 × 64` tile even when only one
+or four rows were live. An OpenCode-generated host change retained the
+1,024-element budget, used the live row count as tile height and rounded the
+width down to a multiple of 16 elements. It also bounded the width so that
+eight full column tiles remained, then recomputed the tail offset and owner.
+On Ascend950PR_9599 with CANN 9.2.0 and PyASC `6b3447b4`, case 6 with
+one BF16 row improved from 1,294.781 to 74.646 µs, and case 19 with four
+BF16 rows and an uneven tail improved from 1,504.377 to 334.773 µs.
+These are medians of three warm device calls after a full-output golden check.
+
+Measure the grid separately at fixed geometry. With the parent's tile and
+the same inputs, 8 → 32 → 64 blocks took 1,294.781 → 307.247 → 162.471 µs
+on case 6 and 1,504.377 → 377.400 → 193.149 µs on case 19. The retained
+PyASC reference uses a `1 × 1024` wide tile, grid-strides over row/column
+tiles and launches up to 72 blocks. When an operator uses separate full-row
+and row-tail launches, sum their NPU task durations for each call before
+taking the median. The [20-case grid comparison](../../../docs/evidence/swiglu-vector-grid-20261110/README.md) records the actual launch sizes for the adaptive variant.
+
 ## ForeachAddcdivScalar
 
 Loop over tensor lists on the host and launch one elementwise kernel for each

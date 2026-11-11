@@ -1,0 +1,2007 @@
+{
+  "pilot": {
+    "case": 12,
+    "variant": "ub",
+    "shape": [
+      1000003,
+      2
+    ],
+    "dtype": "bfloat16",
+    "dim": 1,
+    "correct": true,
+    "median_us": 446.172,
+    "samples_us": [
+      456.822,
+      446.172,
+      436.429
+    ],
+    "launch_grid": [
+      72,
+      1,
+      72,
+      1,
+      72,
+      1,
+      72,
+      1
+    ],
+    "launches": 2,
+    "dispatch": [
+      {
+        "function": "_col_tile",
+        "integers": {
+          "cols": 1,
+          "returned": 16
+        }
+      },
+      {
+        "function": "_query_platform_ub_bytes",
+        "integers": {
+          "returned": 253952
+        }
+      },
+      {
+        "function": "_short_row_height",
+        "integers": {
+          "rows": 1000003,
+          "ct": 16,
+          "esize": 2,
+          "out_mode": 2,
+          "bytes_per_row": 1280,
+          "ceiling": 172,
+          "aiv": 72,
+          "limit": 172,
+          "returned": 128
+        }
+      },
+      {
+        "function": "swi_glu",
+        "integers": {
+          "dim": 1,
+          "out_mode": 2,
+          "rank": 2,
+          "d": 1,
+          "size": 2,
+          "half": 1,
+          "rows": 1000003,
+          "i": 0,
+          "inner": 1,
+          "cols": 1,
+          "ct": 16,
+          "n_c_full": 0,
+          "c_tail": 1,
+          "esize": 2,
+          "rt": 128,
+          "n_rb_full": 7812,
+          "r_tail": 67,
+          "cores": 72
+        }
+      }
+    ],
+    "allocations": [
+      {
+        "UB": 163840
+      },
+      {
+        "UB": 163840
+      }
+    ],
+    "tasks": [
+      [
+        "_swiglu_impl",
+        "AI_VECTOR_CORE",
+        453.273
+      ],
+      [
+        "_swiglu_impl",
+        "AI_VECTOR_CORE",
+        3.549
+      ],
+      [
+        "_swiglu_impl",
+        "AI_VECTOR_CORE",
+        442.365
+      ],
+      [
+        "_swiglu_impl",
+        "AI_VECTOR_CORE",
+        3.807
+      ],
+      [
+        "_swiglu_impl",
+        "AI_VECTOR_CORE",
+        432.635
+      ],
+      [
+        "_swiglu_impl",
+        "AI_VECTOR_CORE",
+        3.794
+      ]
+    ]
+  },
+  "series": [
+    {
+      "case": 1,
+      "variant": "ub",
+      "shape": [
+        1024,
+        2048
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 10.411,
+      "samples_us": [
+        10.411,
+        10.002,
+        10.587
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 1024,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "out_mode": 1,
+            "rank": 2,
+            "d": 1,
+            "size": 2048,
+            "half": 1024,
+            "rows": 1024,
+            "i": 0,
+            "inner": 1,
+            "cols": 1024,
+            "ct": 64,
+            "n_c_full": 16,
+            "c_tail": 0,
+            "esize": 2,
+            "rt": 16,
+            "n_rb_full": 64,
+            "r_tail": 0,
+            "cores": 64
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 43008
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          10.411
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          10.002
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          10.587
+        ]
+      ]
+    },
+    {
+      "case": 2,
+      "variant": "ub",
+      "shape": [
+        2048,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 38.143,
+      "samples_us": [
+        38.841,
+        38.143,
+        38.006
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 2048,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "out_mode": 0,
+            "rank": 2,
+            "d": 1,
+            "size": 4096,
+            "half": 2048,
+            "rows": 2048,
+            "i": 0,
+            "inner": 1,
+            "cols": 2048,
+            "ct": 64,
+            "n_c_full": 32,
+            "c_tail": 0,
+            "esize": 4,
+            "rt": 16,
+            "n_rb_full": 128,
+            "r_tail": 0,
+            "cores": 72
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 36864
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          38.841
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          38.143
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          38.006
+        ]
+      ]
+    },
+    {
+      "case": 3,
+      "variant": "ub",
+      "shape": [
+        4096,
+        8192
+      ],
+      "dtype": "bfloat16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 148.123,
+      "samples_us": [
+        148.123,
+        147.507,
+        148.604
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 4096,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "out_mode": 2,
+            "rank": 2,
+            "d": 1,
+            "size": 8192,
+            "half": 4096,
+            "rows": 4096,
+            "i": 0,
+            "inner": 1,
+            "cols": 4096,
+            "ct": 64,
+            "n_c_full": 64,
+            "c_tail": 0,
+            "esize": 2,
+            "rt": 16,
+            "n_rb_full": 256,
+            "r_tail": 0,
+            "cores": 72
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 43008
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          148.123
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          147.507
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          148.604
+        ]
+      ]
+    },
+    {
+      "case": 4,
+      "variant": "ub",
+      "shape": [
+        8192,
+        16384
+      ],
+      "dtype": "float16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 538.953,
+      "samples_us": [
+        538.953,
+        539.433,
+        538.359
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 67108864,
+            "returned": 64
+          }
+        },
+        {
+          "function": "_wide_col_tile",
+          "integers": {
+            "rows": 1,
+            "cols": 67108864,
+            "ct": 1024,
+            "cap": 8388608,
+            "returned": 1024
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "out_mode": 1,
+            "rank": 2,
+            "d": 0,
+            "size": 8192,
+            "half": 4096,
+            "rows": 1,
+            "i": 1,
+            "inner": 16384,
+            "cols": 67108864,
+            "ct": 64,
+            "n_c_full": 1048576,
+            "c_tail": 0,
+            "esize": 2,
+            "rt": 16,
+            "n_rb_full": 0,
+            "r_tail": 1,
+            "w_ct": 1024,
+            "n_w_full": 65536,
+            "w_tail": 0
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 43008
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          538.953
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          539.433
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          538.359
+        ]
+      ]
+    },
+    {
+      "case": 5,
+      "variant": "ub",
+      "shape": [
+        2039,
+        65520
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 1161.036,
+      "samples_us": [
+        1161.036,
+        1159.879,
+        1169.2450000000001
+      ],
+      "launch_grid": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "launches": 2,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 32760,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "out_mode": 0,
+            "rank": 2,
+            "d": 1,
+            "size": 65520,
+            "half": 32760,
+            "rows": 2039,
+            "i": 0,
+            "inner": 1,
+            "cols": 32760,
+            "ct": 64,
+            "n_c_full": 511,
+            "c_tail": 56,
+            "esize": 4,
+            "rt": 16,
+            "n_rb_full": 127,
+            "r_tail": 7,
+            "cores": 72
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 69632
+        },
+        {
+          "UB": 69632
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          856.818
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          304.218
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          855.326
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          304.553
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          865.041
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          304.204
+        ]
+      ]
+    },
+    {
+      "case": 6,
+      "variant": "ub",
+      "shape": [
+        1022,
+        2047
+      ],
+      "dtype": "bfloat16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 10.552,
+      "samples_us": [
+        11.641,
+        10.552,
+        10.543
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 1046017,
+            "returned": 64
+          }
+        },
+        {
+          "function": "_wide_col_tile",
+          "integers": {
+            "rows": 1,
+            "cols": 1046017,
+            "ct": 1024,
+            "cap": 130752,
+            "returned": 1024
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "out_mode": 2,
+            "rank": 2,
+            "d": 0,
+            "size": 1022,
+            "half": 511,
+            "rows": 1,
+            "i": 1,
+            "inner": 2047,
+            "cols": 1046017,
+            "ct": 64,
+            "n_c_full": 16344,
+            "c_tail": 1,
+            "esize": 2,
+            "rt": 16,
+            "n_rb_full": 0,
+            "r_tail": 1,
+            "w_ct": 1024,
+            "n_w_full": 1021,
+            "w_tail": 513
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          11.641
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          10.552
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          10.543
+        ]
+      ]
+    },
+    {
+      "case": 7,
+      "variant": "ub",
+      "shape": [
+        1009,
+        2016
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 23.607,
+      "samples_us": [
+        24.453,
+        23.607,
+        22.986
+      ],
+      "launch_grid": [
+        63,
+        1,
+        63,
+        1,
+        63,
+        1,
+        63,
+        1
+      ],
+      "launches": 2,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 1008,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "out_mode": 1,
+            "rank": 2,
+            "d": 1,
+            "size": 2016,
+            "half": 1008,
+            "rows": 1009,
+            "i": 0,
+            "inner": 1,
+            "cols": 1008,
+            "ct": 64,
+            "n_c_full": 15,
+            "c_tail": 48,
+            "esize": 2,
+            "rt": 16,
+            "n_rb_full": 63,
+            "r_tail": 1,
+            "cores": 63
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 81920
+        },
+        {
+          "UB": 81920
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          13.67
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          10.783
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          13.064
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          10.543
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          12.358
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          10.628
+        ]
+      ]
+    },
+    {
+      "case": 8,
+      "variant": "ub",
+      "shape": [
+        1538,
+        1537
+      ],
+      "dtype": "float32",
+      "dim": 0,
+      "correct": true,
+      "median_us": 11.805,
+      "samples_us": [
+        12.085,
+        11.805,
+        11.485
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 1181953,
+            "returned": 64
+          }
+        },
+        {
+          "function": "_wide_col_tile",
+          "integers": {
+            "rows": 1,
+            "cols": 1181953,
+            "ct": 1024,
+            "cap": 147744,
+            "returned": 1024
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "out_mode": 0,
+            "rank": 2,
+            "d": 0,
+            "size": 1538,
+            "half": 769,
+            "rows": 1,
+            "i": 1,
+            "inner": 1537,
+            "cols": 1181953,
+            "ct": 64,
+            "n_c_full": 18468,
+            "c_tail": 1,
+            "esize": 4,
+            "rt": 16,
+            "n_rb_full": 0,
+            "r_tail": 1,
+            "w_ct": 1024,
+            "n_w_full": 1154,
+            "w_tail": 257
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 69632
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          12.085
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          11.805
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          11.485
+        ]
+      ]
+    },
+    {
+      "case": 9,
+      "variant": "ub",
+      "shape": [
+        363,
+        367,
+        14
+      ],
+      "dtype": "bfloat16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 31.52,
+      "samples_us": [
+        31.52,
+        32.084,
+        31.456
+      ],
+      "launch_grid": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "launches": 2,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 7,
+            "returned": 16
+          }
+        },
+        {
+          "function": "_query_platform_ub_bytes",
+          "integers": {
+            "returned": 253952
+          }
+        },
+        {
+          "function": "_short_row_height",
+          "integers": {
+            "rows": 133221,
+            "ct": 16,
+            "esize": 2,
+            "out_mode": 2,
+            "bytes_per_row": 1280,
+            "ceiling": 172,
+            "aiv": 72,
+            "limit": 172,
+            "returned": 128
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "out_mode": 2,
+            "rank": 3,
+            "d": 2,
+            "size": 14,
+            "half": 7,
+            "rows": 133221,
+            "i": 1,
+            "inner": 1,
+            "cols": 7,
+            "ct": 16,
+            "n_c_full": 0,
+            "c_tail": 7,
+            "esize": 2,
+            "rt": 128,
+            "n_rb_full": 1040,
+            "r_tail": 101,
+            "cores": 72
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 163840
+        },
+        {
+          "UB": 163840
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          29.055
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          2.465
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          29.597
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          2.487
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          28.962
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          2.494
+        ]
+      ]
+    },
+    {
+      "case": 10,
+      "variant": "ub",
+      "shape": [
+        2049,
+        1024
+      ],
+      "dtype": "float16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 15.023,
+      "samples_us": [
+        15.866,
+        14.845,
+        15.023
+      ],
+      "launch_grid": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "launches": 2,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 512,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "out_mode": 1,
+            "rank": 2,
+            "d": 1,
+            "size": 1024,
+            "half": 512,
+            "rows": 2049,
+            "i": 0,
+            "inner": 1,
+            "cols": 512,
+            "ct": 64,
+            "n_c_full": 8,
+            "c_tail": 0,
+            "esize": 2,
+            "rt": 16,
+            "n_rb_full": 128,
+            "r_tail": 1,
+            "cores": 72
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 43008
+        },
+        {
+          "UB": 43008
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          10.849
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          5.017
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          9.826
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          5.019
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          9.93
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          5.093
+        ]
+      ]
+    },
+    {
+      "case": 11,
+      "variant": "ub",
+      "shape": [
+        3,
+        7,
+        13,
+        1018
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 11.939,
+      "samples_us": [
+        12.908000000000001,
+        10.904,
+        11.939
+      ],
+      "launch_grid": [
+        17,
+        1,
+        17,
+        1,
+        17,
+        1,
+        17,
+        1
+      ],
+      "launches": 2,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 509,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "out_mode": 0,
+            "rank": 4,
+            "d": 3,
+            "size": 1018,
+            "half": 509,
+            "rows": 273,
+            "i": 2,
+            "inner": 1,
+            "cols": 509,
+            "ct": 64,
+            "n_c_full": 7,
+            "c_tail": 61,
+            "esize": 4,
+            "rt": 16,
+            "n_rb_full": 17,
+            "r_tail": 1,
+            "cores": 17
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 69632
+        },
+        {
+          "UB": 69632
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          7.482
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          5.426
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          5.658
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          5.246
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          6.876
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          5.063
+        ]
+      ]
+    },
+    {
+      "case": 12,
+      "variant": "ub",
+      "shape": [
+        1000003,
+        2
+      ],
+      "dtype": "bfloat16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 445.974,
+      "samples_us": [
+        445.974,
+        460.96000000000004,
+        430.986
+      ],
+      "launch_grid": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "launches": 2,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 1,
+            "returned": 16
+          }
+        },
+        {
+          "function": "_query_platform_ub_bytes",
+          "integers": {
+            "returned": 253952
+          }
+        },
+        {
+          "function": "_short_row_height",
+          "integers": {
+            "rows": 1000003,
+            "ct": 16,
+            "esize": 2,
+            "out_mode": 2,
+            "bytes_per_row": 1280,
+            "ceiling": 172,
+            "aiv": 72,
+            "limit": 172,
+            "returned": 128
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "out_mode": 2,
+            "rank": 2,
+            "d": 1,
+            "size": 2,
+            "half": 1,
+            "rows": 1000003,
+            "i": 0,
+            "inner": 1,
+            "cols": 1,
+            "ct": 16,
+            "n_c_full": 0,
+            "c_tail": 1,
+            "esize": 2,
+            "rt": 128,
+            "n_rb_full": 7812,
+            "r_tail": 67,
+            "cores": 72
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 163840
+        },
+        {
+          "UB": 163840
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          442.561
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          3.413
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          457.49
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          3.47
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          427.521
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          3.465
+        ]
+      ]
+    },
+    {
+      "case": 13,
+      "variant": "ub",
+      "shape": [
+        11,
+        13,
+        16,
+        67
+      ],
+      "dtype": "float32",
+      "dim": 2,
+      "correct": true,
+      "median_us": 13.693999999999999,
+      "samples_us": [
+        14.642,
+        12.8,
+        13.693999999999999
+      ],
+      "launch_grid": [
+        8,
+        1,
+        8,
+        1,
+        8,
+        1,
+        8,
+        1
+      ],
+      "launches": 2,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 536,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 2,
+            "out_mode": 0,
+            "rank": 4,
+            "d": 2,
+            "size": 16,
+            "half": 8,
+            "rows": 143,
+            "i": 3,
+            "inner": 67,
+            "cols": 536,
+            "ct": 64,
+            "n_c_full": 8,
+            "c_tail": 24,
+            "esize": 4,
+            "rt": 16,
+            "n_rb_full": 8,
+            "r_tail": 15,
+            "cores": 8
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 69632
+        },
+        {
+          "UB": 69632
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          8.142
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          6.5
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          6.523
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          6.277
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          6.299
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          7.395
+        ]
+      ]
+    },
+    {
+      "case": 14,
+      "variant": "ub",
+      "shape": [
+        3,
+        7,
+        11,
+        13,
+        1012
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 22.657,
+      "samples_us": [
+        23.632,
+        22.657,
+        21.588
+      ],
+      "launch_grid": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "launches": 2,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 506,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "out_mode": 1,
+            "rank": 5,
+            "d": 4,
+            "size": 1012,
+            "half": 506,
+            "rows": 3003,
+            "i": 3,
+            "inner": 1,
+            "cols": 506,
+            "ct": 64,
+            "n_c_full": 7,
+            "c_tail": 58,
+            "esize": 2,
+            "rt": 16,
+            "n_rb_full": 187,
+            "r_tail": 11,
+            "cores": 72
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 81920
+        },
+        {
+          "UB": 81920
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          17.41
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          6.222
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          16.68
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          5.977
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          15.531
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          6.057
+        ]
+      ]
+    },
+    {
+      "case": 15,
+      "variant": "ub",
+      "shape": [
+        512,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 18.151,
+      "samples_us": [
+        18.151,
+        18.43,
+        17.575
+      ],
+      "launch_grid": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 2048,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "out_mode": 0,
+            "rank": 2,
+            "d": 1,
+            "size": 4096,
+            "half": 2048,
+            "rows": 512,
+            "i": 0,
+            "inner": 1,
+            "cols": 2048,
+            "ct": 64,
+            "n_c_full": 32,
+            "c_tail": 0,
+            "esize": 4,
+            "rt": 16,
+            "n_rb_full": 32,
+            "r_tail": 0,
+            "cores": 32
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 36864
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          18.151
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          18.43
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          17.575
+        ]
+      ]
+    },
+    {
+      "case": 16,
+      "variant": "ub",
+      "shape": [
+        254,
+        16383
+      ],
+      "dtype": "bfloat16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 18.883,
+      "samples_us": [
+        19.277,
+        18.653,
+        18.883
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 2080641,
+            "returned": 64
+          }
+        },
+        {
+          "function": "_wide_col_tile",
+          "integers": {
+            "rows": 1,
+            "cols": 2080641,
+            "ct": 1024,
+            "cap": 260080,
+            "returned": 1024
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "out_mode": 2,
+            "rank": 2,
+            "d": 0,
+            "size": 254,
+            "half": 127,
+            "rows": 1,
+            "i": 1,
+            "inner": 16383,
+            "cols": 2080641,
+            "ct": 64,
+            "n_c_full": 32510,
+            "c_tail": 1,
+            "esize": 2,
+            "rt": 16,
+            "n_rb_full": 0,
+            "r_tail": 1,
+            "w_ct": 1024,
+            "n_w_full": 2031,
+            "w_tail": 897
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          19.277
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          18.653
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          18.883
+        ]
+      ]
+    },
+    {
+      "case": 17,
+      "variant": "ub",
+      "shape": [
+        4096,
+        1023
+      ],
+      "dtype": "float16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 17.237,
+      "samples_us": [
+        18.262,
+        17.23,
+        17.237
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 2095104,
+            "returned": 64
+          }
+        },
+        {
+          "function": "_wide_col_tile",
+          "integers": {
+            "rows": 1,
+            "cols": 2095104,
+            "ct": 1024,
+            "cap": 261888,
+            "returned": 1024
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "out_mode": 1,
+            "rank": 2,
+            "d": 0,
+            "size": 4096,
+            "half": 2048,
+            "rows": 1,
+            "i": 1,
+            "inner": 1023,
+            "cols": 2095104,
+            "ct": 64,
+            "n_c_full": 32736,
+            "c_tail": 0,
+            "esize": 2,
+            "rt": 16,
+            "n_rb_full": 0,
+            "r_tail": 1,
+            "w_ct": 1024,
+            "n_w_full": 2046,
+            "w_tail": 0
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 43008
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          18.262
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          17.23
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          17.237
+        ]
+      ]
+    },
+    {
+      "case": 18,
+      "variant": "ub",
+      "shape": [
+        2,
+        1023,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 56.647999999999996,
+      "samples_us": [
+        58.354,
+        56.647999999999996,
+        56.138999999999996
+      ],
+      "launch_grid": [
+        72,
+        1,
+        72,
+        1,
+        72,
+        1,
+        72,
+        1
+      ],
+      "launches": 2,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 2048,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "out_mode": 0,
+            "rank": 3,
+            "d": 2,
+            "size": 4096,
+            "half": 2048,
+            "rows": 2046,
+            "i": 1,
+            "inner": 1,
+            "cols": 2048,
+            "ct": 64,
+            "n_c_full": 32,
+            "c_tail": 0,
+            "esize": 4,
+            "rt": 16,
+            "n_rb_full": 127,
+            "r_tail": 14,
+            "cores": 72
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 36864
+        },
+        {
+          "UB": 36864
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          40.047
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          18.307
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          38.354
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          18.294
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          37.983
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          18.156
+        ]
+      ]
+    },
+    {
+      "case": 19,
+      "variant": "ub",
+      "shape": [
+        4,
+        510,
+        4097
+      ],
+      "dtype": "bfloat16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 41.736,
+      "samples_us": [
+        42.053,
+        41.454,
+        41.736
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 1044735,
+            "returned": 64
+          }
+        },
+        {
+          "function": "_wide_col_tile",
+          "integers": {
+            "rows": 4,
+            "cols": 1044735,
+            "ct": 256,
+            "cap": 130576,
+            "returned": 256
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "out_mode": 2,
+            "rank": 3,
+            "d": 1,
+            "size": 510,
+            "half": 255,
+            "rows": 4,
+            "i": 2,
+            "inner": 4097,
+            "cols": 1044735,
+            "ct": 64,
+            "n_c_full": 16323,
+            "c_tail": 63,
+            "esize": 2,
+            "rt": 16,
+            "n_rb_full": 0,
+            "r_tail": 4,
+            "w_ct": 256,
+            "n_w_full": 4080,
+            "w_tail": 255
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          42.053
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          41.454
+        ],
+        [
+          "_swiglu_wide_row",
+          "AI_VECTOR_CORE",
+          41.736
+        ]
+      ]
+    },
+    {
+      "case": 20,
+      "variant": "ub",
+      "shape": [
+        2,
+        3,
+        17,
+        512,
+        100
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 30.661,
+      "samples_us": [
+        30.661,
+        30.88,
+        29.624
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_col_tile",
+          "integers": {
+            "cols": 50,
+            "returned": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "out_mode": 0,
+            "rank": 5,
+            "d": 4,
+            "size": 100,
+            "half": 50,
+            "rows": 52224,
+            "i": 3,
+            "inner": 1,
+            "cols": 50,
+            "ct": 64,
+            "n_c_full": 0,
+            "c_tail": 50,
+            "esize": 4,
+            "rt": 16,
+            "n_rb_full": 3264,
+            "r_tail": 0,
+            "cores": 72
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 69632
+        }
+      ],
+      "tasks": [
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          30.661
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          30.88
+        ],
+        [
+          "_swiglu_impl",
+          "AI_VECTOR_CORE",
+          29.624
+        ]
+      ]
+    }
+  ]
+}

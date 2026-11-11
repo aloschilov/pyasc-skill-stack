@@ -1,0 +1,17 @@
+if dtype == torch.bfloat16 and d == rank - 1 and size == 2:
+    # Native-enabled 950PR build: attempt the register kernel ahead of the
+    # public packed tile path. The selector receives the effective UB
+    # capacity (any caller-supplied runner limit is already folded in at
+    # the query boundary) together with the active vector count, and it
+    # returns None when the capacity is missing or no qualified tile fits.
+    tile = _register_pair_tile_size(
+        rows, _query_platform_ub_bytes(), vector_blocks(rows)
+    )
+    if tile:
+        # The qualified specialization fixes its physical tile (2048 pairs)
+        # and takes exactly four arguments; groups is ceil(rows / tile).
+        groups = (rows + tile - 1) // tile
+        _swiglu_register_pairs[vector_blocks(groups)](input, out, rows, groups)
+        return out
+    # Tile declined: fall through to the public packed tile path below,
+    # which in turn falls back to the general row kernel.

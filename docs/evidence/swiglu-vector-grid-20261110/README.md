@@ -1,0 +1,176 @@
+# SwiGLU launch grids on Ascend950PR_9599
+
+All 20 published Season 2 SwiGLU cases passed the full golden check for cap64, auto, UB-height auto, packed pairs, the gate-only variant, the native register variant, the archived job replay and the fresh shape-dispatch candidate. Cap64 and auto share tile shapes and math. The UB variant starts from auto and selects the height of padded short rows from the active UB capacity. Cap64 limits each launch to 64 independent work items. Auto uses the vector resources reported for the active context, bounded by the work available to that launch. A separately owned row tail launches one block.
+
+## Measured grids and device time
+
+The auto, UB, packed, gate-only, register and job grids report the `block_num` argument recorded on return from each successful PyASC `runtime.launch_kernel` call. All four invocations per case had the same grid. The cap64 grid comes from the retained dispatch code, input geometry and profiler task names. A grid of `72+1` means two successive launches.
+
+Speed relative to CANNBench is `baseline_perf_us / candidate_us`. The auto vs cap64 column uses `cap64_us / auto_us`. The UB vs auto column uses `auto_us / ub_us`. Tile rows gives the physical height of the main UB-variant launch. Packed vs UB-auto is UB time divided by packed time; packed vs auto compares against the original grid-only auto. All packed times come from the full series, not the pilot. The last row uses the geometric mean of the 20 unrounded ratios. CANNBench publishes a scoring-capped baseline for the 950pr family with status `pending_npu_revalidation`. [Pinned CANNBench metadata](https://gitcode.com/cann/cann-bench/blob/72fb4064d80bcbd6195a100cd4bbabac7a4f8817/tasks/metadata/950pr.json)
+
+| Case | Input shape | Cap64 grid | Auto grid | CANNBench µs | Cap64 µs | Auto µs | Cap64 vs CANNBench (×) | Auto vs CANNBench (×) | Auto vs cap64 (×) | UB grid | Tile rows | UB µs | UB vs CANNBench (×) | UB vs auto (×) | Packed grid | Packed µs | Packed vs CANNBench (×) | Packed vs auto (×) | Packed vs UB-auto (×) | Gate grid | Gate µs | Gate vs CANNBench (×) | Gate vs packed (×) | Gate vs auto (×) | Register grid | Register µs | Register vs CANNBench (×) | Register vs gate (×) | Register vs auto (×) | Job grid | Job µs | Job vs CANNBench (×) | Job vs register (×) | Fresh route | Fresh grid | Fresh µs | Fresh vs CANNBench (×) | Fresh vs register auto (×) | Fresh vs job (×) | Fresh vs grid auto (×) |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 1024 × 2048 | 64 | 64 | 6.380 | 9.965 | 10.763 | 0.64024 | 0.59277 | 0.9259 | 64 | 16 | 10.411 | 0.61281 | 1.0338 | 64 | 9.765 | 0.65335 | 1.1022 | 1.0662 | 64 | 10.284 | 0.62038 | 0.94953 | 1.04658 | 64 | 9.975 | 0.63960 | 1.03098 | 1.07900 | 72 | 5.016 | 1.27193 | 1.98864 | 2D copy | 72 | 7.059 | 0.90381 | 1.41309 | 0.71058 | 1.52472 |
+| 2 | 2048 × 4096 | 64 | 72 | 23.650 | 38.081 | 38.892 | 0.62104 | 0.60809 | 0.9791 | 72 | 16 | 38.143 | 0.62004 | 1.0196 | 72 | 38.994 | 0.60650 | 0.9974 | 0.9782 | 72 | 39.192 | 0.60344 | 0.99495 | 0.99235 | 72 | 39.477 | 0.59908 | 0.99278 | 0.98518 | 72 | 23.782 | 0.99445 | 1.65995 | flat chunks | 72 | 24.423 | 0.96835 | 1.61639 | 0.97375 | 1.59243 |
+| 3 | 4096 × 8192 | 64 | 72 | 48.590 | 150.123 | 147.905 | 0.32367 | 0.32852 | 1.0150 | 72 | 16 | 148.123 | 0.32804 | 0.9985 | 72 | 147.193 | 0.33011 | 1.0048 | 1.0063 | 72 | 149.534 | 0.32494 | 0.98434 | 0.98911 | 72 | 146.886 | 0.33080 | 1.01803 | 1.00694 | 72 | 45.645 | 1.06452 | 3.21801 | flat chunks | 72 | 49.693 | 0.97780 | 2.95587 | 0.91854 | 2.97637 |
+| 4 | 8192 × 16384 | 64 | 72 | 241.490 | 591.541 | 539.494 | 0.40824 | 0.44762 | 1.0965 | 72 | 1 | 538.953 | 0.44807 | 1.0010 | 72 | 539.944 | 0.44725 | 0.9992 | 0.9982 | 72 | 539.569 | 0.44756 | 1.00069 | 0.99986 | 72 | 539.676 | 0.44747 | 0.99980 | 0.99966 | 72 | 243.929 | 0.99000 | 2.21243 | flat chunks | 72 | 247.218 | 0.97683 | 2.18300 | 0.98670 | 2.18226 |
+| 5 | 2039 × 65520 | 64+1 | 72+1 | 522.100 | 1144.921 | 1150.281 | 0.45601 | 0.45389 | 0.9953 | 72+1 | 16 | 1161.036 | 0.44968 | 0.9907 | 72+1 | 1158.588 | 0.45063 | 0.9928 | 1.0021 | 72+1 | 1149.157 | 0.45433 | 1.00821 | 1.00098 | 72+1 | 1148.542 | 0.45458 | 1.00054 | 1.00151 | 72 | 523.609 | 0.99712 | 2.19351 | flat chunks | 72 | 516.925 | 1.01001 | 2.22187 | 1.01293 | 2.22524 |
+| 6 | 1022 × 2047 | 64 | 72 | 6.200 | 12.065 | 11.190 | 0.51388 | 0.55407 | 1.0782 | 72 | 1 | 10.552 | 0.58757 | 1.0605 | 72 | 11.540 | 0.53726 | 0.9697 | 0.9144 | 72 | 11.605 | 0.53425 | 0.99440 | 0.96424 | 72 | 11.010 | 0.56312 | 1.05404 | 1.01635 | 72 | 6.134 | 1.01076 | 1.79491 | flat chunks | 72 | 5.231 | 1.18524 | 2.10476 | 1.17262 | 2.13917 |
+| 7 | 1009 × 2016 | 63+1 | 63+1 | 6.500 | 23.766 | 23.435 | 0.27350 | 0.27736 | 1.0141 | 63+1 | 16 | 23.607 | 0.27534 | 0.9927 | 63+1 | 23.011 | 0.28247 | 1.0184 | 1.0259 | 63+1 | 23.008 | 0.28251 | 1.00013 | 1.01856 | 63+1 | 23.598 | 0.27545 | 0.97500 | 0.99309 | 72 | 6.687 | 0.97204 | 3.52894 | 2D copy | 72 | 7.398 | 0.87862 | 3.18978 | 0.90389 | 3.16775 |
+| 8 | 1538 × 1537 | 64 | 72 | 8.540 | 13.416 | 11.756 | 0.63655 | 0.72644 | 1.1412 | 72 | 1 | 11.805 | 0.72342 | 0.9958 | 72 | 11.631 | 0.73424 | 1.0107 | 1.0150 | 72 | 12.131 | 0.70398 | 0.95878 | 0.96909 | 72 | 11.566 | 0.73837 | 1.04885 | 1.01643 | 72 | 8.488 | 1.00613 | 1.36263 | flat chunks | 72 | 9.105 | 0.93795 | 1.27029 | 0.93224 | 1.29116 |
+| 9 | 363 × 367 × 14 | 64+1 | 72+1 | 6.782 | 110.477 | 95.993 | 0.06139 | 0.07065 | 1.1509 | 72+1 | 128 | 31.520 | 0.21516 | 3.0455 | 72+1 | 29.573 | 0.22933 | 3.2460 | 1.0658 | 72+1 | 30.445 | 0.22276 | 0.97136 | 3.15300 | 72+1 | 29.961 | 0.22636 | 1.01615 | 3.20393 | 72 | 6.385 | 1.06218 | 4.69240 | reindex | 72 | 15.229 | 0.44533 | 1.96736 | 0.41927 | 6.30330 |
+| 10 | 2049 × 1024 | 64+1 | 72+1 | 6.180 | 14.946 | 15.160 | 0.41349 | 0.40765 | 0.9859 | 72+1 | 16 | 15.023 | 0.41137 | 1.0091 | 72+1 | 15.039 | 0.41093 | 1.0080 | 0.9989 | 72+1 | 14.878 | 0.41538 | 1.01082 | 1.01895 | 72+1 | 15.106 | 0.40911 | 0.98491 | 1.00357 | 72 | 5.756 | 1.07366 | 2.62439 | 2D copy | 72 | 6.885 | 0.89760 | 2.19405 | 0.83602 | 2.20189 |
+| 11 | 3 × 7 × 13 × 1018 | 17+1 | 17+1 | 2.021 | 12.184 | 11.186 | 0.16587 | 0.18067 | 1.0892 | 17+1 | 16 | 11.939 | 0.16928 | 0.9369 | 17+1 | 12.068 | 0.16747 | 0.9269 | 0.9893 | 17+1 | 10.885 | 0.18567 | 1.10868 | 1.02765 | 17+1 | 10.836 | 0.18651 | 1.00452 | 1.03230 | 35 | 3.010 | 0.67143 | 3.60000 | 2D copy | 46 | 2.974 | 0.67956 | 3.64358 | 1.01210 | 3.76126 |
+| 12 | 1000003 × 2 | 64+1 | 72+1 | 7.273 | 1272.485 | 1107.532 | 0.00572 | 0.00657 | 1.1489 | 72+1 | 128 | 445.974 | 0.01631 | 2.4834 | 72+1 | 31.424 | 0.23145 | 35.2448 | 14.1921 | 72 | 10.773 | 0.67511 | 2.91692 | 102.80627 | 72 | 7.492 | 0.97077 | 1.43793 | 147.82862 | 72 | 6.345 | 1.14626 | 1.18077 | packed BF16 | 72 | 10.625 | 0.68452 | 0.70513 | 0.59718 | 104.23831 |
+| 13 | 11 × 13 × 16 × 67 | 8+1 | 8+1 | 1.500 | 13.627 | 13.610 | 0.11008 | 0.11021 | 1.0012 | 8+1 | 16 | 13.694 | 0.10954 | 0.9939 | 8+1 | 13.524 | 0.11091 | 1.0064 | 1.0126 | 8+1 | 13.633 | 0.11003 | 0.99200 | 0.99831 | 8+1 | 13.325 | 0.11257 | 1.02311 | 1.02139 | 36 | 2.550 | 0.58824 | 5.22549 | 2D copy | 29 | 2.628 | 0.57078 | 5.07040 | 0.97032 | 5.17884 |
+| 14 | 3 × 7 × 11 × 13 × 1012 | 64+1 | 72+1 | 7.540 | 23.042 | 22.275 | 0.32723 | 0.33850 | 1.0344 | 72+1 | 16 | 22.657 | 0.33279 | 0.9831 | 72+1 | 21.870 | 0.34476 | 1.0185 | 1.0360 | 72+1 | 22.160 | 0.34025 | 0.98691 | 1.00519 | 72+1 | 21.798 | 0.34590 | 1.01661 | 1.02188 | 72 | 7.385 | 1.02099 | 2.95166 | 2D copy | 72 | 9.345 | 0.80685 | 2.33258 | 0.79026 | 2.38363 |
+| 15 | 512 × 4096 | 32 | 32 | 7.780 | 18.810 | 18.529 | 0.41361 | 0.41988 | 1.0152 | 32 | 16 | 18.151 | 0.42863 | 1.0208 | 32 | 18.452 | 0.42163 | 1.0042 | 0.9837 | 32 | 18.612 | 0.41801 | 0.99140 | 0.99554 | 32 | 18.340 | 0.42421 | 1.01483 | 1.01031 | 72 | 7.520 | 1.03457 | 2.43883 | flat chunks | 72 | 7.949 | 0.97874 | 2.30721 | 0.94603 | 2.33099 |
+| 16 | 254 × 16383 | 64 | 72 | 8.790 | 21.173 | 19.477 | 0.41515 | 0.45130 | 1.0871 | 72 | 1 | 18.883 | 0.46550 | 1.0315 | 72 | 19.095 | 0.46033 | 1.0200 | 0.9889 | 72 | 18.552 | 0.47380 | 1.02927 | 1.04986 | 72 | 18.764 | 0.46845 | 0.98870 | 1.03800 | 72 | 8.310 | 1.05776 | 2.25800 | flat chunks | 72 | 8.732 | 1.00664 | 2.14888 | 0.95167 | 2.23053 |
+| 17 | 4096 × 1023 | 64 | 72 | 8.760 | 19.352 | 17.641 | 0.45267 | 0.49657 | 1.0970 | 72 | 1 | 17.237 | 0.50821 | 1.0234 | 72 | 17.588 | 0.49807 | 1.0030 | 0.9800 | 72 | 17.211 | 0.50898 | 1.02190 | 1.02498 | 72 | 17.730 | 0.49408 | 0.97073 | 0.99498 | 72 | 8.398 | 1.04311 | 2.11122 | flat chunks | 72 | 8.223 | 1.06530 | 2.15615 | 1.02128 | 2.14532 |
+| 18 | 2 × 1023 × 4096 | 64+1 | 72+1 | 23.630 | 56.562 | 57.033 | 0.41777 | 0.41432 | 0.9917 | 72+1 | 16 | 56.648 | 0.41714 | 1.0068 | 72+1 | 57.264 | 0.41265 | 0.9960 | 0.9892 | 72+1 | 56.456 | 0.41856 | 1.01431 | 1.01022 | 72+1 | 56.285 | 0.41983 | 1.00304 | 1.01329 | 72 | 23.214 | 1.01792 | 2.42461 | flat chunks | 72 | 22.698 | 1.04106 | 2.47973 | 1.02273 | 2.51269 |
+| 19 | 4 × 510 × 4097 | 64 | 72 | 14.280 | 46.400 | 41.973 | 0.30776 | 0.34022 | 1.1055 | 72 | 4 | 41.736 | 0.34215 | 1.0057 | 72 | 42.183 | 0.33852 | 0.9950 | 0.9894 | 72 | 41.643 | 0.34291 | 1.01297 | 1.00792 | 72 | 41.147 | 0.34705 | 1.01205 | 1.02007 | 72 | 13.411 | 1.06480 | 3.06815 | flat chunks | 72 | 13.202 | 1.08165 | 3.11672 | 1.01583 | 3.17929 |
+| 20 | 2 × 3 × 17 × 512 × 100 | 64 | 72 | 19.560 | 33.595 | 31.090 | 0.58223 | 0.62914 | 1.0806 | 72 | 16 | 30.661 | 0.63794 | 1.0140 | 72 | 30.020 | 0.65157 | 1.0356 | 1.0214 | 72 | 30.248 | 0.64665 | 0.99246 | 1.02784 | 72 | 31.076 | 0.62942 | 0.97336 | 1.00045 | 72 | 15.734 | 1.24317 | 1.97509 | 2D copy | 72 | 20.611 | 0.94901 | 1.50774 | 0.76338 | 1.50842 |
+| **Geometric mean** | | | | | | | **0.28294** | **0.29703** | **1.04980** | | | | **0.33050** | **1.11267** |  |  | **0.37834** | **1.27374** | **1.14476** |  |  | **0.39941** | **1.05571** | **1.34470** |  |  | **0.40924** | **1.02460** | **1.37778** |  |  | **1.00317** | **2.45130** |  |  |  | **0.88093** | **2.15260** | **0.87814** | **2.96580** |
+
+[Full comparison CSV](comparison.csv) includes the earlier reference, parent, archived and generated candidates, three device-time samples for cap64, auto, UB and packed, and the observed auto, UB and packed launch counts in call order. The gate-only columns include its three samples and complete launch history. Register and job grids are observed launch counts. Register vs gate and register vs auto use the prior time divided by the register time. Job vs register uses register time divided by job time. The JSON profiles below include all samples and grids.
+
+## OpenCode shape dispatch on the public reindex build
+
+The two pilot goldens passed before the full matrix. Case 9 took 15.092 µs and case 12 took 11.123 µs in the pilots. All 20 outputs in the subsequent series passed the same full-tensor check. Each Fresh route and Fresh grid in the table comes from the task name and launch recorded on David. Cases 1, 7, 10, 11, 13, 14 and 20 used 2D copies. Cases 2–6, 8 and 15–19 used flat chunks. Case 9 used reindex and case 12 used the packed BF16 path.
+
+OpenCode 1.2.19 with GLM-5.3 received the SwiGLU contract and skills at `9d890d01`. Its first whole-module attempt returned a plan. Both whole-module code requests exhausted their 32,000-token output budgets before emitting source. A separate selector request supplied the SwiGLU skill excerpt and the observed 253952-byte UB and 72 AIVs. The request left the route names and thresholds to the model. The generation directory excluded the job operator and its dispatcher. The [first executable selector](shape/first-selector.txt) picked packed BF16 neighbour pairs first, slab gathers for half-rows up to 32 bytes, 2D copies through 3072 bytes, and flat chunks above that. A second OpenCode response preserved the route conditions and converted its tile to one integer using the supplied packed and flat limits of 2048 pairs and 10560 elements. The selector embeds this device’s capacity and count in its tile heuristics. Actual launch counts still come from the active vector resources and available work.
+
+OpenCode generated the 2D, gather and flat kernels in separate requests after choosing the layouts. The requests included real API syntax and additional addressing feedback for gather and flat. The measured module also includes hand-written launch glue and fixes to PyASC type annotations, GM tensor bindings and offset lists. The flat draft contained identity gathers using an unavailable `arange`. Removing them let the kernel consume the copied tiles directly. The packed implementation comes from the earlier public two-transpose template. [Executed source](shape/swi_glu.py) · [Prompts, three device samples per case and pilots](shape/measurements.json)
+
+On case 9, the selector batches 144 rows of two seven-element halves, caches the two index tensors and performs two local gathers from one contiguous slab. The generated gather used 926 tiles, unroll 1 and 24,192 bytes of UB. The archive used 261 tiles of 512 rows, unroll 2 and 100,352 bytes of UB. Both launched 72 blocks. The full-series median was 15.229 µs, against 29.961 µs for register auto, 6.385 µs for the replayed job and 6.782 µs in CANNBench. On case 12, the BF16 last-axis guard wins before the short-half rule. Its 72-block public kernel works on 2048 pairs per tile with the tail in the main launch. It took 10.625 µs against 7.492 µs for register auto, 6.345 µs for the job and 7.273 µs in CANNBench.
+
+Across all 20 cases the geometric mean of reference time divided by Fresh time is **0.88093×** for CANNBench, **2.15260×** for register auto, **0.87814×** for the archived job and **2.96580×** for the original grid auto. Fresh and job use the same archive-bundled PyASC extension on CPython 3.12.13. Register auto used PyASC `6b3447b4` on CPython 3.10.14. All hardware comparisons use separate warmed runs on Ascend950PR_9599 with CANN 9.2.0 and the same profiler protocol. CANNBench is the published 950PR scoring baseline.
+
+## Register SwiGLU and archived submission replay
+
+OpenCode 1.2.19 with GLM-5.3 generated the [layout guard and launch](native/dispatch.txt)
+from skill revision `3775d51` for a native-enabled 950PR build. The executed
+[candidate](native/swi_glu.py) combines that output, the
+[register kernel and selector](../../../skills/asctile-api-patterns/templates/register-bf16-swiglu.py)
+and the prior gate-only operator. Only case 12 selected the register path.
+Its tile contains 2048 pairs. A single 72-block grid handles all 489 tiles,
+including the final 579 pairs. The compiled specialization uses 12288 bytes
+of UB. It loads adjacent BF16 pairs, applies `DeInterleave` in registers,
+computes FP32 SwiGLU there and rounds the result to BF16 for the store.
+Public-only candidates can use the separate public tile template.
+
+The independent pilot passed in 7.127 µs. In the all-case series the
+median was 7.492 µs against 10.773 µs for the previous gate-only
+auto and 7.273 µs in the published scoring metadata. The other 19
+cases retained the prior kernels and grids. Their geometric mean ratio to
+the preceding gate-only series was 1.00648×. The full-series ratios
+compare separate runs. [Pilot and all 20 native profiles](native/measurements.json)
+
+The job columns replay `job_f9f0facb7d6b-submission_asctile_l1_public_v2 (1).zip`
+(SHA-256 `59beca25e04ab8bb546c7bf8e6bf0c4a90612f6c13928a8a896cc5dd120edd3d`). Its unmodified `cann_bench.swi_glu`
+and bundled `asc` ran under CPython 3.12.13. The generated candidate used
+CPython 3.10.14 and PyASC `6b3447b4`. Both ran on the same 950PR device
+with CANN 9.2.0, PyTorch 2.5.1+cpu, the same case seeds, full golden checks
+and the same three-call warmed vector-task metric. The replay omits an explicit
+L2 flush. Timings from the archive's cold-tuning notes and an online service
+score are separate measurements. Version 1.0.0 in the archive is the submission
+package version. The recorded extension hash identifies the bundled PyASC.
+[Archive replay and hashes](native/archive-measurements.json)
+
+The job dispatches from the physical half-row size. For short halves it reads
+one contiguous slab and uses two indexed gathers in UB. Its case-12
+specialization processes 4096 pairs per tile with loop unroll 2. It measured
+6.345 µs. The compute kernels, runtime versions, tile sizes,
+loop unroll and division sequence differ between the archive and the native
+candidate, so this comparison measures complete implementations. On case 9
+(two halves of seven) the gather route took 6.385 µs versus 29.961 µs for
+the generated row kernel. For intermediate
+rows the archive aggregates rows into 2D copies. For wide halves it uses
+contiguous flat chunks with unrolling. All 20 archived outputs passed the
+golden check. The archive’s own self-check with its default seed of 2026 also
+passed MERE and MARE for all 20 cases. The job's measured speed relative to CANNBench has geometric
+mean 1.00317×.
+
+## Gate-only packed path
+
+OpenCode 1.2.19 with GLM-5.3 generated the host dispatch from the updated skill.
+The [assembly script](gate/assemble.py) combines its [generated dispatch](gate/dispatch.txt),
+the [skill template](../../../skills/asctile-api-patterns/templates/packed-bf16-swiglu.py)
+and the UB-height parent into the [executed source](gate/swi_glu.py).
+The initial dispatcher referenced an undefined runner cap and the obsolete tail-launch signature.
+After repair, a fresh request given the final skill’s host example reproduced the measured file byte for byte.
+The hardware profile records a 253952-byte active UB capacity. Case 12 selected
+2048 pairs (184832 compiled UB bytes). The 488 full tiles and final 579 pairs
+ran on a single 72-block grid. Each tile loads adjacent BF16 pairs, separates
+the two planes and applies FP32 exp to its gate plane. The 19 other cases
+used the previous kernels.
+
+The independent case-12 pilot took 10.619 µs. In the fresh 20-case
+series case 12 took 10.773 µs. Gate vs packed uses the previous
+256-pair packed time divided by the new time. Gate vs auto uses the original
+grid-only time divided by the new time. All 20 cases passed the full golden check.
+The table uses full-series medians. The ratios compare separate hardware series.
+[Pilot and all 20 profiles](gate/measurements.json)
+
+## Packed BF16 pair result
+
+The packed branch ran only for case 12: contiguous BF16, normalized split axis
+last, input extent two. Other cases used the same kernels and launch grids as
+UB-auto, including case 9 (two halves of seven, not seven interleaved pairs).
+
+The candidate starts from [UB-auto](ub/swi_glu.py) and uses the
+[256-pair device template at its measured revision](https://github.com/aloschilov/pyasc-skill-stack/blob/ab19c33d633ceb06afd150df3a659d73e4782ea4/skills/asctile-api-patterns/templates/packed-bf16-swiglu.py).
+OpenCode 1.2.19 / GLM-5.3 generated the host dispatch and repaired its initial
+axis check. The first guard compared the axis **index** to 2 and therefore
+fell through to UB-auto on the rank-two pilot. A full-source generation attempt
+did not produce the measured kernel. The packaged candidate mechanically inserts
+the template and the repaired OpenCode dispatch into the UB candidate.
+[Executed source](packed/swi_glu.py) · [Pilot and all 20 profiles](packed/measurements.json).
+
+One full tile reads 512 contiguous BF16 values, deinterleaves 256 pairs with two
+local aligned transposes and writes 256 BF16 outputs. The final tile reads
+134 values and stores 67. The full-group and tail specializations each compiled to
+23,104 UB bytes on David; padded UB-auto required
+163,840 bytes for 128 rows. The hardware pilot passed the full golden at
+31.116 µs. The separate full-series result was
+31.424 µs, versus 445.974 µs for UB-auto and
+7.273 µs for the scoring-capped CANNBench baseline.
+The resulting speeds are 14.1921× vs UB-auto and
+0.23145× vs CANNBench. All four invocations used
+`72+1`. Across 20 cases the geometric means are
+1.14476× vs UB-auto, 1.27374× vs
+grid-only auto and 0.37834× vs CANNBench. Across the other
+19 the measured geometric mean vs UB-auto was 1.00270× in separate
+series using unchanged paths.
+
+## Short-row result
+
+With 1,000,003 BF16 rows and one useful output element per row, case 12 went from 1,107.532 to 445.974 µs (2.483× the auto speed, 0.01631× CANNBench). Both versions launch `72+1`. The taller tile reduces the full row groups from 62,500 to 7,812. A separate launch handles the last 67 rows. Each local row still has 16 physical lanes for one useful output element. The standalone pilot passed at 446.172 µs. The table uses the subsequent full-series run.
+
+Case 9 has seven useful BF16 outputs per row. Its time changed from 95.993 to 31.520 µs (3.045×). Those two cases enter the short-row route. Across the other 18, the geometric mean of auto time divided by UB time was 1.0062× in separate measurement series.
+
+OpenCode 1.2.19 with GLM-5.3 regenerated the host dispatch from the measured auto source using the updated short-row skill. Its first executable estimate selected 512 rows and the compiler reported 655,360 UB bytes, above the available 253,952 bytes. An isolated calibration confirmed 163,840 bytes for 128 rows. The repair prompt supplied this measured 80-byte cost per padded lane and requested a scoped edit to the generated selector. The measured snapshot incorporates that OpenCode edit and omits the superseded capacity clamp. The module docstring describes the pre-repair estimate.
+
+The executed selector queries the active SoC after platform setup, subtracts 32 KiB, divides by the measured cost per physical row, bounds the height by useful rows per AIV and rounds down to a power of two. On case 12, modeled capacities of 131,072, 253,952 and 524,288 bytes select heights of 64, 128 and 256 at 72 AIVs. Only 253,952 bytes was the hardware capacity. The warmup captured the actual height of 128 and 163,840 compiled UB bytes for each of the two launches. [Measured source](ub/swi_glu.py) · [Pilot and 20-case measurements](ub/measurements.json) · [Profiler harness](measure.py)
+
+## Measurement and provenance
+
+- Ascend950PR_9599, device 0, CANN 9.2.0, PyASC `6b3447b45f1f7bd71fa8a23d98b1e76572b3f475`, Python 3.10.14 and PyTorch 2.5.1+cpu. The runtime reported 36 AI cores and 72 vector cores. Device and current-thread vector limits were both 72.
+- OpenCode 1.2.19 with GLM-5.3 generated the tiling candidate. The cap64 and auto variants change its host launch policy. Auto reuses the skill template's `vector_blocks` helper. The constant eight in the wide-path tile-width calculation and dispatch threshold is common to both variants.
+- Each case uses a separate process and the CANNBench data generator seeded with the case ID. The first call warmed the kernel and produced the output checked against the full golden tensor with `torch.testing.assert_close(equal_nan=True)`, including shape and dtype. The next three calls ran under the PyASC device profiler. Each sample sums the AI_VECTOR_CORE durations within one operator call. The per-case time is their median. Transfers, host dispatch, resource queries and compilation are outside this device metric. Cap64 was measured in the preceding series.
+- For 0, 3 and 1,000 work items the template returned 0, 3 and 72 on the NPU. In the pinned CaModel image the simulator driver reported Ascend950PR_9589 and the helper returned 0, 3 and 64 with Ascend950PR_9599 requested. Both backends passed the template's numerical checks at 8,192, 8,191 and 131,072 elements.
+
+The [measured auto candidate](auto/swi_glu.py) keeps the generator's original docstring, which describes the initial eight-block policy. To use the snapshot with this PyASC pin, place the stack's [runtime helper](../../../integrations/cannbench/smoke-kernel/_pyasc_runtime.py) beside it and put the [kernel template](../../../skills/asctile-codegen-workflow/templates/kernel-template.py) on the Python path as `grid_template.py`, replacing `from asc.experimental import asctile` with `import asctile` for this runtime.
+
+| Measured source | SHA-256 |
+|---|---|
+| OpenCode output | `f63e111e2f158bff86835517f56ef19b4f0bb43ba92a26a9dda117130bbb9a1f` |
+| G64, wide branch only | `83e2707d96f2105c5d2195ee1841e043165e26e3e066ae5d3414394f29bd4070` |
+| Cap64, all branches | `87069b0d42693f85239af16233e26dfe80a967ded1fc79038ae342f57b97ce11` |
+| Auto, all branches | `9155e3a6979cb35de23fa2be010b8c18bba7afd52cf201669dab84a0b2f4f8c1` |
+| Runtime-specific grid template | `cd51051e19cc813a5881636076aa4e1759e60486a6767a46a20006778a329ce9` |
+| OpenCode UB-height candidate | `1a511da8b9e22195f82ec309d3ab0a7fdd6c456575db2ad4327772a2d298ae7d` |
+| Packed pairs (OpenCode dispatch and skill template) | `d664fe0484c30f9f49a38173b3dd473fd7206465b87d489aaa68cd96cab1c709` |
+| Native-enabled OpenCode register candidate | `ff47b526faf14e76159720d3753731c3ffa795339659612994588c066ade71ed` |
+| Archived job f9f0facb7d6b operator | `b1084b683f3e632525c85b9bb049aa36e62f734677016b6d43151b78e38ee4d6` |
+| UB-sized gate-only pair tile with an in-grid tail | `eab4342b39ffa94a6fe5f81a325088c31c967ca7ee990d09c15cc67262b4b5ce` |

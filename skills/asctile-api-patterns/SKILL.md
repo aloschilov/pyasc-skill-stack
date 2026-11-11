@@ -151,6 +151,15 @@ exceptions produced while computing padded lanes.
   `LaunchOptions(core_num, stream, ...)`; stream is not a removed v1 feature.
   Use the evaluator's current stream when required; do not force a default stream.
 
+For vector kernels, select the grid on the host after platform setup. Query
+`asc.lib.runtime.device_info(DeviceModuleType.RT_MODULE_TYPE_VECTOR_CORE,
+DeviceInfoType.INFO_TYPE_CORE_NUM)` using the enums from the same module.
+On NPU, apply the active device and calling thread's AIV limits. The CANN 9
+implementation is in `asctile-codegen-workflow/templates/kernel-template.py`
+(`vector_blocks`). Bound each launch by its independent row groups or column
+tiles, including any tail assigned to that launch. Skip empty work. A simulator
+can report a different count from hardware even with the same requested target.
+
 Supported current compile options include `always_compile`, `insert_sync`,
 `reuse_alloc` (`0`, `1`, `2`), `vf_fusion`, and `matmul_cube_only`. Do not use
 the removed `run_asc2_passes` option. Prefer an evidenced `reuse_alloc` value;
@@ -170,6 +179,46 @@ DMA size, overlap, and scalar overhead. The largest fitting tile is not always
 fastest; UB fill is not the objective. Read
 [top-down tuning from CANN samples](references/cann-performance-tuning.md)
 before a performance iteration.
+
+### Batch short rows within the active UB budget
+
+First check the physical layout. For contiguous, interleaved BF16 pairs
+consumed together, use the [packed pair pattern](references/packed-bf16-pairs.md)
+to choose a tile from active UB, give the tail one owner in the same grid,
+and apply expensive unary operations to the consuming plane. For native-enabled
+950PR generation, select register deinterleaving and keep SwiGLU in FP32
+registers through the final BF16 conversion.
+
+For other layouts with many rows whose useful width is smaller than a 32-byte transfer, choose
+the row count on the host after platform setup. On PyASC pins exposing
+`asc.runtime.launcher.get_platform_info`, query
+`get_platform_info(runtime.get_soc_version()).ub_size` in bytes. Use the
+smaller capacity if the active device or runner imposes a lower UB limit.
+Keep the row height a ConstExpr of each launched specialization.
+
+1. Round each local operand's width to its required transfer alignment.
+   Budget bytes per physical row across the simultaneously live inputs,
+   promoted intermediates, outputs, scratch and buffering. Include fixed
+   allocation overhead and reserve. Use the compiled allocation for the
+   exact JIT options to check the estimate before accepting a height. A
+   compiler can allocate more buffers than Python-level liveness predicts.
+   On a UB overflow, retain the rejected height and consumed bytes. Use
+   the observed per-row allocation for that kernel, dtype and physical width
+   as a lower bound on the cost, then compile and validate the reduced height.
+2. Compute the UB ceiling as `(ub_bytes - fixed_bytes) // bytes_per_row`.
+   Bound it also by useful rows per available AIV so small inputs retain
+   parallel work. For an unavailable capacity, use a separately qualified
+   conservative path or report the missing platform query. If a minimum tile
+   cannot fit, select a smaller qualified layout or report the budget error.
+   Round down to a supported height (e.g. a power of two).
+   Ensure full-tile output boundaries meet the kernel's store alignment.
+   Handle a sub-tile input or final partial group with valid extents.
+3. Use the chosen height for tile shape, row offsets, group count, tail
+   and grid. Skip empty work. Check a short-row case at two modeled UB
+   budgets and record the selected height, compiled UB and actual launches
+   on hardware. Keep the tiling of wider rows independently qualified.
+   For the padded CANNBench SwiGLU kernel, use the matching measured
+   per-row cost in `asctile-cannbench-kernel/references/operator-patterns.md`.
 
 AscTile dtype constraints observed by the CANNBench integration:
 
@@ -262,6 +311,7 @@ numerical correctness or performance.
 ## References
 
 - [JIT options and measured hazards](references/api-jit-options.md)
+- [DMA and UB sizing for row-slab reindex gathers](references/reindex-slabs.md)
 - [Reduction tiling](references/reduction-tiling.md)
 - [CANN performance techniques and evidence-driven experiments](references/cann-performance-tuning.md)
 - `asctile-cannbench-kernel` for the benchmark contract and evidence labels
