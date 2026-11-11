@@ -3,12 +3,20 @@
 For SwiGLU on a contiguous final axis of length two, flatten the outer
 dimensions into a pair count. One contiguous BF16 read covers both operands.
 Select the implementation according to the target and the candidate contract.
-For a native-enabled hardware build on the qualified 950PR, prefer the
-[register kernel and selector](../templates/register-bf16-swiglu.py) ahead
-of the [public tile path](../templates/packed-bf16-swiglu.py). For a
-public-AscTile-only campaign, include just the public template. Separate the
-choice of source allowed in the artifact from run-time dispatch on that source. Adapt the AscTile import to the
-active runtime. Keep the existing dispatch for other layouts.
+On the archive-bundled 950PR public PyASC build with `asctile.reindex` and
+reusable int32 indices, route eligible pairs through the existing
+[short-half slab gather](reindex-slabs.md). For H=1 the two vectors contain
+even and odd element offsets. Load each vector once per block, gather BF16
+from a single contiguous input tile and cast each half to FP32 for SwiGLU.
+Derive the row count and loop unroll using the same DMA, UB and work bounds
+as the other qualified gathers. Keep the partial tile in the main grid.
+
+On the native-enabled 950PR pin qualified below, use the
+[register kernel and selector](../templates/register-bf16-swiglu.py).
+For a public pin without a qualified gather, the
+[packed transpose template](../templates/packed-bf16-swiglu.py) supplies
+the two-plane path. Select among these implementations from the candidate
+contract and the APIs verified on the active compiler build.
 
 ### Native BF16 register path
 
@@ -29,7 +37,7 @@ lane once, multiply by its value, round to BF16 and combine the disjoint
 output lanes. Only the input and output tiles occupy UB. Keep the valid
 extents on the copies so the last block writes exactly the remaining rows.
 
-### Public tile path
+### Public transpose path on the earlier pin
 
 After platform setup and empty-input handling, integrate the template at the
 start of the existing contiguous SwiGLU dispatch. The surrounding operator

@@ -185,7 +185,8 @@ before a performance iteration.
 First check the physical layout. For contiguous, interleaved BF16 pairs
 consumed together, use the [packed pair pattern](references/packed-bf16-pairs.md)
 to choose a tile from active UB, give the tail one owner in the same grid,
-and apply expensive unary operations to the consuming plane. For native-enabled
+and apply expensive unary operations to the consuming plane. On the qualified
+public 950PR reindex build, dense pairs use the short-half slab gather. For native-enabled
 950PR generation, select register deinterleaving and keep SwiGLU in FP32
 registers through the final BF16 conversion.
 
@@ -311,6 +312,7 @@ numerical correctness or performance.
 ## References
 
 - [JIT options and measured hazards](references/api-jit-options.md)
+- [Height and unroll for strided 2D row copies](references/strided-row-tiles.md)
 - [DMA and UB sizing for row-slab reindex gathers](references/reindex-slabs.md)
 - [Reduction tiling](references/reduction-tiling.md)
 - [CANN performance techniques and evidence-driven experiments](references/cann-performance-tuning.md)
