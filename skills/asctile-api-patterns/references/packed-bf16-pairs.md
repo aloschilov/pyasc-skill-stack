@@ -6,13 +6,24 @@ Use the [public AscTile template](../templates/packed-bf16-swiglu.py) for
 the device kernel and its host tile selector. Adapt the AscTile import to the
 active runtime. Keep the existing dispatch for other layouts.
 
-After platform setup, pass the active UB capacity in bytes and the available
-vector count to `_pair_tile_size(rows, ub_bytes, vector_blocks(rows))`. Use
-the largest qualified shape that fits the capacity and leaves enough work for
-the vector grid. With a positive tile, compute the ceiling tile count, then
-launch `_swiglu_pair_groups[vector_blocks(groups)](input, out, rows, groups, tile)`
-once. A missing capacity or an unsupported size selects the qualified fallback.
-Handle empty inputs on the host. Use the runner's effective UB limit if smaller.
+After platform setup and empty-input handling, integrate the template at the
+start of the existing contiguous SwiGLU dispatch. The surrounding operator
+has already validated contiguity and normalized the split axis.
+
+```python
+if dtype == torch.bfloat16 and d == rank - 1 and size == 2:
+    tile = _pair_tile_size(rows, _query_platform_ub_bytes(), vector_blocks(rows))
+    if tile:
+        groups = (rows + tile - 1) // tile
+        _swiglu_pair_groups[vector_blocks(groups)](input, out, rows, groups, tile)
+        return out
+# Continue into the existing general row kernel.
+```
+
+Pass the effective UB capacity in bytes. When the caller supplies an additional
+runner limit, take the smaller capacity at the query boundary. The selector
+returns None when the capacity is missing or no qualified tile fits. Falling
+through here preserves the general operator's own resource handling.
 
 Each block visits whole tiles in a block-stride loop. For each tile the valid
 pair count is the smaller of the tile size and the remaining rows. Keep static
