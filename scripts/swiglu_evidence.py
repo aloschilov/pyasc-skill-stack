@@ -158,4 +158,15 @@ def service_history(fetch, pinned, discover):
             require(old==record,'Conflicting service job identity')
         except errors:
             complete = False
-    return {'complete':complete,'runs':sorted(runs.values(),key=lambda r:r['finished_at'],reverse=True)}
+    history = sorted(runs.values(),key=lambda r:r['finished_at'],reverse=True)
+    if complete:
+        for current,previous in zip(history,history[1:]):
+            paired = list(zip(previous['cases'],current['cases']))
+            generated = [(a,b) for a,b in paired if b['kernel']!='_swiglu_pair_groups']
+            current['previous'] = {
+                'job':previous['job'],'release':previous['release'],
+                'previous_over_current':geometric_mean(a['elapsed_us']/b['elapsed_us'] for a,b in generated),
+                'changed_baselines':sum(a['baseline_us']!=b['baseline_us'] for a,b in generated)}
+            for old,new in paired:
+                new['previous_elapsed_us']=old['elapsed_us']
+    return {'complete':complete,'runs':history}

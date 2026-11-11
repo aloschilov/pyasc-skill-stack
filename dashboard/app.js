@@ -200,7 +200,7 @@ function serviceTable(runs) {
   const table=el('table');
   table.append(el('caption','CI-generated SwiGLU · official CANNBench evaluations on 950PR, catalog 2.0.0'));
   const head=table.createTHead().insertRow();
-  for (const title of ['Finished (UTC)','Generation','CANNBench job','Baseline / candidate (19 generated)','Baseline / candidate (all 20)','Service score (all 20)','Per-case timings']) {
+  for (const title of ['Finished (UTC)','Generation','CANNBench job','Baseline / candidate (19 generated)','Baseline / candidate (all 20)','Service score (all 20)','Previous / current time (19)','Per-case timings']) {
     const th=el('th',title); th.scope='col'; head.append(th);
   }
   const body=table.createTBody();
@@ -215,16 +215,21 @@ function serviceTable(runs) {
     row.insertCell().append(job);
     for (const ratio of [p.ratio,p.all_ratio]) row.insertCell().textContent=ratio.toFixed(3)+'×';
     row.insertCell().textContent=p.score.toFixed(4);
+    const change=row.insertCell();
+    if (p.previous) {
+      change.append(link(p.previous.previous_over_current.toFixed(3)+'×',p.previous.release),
+        el('div','Compared with '+p.previous.job+' · '+p.previous.changed_baselines+' changed baselines','subtle'));
+    } else change.textContent='—';
     const details=el('details'); details.append(el('summary','20/20 passed'),link('Source and service receipt',p.release));
     const times=el('table'); times.append(el('caption','Official device time (µs)'));
     const cols=times.createTHead().insertRow();
-    for (const title of ['Case','Compute','Candidate','Baseline','Baseline / candidate','Service t_hw (µs)','Case score']) {
+    for (const title of ['Case','Compute','Candidate','Baseline','Baseline / candidate','Service t_hw (µs)','Case score','Previous candidate (µs)']) {
       const th=el('th',title); th.scope='col'; cols.append(th);
     }
     const rows=times.createTBody();
     for (const c of p.cases) {
       const line=rows.insertRow();
-      for (const value of [c.id,c.kernel,c.elapsed_us,c.baseline_us,(c.baseline_us/c.elapsed_us).toFixed(3)+'×',c.t_hw_us??'—',c.perf_score?.toFixed(4)??'—']) line.insertCell().textContent=value;
+      for (const value of [c.id,c.kernel,c.elapsed_us,c.baseline_us,(c.baseline_us/c.elapsed_us).toFixed(3)+'×',c.t_hw_us??'—',c.perf_score?.toFixed(4)??'—',c.previous_elapsed_us??'—']) line.insertCell().textContent=value;
     }
     details.append(times); row.insertCell().append(details);
   }
@@ -379,6 +384,11 @@ function validate(data) {
     require(['wide','parent','reference'].every(k=>Number.isFinite(s.scores[k])) && [s.parent_over_wide,s.archive_over_shape].every(v=>Number.isFinite(v)&&v>0));
   }
   for (const p of data.cannbench_performance?.runs || []) {
+    if (p.previous) {
+      safeURL(p.previous.release);
+      require(/^job_[0-9a-f]+$/.test(p.previous.job) && Number.isFinite(p.previous.previous_over_current) && p.previous.previous_over_current>0 &&
+        Number.isInteger(p.previous.changed_baselines) && p.previous.changed_baselines>=0 && p.previous.changed_baselines<=19);
+    }
     require(typeof p.model==='string' && /^[0-9a-f]{40}$/.test(p.revision) && Number.isFinite(Date.parse(p.finished_at)) && p.all_ratio>0 && Number.isFinite(p.all_ratio));
   }
   for (const p of [data.swiglu_performance,...(data.cannbench_performance?.runs || [])].filter(p=>p?.status==='available')) {
