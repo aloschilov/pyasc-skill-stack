@@ -32,7 +32,7 @@ def main(root):
     profile['provider']['gateway']['options']['baseURL'] = os.environ['OPENCODE_BASE_URL']
     profile['skills'] = {'paths':[str(context/'skills')]}
     profile['permission'] = ci.worker_permissions(context)
-    profile['agent'] = {'build':{'steps':12}}
+    profile['agent'] = {'build':{'steps':32}}
     ci.save(project/'opencode.json', profile)
     private = root.parent/(root.name+'-private')
     private.mkdir(mode=0o700)
@@ -47,6 +47,8 @@ def main(root):
     trace = ci.trace(out, context/'skills')
     ci.capture_session(private/'opencode/opencode.db', trace['session_id'], root/'session.json')
     candidate = project/'candidate.py'
+    if not candidate.is_file():
+        raise ValueError('OpenCode completed without writing candidate.py; see its retained session')
     ci.save(root/'generation.json', {'run_id':identity['GITHUB_RUN_ID'], 'run_attempt':identity['GITHUB_RUN_ATTEMPT'],
             'revision':identity['GITHUB_SHA'], 'candidate_sha256':ci.smoke.sha(candidate),
             'prompt_sha256':ci.smoke.sha(root/'prompt.txt'), 'model':ci.MODEL, 'opencode':version,
