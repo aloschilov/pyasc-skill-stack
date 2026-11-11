@@ -190,7 +190,47 @@ function renderComparisons(records) {
   }
   $('comparisons').replaceChildren(...(panels.length ? panels : [el('p', 'No retained paired comparisons match these filters.', 'empty')]));
 }
-function renderTiming(records) {
+function serviceFilterRecord(p, data) {
+  return {id:`SwiGLU ${p.job} ${p.submission}`, category:'fresh-generated', availability:'available',
+    level:'npu-numerical-and-timing', observed_models:[], models:[{requested:p.model}],
+    tasks:p.cases.map(c => ({id:c.id})), counts:{qualified:20}, status:'complete',
+    freshness:(Date.parse(data.built_at)-Date.parse(p.finished_at))/3600000 > data.max_age_hours ? 'stale':'recent'};
+}
+function serviceTable(runs) {
+  const table=el('table');
+  table.append(el('caption','CI-generated SwiGLU · official CANNBench evaluations on 950PR, catalog 2.0.0'));
+  const head=table.createTHead().insertRow();
+  for (const title of ['Finished (UTC)','Generation','CANNBench job','Baseline / candidate (19 generated)','Baseline / candidate (all 20)','Service score (all 20)','Per-case timings']) {
+    const th=el('th',title); th.scope='col'; head.append(th);
+  }
+  const body=table.createTBody();
+  for (const p of runs) {
+    const row=body.insertRow();
+    row.insertCell().textContent=p.finished_at.slice(0,16).replace('T',' ');
+    row.insertCell().append(link(`${p.model} · ${p.revision.slice(0,7)}`,p.generation));
+    const skill=link('skills '+(p.skills_revision||p.revision).slice(0,7),
+      'https://github.com/aloschilov/pyasc-skill-stack/commit/'+(p.skills_revision||p.revision));
+    row.cells[1].append(document.createElement('br'),skill);
+    const job=el('a',p.job); job.href='https://cannbench.com/jobs/'+p.job;
+    row.insertCell().append(job);
+    for (const ratio of [p.ratio,p.all_ratio]) row.insertCell().textContent=ratio.toFixed(3)+'×';
+    row.insertCell().textContent=p.score.toFixed(4);
+    const details=el('details'); details.append(el('summary','20/20 passed'),link('Source and service receipt',p.release));
+    const times=el('table'); times.append(el('caption','Official device time (µs)'));
+    const cols=times.createTHead().insertRow();
+    for (const title of ['Case','Compute','Candidate','Baseline','Baseline / candidate','Service t_hw (µs)','Case score']) {
+      const th=el('th',title); th.scope='col'; cols.append(th);
+    }
+    const rows=times.createTBody();
+    for (const c of p.cases) {
+      const line=rows.insertRow();
+      for (const value of [c.id,c.kernel,c.elapsed_us,c.baseline_us,(c.baseline_us/c.elapsed_us).toFixed(3)+'×',c.t_hw_us??'—',c.perf_score?.toFixed(4)??'—']) line.insertCell().textContent=value;
+    }
+    details.append(times); row.insertCell().append(details);
+  }
+  const wrapper=el('div',undefined,'table-wrap'); wrapper.append(table); return wrapper;
+}
+function renderTiming(records, data) {
   const panels = records.filter(r => available(r) && r.baseline_time_ratio != null).map(r => {
     const panel = el('article', undefined, 'panel'); panel.append(el('h3', `${titles[r.kind]} · ${r.qualified}/${r.required} device cases`), el('div', r.id, 'record-id'));
     const metrics = el('div', undefined, 'timing-metrics');
@@ -199,13 +239,17 @@ function renderTiming(records) {
     const service = el('div'); service.append(el('span', 'CANNBench service score'), el('strong', r.service_score === null ? 'Unavailable' : r.service_score.toFixed(4)), el('p', 'Service-defined score; not a timing speedup.'));
     metrics.append(timing, service); panel.append(metrics, el('p', `Device job: ${r.elapsed_seconds.toFixed(2)} s · ${stateLabel(r)} · ${r.freshness} result`, 'subtle'), evidenceLinks(r)); return panel;
   });
+  const history=data.cannbench_performance;
+  const runs=(history?.runs || []).filter(p=>matches(serviceFilterRecord(p,data)));
+  if (runs.length) panels.unshift(serviceTable(runs));
+  if (history?.complete===false) panels.push(el('p','Some service receipts could not be verified.','attention'));
   $('timing').replaceChildren(...(panels.length ? panels : [el('p', 'No retained NPU timing evidence matches these filters. Simulator qualification does not supply a device timing ratio.', 'empty')]));
 }
 function render(data) {
   const records = data.records.filter(matches);
   $('count').textContent = `${records.length} of ${data.records.length} retained records`;
   $('records').replaceChildren(...records.map(renderRow)); $('empty').hidden = records.length > 0;
-  renderComparisons(records); renderTiming(records);
+  renderComparisons(records); renderTiming(records,data);
 }
 const dailyLabels = {
   'unavailable':'Insufficient verified observations', 'incompatible':'Execution conditions differ',
@@ -334,8 +378,11 @@ function validate(data) {
     require(s.cases.length===20 && s.cases.every((r,i)=>r.case===i+1 && ['parent','wide','reference','shape_us','replay_us'].every(k=>Number.isFinite(r[k]) && r[k]>0)));
     require(['wide','parent','reference'].every(k=>Number.isFinite(s.scores[k])) && [s.parent_over_wide,s.archive_over_shape].every(v=>Number.isFinite(v)&&v>0));
   }
-  if (data.swiglu_performance?.status === 'available') {
-    const p=data.swiglu_performance; safeURL(p.generation); safeURL(p.release);
+  for (const p of data.cannbench_performance?.runs || []) {
+    require(typeof p.model==='string' && /^[0-9a-f]{40}$/.test(p.revision) && Number.isFinite(Date.parse(p.finished_at)) && p.all_ratio>0 && Number.isFinite(p.all_ratio));
+  }
+  for (const p of [data.swiglu_performance,...(data.cannbench_performance?.runs || [])].filter(p=>p?.status==='available')) {
+    safeURL(p.generation); safeURL(p.release);
     require(/^job_[0-9a-f]+$/.test(p.job) && /^sub_[0-9a-f]+$/.test(p.submission) && Number.isFinite(p.ratio) && p.ratio>0 && Number.isFinite(p.score) && p.cases.length===20 &&
       p.cases.every((c,i)=>c.id===`level1/swi_glu_${i+1}` && ['elapsed_us','baseline_us'].every(k=>Number.isFinite(c[k]) && c[k]>0)));
   }
@@ -375,7 +422,7 @@ function unavailable() {
 }
 fetch('data.json', {cache:'no-store'}).then(r => {if (!r.ok) throw new Error('Missing data'); return r.json();}).then(data => {
   validate(data);
-  for (const name of [...new Set(data.records.flatMap(models))].sort()) {
+  for (const name of [...new Set(data.records.concat((data.cannbench_performance?.runs||[]).map(p=>serviceFilterRecord(p,data))).flatMap(models))].sort()) {
     const option = el('option', name); option.value = name; $('model').append(option);
   }
   renderDaily(data.daily); renderTransfer(data.transfer); renderSwiGLU(data.swiglu,data.swiglu_performance); renderOverview(data); render(data); freshness(data);

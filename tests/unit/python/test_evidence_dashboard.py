@@ -34,6 +34,36 @@ class Dashboard(unittest.TestCase):
         self.catalog = self.root/'sources.json'; self.write_catalog()
         self.now = datetime(2026,11,6,tzinfo=timezone.utc)
 
+    def test_service_history_paginates_and_preserves_verified_pin(self):
+        import swiglu_evidence
+        receipt = {'schema':1,'evaluation_run':'41','origin_run':'39','hardware':'950pr',
+                   'benchmark_version':'2.0.0','job_id':'job_123','submission_id':'sub_456',
+                   'candidate_sha256':'a'*64,'package_sha256':'b'*64,'revision':'c'*40,
+                   'model':'gateway/test','finished_at':'2026-11-11T10:00:00',
+                   'generated_ratio':0.5,'service_score':43.5,
+                   'cases':[{'id':f'level1/swi_glu_{i}', 'kernel':'rows' if i!=12 else '_swiglu_pair_groups',
+                             'elapsed_us':2 if i!=12 else 4,'baseline_us':1,'private':'never'}
+                            for i in range(1,21)]}
+        raw=raw_json(receipt)
+        tag='qualification-swiglu-performance-41'
+        pin={'release':tag,'sha256':dash.digest(raw)}
+        calls=[]
+        def fetch(url):
+            calls.append(url)
+            if url.endswith('page=1'):
+                return raw_json([{'tag_name':'draft','draft':True}]*100)
+            if url.endswith('page=2'):
+                return raw_json([{'tag_name':tag,'draft':False,'prerelease':False,
+                                  'assets':[{'name':'performance.json','size':len(raw),'digest':'sha256:'+'f'*64}]}])
+            return raw
+        result=swiglu_evidence.service_history(fetch,pin,True)
+        self.assertEqual(len(calls),3)
+        self.assertFalse(result['complete'])
+        record,=result['runs']
+        self.assertEqual(record['ratio'],0.5)
+        self.assertLess(record['all_ratio'],record['ratio'])
+        self.assertNotIn('private',record['cases'][0])
+
     def write_catalog(self): self.catalog.write_bytes(raw_json(self.spec))
 
     def reviewed(self, accepted=True, requests=None):

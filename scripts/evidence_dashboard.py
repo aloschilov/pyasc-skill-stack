@@ -547,12 +547,9 @@ def build(catalog_path, output, loader=fetch, now=None, daily=None, recent=recen
         payload['swiglu'] = swiglu_evidence.project(loader, spec['swiglu_study'])
     except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
         payload['swiglu'] = {'status':'unavailable'}
-    try:
-        pin = (swiglu_evidence.latest_performance(loader) if daily is not None else None) or spec.get('swiglu_performance')
-        if pin:
-            payload['swiglu_performance'] = swiglu_evidence.service_projection(loader,pin)
-    except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
-        payload['swiglu_performance'] = {'status':'unavailable'}
+    history = swiglu_evidence.service_history(loader,spec.get('swiglu_performance'),daily is not None)
+    payload['cannbench_performance'] = history
+    payload['swiglu_performance'] = next(iter(history['runs']), {'status':'unavailable'})
     try:
         payload['transfer'] = transfer_study(loader, spec['skill_transfer'])
     except (OSError, ValueError, KeyError, TypeError, ArithmeticError, EOFError, tarfile.TarError, zlib.error):

@@ -198,10 +198,12 @@ test('malformed kernel source projection fails closed', async () => {
 test('workflow navigation preserves the distinct July and November assignments', async () => {
   await load();
   await page.getByRole('link', {name:'BPMN workflows'}).click();
+  await page.locator('#heads b').first().waitFor();
   assert.deepEqual(await page.locator('#heads b').allTextContents(), ['Caller','Author','Reviewer','Verifier','Tuner']);
   await page.getByRole('button', {name:'Phase 4', exact:true}).click();
   assert.match(await page.locator('#phase').innerText(), /tuning/i);
   await page.getByRole('link', {name:'July · Asc2'}).click();
+  await page.locator('#heads b').first().waitFor();
   assert.deepEqual(await page.locator('#heads b').allTextContents(), ['Main Agent','Design','Evaluation','Implementation','Acceptance Review','Verification']);
   await page.getByRole('button', {name:'Phase 2', exact:true}).click();
   await page.locator('#count').click();
@@ -253,7 +255,15 @@ test('CI submission shows 19 generated cases and the independent historical comp
   payload.swiglu_performance = {status:'available', ratio:0.8, score:67, job:'job_abc', submission:'sub_def',
     release:base+'/releases/tag/example', generation:base+'/actions/runs/12345',
     cases:Array.from({length:20},(_,i)=>({id:'level1/swi_glu_'+(i+1),kernel:i===11?'_swiglu_pair_groups':'rows',elapsed_us:10,baseline_us:8}))};
+  payload.cannbench_performance = {complete:true,runs:[{...payload.swiglu_performance,
+    model:'gateway/glm-5.3',revision:'d'.repeat(40),all_ratio:0.81,finished_at:'2026-11-11T17:08:38+00:00'}]};
   await load(payload);
+  const timing=page.locator('#timing');
+  assert.match(await timing.innerText(),/0.800×.*0.810×.*67.0000/s);
+  await timing.getByText('20/20 passed').click();
+  assert.equal(await timing.getByRole('table',{name:'Official device time (µs)'}).locator('tbody tr').count(),20);
+  await page.locator('#search').fill('unrelated');
+  assert.equal(await timing.getByText('job_abc').count(),0);
   const panel = page.locator('#swiglu-study');
   assert.match(await panel.textContent(),/0.800× baseline speed.*19 cases.*25.0% more device time/);
   assert.equal(await panel.getByRole('link',{name:'GitHub Actions generation'}).getAttribute('href'),payload.swiglu_performance.generation);

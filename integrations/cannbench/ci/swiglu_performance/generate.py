@@ -3,7 +3,10 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
+
+from geometry import validate
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -16,8 +19,10 @@ def main(root):
     context = root / 'context'
     project = root / 'project'
     project.mkdir()
+    skill_root = Path(os.environ.get('SWIGLU_SKILL_SOURCE') or ci.ROOT)
+    skill_revision = subprocess.check_output(['git','-C',str(skill_root),'rev-parse','HEAD'],text=True).strip()
     for name in ci.SKILLS:
-        shutil.copytree(ci.ROOT/'skills'/name, context/'skills'/name)
+        shutil.copytree(skill_root/'skills'/name, context/'skills'/name)
     catalog, task = ci.smoke.task_snapshot(ci.ci_client())
     ci.save(root/'catalog.json', catalog)
     ci.save(root/'task.json', task)
@@ -32,6 +37,8 @@ def main(root):
     profile['provider']['gateway']['options']['baseURL'] = os.environ['OPENCODE_BASE_URL']
     profile['skills'] = {'paths':[str(context/'skills')]}
     profile['permission'] = ci.worker_permissions(context)
+    for path in ('policy.json','**/policy.json'):
+        profile['permission']['edit'][path] = 'allow'
     profile['agent'] = {'build':{'steps':32}}
     ci.save(project/'opencode.json', profile)
     private = root.parent/(root.name+'-private')
@@ -49,8 +56,11 @@ def main(root):
     candidate = project/'candidate.py'
     if not candidate.is_file():
         raise ValueError('OpenCode completed without writing candidate.py; see its retained session')
+    policy = project/'policy.json'
+    validate(ci.load(policy))
     ci.save(root/'generation.json', {'run_id':identity['GITHUB_RUN_ID'], 'run_attempt':identity['GITHUB_RUN_ATTEMPT'],
             'revision':identity['GITHUB_SHA'], 'candidate_sha256':ci.smoke.sha(candidate),
+            'skills_revision':skill_revision, 'policy_sha256':ci.smoke.sha(policy),
             'prompt_sha256':ci.smoke.sha(root/'prompt.txt'), 'model':ci.MODEL, 'opencode':version,
             'profile_sha256':ci.smoke.sha(project/'opencode.json'), 'session_id':trace['session_id'],
             'loaded_skills':trace['loaded_skills'], 'context_hashes':ci.hashes(context)})
