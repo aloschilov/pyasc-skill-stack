@@ -1,35 +1,35 @@
-# Read interleaved BF16 pairs as one flat tile
+# Tile contiguous BF16 pairs
 
-When each output consumes two adjacent elements in contiguous storage, flatten
-the outer dimensions into a pair count. Read a contiguous span starting at
-`2 * first_pair`; write one contiguous result starting at `first_pair`. The
-input and output valid extents are respectively twice the valid pair count and
-the valid pair count. Align full tile boundaries and give the last partial
-tile a single writer. Do not round up each individual operand within each row.
+For SwiGLU on a contiguous final axis of length two, flatten the outer
+dimensions into a pair count. One contiguous BF16 read covers both operands.
+Use the [public AscTile template](../templates/packed-bf16-swiglu.py) for
+the device kernel and its host tile selector. Adapt the AscTile import to the
+active runtime. Keep the existing dispatch for other layouts.
 
-On pins without a qualified local unzip operation, this AscTile layout splits
-256 BF16 pairs using two aligned transposes. Both transpose dimensions are
-multiples of 16 BF16 elements. Reshaping the flat input directly to [2, 256]
-would instead put the first half of the input in the first plane.
+After platform setup, pass the active UB capacity in bytes and the available
+vector count to `_pair_tile_size(rows, ub_bytes, vector_blocks(rows))`. Use
+the largest qualified shape that fits the capacity and leaves enough work for
+the vector grid. With a positive tile, compute the ceiling tile count, then
+launch `_swiglu_pair_groups[vector_blocks(groups)](input, out, rows, groups, tile)`
+once. A missing capacity or an unsupported size selects the qualified fallback.
+Handle empty inputs on the host. Use the runner's effective UB limit if smaller.
 
-```python
-flat = asctile.copy_in(x, [2 * first], [512], real_shape=[2 * valid], pad_value=0.0)
-t = flat.reshape(16, 32).transpose(1, 0)
-planes = t.reshape(16, 32).transpose(1, 0).reshape(2, 256)
-```
+Each block visits whole tiles in a block-stride loop. For each tile the valid
+pair count is the smaller of the tile size and the remaining rows. Keep static
+physical shapes and pass dynamic valid extents to the input and output copies.
+This assigns a partial tile to one block in the same launch, including when the
+whole input fits in one partial tile.
 
-See the [complete pair kernel](../templates/packed-bf16-swiglu.py) for the exact
-public API calls. It selects SiLU of the gate plane and the original value
-plane with a two-row mask, then reduces their product along the plane axis.
-Its block-stride wrapper takes a first group, a count of groups and a single
-compile-time valid extent. Launch the full groups with valid = 256 and, if
-needed, the final group with its actual valid extent. Keep intermediates local.
-Do not use host tensor indexing or an unqualified gather on the last axis.
+The two aligned BF16 transposes move parity to the leading axis. Select the
+gate and value planes independently before applying the nonlinear function.
+On PyASC 6b3447b4, selecting with `where` and reducing over that two-element
+axis produces two single-plane tensors. Zero the unselected lanes using
+`where` so NaNs in the other plane cannot leak through multiplication by zero.
+Compute FP32 sigmoid only on the gate and multiply by the original value.
 
-Assign whole tiles using the active vector grid and a block-stride loop.
-The tile and transpose dimensions form one layout: deriving a new tile size
-from UB alone does not preserve the permutation. Check compiled UB against the
-active capacity. The linked FP32-compute specialization used 23,104 UB bytes
-for both 256 and 67 valid pairs on the 950PR at PyASC 6b3447b4. Recheck on
-a different runtime or after changing the computation. Validate pair order on varying inputs, a partial tile,
-nonfinite lanes and the output write boundary before timing on hardware.
+The allocation table in the template is specific to this computation, layout,
+compiler and JIT options. In 950PR CaModel the 4096-pair specialization
+requested 369664 bytes at a 253952-byte capacity. Recheck allocation before
+extending the size ladder or changing the kernel. Validate multiple tile sizes,
+an exact tile, a partial-only input, a block-stride tail, nonfinite lanes and
+the output write boundary before timing.
