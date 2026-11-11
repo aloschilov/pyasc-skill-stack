@@ -311,6 +311,7 @@ numerical correctness or performance.
 ## References
 
 - [JIT options and measured hazards](references/api-jit-options.md)
+- [DMA and UB sizing for row-slab reindex gathers](references/reindex-slabs.md)
 - [Reduction tiling](references/reduction-tiling.md)
 - [CANN performance techniques and evidence-driven experiments](references/cann-performance-tuning.md)
 - `asctile-cannbench-kernel` for the benchmark contract and evidence labels

@@ -220,6 +220,10 @@ exercises three useful candidates:
   Include their transfers and UB allocation, and use an index-construction
   method allowed by the candidate contract. For H=1, compare this public
   route with the register specialization when native code is enabled.
+  For this slab route, derive height and loop unroll from the input DMA
+  bytes, compiled UB footprint and useful tiles per AIV. Apply the
+  [reindex slab geometry](../../asctile-api-patterns/references/reindex-slabs.md)
+  for the matching build.
 - When several half-rows fit in UB, batch them into a two-dimensional tile
   with a 32-byte-aligned physical width. Bound both the row count and the
   logical width on reads and stores. The archive targets roughly 8–16 KiB
