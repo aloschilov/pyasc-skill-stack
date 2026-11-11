@@ -168,7 +168,7 @@ jobs:
           if [ -n "$ref" ]; then
             # An existing lightweight qualification tag binds this receipt to its evaluation.
             test "${ref%%[[:space:]]*}" = "$revision"
-            target=(--verify-tag)
+            target=()
           elif [ -n "$PUBLISH_TOKEN" ]; then
             # Creating a tag on a workflow-changing branch revision may require Workflows write.
             if GH_TOKEN="$PUBLISH_TOKEN" gh api "repos/$GITHUB_REPOSITORY" --silent; then
