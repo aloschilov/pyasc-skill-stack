@@ -29,7 +29,12 @@ that forces a shorter tile. A single full-capacity test can hide a unit error.
    divided by input bytes per row, the effective UB divided by the single-
    iteration cost per row, and `ceil(R / active_AIVs)` useful rows per AIV.
    Keep the physical input, gathered output and int32 index tile lengths
-   aligned to 32 bytes. Allow the final valid row count to be smaller.
+   aligned to 32 bytes. Check the actual byte lengths before returning either
+   gather specialization: `(2*T*H*s) % 32 == (T*H*s) % 32 == (4*T*H) % 32 == 0`.
+   If the largest power-of-two tile fails, all smaller powers also fail.
+   Use the row fallback in that case. Allow the final valid row count to be smaller.
+   Exercise the fallback with `R=A` and a seven-element BF16 half-row:
+   the one-row candidate has only 14 output bytes.
 2. At this height prefer unroll 2 when the two-iteration footprint fits UB
    and there are at least two tiles per active block on average. Otherwise
    try unroll 1 at that height. If no aligned tile fits, use the existing
