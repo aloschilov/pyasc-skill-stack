@@ -43,5 +43,15 @@
       "sha256": "aa86a82a28f4a13edf5858059495119cf083c0df876c81e9641a16b8b3a52d56",
       "run_id": 41673353296
     }
-  ]
+  ],
+  "swiglu_study": {
+    "release": "qualification-swiglu-retile-20261110",
+    "asset": "swiglu-retile.json",
+    "sha256": "ef29797cef9a6443bd758b77c91d7d5522350f599c48961f28141c9354a8a5ee"
+  },
+  "skill_transfer": {
+    "release": "qualification-cannbench-transfer-52",
+    "asset": "cannbench-maximum-transfer-52.tar.gz",
+    "sha256": "6ad38bdc97349611b0e4c31f32d8e41d5a46b12f402e48a150cfc597f6b092d0"
+  }
 }

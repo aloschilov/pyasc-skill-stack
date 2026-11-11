@@ -208,3 +208,21 @@ test('workflow navigation preserves the distinct July and November assignments',
   await page.locator('#handoffs button').first().click();
   assert.match(await page.locator('#example').innerText(), /July assignment:/);
 });
+
+test('daily comparison shows first attempts, dated sources and a missing hardware pair', async () => {
+  const payload=data();
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const yesterday=new Date(Date.parse(today+'T12:00:00Z')-86400000).toISOString().slice(0,10);
+  payload.daily={status:'same-skills',timezone:'Europe/Moscow',dates:[yesterday,today],
+    runs:[1,2].map(n=>({run_id:n,attempt:1,revision:'b'.repeat(40),cells:{add:'passed',reduce:'failed'},model:'glm'})),
+    hardware:{status:'unavailable'}};
+  await load(payload);
+  const daily=page.locator('#daily-quality');
+  assert.match(await daily.innerText(),/Same skill bytes/);
+  assert.match(await daily.innerText(),/1\/2 first attempts/);
+  assert.match(await daily.innerText(),/no matched pair/);
+  assert.equal(await daily.locator('a').count(),2);
+  payload.daily.dates=['2020-01-01','2020-01-02'];
+  await load(payload);
+  assert.match(await daily.innerText(),/Today’s comparison is unavailable/);
+});
