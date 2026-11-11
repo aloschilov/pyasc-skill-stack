@@ -41,7 +41,7 @@ def restore(root, origin):
     require(run['head_repository']['full_name']==repo and (run['event']=='workflow_dispatch' or (run['event']=='push' and run['head_branch']=='main'))
             and run['path']=='.github/workflows/ci.yml', 'Wrong generation workflow')
     jobs = api(f'runs/{origin}/attempts/{attempt}/jobs')['jobs']
-    require(any(j['name']=='swiglu-performance / generate' and j['conclusion']=='success' for j in jobs),
+    require(any(j['name'] in ('swiglu-performance / generate','swiglu-on-skill-change / generate') and j['conclusion']=='success' for j in jobs),
             'Generation job did not succeed')
     dest = root/'generation'
     dest.mkdir()
@@ -52,6 +52,7 @@ def restore(root, origin):
             and g['model']==ci.MODEL and set(g['loaded_skills'])==set(ci.SKILLS)
             and sha(dest/'project/candidate.py')==g['candidate_sha256']
             and sha(dest/'project/policy.json')==g['policy_sha256']
+            and sha(dest/'policy-prompt.txt')==g['policy_prompt_sha256']
             and sha(dest/'prompt.txt')==g['prompt_sha256']
             and sha(dest/'project/opencode.json')==g['profile_sha256'], 'Generation receipt mismatch')
     ci.check_hashes(dest/'context',g['context_hashes'])

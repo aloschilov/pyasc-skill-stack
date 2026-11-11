@@ -13,6 +13,20 @@ sys.path.insert(0, str(HERE.parent))
 import single_operator as ci
 
 
+def ended_at_limit(events):
+    reasons=[]
+    for line in events.splitlines():
+        try:
+            event=json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get('type')=='error':
+            return False
+        if event.get('type')=='step_finish':
+            reasons.append(event['part'].get('reason'))
+    return bool(reasons) and reasons[-1]=='length'
+
+
 def main(root):
     identity = ci.ci_identity()
     root.mkdir(parents=True, exist_ok=False)
@@ -49,17 +63,37 @@ def main(root):
                OPENCODE_CONFIG_CONTENT=json.dumps(profile), OPENCODE_DISABLE_EXTERNAL_SKILLS='1',
                OPENCODE_DISABLE_CLAUDE_CODE_SKILLS='1')
     version = ci.call(['opencode','--version'],root/'version.log',env=env).strip()
-    out = ci.call(['opencode','run','--pure','--format','json','--dir',str(project),'-m',ci.MODEL,prompt],
-                  root/'events.log',cwd=project,env=env,timeout=1200)
-    trace = ci.trace(out, context/'skills')
-    ci.capture_session(private/'opencode/opencode.db', trace['session_id'], root/'session.json')
-    candidate = project/'candidate.py'
-    if not candidate.is_file():
-        raise ValueError('OpenCode completed without writing candidate.py; see its retained session')
-    policy = project/'policy.json'
+    command=['opencode','run','--pure','--format','json','--dir',str(project),'-m',ci.MODEL]
+    events=ci.call([*command,prompt],root/'events.log',cwd=project,env=env,timeout=1200)
+    trace=ci.trace(events,context/'skills')
+    session=trace['session_id']
+    database=private/'opencode/opencode.db'
+    ci.capture_session(database,session,root/'session.json')
+    command.extend(['--session',session])
+
+    def finish_file(path,log,previous):
+        if not path.is_file() and ended_at_limit(previous):
+            reminder=f'The preceding response reached its output limit. Use the write tool now to create {path.name} from the instructions already loaded.'
+            previous=ci.call([*command,reminder],root/log,cwd=project,env=env,timeout=1200)
+            ci.capture_session(database,session,root/'session.json')
+        if not path.is_file():
+            raise ValueError(f'Missing {path.name}; inspect the retained session and finish reason')
+
+    candidate=project/'candidate.py'
+    finish_file(candidate,'kernel-continuation.log',events)
+    before=ci.smoke.sha(candidate)
+    policy_prompt=(HERE/'policy-prompt.txt').read_text()
+    (root/'policy-prompt.txt').write_text(policy_prompt)
+    response=ci.call([*command,policy_prompt],root/'policy-events.log',cwd=project,env=env,timeout=1200)
+    ci.capture_session(database,session,root/'session.json')
+    policy=project/'policy.json'
+    finish_file(policy,'policy-continuation.log',response)
+    if ci.smoke.sha(candidate)!=before:
+        raise ValueError('Policy generation changed the frozen compute kernel')
     validate(ci.load(policy))
     ci.save(root/'generation.json', {'run_id':identity['GITHUB_RUN_ID'], 'run_attempt':identity['GITHUB_RUN_ATTEMPT'],
             'revision':identity['GITHUB_SHA'], 'candidate_sha256':ci.smoke.sha(candidate),
+            'policy_prompt_sha256':ci.smoke.sha(root/'policy-prompt.txt'),
             'skills_revision':skill_revision, 'policy_sha256':ci.smoke.sha(policy),
             'prompt_sha256':ci.smoke.sha(root/'prompt.txt'), 'model':ci.MODEL, 'opencode':version,
             'profile_sha256':ci.smoke.sha(project/'opencode.json'), 'session_id':trace['session_id'],

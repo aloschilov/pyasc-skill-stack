@@ -304,14 +304,22 @@ jobs:
             exit 1
           fi
 
-  swiglu-performance:
+  swiglu-on-skill-change:
     needs: [pr-gate, examples-gate]
-    if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.pr-gate.outputs.evaluate_swiglu == 'true') ||
-      (github.event_name == 'workflow_dispatch' && startsWith(inputs.cannbench_action, 'performance'))
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.pr-gate.outputs.evaluate_swiglu == 'true'
     uses: ./.github/workflows/swiglu-performance.yml
     with:
-      action: ${{ inputs.cannbench_action || 'performance' }}
+      action: performance
+    permissions:
+      contents: write
+      actions: read
+    secrets: inherit
+
+  swiglu-performance:
+    if: github.event_name == 'workflow_dispatch' && startsWith(inputs.cannbench_action, 'performance')
+    uses: ./.github/workflows/swiglu-performance.yml
+    with:
+      action: ${{ inputs.cannbench_action }}
       skills_revision: ${{ inputs.skills_revision }}
       origin: ${{ inputs.origin_run }}
     permissions:

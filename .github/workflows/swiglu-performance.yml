@@ -25,7 +25,7 @@ jobs:
   generate:
     if: inputs.action == 'performance' || inputs.action == 'performance-generate'
     runs-on: cannbench-vm
-    timeout-minutes: 28
+    timeout-minutes: 86
     steps:
       - uses: actions/checkout@v4
         with:
