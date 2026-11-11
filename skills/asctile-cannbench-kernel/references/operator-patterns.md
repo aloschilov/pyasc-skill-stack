@@ -241,6 +241,14 @@ versus 6.345 µs. Retain the selected kernel name, tile height, unroll, compiled
 UB and warmed samples for both shapes before promoting a short-row default.
 [Per-case replay and source](../../../docs/evidence/swiglu-vector-grid-20261110/README.md)
 
+For a reproducible public `asctile.reindex` check, use CPython 3.12, PyASC
+`ed793e45` and
+`ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:1efdcc8585b769715f640e9c9078c2e03cdf2157082d05b0c4b87974beea7407`.
+The arm64 CaModel probe gathered both halves of 16 and 4,096 BF16 pairs with
+exact results. Recheck the complete generated kernel on the submission runtime
+before comparing device times across wheels.
+[Probe, image and per-architecture wheel hashes](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-swiglu-retile-20261110/reindex-cp312-camodel.tar.gz)
+
 For the padded SwiGLU kernel on PyASC `6b3447b4`, the BF16 specialization
 at height 512 and physical width 16 requested 655,360 UB bytes on the 950PR.
 Budget at least 1,280 bytes per physical row (80 bytes per padded lane) for
