@@ -1,21 +1,16 @@
 """Assemble the measured skill template and OpenCode's host dispatch.
 
-Usage: python assemble.py parent.py template.py events.jsonl output.py
+Usage: python assemble.py parent.py template.py dispatch.txt output.py
 The parent is the UB-height candidate in the adjacent ub directory.
 """
 import ast
-import json
 from pathlib import Path
-import re
 import sys
 from textwrap import dedent, indent
 
 
-def assemble(parent, template, events):
-    responses = [e["part"]["text"] for e in map(json.loads, events.splitlines())
-                 if e["type"] == "text"]
-    block, = re.findall(r"```(?:python|py)\s*\n(.*?)```", responses[-1], re.S)
-    dispatch = dedent(block).strip()
+def assemble(parent, template, dispatch):
+    dispatch = dedent(dispatch).strip()
     branch, = ast.parse(dispatch).body
     if not isinstance(branch, ast.If):
         raise ValueError("Expected the generated conditional dispatch")
@@ -37,5 +32,5 @@ def assemble(parent, template, events):
 
 
 if __name__ == "__main__":
-    parent, template, events, output = map(Path, sys.argv[1:])
-    output.write_text(assemble(parent.read_text(), template.read_text(), events.read_text()))
+    parent, template, dispatch, output = map(Path, sys.argv[1:])
+    output.write_text(assemble(parent.read_text(), template.read_text(), dispatch.read_text()))
