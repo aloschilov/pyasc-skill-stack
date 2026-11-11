@@ -250,13 +250,35 @@ function renderTransfer(study) {
     el('p',cases.map(k=>`${k}: ${study.cases.A[k]} → ${study.cases.B[k]}`).join(' · ')),
     link('Fixed prompts, six generation sessions and numerical controls',study.url));
 }
-function renderSwiGLU(study) {
+function renderSwiGLU(study, official) {
   const panel = $('swiglu-study');
-  if (study?.status !== 'available') { panel.textContent = 'SwiGLU measurements unavailable.'; return; }
-  panel.replaceChildren(el('h3','CANNBench · one OpenCode edit at eight blocks'),
+  panel.replaceChildren();
+  if (official?.status === 'available') {
+    const change = (1/official.ratio-1)*100;
+    panel.append(el('h3','CI-generated SwiGLU · CANNBench'),
+      el('p',`${official.ratio.toFixed(3)}× baseline speed across the 19 cases that ran OpenCode-generated compute kernels, or ${Math.abs(change).toFixed(1)}% ${change >= 0 ? 'more' : 'less'} device time. All 20 passed. Case 12 ran the packed BF16 template.`),
+      el('p',`Service score (20 cases): ${official.score.toFixed(4)} · ${official.job} · ${official.submission}`),
+      link('GitHub Actions generation',official.generation), document.createTextNode(' · '),
+      link('CANNBench timings and evaluated source package',official.release));
+    const details=el('details'); details.append(el('summary','Official timings for all 20 cases'));
+    const table=el('table'); table.append(el('caption','Same-job device times in microseconds'));
+    const head=table.createTHead().insertRow();
+    for (const title of ['Case','Compute kernel','Candidate','CANNBench baseline']) {
+      const th=el('th',title); th.scope='col'; head.append(th);
+    }
+    const body=table.createTBody();
+    for (const c of official.cases) {
+      const row=body.insertRow();
+      for (const value of [c.id,c.kernel,c.elapsed_us.toFixed(3),c.baseline_us.toFixed(3)]) row.insertCell().textContent=value;
+    }
+    details.append(table); panel.append(details);
+  }
+  if (study?.status !== 'available') { panel.append(el('p','Historical SwiGLU measurements unavailable.')); return; }
+  panel.append(el('h3','CANNBench · one OpenCode edit at eight blocks'),
     el('p', `All 20 cases passed. Six wide cases improved ${study.parent_over_wide.toFixed(3)}× (geometric mean). Service scores: parent ${study.scores.parent.toFixed(4)}, retiled ${study.scores.wide.toFixed(4)}, reference ${study.scores.reference.toFixed(4)}.`),
     link('Hardware reports and generation provenance',study.release),
     el('h3','Shape dispatch · retained hardware replay'),
+    ...(study.local_generated_ratio ? [el('p',`Исторический замер на David: ${study.local_generated_ratio.toLocaleString('ru-RU',{minimumFractionDigits:3,maximumFractionDigits:3})}× относительно базы CANNBench по 19 кейсам SwiGLU с вычислительными ядрами OpenCode. Это примерно на ${Math.round((1/study.local_generated_ratio-1)*100)}% больше времени. Время кандидата измерялось локально; время базы взято из CANNBench.`)] : []),
     el('p', `Archive / generated dispatch time: ${study.archive_over_shape.toFixed(5)}× across 20 cases on the same PyASC extension and CPython 3.12. Generation included geometry feedback, API repair and an existing BF16 template.`),
     link('Shape selection, sources and per-launch samples',study.shape_evidence));
   const details = el('details'); details.append(el('summary','Compare all 20 cases'));
@@ -309,6 +331,11 @@ function validate(data) {
     require(s.cases.length===20 && s.cases.every((r,i)=>r.case===i+1 && ['parent','wide','reference','shape_us','replay_us'].every(k=>Number.isFinite(r[k]) && r[k]>0)));
     require(['wide','parent','reference'].every(k=>Number.isFinite(s.scores[k])) && [s.parent_over_wide,s.archive_over_shape].every(v=>Number.isFinite(v)&&v>0));
   }
+  if (data.swiglu_performance?.status === 'available') {
+    const p=data.swiglu_performance; safeURL(p.generation); safeURL(p.release);
+    require(Number.isFinite(p.ratio) && p.ratio>0 && Number.isFinite(p.score) && p.cases.length===20 &&
+      p.cases.every((c,i)=>c.id===`level1/swi_glu_${i+1}` && ['elapsed_us','baseline_us'].every(k=>Number.isFinite(c[k]) && c[k]>0)));
+  }
   const ids = new Set();
   for (const r of data.records) {
     require(typeof r.id === 'string' && !ids.has(r.id) && Object.hasOwn(titles, r.kind)); ids.add(r.id);
@@ -348,7 +375,7 @@ fetch('data.json', {cache:'no-store'}).then(r => {if (!r.ok) throw new Error('Mi
   for (const name of [...new Set(data.records.flatMap(models))].sort()) {
     const option = el('option', name); option.value = name; $('model').append(option);
   }
-  renderDaily(data.daily); renderTransfer(data.transfer); renderSwiGLU(data.swiglu); renderOverview(data); render(data); freshness(data);
+  renderDaily(data.daily); renderTransfer(data.transfer); renderSwiGLU(data.swiglu,data.swiglu_performance); renderOverview(data); render(data); freshness(data);
   for (const id of controls) $(id).addEventListener(id === 'search' ? 'input' : 'change', () => render(data));
   $('filters').addEventListener('submit', e => e.preventDefault());
   $('filters').addEventListener('reset', () => { for (const id of controls) $(id).value = id === 'search' ? '' : 'all'; render(data); });

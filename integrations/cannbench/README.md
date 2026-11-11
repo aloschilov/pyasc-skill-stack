@@ -274,3 +274,11 @@ hardware with complete CI provenance. CI published and verified its unchanged
 archive in the [qualification Release](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-41673353296);
 the separate reference qualification is retained with its own scope.
 Implementation or a queued upload alone does not qualify generation.
+
+### Generate and measure SwiGLU from CI
+
+Run `gh workflow run ci.yml --ref main -f cannbench_action=performance` to generate three vector kernels with OpenCode in a fresh project. Actions retains the native session, exact candidate bytes and four skill digests. A network-isolated CaModel gate checks both seeds against the numerical oracle and a suppressed launch. The submitted ZIP includes the unchanged PyASC, its emitted AscendC and the host launcher. CANNBench rebuilds the wheel using the installed CANN toolkit.
+
+The launcher and tile-size policy belong to the harness. Three generated kernels implement 19 official cases. The packed BF16 template implements case 12. The published performance ratio is the geometric mean of each generated case's official baseline time divided by its measured time in the same submission. The service score includes all 20 cases. A single result establishes performance for one candidate.
+
+For a split run, `performance-generate` produces the generation artifact. Use `performance-evaluate` with `-f origin_run=GENERATION_RUN_ID` to qualify and submit its bytes. If the service is still pending, `performance-resume` takes the **evaluation** run ID and only collects the existing submission. Each successful evaluation publishes a release with `performance.json`, the submitted ZIP, the generated source and their SHA-256 checksums. GitHub Pages reads that release.

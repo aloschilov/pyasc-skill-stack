@@ -116,6 +116,28 @@ class DailyQuality(unittest.TestCase):
             with self.assertRaises(ValueError):
                 swiglu_evidence.times(invalid)
 
+    def test_service_ratio_uses_only_generated_compute_and_same_job_times(self):
+        import hashlib
+        cases = [{'id':f'level1/swi_glu_{i}', 'elapsed_us':10 if i==12 else 2,
+                  'baseline_us':1, 'kernel':'_swiglu_pair_groups' if i==12 else 'rows'} for i in range(1,21)]
+        report = {'schema':1, 'evaluation_run':'1234', 'origin_run':'1233','hardware':'950pr',
+                  'benchmark_version':'2.0.0','job_id':'job_abc','submission_id':'sub_abc',
+                  'candidate_sha256':'a'*64,'package_sha256':'b'*64,'cases':cases,'service_score':17,
+                  'generated_ratio':0.5}
+
+        def project():
+            raw = json.dumps(report).encode()
+            return swiglu_evidence.service_projection(lambda _:raw, {
+                'release':'qualification-swiglu-performance-1234','sha256':hashlib.sha256(raw).hexdigest()})
+
+        self.assertEqual(project()['ratio'],0.5)
+        for field,value in [('kernel','_swiglu_pair_groups'),('id','level1/swi_glu_2'),('baseline_us',0)]:
+            with self.subTest(field=field), patch.dict(cases[0],{field:value}), self.assertRaises(ValueError):
+                project()
+        report['generated_ratio']=0.893
+        with self.assertRaises(ValueError):
+            project()
+
     def test_current_publisher_uses_recipe_name_in_tag(self):
         r=dict(run(4,'2026-11-11T00:00:00Z'),event='workflow_dispatch',path='.github/workflows/ci.yml')
         release={'tag_name':'qualification-swi_glu-4','target_commitish':r['head_sha'],'draft':False,

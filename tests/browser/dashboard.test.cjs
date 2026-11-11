@@ -246,3 +246,17 @@ test('the six SwiGLU columns keep their headers and device times readable', asyn
       cells.every(c => c.scrollWidth <= c.clientWidth + 1 && c.clientWidth >= 52)));
   }
 });
+
+test('CI submission shows 19 generated cases and the independent historical comparison', async () => {
+  const payload = data();
+  const base = 'https://github.com/aloschilov/pyasc-skill-stack';
+  payload.swiglu_performance = {status:'available', ratio:0.8, score:67, job:'job_abc', submission:'sub_def',
+    release:base+'/releases/tag/example', generation:base+'/actions/runs/12345',
+    cases:Array.from({length:20},(_,i)=>({id:'level1/swi_glu_'+(i+1),kernel:i===11?'_swiglu_pair_groups':'rows',elapsed_us:10,baseline_us:8}))};
+  await load(payload);
+  const panel = page.locator('#swiglu-study');
+  assert.match(await panel.textContent(),/0.800× baseline speed.*19 cases.*25.0% more device time/);
+  assert.equal(await panel.getByRole('link',{name:'GitHub Actions generation'}).getAttribute('href'),payload.swiglu_performance.generation);
+  await panel.getByText('Official timings for all 20 cases').click();
+  assert.equal(await panel.locator('tbody tr').count(),20);
+});

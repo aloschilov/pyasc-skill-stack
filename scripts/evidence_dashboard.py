@@ -548,6 +548,12 @@ def build(catalog_path, output, loader=fetch, now=None, daily=None, recent=recen
     except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
         payload['swiglu'] = {'status':'unavailable'}
     try:
+        pin = (swiglu_evidence.latest_performance(loader) if daily is not None else None) or spec.get('swiglu_performance')
+        if pin:
+            payload['swiglu_performance'] = swiglu_evidence.service_projection(loader,pin)
+    except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
+        payload['swiglu_performance'] = {'status':'unavailable'}
+    try:
         payload['transfer'] = transfer_study(loader, spec['skill_transfer'])
     except (OSError, ValueError, KeyError, TypeError, ArithmeticError, EOFError, tarfile.TarError, zlib.error):
         payload['transfer'] = {'status':'unavailable'}
@@ -579,7 +585,7 @@ def main():
     result = build(args.catalog, args.output, daily=daily)
     if daily:
         import os
-        message = summary(result['daily'], result['transfer'], result['swiglu'])
+        message = summary(result['daily'], result['transfer'], result['swiglu'], result.get('swiglu_performance'))
         print(message)
         if os.environ.get('GITHUB_STEP_SUMMARY'):
             with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:

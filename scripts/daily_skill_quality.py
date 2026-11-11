@@ -178,7 +178,7 @@ LABELS = {'unavailable':'Insufficient verified observations', 'incompatible':'Ex
           'improved':'More first-attempt qualifications', 'regressed':'Fewer first-attempt qualifications'}
 
 
-def summary(daily, transfer=None, swiglu=None):
+def summary(daily, transfer=None, swiglu=None, performance=None):
     lines = ['## Daily skill quality', '', ' → '.join(daily['dates'])+' (Europe/Moscow)',
              '', '**'+LABELS[daily['status']]+'**', '']
     for i, (day, run) in enumerate(zip(daily['dates'], daily['runs'])):
@@ -200,6 +200,10 @@ def summary(daily, transfer=None, swiglu=None):
     if swiglu and swiglu['status'] == 'available':
         lines += ['', f"Retained [SwiGLU tiling experiment]({swiglu['release']}): {swiglu['parent_over_wide']:.2f}× "
                       "on six wide cases at eight blocks. All 20 passed on CANNBench. This measures one candidate edit."]
+    if performance and performance['status']=='available':
+        lines += ['', f"CI-generated SwiGLU: {performance['ratio']:.3f}× the CANNBench baseline across the "
+                      f"19 generated compute cases; case 12 used the BF16 template. "
+                      f"[Generation]({performance['generation']}) · [Official timings]({performance['release']})."]
     return '\n'.join(lines)
 
 
