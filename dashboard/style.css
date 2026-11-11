@@ -240,6 +240,24 @@ table {
   table-layout: fixed;
   min-width: 960px;
 }
+#swiglu-study table {
+  table-layout: auto;
+  min-width: 40rem;
+  font-variant-numeric: tabular-nums;
+}
+#swiglu-study td, #swiglu-study thead th {
+  text-align: right;
+  white-space: nowrap;
+}
+#swiglu-study thead th:first-child {
+  text-align: left;
+}
+#swiglu-study h3:not(:first-child), #swiglu-study details {
+  margin-top: 1rem;
+}
+#skill-transfer {
+  margin-top: .75rem;
+}
 caption {
   text-align: left;
   padding: 10px 15px;
@@ -256,19 +274,19 @@ th {
   color: var(--muted);
   padding: 11px 14px;
 }
-th:first-child {
+#explore th:first-child {
   width: 24%;
 }
-th:nth-child(2) {
+#explore th:nth-child(2) {
   width: 18%;
 }
-th:nth-child(3) {
+#explore th:nth-child(3) {
   width: 18%;
 }
-th:nth-child(4) {
+#explore th:nth-child(4) {
   width: 24%;
 }
-th:last-child {
+#explore th:last-child {
   width: 16%;
 }
 td {

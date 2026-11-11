@@ -226,3 +226,23 @@ test('daily comparison shows first attempts, dated sources and a missing hardwar
   await load(payload);
   assert.match(await daily.innerText(),/Today’s comparison is unavailable/);
 });
+
+test('the six SwiGLU columns keep their headers and device times readable', async () => {
+  const payload = data();
+  payload.swiglu = {
+    status:'available', release:'https://github.com/example/repo/releases/tag/test',
+    shape_evidence:'https://github.com/example/repo', parent_over_wide:13, archive_over_shape:0.88,
+    scores:{parent:32, wide:33, reference:43},
+    cases:Array.from({length:20}, (_,i)=>({case:i+1, parent:273.4, wide:26.1,
+      reference:16.2, shape_us:15.229, replay_us:6.385}))
+  };
+  await load(payload);
+  const panel = page.locator('#swiglu-study');
+  await panel.locator('summary').click();
+  assert.equal(await panel.locator('tbody tr').count(), 20);
+  for (const width of [1440,390]) {
+    await page.setViewportSize({width,height:900});
+    assert(await panel.locator('th, td').evaluateAll(cells =>
+      cells.every(c => c.scrollWidth <= c.clientWidth + 1 && c.clientWidth >= 52)));
+  }
+});
