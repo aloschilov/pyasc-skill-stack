@@ -192,11 +192,12 @@ tails and NaN/Inf positions for every new candidate.
 
 For SwiGLU, normalize the split axis first. When the contiguous BF16 input
 is split on its final axis of length two, each row is a neighbor pair
-`(gate, value)`. Choose the packed pair path in
-[AscTile API patterns](../../asctile-api-patterns/references/packed-bf16-pairs.md)
-before the short-row height selector. Include the UB-selected tile, the single
-block-stride launch with a bounded final copy, and the gate-only exponential
-from that pattern. Confirm the observed launch count and compiled UB allocation.
+`(gate, value)`. Select the implementation for the active build using the
+[BF16 pair pattern](../../asctile-api-patterns/references/packed-bf16-pairs.md).
+On the qualified archive-bundled public 950PR build, admit these pairs into
+the existing short-half reindex route before any transpose shortcut. Derive
+tile and unroll from the slab geometry. Confirm the actual kernel, grid,
+bounded final copy and compiled UB allocation.
 For an already validated contiguous
 tensor the guard is `dtype == torch.bfloat16 and d == rank - 1 and shape[d] == 2`.
 Here `d` is the normalized **axis index**, not its extent. Verify the launched

@@ -8,11 +8,17 @@ Read the effective UB capacity and available AIVs after platform selection.
 
 ## BF16 SwiGLU on the archive-bundled 950PR PyASC build
 
-Apply this geometry **inside the existing short-half-row gather branch**, after packed-pair dispatch. The measured SwiGLU selector enters that branch for `H*s <= 32` bytes. Route wider BF16 halves through their existing 2D or flat paths. Only an eligible short-half-row gather can take the bounded row fallback. Check route identity against the previous selector at narrow, medium and long half-row widths before launching.
+Use this geometry inside the short-half gather branch (`H*s <= 32` bytes).
+It also covers contiguous BF16 pairs (`H=1`, normalized final axis of length
+two). On this public build with cached int32 indices, let dense pairs reach
+the same gather selector as other short BF16 halves. An early return for
+the legacy transpose specialization would hide the eligible gather. Reuse
+the existing gather selector and kernel. Keep the existing bounded row
+fallback when alignment or capacity declines a tile. Preserve the established
+2D and flat routes for wider halves.
 
-With `reuse_alloc=2`, the measured public gather kernels used 24 bytes per
-output lane at unroll 1 and 28 at unroll 2 for aligned BF16 half-rows of
-seven elements. These are compiled live-buffer costs. Recheck allocations
+With `reuse_alloc=2`, aligned BF16 half-rows of one and seven elements used
+24 bytes per output lane at unroll 1 and 28 at unroll 2. These are compiled live-buffer costs. Recheck allocations
 when applying this estimate to a different specialization or compiler.
 Each row has `H` output lanes. For `T` rows the two footprints in bytes are
 `24*T*H` and `28*T*H`. The corresponding costs per row are `24*H` and
