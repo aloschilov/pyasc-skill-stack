@@ -53,3 +53,99 @@ jobs:
           name: swiglu-generation-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/swiglu-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: error
+
+  evaluate:
+    needs: generate
+    if: >-
+      always() && !cancelled() &&
+      ((inputs.action == 'performance' && needs.generate.result == 'success') ||
+       inputs.action == 'performance-evaluate' || inputs.action == 'performance-resume')
+    runs-on: cannbench-vm
+    timeout-minutes: 340
+    permissions:
+      actions: read
+      contents: write
+    env:
+      HELPER: integrations/cannbench/ci/swiglu_performance/evaluate.py
+      IMAGE: ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:1efdcc8585b769715f640e9c9078c2e03cdf2157082d05b0c4b87974beea7407
+      ORIGIN: ${{ inputs.origin || github.run_id }}
+      EVALUATION_RUN: ${{ inputs.action == 'performance-resume' && inputs.origin || github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Open evaluation directory and prepare benchmark client
+        env:
+          RESUME: ${{ inputs.action == 'performance-resume' }}
+        run: |
+          set -eu
+          [[ "$EVALUATION_RUN" =~ ^[1-9][0-9]*$ ]]
+          base="$HOME/.local/state/pyasc-swiglu-performance"
+          root="$base/$EVALUATION_RUN"
+          mkdir -p -m 700 "$base"
+          if [[ "$RESUME" == true ]]; then test -f "$root/prepared/manifest.json"; else mkdir -m 700 "$root"; fi
+          echo "ROOT=$root" >> "$GITHUB_ENV"
+          export CANNBENCH_VENV="$RUNNER_TEMP/swiglu-eval-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          bash integrations/cannbench/setup-site-mcp.sh
+          echo "PYTHON=$CANNBENCH_VENV/bin/python" >> "$GITHUB_ENV"
+      - name: Verify original GitHub Actions generation
+        if: inputs.action != 'performance-resume'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: '"$PYTHON" "$HELPER" restore "$ROOT" --origin "$ORIGIN"'
+      - name: Run numerical CaModel controls and lower the same bytes to AscendC
+        if: inputs.action != 'performance-resume'
+        run: |
+          set -eu
+          mkdir "$ROOT/qualification"
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
+            --user "$(id -u):$(id -g)" -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
+            -v "$GITHUB_WORKSPACE:/src:ro" -v "$ROOT/qualification:/result" \
+            -v "$ROOT/generation:/generation:ro" -w /tmp "$IMAGE" \
+            python3.12 /src/integrations/cannbench/ci/swiglu_performance/qualify.py /generation /result
+      - name: Package source and reproduce its wheel build
+        if: inputs.action != 'performance-resume'
+        env:
+          CANNBENCH_AGGREGATION_TOKEN: ${{ vars.CANNBENCH_AGGREGATION_TOKEN }}
+        run: |
+          set -eu
+          "$PYTHON" "$HELPER" package "$ROOT"
+          mkdir "$ROOT/build-test"
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
+            --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$ROOT/prepared/submission.zip:/submission.zip:ro" -v "$ROOT/build-test:/build" \
+            -w /build "$IMAGE" bash -c 'python3 -m zipfile -e /submission.zip /build && bash build.sh && python3 -m zipfile -t dist/*.whl'
+      - uses: actions/upload-artifact@v4
+        if: inputs.action != 'performance-resume'
+        id: checkpoint
+        with:
+          name: swiglu-prepared-${{ github.run_id }}
+          path: |
+            ${{ env.ROOT }}/prepared/submission.zip
+            ${{ env.ROOT }}/generation/generation.json
+            ${{ env.ROOT }}/qualification/camodel.json
+          if-no-files-found: error
+      - name: Submit once and collect service timings
+        env:
+          STAGE: ${{ inputs.action == 'performance-resume' && 'resume' || 'submit' }}
+          BENCHSITE_API_TOKEN: ${{ secrets.BENCHSITE_API_TOKEN }}
+          PREPARED_ARTIFACT_ID: ${{ steps.checkpoint.outputs.artifact-id }}
+        run: '"$PYTHON" "$HELPER" "$STAGE" "$ROOT"'
+      - name: Publish measured cases with the evaluated source package
+        env:
+          GH_TOKEN: ${{ secrets.QUALIFICATION_PUBLISH_TOKEN || github.token }}
+        run: |
+          set -eu
+          cd "$ROOT/public"
+          sha256sum -c SHA256SUMS
+          tag="qualification-swiglu-performance-$EVALUATION_RUN"
+          if gh release view "$tag" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            temp=$(mktemp -d)
+            gh release download "$tag" -R "$GITHUB_REPOSITORY" -D "$temp"
+            cmp SHA256SUMS "$temp/SHA256SUMS"
+            (cd "$temp" && sha256sum -c SHA256SUMS)
+          else
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "CI-generated SwiGLU · CANNBench $EVALUATION_RUN" --notes "CI generation, 19 generated compute cases and one packed template. Per-case service measurements and exact submitted source package are attached." \
+              performance.json candidate.py submission.zip SHA256SUMS
+          fi
