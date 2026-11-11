@@ -228,8 +228,9 @@ exercises three useful candidates:
 - When several half-rows fit in UB, batch them into a two-dimensional tile
   with a 32-byte-aligned physical width. Bound both the row count and the
   logical width on reads and stores. The archive targets roughly 8–16 KiB
-  per half-tile for short rows. Tune the height against both DMA size and
-  grid occupancy.
+  per half-tile for short rows. For the public 950PR kernel, choose height
+  from the logical transfer size and choose unroll from the padded UB
+  footprint and work per AIV using the [2D row geometry](../../asctile-api-patterns/references/strided-row-tiles.md).
 - When a half-row is already a long contiguous stream, split it into flat
   chunks. Load gate and value from offsets separated by H, and include
   useful column chunks when choosing the grid. Compare loop unroll 1, 2

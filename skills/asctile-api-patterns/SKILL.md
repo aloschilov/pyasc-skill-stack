@@ -312,6 +312,7 @@ numerical correctness or performance.
 ## References
 
 - [JIT options and measured hazards](references/api-jit-options.md)
+- [Height and unroll for strided 2D row copies](references/strided-row-tiles.md)
 - [DMA and UB sizing for row-slab reindex gathers](references/reindex-slabs.md)
 - [Reduction tiling](references/reduction-tiling.md)
 - [CANN performance techniques and evidence-driven experiments](references/cann-performance-tuning.md)
