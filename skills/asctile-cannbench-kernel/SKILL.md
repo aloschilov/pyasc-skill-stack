@@ -61,6 +61,18 @@ native build mode separately in hardware comparisons.
   For a compile-only gate without a runtime, inject a labeled test capacity in
   the harness. Verify the live query, a small grid, and a saturating grid on
   the requested backend. Record the cap separately from tile sizes and thresholds.
+- For a long contiguous SwiGLU half-row, count independent work as
+  `R * ceil(H / T)`, including column chunks when R is one. Choose the grid
+  from this work and the active AIV limit. Size T in aligned elements from
+  the useful half-width and the compiled UB budget at the chosen unroll.
+  The 950PR archive used 2,048 lanes for H=2,048 and up to 10,560 for long
+  streams at unroll 2 with reuse_alloc=2. The first CI service kernel used
+  4,096 lanes at unroll 1 throughout. Across 11 flat cases its device time
+  was 1.355× the local archive time on a different runner. Treat those
+  geometries as candidates. Verify the allocation of the emitted code for
+  each dtype, including widened FP32 temporaries, and reduce tile or unroll
+  if it exceeds the budget. For an ahead-of-time package encode the choices
+  in general width bands and use the same policy for lowering and launch.
 - For the pinned runtime use `asctile.global_tensor`, `asctile.copy_in`, and
   `asctile.copy_out`; use `real_shape` for tails. Do not substitute the older
   `tensor/load/store` spelling.
