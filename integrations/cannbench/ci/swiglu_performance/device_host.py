@@ -93,9 +93,10 @@ def device_object(key):
 
 @lru_cache(maxsize=64)
 def gather_indices(half, tile, device):
-    lane = torch.arange(tile * half, device=device, dtype=torch.int32)
-    gate = lane // half * (2 * half) + lane % half
-    return gate, gate + half
+    from .geometry import slab_indices
+    # Upload constant addresses once. Some 950PR images omit the aclnnArange binary.
+    return tuple(torch.tensor(index, dtype=torch.int32, device='cpu').to(device)
+                 for index in slab_indices(half, tile))
 
 
 def swi_glu(input, dim=-1):

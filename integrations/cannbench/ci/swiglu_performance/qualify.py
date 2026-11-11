@@ -15,7 +15,7 @@ from asc.lib.utils import get_ascend_path
 from asc.runtime import config
 from asc.runtime.jit import MockTensor
 
-from geometry import DTYPES, all_specs, key, layout
+from geometry import DTYPES, all_specs, key, layout, slab_indices
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]/'workers'))
@@ -104,9 +104,8 @@ def check(kernels, dtype, shape, axis, seed):
     out = torch.full(shape, float('nan'),dtype=x.dtype)
     kwargs = [x,out]
     if route == 'slab':
-        lane = torch.arange(const[0]*const[1],dtype=torch.int32)
-        gate = lane//half*(2*half) + lane%half
-        kwargs.extend([gate,gate+half,rows])
+        indices = [torch.tensor(index,dtype=torch.int32) for index in slab_indices(*const)]
+        kwargs.extend([*indices,rows])
     else:
         kwargs.extend([rows,groups if route=='_swiglu_pair_groups' else half])
     try:

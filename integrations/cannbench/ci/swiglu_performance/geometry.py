@@ -19,6 +19,12 @@ def spec(dtype, half):
     return 'flat', (4096,)
 
 
+def slab_indices(half, tile):
+    """Address constants for a slab; independent of input data and device."""
+    gate = [row * 2 * half + column for row in range(tile) for column in range(half)]
+    return gate, [lane + half for lane in gate]
+
+
 def all_specs():
     for dtype, size in DTYPES.items():
         variants = {spec(dtype, h) for h in range(1, 3072 // size + 2)}
