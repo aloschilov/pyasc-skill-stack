@@ -34,3 +34,36 @@ Across the 19 generated cases the candidate took 1.380× as long, while the base
 Tiles are reconstructed from the submitted package and the local dispatch trace. The service receipt records compute names and elapsed time, without a measured launch grid. These comparisons identify concrete dispatch differences. Isolating a causal contribution from tile size, unroll or core count would require a controlled comparison on the same runner.
 
 [Local source, grid and three-sample measurements](https://github.com/aloschilov/pyasc-skill-stack/tree/909f47ca0c58963f04031e7e7bb2a0f583c82137/docs/evidence/swiglu-vector-grid-20261110) · [CI-generated source and official per-case receipt](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-performance-43061369765)
+
+## Fresh Actions evaluation with a generated policy
+
+The two official CANNBench submissions use the same 20 cases, hardware target and baseline times. Both passed all 20 cases with zero anti-cheat failures. On the 19 generated compute cases the new ratio is **0.92251×**, up from **0.73854×**. The new candidate used **19.94% less device time** geometrically and still took **8.40% more time** than the official baseline. The CANNBench score on all 20 rose from **55.2587 to 62.0525**. Including the template gives 0.95051× for the new submission.
+
+| Case | Official baseline µs | Previous CI µs | New CI µs | Previous / new | New tile / unroll / blocks at 72 available AIVs |
+|---:|---:|---:|---:|---:|---|
+| 1 | 6.38 | 8.08 | 6.41 | 1.261× | rows 4×1024 / 2 / 72 |
+| 2 | 23.65 | 35.42 | 24.86 | 1.425× | flat 2048 / 2 / 72 |
+| 3 | 48.59 | 64.93 | 52.21 | 1.244× | flat 4096 / 2 / 72 |
+| 4 | 241.49 | 273.81 | 245.37 | 1.116× | flat 7168 / 2 / 72 |
+| 5 | 522.10 | 543.48 | 566.05 | 0.960× | flat 8192 / 2 / 72 |
+| 6 | 6.20 | 8.17 | 7.17 | 1.139× | flat 7168 / 2 / 72 |
+| 7 | 6.50 | 11.07 | 9.24 | 1.198× | rows 4×1024 / 2 / 72 |
+| 8 | 8.54 | 10.41 | 10.53 | 0.989× | flat 8192 / 2 / 72 |
+| 9 | 22.05 | 14.77 | 9.21 | 1.604× | slab 256 / 2 / 72 |
+| 10 | 6.18 | 8.47 | 6.79 | 1.247× | rows 8×512 / 2 / 72 |
+| 11 | 3.56 | 4.66 | 4.68 | 0.996× | rows 4×512 / 1 / 69 |
+| 12 | 24.24 | 14.07 | 14.45 | 0.974× | pair_groups 2048 / 1 / 72 |
+| 13 | 3.25 | 5.23 | 5.22 | 1.002× | rows 2×640 / 1 / 72 |
+| 14 | 7.54 | 12.60 | 8.52 | 1.479× | rows 8×512 / 2 / 72 |
+| 15 | 7.78 | 12.93 | 8.47 | 1.527× | flat 2048 / 2 / 72 |
+| 16 | 8.79 | 11.97 | 10.19 | 1.175× | flat 7168 / 2 / 72 |
+| 17 | 8.76 | 11.16 | 9.86 | 1.132× | flat 7168 / 2 / 72 |
+| 18 | 23.63 | 35.69 | 25.19 | 1.417× | flat 2048 / 2 / 72 |
+| 19 | 14.28 | 19.93 | 15.08 | 1.322× | flat 7168 / 2 / 72 |
+| 20 | 19.56 | 38.56 | 20.41 | 1.889× | rows 32×56 / 2 / 72 |
+
+The times come from the service. The last column replays the submitted policy with a stated capacity of 72 AIVs; the service does not expose the live block count. Case 12 uses the same packed template and is excluded from both 19-case ratios. Sixteen of the 19 generated cases improved; cases 5, 8 and 11 took longer. In case 20 the model chose 32×56 at unroll 2 (50,176 compiled UB bytes), different from the local 64×56 study. Both compute source and policy changed between submissions, so the timing difference measures their combined effect.
+
+OpenCode 1.19.0 generated the kernels in Actions with GLM-5.3 high. Two high-reasoning policy responses reached the native output limit. CI recovered the exact model-written kernel bytes and GLM-5.3-low wrote the policy using the same four frozen skills. Earlier, a separate high-reasoning session had reached the limit before writing any kernel. Only the version with a complete policy was submitted. CaModel passed 24 numerical/control pairs and lowered all 219 specializations. The service claimed the submission after 1.29 s and finished 435.73 s later.
+
+[CI kernel generation](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/43085262902) · [Policy generation, CaModel and service evaluation](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/43089305496) · [Frozen skill inputs](https://github.com/aloschilov/pyasc-skill-stack/commit/799abfdb38d4c83fe1bbc0fd1028270e0bdcc064) · [Official job](https://cannbench.com/jobs/job_c2bd842c2347) · [Public receipt and evaluated ZIP](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-performance-43089305496)

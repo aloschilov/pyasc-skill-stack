@@ -155,19 +155,31 @@ jobs:
         run: '"$PYTHON" "$HELPER" "$STAGE" "$ROOT"'
       - name: Publish measured cases with the evaluated source package
         env:
-          GH_TOKEN: ${{ secrets.QUALIFICATION_PUBLISH_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_TOKEN: ${{ secrets.QUALIFICATION_PUBLISH_TOKEN }}
         run: |
           set -eu
           cd "$ROOT/public"
           sha256sum -c SHA256SUMS
           tag="qualification-swiglu-performance-$EVALUATION_RUN"
+          revision=$(jq -er '.evaluation_revision | select(test("^[0-9a-f]{40}$"))' performance.json)
+          ref=$(git ls-remote --refs "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$tag")
+          if [ -n "$ref" ]; then
+            # An existing lightweight qualification tag binds this receipt to its evaluation.
+            test "${ref%%[[:space:]]*}" = "$revision"
+          elif [ -n "$PUBLISH_TOKEN" ]; then
+            # Creating a tag on a workflow-changing branch revision may require Workflows write.
+            if GH_TOKEN="$PUBLISH_TOKEN" gh api "repos/$GITHUB_REPOSITORY" --silent; then
+              export GH_TOKEN="$PUBLISH_TOKEN"
+            fi
+          fi
           if gh release view "$tag" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             temp=$(mktemp -d)
             gh release download "$tag" -R "$GITHUB_REPOSITORY" -D "$temp"
             cmp SHA256SUMS "$temp/SHA256SUMS"
             (cd "$temp" && sha256sum -c SHA256SUMS)
           else
-            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$revision" \
               --title "CI-generated SwiGLU · CANNBench $EVALUATION_RUN" --notes "CI generation, 19 generated compute cases and one packed template. Per-case service measurements and exact submitted source package are attached." \
               performance.json candidate.py submission.zip SHA256SUMS
           fi

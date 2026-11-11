@@ -111,10 +111,21 @@ def service_projection(fetch, pin):
     require(re.fullmatch(r'[0-9a-f]{40}',skill_revision),'Invalid skill revision')
     if 'policy_sha256' in result:
         require(re.fullmatch(r'[a-f0-9]{64}',result['policy_sha256']), 'Invalid model policy identity')
+    generation_base=RELEASE.removesuffix('/releases')+'/actions/runs/'
+    kernel_run=origin
+    lineage=result.get('kernel_origin')
+    if lineage is not None:
+        kernel_run=str(lineage['run'])
+        require(re.fullmatch(r'[1-9][0-9]+',kernel_run) and lineage['candidate_sha256']==result['candidate_sha256'],
+                'Kernel recovery changed the compute source')
+    policy_profile=result.get('policy_profile')
+    require(policy_profile is None or re.fullmatch(r'[a-zA-Z0-9.-]{1,60}',policy_profile),'Invalid policy profile')
     public_cases = [{k:c[k] for k in ('id','kernel','baseline_us','elapsed_us','perf_score','t_hw_us') if k in c}
                     for c in sorted(cases,key=lambda c:int(c['id'].split('_')[-1]))]
     return {'status':'available','ratio':ratio,'score':result['service_score'],'job':result['job_id'],
-            'submission':result['submission_id'],'generation':RELEASE.removesuffix('/releases')+'/actions/runs/'+origin,
+            'submission':result['submission_id'],'generation':generation_base+kernel_run,
+            'policy_generation':generation_base+origin if result.get('policy_sha256') else None,
+            'policy_profile':policy_profile,
             'all_ratio':geometric_mean(c['baseline_us']/c['elapsed_us'] for c in cases),
             'finished_at':finished.isoformat(),'model':result['model'],'revision':result['revision'],
             'skills_revision':skill_revision, 'policy_sha256':result.get('policy_sha256'),

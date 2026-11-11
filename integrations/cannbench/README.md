@@ -190,7 +190,7 @@ Release publication targets the exact generation commit. If that commit changes
 write permission](https://docs.github.com/en/rest/releases/releases#create-a-release),
 which the built-in `GITHUB_TOKEN` cannot receive. Configure a repository-scoped
 GitHub App or fine-grained token with **Contents: write** and **Workflows: write**
-as `QUALIFICATION_PUBLISH_TOKEN` for that case. Only the release-publication step
+as `QUALIFICATION_PUBLISH_TOKEN` for that case. For a SwiGLU performance publication, an existing lightweight `qualification-swiglu-performance-EVALUATION_RUN` tag at the exact evaluation revision lets CI publish with its built-in token. The publisher verifies that tag before attaching evidence. Only the release-publication step
 receives this optional secret; it is not available to generation or CANNBench.
 A publication failure retains the sealed archive. Resume the same origin through
 CI after configuring the credential; never regenerate or resubmit for publication.

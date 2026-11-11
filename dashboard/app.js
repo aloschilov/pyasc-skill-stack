@@ -211,6 +211,8 @@ function serviceTable(runs) {
     const skill=link('skills '+(p.skills_revision||p.revision).slice(0,7),
       'https://github.com/aloschilov/pyasc-skill-stack/commit/'+(p.skills_revision||p.revision));
     row.cells[1].append(document.createElement('br'),skill);
+    if (p.policy_generation) row.cells[1].append(document.createElement('br'),
+      link('Policy · '+(p.policy_profile || p.model),p.policy_generation));
     const job=el('a',p.job); job.href='https://cannbench.com/jobs/'+p.job;
     row.insertCell().append(job);
     for (const ratio of [p.ratio,p.all_ratio]) row.insertCell().textContent=ratio.toFixed(3)+'×';
