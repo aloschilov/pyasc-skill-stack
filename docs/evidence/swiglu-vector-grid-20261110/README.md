@@ -1,38 +1,83 @@
 # SwiGLU launch grids on Ascend950PR_9599
 
-All 20 published Season 2 SwiGLU cases passed the full golden check for cap64, auto, UB-height auto, packed pairs and the gate-only variant. Cap64 and auto share tile shapes and math. The UB variant starts from auto and selects the height of padded short rows from the active UB capacity. Cap64 limits each launch to 64 independent work items. Auto uses the vector resources reported for the active context, bounded by the work available to that launch. A separately owned row tail launches one block.
+All 20 published Season 2 SwiGLU cases passed the full golden check for cap64, auto, UB-height auto, packed pairs, the gate-only variant, the native register variant and the archived job replay. Cap64 and auto share tile shapes and math. The UB variant starts from auto and selects the height of padded short rows from the active UB capacity. Cap64 limits each launch to 64 independent work items. Auto uses the vector resources reported for the active context, bounded by the work available to that launch. A separately owned row tail launches one block.
 
 ## Measured grids and device time
 
-The auto, UB, packed and gate-only grids report the `block_num` argument recorded on return from each successful PyASC `runtime.launch_kernel` call. All four invocations per case had the same grid. The cap64 grid comes from the retained dispatch code, input geometry and profiler task names. A grid of `72+1` means two successive launches.
+The auto, UB, packed, gate-only, register and job grids report the `block_num` argument recorded on return from each successful PyASC `runtime.launch_kernel` call. All four invocations per case had the same grid. The cap64 grid comes from the retained dispatch code, input geometry and profiler task names. A grid of `72+1` means two successive launches.
 
 Speed relative to CANNBench is `baseline_perf_us / candidate_us`. The auto vs cap64 column uses `cap64_us / auto_us`. The UB vs auto column uses `auto_us / ub_us`. Tile rows gives the physical height of the main UB-variant launch. Packed vs UB-auto is UB time divided by packed time; packed vs auto compares against the original grid-only auto. All packed times come from the full series, not the pilot. The last row uses the geometric mean of the 20 unrounded ratios. CANNBench publishes a scoring-capped baseline for the 950pr family with status `pending_npu_revalidation`. [Pinned CANNBench metadata](https://gitcode.com/cann/cann-bench/blob/72fb4064d80bcbd6195a100cd4bbabac7a4f8817/tasks/metadata/950pr.json)
 
-| Case | Input shape | Cap64 grid | Auto grid | CANNBench µs | Cap64 µs | Auto µs | Cap64 vs CANNBench (×) | Auto vs CANNBench (×) | Auto vs cap64 (×) | UB grid | Tile rows | UB µs | UB vs CANNBench (×) | UB vs auto (×) | Packed grid | Packed µs | Packed vs CANNBench (×) | Packed vs auto (×) | Packed vs UB-auto (×) | Gate grid | Gate µs | Gate vs CANNBench (×) | Gate vs packed (×) | Gate vs auto (×) |
-|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:| ---: | ---: | ---: | ---: | ---: |
-| 1 | 1024 × 2048 | 64 | 64 | 6.380 | 9.965 | 10.763 | 0.64024 | 0.59277 | 0.9259 | 64 | 16 | 10.411 | 0.61281 | 1.0338 | 64 | 9.765 | 0.65335 | 1.1022 | 1.0662 | 64 | 10.284 | 0.62038 | 0.94953 | 1.04658 |
-| 2 | 2048 × 4096 | 64 | 72 | 23.650 | 38.081 | 38.892 | 0.62104 | 0.60809 | 0.9791 | 72 | 16 | 38.143 | 0.62004 | 1.0196 | 72 | 38.994 | 0.60650 | 0.9974 | 0.9782 | 72 | 39.192 | 0.60344 | 0.99495 | 0.99235 |
-| 3 | 4096 × 8192 | 64 | 72 | 48.590 | 150.123 | 147.905 | 0.32367 | 0.32852 | 1.0150 | 72 | 16 | 148.123 | 0.32804 | 0.9985 | 72 | 147.193 | 0.33011 | 1.0048 | 1.0063 | 72 | 149.534 | 0.32494 | 0.98434 | 0.98911 |
-| 4 | 8192 × 16384 | 64 | 72 | 241.490 | 591.541 | 539.494 | 0.40824 | 0.44762 | 1.0965 | 72 | 1 | 538.953 | 0.44807 | 1.0010 | 72 | 539.944 | 0.44725 | 0.9992 | 0.9982 | 72 | 539.569 | 0.44756 | 1.00069 | 0.99986 |
-| 5 | 2039 × 65520 | 64+1 | 72+1 | 522.100 | 1144.921 | 1150.281 | 0.45601 | 0.45389 | 0.9953 | 72+1 | 16 | 1161.036 | 0.44968 | 0.9907 | 72+1 | 1158.588 | 0.45063 | 0.9928 | 1.0021 | 72+1 | 1149.157 | 0.45433 | 1.00821 | 1.00098 |
-| 6 | 1022 × 2047 | 64 | 72 | 6.200 | 12.065 | 11.190 | 0.51388 | 0.55407 | 1.0782 | 72 | 1 | 10.552 | 0.58757 | 1.0605 | 72 | 11.540 | 0.53726 | 0.9697 | 0.9144 | 72 | 11.605 | 0.53425 | 0.99440 | 0.96424 |
-| 7 | 1009 × 2016 | 63+1 | 63+1 | 6.500 | 23.766 | 23.435 | 0.27350 | 0.27736 | 1.0141 | 63+1 | 16 | 23.607 | 0.27534 | 0.9927 | 63+1 | 23.011 | 0.28247 | 1.0184 | 1.0259 | 63+1 | 23.008 | 0.28251 | 1.00013 | 1.01856 |
-| 8 | 1538 × 1537 | 64 | 72 | 8.540 | 13.416 | 11.756 | 0.63655 | 0.72644 | 1.1412 | 72 | 1 | 11.805 | 0.72342 | 0.9958 | 72 | 11.631 | 0.73424 | 1.0107 | 1.0150 | 72 | 12.131 | 0.70398 | 0.95878 | 0.96909 |
-| 9 | 363 × 367 × 14 | 64+1 | 72+1 | 6.782 | 110.477 | 95.993 | 0.06139 | 0.07065 | 1.1509 | 72+1 | 128 | 31.520 | 0.21516 | 3.0455 | 72+1 | 29.573 | 0.22933 | 3.2460 | 1.0658 | 72+1 | 30.445 | 0.22276 | 0.97136 | 3.15300 |
-| 10 | 2049 × 1024 | 64+1 | 72+1 | 6.180 | 14.946 | 15.160 | 0.41349 | 0.40765 | 0.9859 | 72+1 | 16 | 15.023 | 0.41137 | 1.0091 | 72+1 | 15.039 | 0.41093 | 1.0080 | 0.9989 | 72+1 | 14.878 | 0.41538 | 1.01082 | 1.01895 |
-| 11 | 3 × 7 × 13 × 1018 | 17+1 | 17+1 | 2.021 | 12.184 | 11.186 | 0.16587 | 0.18067 | 1.0892 | 17+1 | 16 | 11.939 | 0.16928 | 0.9369 | 17+1 | 12.068 | 0.16747 | 0.9269 | 0.9893 | 17+1 | 10.885 | 0.18567 | 1.10868 | 1.02765 |
-| 12 | 1000003 × 2 | 64+1 | 72+1 | 7.273 | 1272.485 | 1107.532 | 0.00572 | 0.00657 | 1.1489 | 72+1 | 128 | 445.974 | 0.01631 | 2.4834 | 72+1 | 31.424 | 0.23145 | 35.2448 | 14.1921 | 72 | 10.773 | 0.67511 | 2.91692 | 102.80627 |
-| 13 | 11 × 13 × 16 × 67 | 8+1 | 8+1 | 1.500 | 13.627 | 13.610 | 0.11008 | 0.11021 | 1.0012 | 8+1 | 16 | 13.694 | 0.10954 | 0.9939 | 8+1 | 13.524 | 0.11091 | 1.0064 | 1.0126 | 8+1 | 13.633 | 0.11003 | 0.99200 | 0.99831 |
-| 14 | 3 × 7 × 11 × 13 × 1012 | 64+1 | 72+1 | 7.540 | 23.042 | 22.275 | 0.32723 | 0.33850 | 1.0344 | 72+1 | 16 | 22.657 | 0.33279 | 0.9831 | 72+1 | 21.870 | 0.34476 | 1.0185 | 1.0360 | 72+1 | 22.160 | 0.34025 | 0.98691 | 1.00519 |
-| 15 | 512 × 4096 | 32 | 32 | 7.780 | 18.810 | 18.529 | 0.41361 | 0.41988 | 1.0152 | 32 | 16 | 18.151 | 0.42863 | 1.0208 | 32 | 18.452 | 0.42163 | 1.0042 | 0.9837 | 32 | 18.612 | 0.41801 | 0.99140 | 0.99554 |
-| 16 | 254 × 16383 | 64 | 72 | 8.790 | 21.173 | 19.477 | 0.41515 | 0.45130 | 1.0871 | 72 | 1 | 18.883 | 0.46550 | 1.0315 | 72 | 19.095 | 0.46033 | 1.0200 | 0.9889 | 72 | 18.552 | 0.47380 | 1.02927 | 1.04986 |
-| 17 | 4096 × 1023 | 64 | 72 | 8.760 | 19.352 | 17.641 | 0.45267 | 0.49657 | 1.0970 | 72 | 1 | 17.237 | 0.50821 | 1.0234 | 72 | 17.588 | 0.49807 | 1.0030 | 0.9800 | 72 | 17.211 | 0.50898 | 1.02190 | 1.02498 |
-| 18 | 2 × 1023 × 4096 | 64+1 | 72+1 | 23.630 | 56.562 | 57.033 | 0.41777 | 0.41432 | 0.9917 | 72+1 | 16 | 56.648 | 0.41714 | 1.0068 | 72+1 | 57.264 | 0.41265 | 0.9960 | 0.9892 | 72+1 | 56.456 | 0.41856 | 1.01431 | 1.01022 |
-| 19 | 4 × 510 × 4097 | 64 | 72 | 14.280 | 46.400 | 41.973 | 0.30776 | 0.34022 | 1.1055 | 72 | 4 | 41.736 | 0.34215 | 1.0057 | 72 | 42.183 | 0.33852 | 0.9950 | 0.9894 | 72 | 41.643 | 0.34291 | 1.01297 | 1.00792 |
-| 20 | 2 × 3 × 17 × 512 × 100 | 64 | 72 | 19.560 | 33.595 | 31.090 | 0.58223 | 0.62914 | 1.0806 | 72 | 16 | 30.661 | 0.63794 | 1.0140 | 72 | 30.020 | 0.65157 | 1.0356 | 1.0214 | 72 | 30.248 | 0.64665 | 0.99246 | 1.02784 |
-| **Geometric mean** | | | | | | | **0.28294** | **0.29703** | **1.04980** | | | | **0.33050** | **1.11267** |  |  | **0.37834** | **1.27374** | **1.14476** |  |  | **0.39941** | **1.05571** | **1.34470** |
+| Case | Input shape | Cap64 grid | Auto grid | CANNBench µs | Cap64 µs | Auto µs | Cap64 vs CANNBench (×) | Auto vs CANNBench (×) | Auto vs cap64 (×) | UB grid | Tile rows | UB µs | UB vs CANNBench (×) | UB vs auto (×) | Packed grid | Packed µs | Packed vs CANNBench (×) | Packed vs auto (×) | Packed vs UB-auto (×) | Gate grid | Gate µs | Gate vs CANNBench (×) | Gate vs packed (×) | Gate vs auto (×) | Register grid | Register µs | Register vs CANNBench (×) | Register vs gate (×) | Register vs auto (×) | Job grid | Job µs | Job vs CANNBench (×) | Job vs register (×) |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 1024 × 2048 | 64 | 64 | 6.380 | 9.965 | 10.763 | 0.64024 | 0.59277 | 0.9259 | 64 | 16 | 10.411 | 0.61281 | 1.0338 | 64 | 9.765 | 0.65335 | 1.1022 | 1.0662 | 64 | 10.284 | 0.62038 | 0.94953 | 1.04658 | 64 | 9.975 | 0.63960 | 1.03098 | 1.07900 | 72 | 5.016 | 1.27193 | 1.98864 |
+| 2 | 2048 × 4096 | 64 | 72 | 23.650 | 38.081 | 38.892 | 0.62104 | 0.60809 | 0.9791 | 72 | 16 | 38.143 | 0.62004 | 1.0196 | 72 | 38.994 | 0.60650 | 0.9974 | 0.9782 | 72 | 39.192 | 0.60344 | 0.99495 | 0.99235 | 72 | 39.477 | 0.59908 | 0.99278 | 0.98518 | 72 | 23.782 | 0.99445 | 1.65995 |
+| 3 | 4096 × 8192 | 64 | 72 | 48.590 | 150.123 | 147.905 | 0.32367 | 0.32852 | 1.0150 | 72 | 16 | 148.123 | 0.32804 | 0.9985 | 72 | 147.193 | 0.33011 | 1.0048 | 1.0063 | 72 | 149.534 | 0.32494 | 0.98434 | 0.98911 | 72 | 146.886 | 0.33080 | 1.01803 | 1.00694 | 72 | 45.645 | 1.06452 | 3.21801 |
+| 4 | 8192 × 16384 | 64 | 72 | 241.490 | 591.541 | 539.494 | 0.40824 | 0.44762 | 1.0965 | 72 | 1 | 538.953 | 0.44807 | 1.0010 | 72 | 539.944 | 0.44725 | 0.9992 | 0.9982 | 72 | 539.569 | 0.44756 | 1.00069 | 0.99986 | 72 | 539.676 | 0.44747 | 0.99980 | 0.99966 | 72 | 243.929 | 0.99000 | 2.21243 |
+| 5 | 2039 × 65520 | 64+1 | 72+1 | 522.100 | 1144.921 | 1150.281 | 0.45601 | 0.45389 | 0.9953 | 72+1 | 16 | 1161.036 | 0.44968 | 0.9907 | 72+1 | 1158.588 | 0.45063 | 0.9928 | 1.0021 | 72+1 | 1149.157 | 0.45433 | 1.00821 | 1.00098 | 72+1 | 1148.542 | 0.45458 | 1.00054 | 1.00151 | 72 | 523.609 | 0.99712 | 2.19351 |
+| 6 | 1022 × 2047 | 64 | 72 | 6.200 | 12.065 | 11.190 | 0.51388 | 0.55407 | 1.0782 | 72 | 1 | 10.552 | 0.58757 | 1.0605 | 72 | 11.540 | 0.53726 | 0.9697 | 0.9144 | 72 | 11.605 | 0.53425 | 0.99440 | 0.96424 | 72 | 11.010 | 0.56312 | 1.05404 | 1.01635 | 72 | 6.134 | 1.01076 | 1.79491 |
+| 7 | 1009 × 2016 | 63+1 | 63+1 | 6.500 | 23.766 | 23.435 | 0.27350 | 0.27736 | 1.0141 | 63+1 | 16 | 23.607 | 0.27534 | 0.9927 | 63+1 | 23.011 | 0.28247 | 1.0184 | 1.0259 | 63+1 | 23.008 | 0.28251 | 1.00013 | 1.01856 | 63+1 | 23.598 | 0.27545 | 0.97500 | 0.99309 | 72 | 6.687 | 0.97204 | 3.52894 |
+| 8 | 1538 × 1537 | 64 | 72 | 8.540 | 13.416 | 11.756 | 0.63655 | 0.72644 | 1.1412 | 72 | 1 | 11.805 | 0.72342 | 0.9958 | 72 | 11.631 | 0.73424 | 1.0107 | 1.0150 | 72 | 12.131 | 0.70398 | 0.95878 | 0.96909 | 72 | 11.566 | 0.73837 | 1.04885 | 1.01643 | 72 | 8.488 | 1.00613 | 1.36263 |
+| 9 | 363 × 367 × 14 | 64+1 | 72+1 | 6.782 | 110.477 | 95.993 | 0.06139 | 0.07065 | 1.1509 | 72+1 | 128 | 31.520 | 0.21516 | 3.0455 | 72+1 | 29.573 | 0.22933 | 3.2460 | 1.0658 | 72+1 | 30.445 | 0.22276 | 0.97136 | 3.15300 | 72+1 | 29.961 | 0.22636 | 1.01615 | 3.20393 | 72 | 6.385 | 1.06218 | 4.69240 |
+| 10 | 2049 × 1024 | 64+1 | 72+1 | 6.180 | 14.946 | 15.160 | 0.41349 | 0.40765 | 0.9859 | 72+1 | 16 | 15.023 | 0.41137 | 1.0091 | 72+1 | 15.039 | 0.41093 | 1.0080 | 0.9989 | 72+1 | 14.878 | 0.41538 | 1.01082 | 1.01895 | 72+1 | 15.106 | 0.40911 | 0.98491 | 1.00357 | 72 | 5.756 | 1.07366 | 2.62439 |
+| 11 | 3 × 7 × 13 × 1018 | 17+1 | 17+1 | 2.021 | 12.184 | 11.186 | 0.16587 | 0.18067 | 1.0892 | 17+1 | 16 | 11.939 | 0.16928 | 0.9369 | 17+1 | 12.068 | 0.16747 | 0.9269 | 0.9893 | 17+1 | 10.885 | 0.18567 | 1.10868 | 1.02765 | 17+1 | 10.836 | 0.18651 | 1.00452 | 1.03230 | 35 | 3.010 | 0.67143 | 3.60000 |
+| 12 | 1000003 × 2 | 64+1 | 72+1 | 7.273 | 1272.485 | 1107.532 | 0.00572 | 0.00657 | 1.1489 | 72+1 | 128 | 445.974 | 0.01631 | 2.4834 | 72+1 | 31.424 | 0.23145 | 35.2448 | 14.1921 | 72 | 10.773 | 0.67511 | 2.91692 | 102.80627 | 72 | 7.492 | 0.97077 | 1.43793 | 147.82862 | 72 | 6.345 | 1.14626 | 1.18077 |
+| 13 | 11 × 13 × 16 × 67 | 8+1 | 8+1 | 1.500 | 13.627 | 13.610 | 0.11008 | 0.11021 | 1.0012 | 8+1 | 16 | 13.694 | 0.10954 | 0.9939 | 8+1 | 13.524 | 0.11091 | 1.0064 | 1.0126 | 8+1 | 13.633 | 0.11003 | 0.99200 | 0.99831 | 8+1 | 13.325 | 0.11257 | 1.02311 | 1.02139 | 36 | 2.550 | 0.58824 | 5.22549 |
+| 14 | 3 × 7 × 11 × 13 × 1012 | 64+1 | 72+1 | 7.540 | 23.042 | 22.275 | 0.32723 | 0.33850 | 1.0344 | 72+1 | 16 | 22.657 | 0.33279 | 0.9831 | 72+1 | 21.870 | 0.34476 | 1.0185 | 1.0360 | 72+1 | 22.160 | 0.34025 | 0.98691 | 1.00519 | 72+1 | 21.798 | 0.34590 | 1.01661 | 1.02188 | 72 | 7.385 | 1.02099 | 2.95166 |
+| 15 | 512 × 4096 | 32 | 32 | 7.780 | 18.810 | 18.529 | 0.41361 | 0.41988 | 1.0152 | 32 | 16 | 18.151 | 0.42863 | 1.0208 | 32 | 18.452 | 0.42163 | 1.0042 | 0.9837 | 32 | 18.612 | 0.41801 | 0.99140 | 0.99554 | 32 | 18.340 | 0.42421 | 1.01483 | 1.01031 | 72 | 7.520 | 1.03457 | 2.43883 |
+| 16 | 254 × 16383 | 64 | 72 | 8.790 | 21.173 | 19.477 | 0.41515 | 0.45130 | 1.0871 | 72 | 1 | 18.883 | 0.46550 | 1.0315 | 72 | 19.095 | 0.46033 | 1.0200 | 0.9889 | 72 | 18.552 | 0.47380 | 1.02927 | 1.04986 | 72 | 18.764 | 0.46845 | 0.98870 | 1.03800 | 72 | 8.310 | 1.05776 | 2.25800 |
+| 17 | 4096 × 1023 | 64 | 72 | 8.760 | 19.352 | 17.641 | 0.45267 | 0.49657 | 1.0970 | 72 | 1 | 17.237 | 0.50821 | 1.0234 | 72 | 17.588 | 0.49807 | 1.0030 | 0.9800 | 72 | 17.211 | 0.50898 | 1.02190 | 1.02498 | 72 | 17.730 | 0.49408 | 0.97073 | 0.99498 | 72 | 8.398 | 1.04311 | 2.11122 |
+| 18 | 2 × 1023 × 4096 | 64+1 | 72+1 | 23.630 | 56.562 | 57.033 | 0.41777 | 0.41432 | 0.9917 | 72+1 | 16 | 56.648 | 0.41714 | 1.0068 | 72+1 | 57.264 | 0.41265 | 0.9960 | 0.9892 | 72+1 | 56.456 | 0.41856 | 1.01431 | 1.01022 | 72+1 | 56.285 | 0.41983 | 1.00304 | 1.01329 | 72 | 23.214 | 1.01792 | 2.42461 |
+| 19 | 4 × 510 × 4097 | 64 | 72 | 14.280 | 46.400 | 41.973 | 0.30776 | 0.34022 | 1.1055 | 72 | 4 | 41.736 | 0.34215 | 1.0057 | 72 | 42.183 | 0.33852 | 0.9950 | 0.9894 | 72 | 41.643 | 0.34291 | 1.01297 | 1.00792 | 72 | 41.147 | 0.34705 | 1.01205 | 1.02007 | 72 | 13.411 | 1.06480 | 3.06815 |
+| 20 | 2 × 3 × 17 × 512 × 100 | 64 | 72 | 19.560 | 33.595 | 31.090 | 0.58223 | 0.62914 | 1.0806 | 72 | 16 | 30.661 | 0.63794 | 1.0140 | 72 | 30.020 | 0.65157 | 1.0356 | 1.0214 | 72 | 30.248 | 0.64665 | 0.99246 | 1.02784 | 72 | 31.076 | 0.62942 | 0.97336 | 1.00045 | 72 | 15.734 | 1.24317 | 1.97509 |
+| **Geometric mean** | | | | | | | **0.28294** | **0.29703** | **1.04980** | | | | **0.33050** | **1.11267** |  |  | **0.37834** | **1.27374** | **1.14476** |  |  | **0.39941** | **1.05571** | **1.34470** |  |  | **0.40924** | **1.02460** | **1.37778** |  |  | **1.00317** | **2.45130** |
 
-[Full comparison CSV](comparison.csv) includes the earlier reference, parent, archived and generated candidates, three device-time samples for cap64, auto, UB and packed, and the observed auto, UB and packed launch counts in call order. The gate-only columns include its three samples and complete launch history.
+[Full comparison CSV](comparison.csv) includes the earlier reference, parent, archived and generated candidates, three device-time samples for cap64, auto, UB and packed, and the observed auto, UB and packed launch counts in call order. The gate-only columns include its three samples and complete launch history. Register and job grids are observed launch counts. Register vs gate and register vs auto use the prior time divided by the register time. Job vs register uses register time divided by job time. The JSON profiles below include all samples and grids.
+
+## Register SwiGLU and archived submission replay
+
+OpenCode 1.2.19 with GLM-5.3 generated the [layout guard and launch](native/dispatch.txt)
+from skill revision `3775d51` for a native-enabled 950PR build. The executed
+[candidate](native/swi_glu.py) combines that output, the
+[register kernel and selector](../../../skills/asctile-api-patterns/templates/register-bf16-swiglu.py)
+and the prior gate-only operator. Only case 12 selected the register path.
+Its tile contains 2048 pairs. A single 72-block grid handles all 489 tiles,
+including the final 579 pairs. The compiled specialization uses 12288 bytes
+of UB. It loads adjacent BF16 pairs, applies `DeInterleave` in registers,
+computes FP32 SwiGLU there and rounds the result to BF16 for the store.
+Public-only candidates can use the separate public tile template.
+
+The independent pilot passed in 7.127 µs. In the all-case series the
+median was 7.492 µs against 10.773 µs for the previous gate-only
+auto and 7.273 µs in the published scoring metadata. The other 19
+cases retained the prior kernels and grids. Their geometric mean ratio to
+the preceding gate-only series was 1.00648×. The full-series ratios
+compare separate runs. [Pilot and all 20 native profiles](native/measurements.json)
+
+The job columns replay `job_f9f0facb7d6b-submission_asctile_l1_public_v2 (1).zip`
+(SHA-256 `59beca25e04ab8bb546c7bf8e6bf0c4a90612f6c13928a8a896cc5dd120edd3d`). Its unmodified `cann_bench.swi_glu`
+and bundled `asc` ran under CPython 3.12.13. The generated candidate used
+CPython 3.10.14 and PyASC `6b3447b4`. Both ran on the same 950PR device
+with CANN 9.2.0, PyTorch 2.5.1+cpu, the same case seeds, full golden checks
+and the same three-call warmed vector-task metric. The replay omits an explicit
+L2 flush. Timings from the archive's cold-tuning notes and an online service
+score are separate measurements. Version 1.0.0 in the archive is the submission
+package version. The recorded extension hash identifies the bundled PyASC.
+[Archive replay and hashes](native/archive-measurements.json)
+
+The job dispatches from the physical half-row size. For short halves it reads
+one contiguous slab and uses two indexed gathers in UB. Its case-12
+specialization processes 4096 pairs per tile with loop unroll 2. It measured
+6.345 µs. The compute kernels, runtime versions, tile sizes,
+loop unroll and division sequence differ between the archive and the native
+candidate, so this comparison measures complete implementations. On case 9
+(two halves of seven) the gather route took 6.385 µs versus 29.961 µs for
+the generated row kernel. For intermediate
+rows the archive aggregates rows into 2D copies. For wide halves it uses
+contiguous flat chunks with unrolling. All 20 archived outputs passed the
+golden check. The archive’s own self-check with its default seed of 2026 also
+passed MERE and MARE for all 20 cases. The job's measured speed relative to CANNBench has geometric
+mean 1.00317×.
 
 ## Gate-only packed path
 
@@ -114,4 +159,6 @@ The [measured auto candidate](auto/swi_glu.py) keeps the generator's original do
 | Runtime-specific grid template | `cd51051e19cc813a5881636076aa4e1759e60486a6767a46a20006778a329ce9` |
 | OpenCode UB-height candidate | `1a511da8b9e22195f82ec309d3ab0a7fdd6c456575db2ad4327772a2d298ae7d` |
 | Packed pairs (OpenCode dispatch and skill template) | `d664fe0484c30f9f49a38173b3dd473fd7206465b87d489aaa68cd96cab1c709` |
+| Native-enabled OpenCode register candidate | `ff47b526faf14e76159720d3753731c3ffa795339659612994588c066ade71ed` |
+| Archived job f9f0facb7d6b operator | `b1084b683f3e632525c85b9bb049aa36e62f734677016b6d43151b78e38ee4d6` |
 | UB-sized gate-only pair tile with an in-grid tail | `eab4342b39ffa94a6fe5f81a325088c31c967ca7ee990d09c15cc67262b4b5ce` |

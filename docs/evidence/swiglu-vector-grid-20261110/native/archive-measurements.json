@@ -1,0 +1,2174 @@
+{
+  "job": "job_f9f0facb7d6b",
+  "artifact": "submission_asctile_l1_public_v2 (1).zip",
+  "zip_sha256": "59beca25e04ab8bb546c7bf8e6bf0c4a90612f6c13928a8a896cc5dd120edd3d",
+  "operator_sha256": "b1084b683f3e632525c85b9bb049aa36e62f734677016b6d43151b78e38ee4d6",
+  "extension_sha256": "beacb0463eaa334fdaf33760e581ce07b74734a937cdbbed2551bbc70ff786e7",
+  "target": "Ascend950PR_9599",
+  "cann": "9.2.0",
+  "python": "3.12.13",
+  "torch": "2.5.1+cpu",
+  "cases": [
+    {
+      "case": 1,
+      "variant": "cann_bench",
+      "shape": [
+        1024,
+        2048
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 5.016,
+      "samples_us": [
+        5.206,
+        4.621,
+        5.016
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": -1,
+            "rank": 2,
+            "j": 1,
+            "rows": 1024,
+            "d": 1024,
+            "H": 1024
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 1024,
+            "H": 1024,
+            "elsize": 2,
+            "half_row": 2048,
+            "t": 4,
+            "u": 2,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "_hc",
+          "integers": {
+            "H": 1024,
+            "elsize": 2,
+            "step": 16,
+            "returned": 1024
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 1024,
+            "HC": 1024,
+            "rows": 1024
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "n": 1048576,
+            "H": 1024,
+            "HC": 1024,
+            "rows": 1024
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          5.206
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          4.621
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          5.016
+        ]
+      ]
+    },
+    {
+      "case": 2,
+      "variant": "cann_bench",
+      "shape": [
+        2048,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 23.782,
+      "samples_us": [
+        24.227,
+        23.782,
+        23.605
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": -1,
+            "rank": 2,
+            "j": 1,
+            "rows": 2048,
+            "d": 2048,
+            "H": 2048
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 2048,
+            "H": 2048,
+            "elsize": 4,
+            "half_row": 8192,
+            "t": 4,
+            "u": 2,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "_hc",
+          "integers": {
+            "H": 2048,
+            "elsize": 4,
+            "step": 8,
+            "returned": 2048
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 2048,
+            "HC": 2048,
+            "rows": 2048
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "n": 4194304,
+            "H": 2048,
+            "HC": 2048,
+            "rows": 2048
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 196608
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          24.227
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          23.782
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          23.605
+        ]
+      ]
+    },
+    {
+      "case": 3,
+      "variant": "cann_bench",
+      "shape": [
+        4096,
+        8192
+      ],
+      "dtype": "bfloat16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 45.645,
+      "samples_us": [
+        45.645,
+        45.686,
+        45.307
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": -1,
+            "rank": 2,
+            "j": 1,
+            "rows": 4096,
+            "d": 4096,
+            "H": 4096
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 4096,
+            "H": 4096,
+            "elsize": 2,
+            "half_row": 8192,
+            "t": 4096,
+            "u": 3,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 4096,
+            "nc1": 1,
+            "rows": 4096
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "n": 16777216,
+            "H": 4096,
+            "nc1": 1,
+            "rows": 4096
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 98304
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          45.645
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          45.686
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          45.307
+        ]
+      ]
+    },
+    {
+      "case": 4,
+      "variant": "cann_bench",
+      "shape": [
+        8192,
+        16384
+      ],
+      "dtype": "float16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 243.929,
+      "samples_us": [
+        243.929,
+        243.798,
+        244.006
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": 0,
+            "rank": 2,
+            "j": 0,
+            "rows": 1,
+            "d": 16384,
+            "H": 67108864
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 1,
+            "H": 67108864,
+            "elsize": 2,
+            "half_row": 134217728,
+            "t": 8448,
+            "u": 3,
+            "traffic": 268435456,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 67108864,
+            "nc1": 0,
+            "rows": 1
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "n": 67108864,
+            "H": 67108864,
+            "nc1": 0,
+            "rows": 1
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 202752
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          243.929
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          243.798
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          244.006
+        ]
+      ]
+    },
+    {
+      "case": 5,
+      "variant": "cann_bench",
+      "shape": [
+        2039,
+        65520
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 523.609,
+      "samples_us": [
+        523.981,
+        523.609,
+        522.604
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": -1,
+            "rank": 2,
+            "j": 1,
+            "rows": 2039,
+            "d": 2039,
+            "H": 32760
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 2039,
+            "H": 32760,
+            "elsize": 4,
+            "half_row": 131040,
+            "t": 10560,
+            "u": 2,
+            "traffic": 534381120,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 32760,
+            "nc1": 0,
+            "rows": 2039
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "n": 66797640,
+            "H": 32760,
+            "nc1": 0,
+            "rows": 2039
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 253440
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          523.981
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          523.609
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          522.604
+        ]
+      ]
+    },
+    {
+      "case": 6,
+      "variant": "cann_bench",
+      "shape": [
+        1022,
+        2047
+      ],
+      "dtype": "bfloat16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 6.134,
+      "samples_us": [
+        6.134,
+        5.416,
+        6.583
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": 0,
+            "rank": 2,
+            "j": 0,
+            "rows": 1,
+            "d": 2047,
+            "H": 1046017
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 1,
+            "H": 1046017,
+            "elsize": 2,
+            "half_row": 2092034,
+            "t": 6336,
+            "u": 2,
+            "traffic": 4184068,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 1046017,
+            "nc1": 0,
+            "rows": 1
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "n": 1046017,
+            "H": 1046017,
+            "nc1": 0,
+            "rows": 1
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 126720
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          6.134
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          5.416
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          6.583
+        ]
+      ]
+    },
+    {
+      "case": 7,
+      "variant": "cann_bench",
+      "shape": [
+        1009,
+        2016
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 6.687,
+      "samples_us": [
+        6.687,
+        5.266,
+        6.785
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": -1,
+            "rank": 2,
+            "j": 1,
+            "rows": 1009,
+            "d": 1009,
+            "H": 1008
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 1009,
+            "H": 1008,
+            "elsize": 2,
+            "half_row": 2016,
+            "t": 8,
+            "u": 2,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "_hc",
+          "integers": {
+            "H": 1008,
+            "elsize": 2,
+            "step": 16,
+            "returned": 1008
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 1008,
+            "HC": 1008,
+            "rows": 1009
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "n": 1017072,
+            "H": 1008,
+            "HC": 1008,
+            "rows": 1009
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 161280
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          6.687
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          5.266
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          6.785
+        ]
+      ]
+    },
+    {
+      "case": 8,
+      "variant": "cann_bench",
+      "shape": [
+        1538,
+        1537
+      ],
+      "dtype": "float32",
+      "dim": 0,
+      "correct": true,
+      "median_us": 8.488,
+      "samples_us": [
+        8.488,
+        9.29,
+        8.088
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": 0,
+            "rank": 2,
+            "j": 0,
+            "rows": 1,
+            "d": 1537,
+            "H": 1181953
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 1,
+            "H": 1181953,
+            "elsize": 4,
+            "half_row": 4727812,
+            "t": 6336,
+            "u": 2,
+            "traffic": 9455624,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 1181953,
+            "nc1": 0,
+            "rows": 1
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "n": 1181953,
+            "H": 1181953,
+            "nc1": 0,
+            "rows": 1
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 152064
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          8.488
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          9.29
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          8.088
+        ]
+      ]
+    },
+    {
+      "case": 9,
+      "variant": "cann_bench",
+      "shape": [
+        363,
+        367,
+        14
+      ],
+      "dtype": "bfloat16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 6.385,
+      "samples_us": [
+        7.001,
+        6.292,
+        6.385
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": -1,
+            "rank": 3,
+            "j": 2,
+            "rows": 133221,
+            "d": 367,
+            "H": 7
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 133221,
+            "H": 7,
+            "elsize": 2,
+            "half_row": 14,
+            "t": 512,
+            "u": 2,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "_rex_indices",
+          "integers": {
+            "H": 7,
+            "TR": 512
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 7,
+            "rows": 133221
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "n": 932547,
+            "H": 7,
+            "rows": 133221
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 100352
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel_rex",
+          "AI_VECTOR_CORE",
+          7.001
+        ],
+        [
+          "swiglu_kernel_rex",
+          "AI_VECTOR_CORE",
+          6.292
+        ],
+        [
+          "swiglu_kernel_rex",
+          "AI_VECTOR_CORE",
+          6.385
+        ]
+      ]
+    },
+    {
+      "case": 10,
+      "variant": "cann_bench",
+      "shape": [
+        2049,
+        1024
+      ],
+      "dtype": "float16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 5.756,
+      "samples_us": [
+        6.016,
+        5.008,
+        5.756
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": 1,
+            "rank": 2,
+            "j": 1,
+            "rows": 2049,
+            "d": 2049,
+            "H": 512
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 2049,
+            "H": 512,
+            "elsize": 2,
+            "half_row": 1024,
+            "t": 8,
+            "u": 2,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "_hc",
+          "integers": {
+            "H": 512,
+            "elsize": 2,
+            "step": 16,
+            "returned": 512
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 512,
+            "HC": 512,
+            "rows": 2049
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "n": 1049088,
+            "H": 512,
+            "HC": 512,
+            "rows": 2049
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          6.016
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          5.008
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          5.756
+        ]
+      ]
+    },
+    {
+      "case": 11,
+      "variant": "cann_bench",
+      "shape": [
+        3,
+        7,
+        13,
+        1018
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 3.01,
+      "samples_us": [
+        4.754,
+        2.967,
+        3.01
+      ],
+      "launch_grid": [
+        35,
+        35,
+        35,
+        35
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": -1,
+            "rank": 4,
+            "j": 3,
+            "rows": 273,
+            "d": 13,
+            "H": 509
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 273,
+            "H": 509,
+            "elsize": 4,
+            "half_row": 2036,
+            "t": 8,
+            "u": 2,
+            "blocks": 35
+          }
+        },
+        {
+          "function": "_align_up",
+          "integers": {
+            "n": 509,
+            "alignment": 8,
+            "returned": 512
+          }
+        },
+        {
+          "function": "_hc",
+          "integers": {
+            "H": 509,
+            "elsize": 4,
+            "step": 8,
+            "returned": 512
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 509,
+            "HC": 512,
+            "rows": 273
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "n": 138957,
+            "H": 509,
+            "HC": 512,
+            "rows": 273
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 98304
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          4.754
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          2.967
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          3.01
+        ]
+      ]
+    },
+    {
+      "case": 12,
+      "variant": "cann_bench",
+      "shape": [
+        1000003,
+        2
+      ],
+      "dtype": "bfloat16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 6.345,
+      "samples_us": [
+        7.08,
+        6.134,
+        6.345
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": 1,
+            "rank": 2,
+            "j": 1,
+            "rows": 1000003,
+            "d": 1000003,
+            "H": 1
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 1000003,
+            "H": 1,
+            "elsize": 2,
+            "half_row": 2,
+            "t": 4096,
+            "u": 2,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "_rex_indices",
+          "integers": {
+            "H": 1,
+            "TR": 4096
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 1,
+            "rows": 1000003
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "n": 1000003,
+            "H": 1,
+            "rows": 1000003
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 114688
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel_rex",
+          "AI_VECTOR_CORE",
+          7.08
+        ],
+        [
+          "swiglu_kernel_rex",
+          "AI_VECTOR_CORE",
+          6.134
+        ],
+        [
+          "swiglu_kernel_rex",
+          "AI_VECTOR_CORE",
+          6.345
+        ]
+      ]
+    },
+    {
+      "case": 13,
+      "variant": "cann_bench",
+      "shape": [
+        11,
+        13,
+        16,
+        67
+      ],
+      "dtype": "float32",
+      "dim": 2,
+      "correct": true,
+      "median_us": 2.55,
+      "samples_us": [
+        3.269,
+        2.441,
+        2.55
+      ],
+      "launch_grid": [
+        36,
+        36,
+        36,
+        36
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": 2,
+            "rank": 4,
+            "j": 2,
+            "rows": 143,
+            "d": 67,
+            "H": 536
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 143,
+            "H": 536,
+            "elsize": 4,
+            "half_row": 2144,
+            "t": 4,
+            "u": 2,
+            "blocks": 36
+          }
+        },
+        {
+          "function": "_hc",
+          "integers": {
+            "H": 536,
+            "elsize": 4,
+            "step": 8,
+            "returned": 536
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 536,
+            "HC": 536,
+            "rows": 143
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 2,
+            "n": 76648,
+            "H": 536,
+            "HC": 536,
+            "rows": 143
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 51456
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          3.269
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          2.441
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          2.55
+        ]
+      ]
+    },
+    {
+      "case": 14,
+      "variant": "cann_bench",
+      "shape": [
+        3,
+        7,
+        11,
+        13,
+        1012
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 7.385,
+      "samples_us": [
+        7.973,
+        7.385,
+        7.212
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": -1,
+            "rank": 5,
+            "j": 4,
+            "rows": 3003,
+            "d": 13,
+            "H": 506
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 3003,
+            "H": 506,
+            "elsize": 2,
+            "half_row": 1012,
+            "t": 16,
+            "u": 2,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "_align_up",
+          "integers": {
+            "n": 506,
+            "alignment": 16,
+            "returned": 512
+          }
+        },
+        {
+          "function": "_hc",
+          "integers": {
+            "H": 506,
+            "elsize": 2,
+            "step": 16,
+            "returned": 512
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 506,
+            "HC": 512,
+            "rows": 3003
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "n": 1519518,
+            "H": 506,
+            "HC": 512,
+            "rows": 3003
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 163840
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          7.973
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          7.385
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          7.212
+        ]
+      ]
+    },
+    {
+      "case": 15,
+      "variant": "cann_bench",
+      "shape": [
+        512,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 7.52,
+      "samples_us": [
+        8.306,
+        7.446,
+        7.52
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": -1,
+            "rank": 2,
+            "j": 1,
+            "rows": 512,
+            "d": 512,
+            "H": 2048
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 512,
+            "H": 2048,
+            "elsize": 4,
+            "half_row": 8192,
+            "t": 2048,
+            "u": 3,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 2048,
+            "nc1": 1,
+            "rows": 512
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "n": 1048576,
+            "H": 2048,
+            "nc1": 1,
+            "rows": 512
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 73728
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          8.306
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          7.446
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          7.52
+        ]
+      ]
+    },
+    {
+      "case": 16,
+      "variant": "cann_bench",
+      "shape": [
+        254,
+        16383
+      ],
+      "dtype": "bfloat16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 8.31,
+      "samples_us": [
+        9.074,
+        8.31,
+        8.122
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": 0,
+            "rank": 2,
+            "j": 0,
+            "rows": 1,
+            "d": 16383,
+            "H": 2080641
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 1,
+            "H": 2080641,
+            "elsize": 2,
+            "half_row": 4161282,
+            "t": 6336,
+            "u": 2,
+            "traffic": 8322564,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 2080641,
+            "nc1": 0,
+            "rows": 1
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "n": 2080641,
+            "H": 2080641,
+            "nc1": 0,
+            "rows": 1
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 126720
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          9.074
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          8.31
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          8.122
+        ]
+      ]
+    },
+    {
+      "case": 17,
+      "variant": "cann_bench",
+      "shape": [
+        4096,
+        1023
+      ],
+      "dtype": "float16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 8.398,
+      "samples_us": [
+        8.547,
+        8.398,
+        8.021
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": 0,
+            "rank": 2,
+            "j": 0,
+            "rows": 1,
+            "d": 1023,
+            "H": 2095104
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 1,
+            "H": 2095104,
+            "elsize": 2,
+            "half_row": 4190208,
+            "t": 6336,
+            "u": 2,
+            "traffic": 8380416,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 2095104,
+            "nc1": 0,
+            "rows": 1
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "n": 2095104,
+            "H": 2095104,
+            "nc1": 0,
+            "rows": 1
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 126720
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          8.547
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          8.398
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          8.021
+        ]
+      ]
+    },
+    {
+      "case": 18,
+      "variant": "cann_bench",
+      "shape": [
+        2,
+        1023,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 23.214,
+      "samples_us": [
+        23.214,
+        22.772,
+        23.35
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": -1,
+            "rank": 3,
+            "j": 2,
+            "rows": 2046,
+            "d": 1023,
+            "H": 2048
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 2046,
+            "H": 2048,
+            "elsize": 4,
+            "half_row": 8192,
+            "t": 4,
+            "u": 2,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "_hc",
+          "integers": {
+            "H": 2048,
+            "elsize": 4,
+            "step": 8,
+            "returned": 2048
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 2048,
+            "HC": 2048,
+            "rows": 2046
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "n": 4190208,
+            "H": 2048,
+            "HC": 2048,
+            "rows": 2046
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 196608
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          23.214
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          22.772
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          23.35
+        ]
+      ]
+    },
+    {
+      "case": 19,
+      "variant": "cann_bench",
+      "shape": [
+        4,
+        510,
+        4097
+      ],
+      "dtype": "bfloat16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 13.411,
+      "samples_us": [
+        13.845,
+        13.411,
+        13.261
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": 1,
+            "rank": 3,
+            "j": 1,
+            "rows": 4,
+            "d": 4097,
+            "H": 1044735
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 4,
+            "H": 1044735,
+            "elsize": 2,
+            "half_row": 2089470,
+            "t": 6336,
+            "u": 2,
+            "traffic": 16715760,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 1044735,
+            "nc1": 0,
+            "rows": 4
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "n": 4178940,
+            "H": 1044735,
+            "nc1": 0,
+            "rows": 4
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 126720
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          13.845
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          13.411
+        ],
+        [
+          "swiglu_kernel",
+          "AI_VECTOR_CORE",
+          13.261
+        ]
+      ]
+    },
+    {
+      "case": 20,
+      "variant": "cann_bench",
+      "shape": [
+        2,
+        3,
+        17,
+        512,
+        100
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 15.734,
+      "samples_us": [
+        16.479,
+        15.734,
+        15.686
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "_decompose",
+          "integers": {
+            "dim": -1,
+            "rank": 5,
+            "j": 4,
+            "rows": 52224,
+            "d": 512,
+            "H": 50
+          }
+        },
+        {
+          "function": "_vector_block_num",
+          "integers": {
+            "returned": 72
+          }
+        },
+        {
+          "function": "select_params",
+          "integers": {
+            "rows": 52224,
+            "H": 50,
+            "elsize": 4,
+            "half_row": 200,
+            "t": 64,
+            "u": 2,
+            "blocks": 72
+          }
+        },
+        {
+          "function": "_align_up",
+          "integers": {
+            "n": 50,
+            "alignment": 8,
+            "returned": 56
+          }
+        },
+        {
+          "function": "_hc",
+          "integers": {
+            "H": 50,
+            "elsize": 4,
+            "step": 8,
+            "returned": 56
+          }
+        },
+        {
+          "function": "launch",
+          "integers": {
+            "H": 50,
+            "HC": 56,
+            "rows": 52224
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": -1,
+            "n": 2611200,
+            "H": 50,
+            "HC": 56,
+            "rows": 52224
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 86016
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          16.479
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          15.734
+        ],
+        [
+          "swiglu_kernel_2d",
+          "AI_VECTOR_CORE",
+          15.686
+        ]
+      ]
+    }
+  ],
+  "archive_self_check": {
+    "seed": 2026,
+    "passed": 20,
+    "metrics_as_printed": [
+      {
+        "case": 1,
+        "dtype": "float16",
+        "mere": "1.48e-08",
+        "mare": "9.61e-04"
+      },
+      {
+        "case": 2,
+        "dtype": "float32",
+        "mere": "1.35e-08",
+        "mare": "3.38e-07"
+      },
+      {
+        "case": 3,
+        "dtype": "bfloat16",
+        "mere": "2.56e-10",
+        "mare": "4.29e-03"
+      },
+      {
+        "case": 4,
+        "dtype": "float16",
+        "mere": "1.29e-08",
+        "mare": "1.33e-03"
+      },
+      {
+        "case": 5,
+        "dtype": "float32",
+        "mere": "3.14e-09",
+        "mare": "4.28e-07"
+      },
+      {
+        "case": 6,
+        "dtype": "bfloat16",
+        "mere": "4.10e-08",
+        "mare": "4.29e-03"
+      },
+      {
+        "case": 7,
+        "dtype": "float16",
+        "mere": "8.37e-09",
+        "mare": "8.64e-04"
+      },
+      {
+        "case": 8,
+        "dtype": "float32",
+        "mere": "1.29e-08",
+        "mare": "3.06e-07"
+      },
+      {
+        "case": 9,
+        "dtype": "bfloat16",
+        "mere": "0.00e+00",
+        "mare": "0.00e+00"
+      },
+      {
+        "case": 10,
+        "dtype": "float16",
+        "mere": "0.00e+00",
+        "mare": "0.00e+00"
+      },
+      {
+        "case": 11,
+        "dtype": "float32",
+        "mere": "3.54e-09",
+        "mare": "2.63e-07"
+      },
+      {
+        "case": 12,
+        "dtype": "bfloat16",
+        "mere": "0.00e+00",
+        "mare": "0.00e+00"
+      },
+      {
+        "case": 13,
+        "dtype": "float32",
+        "mere": "3.45e-09",
+        "mare": "2.56e-07"
+      },
+      {
+        "case": 14,
+        "dtype": "float16",
+        "mere": "0.00e+00",
+        "mare": "0.00e+00"
+      },
+      {
+        "case": 15,
+        "dtype": "float32",
+        "mere": "1.41e-08",
+        "mare": "3.03e-07"
+      },
+      {
+        "case": 16,
+        "dtype": "bfloat16",
+        "mere": "2.06e-09",
+        "mare": "4.29e-03"
+      },
+      {
+        "case": 17,
+        "dtype": "float16",
+        "mere": "3.07e-10",
+        "mare": "6.44e-04"
+      },
+      {
+        "case": 18,
+        "dtype": "float32",
+        "mere": "1.45e-08",
+        "mare": "3.38e-07"
+      },
+      {
+        "case": 19,
+        "dtype": "bfloat16",
+        "mere": "0.00e+00",
+        "mare": "0.00e+00"
+      },
+      {
+        "case": 20,
+        "dtype": "float32",
+        "mere": "9.37e-09",
+        "mare": "3.99e-07"
+      }
+    ]
+  }
+}

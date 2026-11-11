@@ -206,6 +206,34 @@ contains two adjacent **halves** of length seven, not seven interleaved pairs.
 Keep the UB-sized row path for other short rows. Dispatch from layout and dtype,
 never the case ID or a particular outer shape.
 
+For other contiguous splits, express the input as `[R, 2H]`, where
+`R = prod(shape[:d])` and `H = (shape[d] // 2) * prod(shape[d+1:])`.
+Choose the DMA layout from the half-row byte count and available independent
+tiles. The [950PR archive replay](../../../docs/evidence/swiglu-vector-grid-20261110/README.md#register-swiglu-and-archived-submission-replay)
+exercises three useful candidates:
+
+- For very short halves, load a contiguous slab of complete rows. On pins
+  supporting public `asctile.reindex`, compare two local gathers with
+  padded strided copies. For output lane `r * H + h`, the two indices are
+  `r * 2 * H + h` and `r * 2 * H + H + h`. They also work for H greater
+  than one. The archive loads two reusable int32 index tiles per block.
+  Include their transfers and UB allocation, and use an index-construction
+  method allowed by the candidate contract. For H=1, compare this public
+  route with the register specialization when native code is enabled.
+- When several half-rows fit in UB, batch them into a two-dimensional tile
+  with a 32-byte-aligned physical width. Bound both the row count and the
+  logical width on reads and stores. The archive targets roughly 8–16 KiB
+  per half-tile for short rows. Tune the height against both DMA size and
+  grid occupancy.
+- When a half-row is already a long contiguous stream, split it into flat
+  chunks. Load gate and value from offsets separated by H, and include
+  useful column chunks when choosing the grid. Compare loop unroll 1, 2
+  and 3 using compiled UB for the exact dtype, tile and JIT options.
+
+Use the active vector-resource query for these routes. Recheck warm and
+cache-flushed timings under the runner's actual sampling convention before
+transferring a threshold or unroll choice from another runtime.
+
 For the padded SwiGLU kernel on PyASC `6b3447b4`, the BF16 specialization
 at height 512 and physical width 16 requested 655,360 UB bytes on the 950PR.
 Budget at least 1,280 bytes per physical row (80 bytes per padded lane) for
