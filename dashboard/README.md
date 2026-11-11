@@ -69,7 +69,7 @@ job summary and the browsable snapshot with its public JSON. A manual dispatch
 with `publish=false` provides a preview. The `skill-quality-<run_id>` artifact
 retains the verified daily projection. The page links both source runs.
 
-The reporting day uses Europe/Moscow and the scheduled workflow's creation
+The reporting day starts at midnight Moscow time (fixed UTC+03:00) and uses the scheduled workflow's creation
 time. Both consecutive days need one main nightly execution. The reader
 checks the exact run and attempt, archived bytes, plan, model attribution,
 source hashes, simulator numerics, suppression controls and independent

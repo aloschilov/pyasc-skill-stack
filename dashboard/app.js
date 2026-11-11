@@ -215,7 +215,7 @@ const dailyLabels = {
 function renderDaily(daily) {
   const panel = $('daily-quality');
   if (!daily) { panel.textContent = 'No verified daily comparison in this snapshot.'; return; }
-  const dayNow = new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Moscow', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
+  const dayNow = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
   const historical = dayNow !== daily.dates[1];
   panel.replaceChildren(el('h3', historical ? 'Today’s comparison is unavailable' : dailyLabels[daily.status]), el('p',
     `${daily.dates.join(' → ')} · Europe/Moscow · ${historical ? 'Historical comparison: '+dailyLabels[daily.status] : 'Current comparison'}`));

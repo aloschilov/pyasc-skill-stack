@@ -8,17 +8,19 @@ import sys
 import tarfile
 import tempfile
 import zlib
-from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'tests/tools'))
 from generation_ci import unpack
 from generation_compare import Bundle, require, utc
+from generation_models import inspect_request_settings
 from generation_plan import canonical, digest
+from generation_protocols import context_files
 
 REPOSITORY = 'aloschilov/pyasc-skill-stack'
 WORKFLOW = '.github/workflows/generation-nightly.yml'
-ZONE = ZoneInfo('Europe/Moscow')
+# This reporting contract uses midnight UTC+03:00, including on slim simulator images.
+ZONE = timezone(timedelta(hours=3), 'Europe/Moscow')
 
 
 def gh(*args):
@@ -61,6 +63,7 @@ def read_run(run):
         require(bundle.state['status'] in ('passed', 'failed'), 'Incomplete cohort')
         attempts = [cell['attempts'][0] for cell in bundle.state['cells']]
         sessions = set()
+        wire_by_cell = {}
         # Retain model failures in the denominator; an unknown provider or interrupted
         # request cannot establish a skill effect. Bundle validates numerical winners.
         expected_model = bundle.plan['model']['expected_response']
@@ -72,13 +75,16 @@ def read_run(run):
             require(isinstance(session, str) and session and session not in sessions, 'Reused first attempt')
             sessions.add(session)
             usage = attempt['usage']
-            require(usage['usage_complete'] is True and usage['requests']
+            require(bundle.json(prefix+'usage.json') == usage and usage['usage_complete'] is True and usage['requests']
                     and all(r['status'] == 'complete' and r['usage']['observed_model'] == expected_model
                             for r in usage['requests']), 'Missing first-attempt attribution')
-        skills = {k:v for k,v in bundle.plan['source_sha256'].items() if k.startswith('skills/')}
+            wire_by_cell[cell['id']] = sorted({digest(canonical(inspect_request_settings(
+                r, bundle.plan['limits']['output_tokens_per_response'], bundle.wire_settings_required)))
+                for r in usage['requests']})
+        skills = {k:v for k,v in context_files(bundle.plan).items() if k.startswith('skills/')}
         require(bool(skills), 'Missing skill inputs')
         return {'revision': run['head_sha'], 'archive_sha256': archive_sha, 'run_id': rid, 'attempt': run['run_attempt'],
-                'protocol': digest(canonical(bundle.compatibility())), 'model': expected_model,
+                'protocol': digest(canonical([bundle.compatibility(), wire_by_cell])), 'model': expected_model,
                 'skills': digest(canonical(skills)), 'runtime': bundle.plan['runtime']['source_revision'],
                 'cells': {c['id']: a['status'] for c,a in zip(bundle.state['cells'], attempts)},
                 'sessions': sessions, 'run_date': utc(run['created_at']).astimezone(ZONE).date().isoformat()}
