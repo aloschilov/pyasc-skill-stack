@@ -109,10 +109,20 @@ def service(root, submit):
             state = ci.smoke.submit_once(queue,package,LEDGER)
         print('CANNBench job',state.get('job_id'), 'submission',state.get('submission_id'),flush=True)
     end = time.monotonic()+4*3600
+    visible_by = time.monotonic()+300
     while True:
         with (LEDGER/'lock').open('a') as lock:
             fcntl.flock(lock,fcntl.LOCK_EX)
-            code, result = ci.smoke.collect(queue,package,LEDGER)
+            try:
+                code, result = ci.smoke.collect(queue,package,LEDGER)
+            except Exception as exc:
+                # A confirmed POST can precede job visibility on the read replica.
+                if getattr(exc,'status',None)!=404 or time.monotonic()>=visible_by:
+                    raise
+                recorded = load(package/'state.json')
+                if not recorded.get('job_id') or not recorded.get('submission_id'):
+                    raise
+                code, result = 2, dict(recorded,status='awaiting job visibility')
         print(ci.smoke.now(),result.get('job_id'),result.get('status','terminal'), flush=True)
         if code!=2:
             break
