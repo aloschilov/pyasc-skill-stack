@@ -10,7 +10,7 @@ on:
         description: 'Optional single-model operator NPU evaluation (uses one credit); resume never submits'
         type: choice
         default: none
-        options: [none, generate, repair, continue, resume]
+        options: [none, generate, repair, continue, resume, performance-generate, performance, performance-evaluate, performance-resume, performance-submit-prepared]
       operator:
         description: 'Checked-in operator recipe; ignored for continue/resume'
         type: string
@@ -287,9 +287,20 @@ jobs:
             exit 1
           fi
 
+  swiglu-performance:
+    if: github.event_name == 'workflow_dispatch' && startsWith(inputs.cannbench_action, 'performance')
+    uses: ./.github/workflows/swiglu-performance.yml
+    with:
+      action: ${{ inputs.cannbench_action }}
+      origin: ${{ inputs.origin_run }}
+    permissions:
+      contents: write
+      actions: read
+    secrets: inherit
+
   generated-hardware:
     needs: [pr-gate, examples-gate]
-    if: github.event_name == 'workflow_dispatch' && inputs.cannbench_action != 'none' && inputs.cannbench_action != ''
+    if: github.event_name == 'workflow_dispatch' && inputs.cannbench_action != 'none' && inputs.cannbench_action != '' && !startsWith(inputs.cannbench_action, 'performance')
     uses: ./.github/workflows/cannbench-generated.yml
     permissions:
       contents: write

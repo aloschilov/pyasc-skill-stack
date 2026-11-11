@@ -80,6 +80,33 @@ class Smoke(unittest.TestCase):
         smoke.save(ledger/(state['archive_sha256']+'.json'),state)
         return run,ledger,state
 
+    def test_maintenance_reopen_keeps_same_package_and_records_the_previous_rejection(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run,ledger,state=self.prepared(Path(tmp))
+            manifest=json.loads((run/'manifest.json').read_bytes())
+            manifest['aggregation_token']='agg_test'
+            smoke.save(run/'manifest.json',manifest)
+            smoke.save(run/'task.json',{})
+            state.update(phase='rejected',manifest_sha256=smoke.sha(run/'manifest.json'))
+            smoke.save(ledger/(state['archive_sha256']+'.json'),state)
+            error={'type':'SubmissionRejected','detail':'HTTP 403: submission is paused during maintenance'}
+            smoke.save(run/'upload-error.json',error)
+            queue=Mock(target_hardware='950pr',benchmark_slug='official-tasks')
+            queue._client.list_jobs.return_value={'jobs':[]}
+            queue._submit_streaming.return_value={'job_id':'job_new','submission_id':'sub_new'}
+            queue._client._get_json.return_value={'maintenance':{'enabled':True}}
+            with self.assertRaisesRegex(ValueError,'Rejected request'):
+                smoke.submit_once(queue,run,ledger,retry_maintenance=True)
+            queue._submit_streaming.assert_not_called()
+            queue._client._get_json.return_value={'maintenance':{'enabled':False}}
+            with patch.object(smoke,'task_snapshot',return_value=(manifest['catalog'],{})):
+                accepted=smoke.submit_once(queue,run,ledger,retry_maintenance=True)
+                repeated=smoke.submit_once(queue,run,ledger,retry_maintenance=True)
+            self.assertEqual(accepted,repeated)
+            self.assertEqual(state['archive_sha256'],accepted['archive_sha256'])
+            self.assertEqual([state],accepted['previous_intents'])
+            queue._submit_streaming.assert_called_once()
+
     def test_unknown_delivery_never_reposts(self):
         with tempfile.TemporaryDirectory() as tmp:
             run,ledger,state=self.prepared(Path(tmp)); queue=Mock()

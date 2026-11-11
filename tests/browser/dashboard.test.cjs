@@ -208,3 +208,56 @@ test('workflow navigation preserves the distinct July and November assignments',
   await page.locator('#handoffs button').first().click();
   assert.match(await page.locator('#example').innerText(), /July assignment:/);
 });
+
+test('daily comparison shows first attempts, dated sources and a missing hardware pair', async () => {
+  const payload=data();
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const yesterday=new Date(Date.parse(today+'T12:00:00Z')-86400000).toISOString().slice(0,10);
+  payload.daily={status:'same-skills',timezone:'Europe/Moscow',dates:[yesterday,today],
+    runs:[1,2].map(n=>({run_id:n,attempt:1,revision:'b'.repeat(40),cells:{add:'passed',reduce:'failed'},model:'glm'})),
+    hardware:{status:'unavailable'}};
+  await load(payload);
+  const daily=page.locator('#daily-quality');
+  assert.match(await daily.innerText(),/Same skill bytes/);
+  assert.match(await daily.innerText(),/1\/2 first attempts/);
+  assert.match(await daily.innerText(),/no matched pair/);
+  assert.equal(await daily.locator('a').count(),2);
+  payload.daily.dates=['2020-01-01','2020-01-02'];
+  await load(payload);
+  assert.match(await daily.innerText(),/Today’s comparison is unavailable/);
+});
+
+test('the six SwiGLU columns keep their headers and device times readable', async () => {
+  const payload = data();
+  payload.swiglu = {
+    status:'available', release:'https://github.com/example/repo/releases/tag/test',
+    shape_evidence:'https://github.com/example/repo', parent_over_wide:13, archive_over_shape:0.88,
+    scores:{parent:32, wide:33, reference:43},
+    cases:Array.from({length:20}, (_,i)=>({case:i+1, parent:273.4, wide:26.1,
+      reference:16.2, shape_us:15.229, replay_us:6.385}))
+  };
+  await load(payload);
+  const panel = page.locator('#swiglu-study');
+  await panel.locator('summary').click();
+  assert.equal(await panel.locator('tbody tr').count(), 20);
+  for (const width of [1440,390]) {
+    await page.setViewportSize({width,height:900});
+    assert(await panel.locator('th, td').evaluateAll(cells =>
+      cells.every(c => c.scrollWidth <= c.clientWidth + 1 && c.clientWidth >= 52)));
+  }
+});
+
+test('CI submission shows 19 generated cases and the independent historical comparison', async () => {
+  const payload = data();
+  const base = 'https://github.com/aloschilov/pyasc-skill-stack';
+  payload.swiglu_performance = {status:'available', ratio:0.8, score:67, job:'job_abc', submission:'sub_def',
+    release:base+'/releases/tag/example', generation:base+'/actions/runs/12345',
+    cases:Array.from({length:20},(_,i)=>({id:'level1/swi_glu_'+(i+1),kernel:i===11?'_swiglu_pair_groups':'rows',elapsed_us:10,baseline_us:8}))};
+  await load(payload);
+  const panel = page.locator('#swiglu-study');
+  assert.match(await panel.textContent(),/0.800× baseline speed.*19 cases.*25.0% more device time/);
+  assert.equal(await panel.getByRole('link',{name:'GitHub Actions generation'}).getAttribute('href'),payload.swiglu_performance.generation);
+  assert.equal(await panel.getByRole('link',{name:'CANNBench job job_abc'}).getAttribute('href'),'https://cannbench.com/jobs/job_abc');
+  await panel.getByText('Official timings for all 20 cases').click();
+  assert.equal(await panel.locator('tbody tr').count(),20);
+});

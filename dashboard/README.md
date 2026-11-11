@@ -6,7 +6,7 @@ it does not duplicate measured outcomes. Generated summaries and page snapshots
 remain external artifacts. No model, compiler, simulator or NPU is invoked.
 
 ```sh
-python3 scripts/evidence_dashboard.py --output /outside/new-page-snapshot
+python3 scripts/evidence_dashboard.py --daily --output /outside/new-page-snapshot
 python3 -m http.server 8765 --directory /outside/new-page-snapshot
 ```
 
@@ -27,8 +27,7 @@ The public JSON is an allowlisted projection: tasks, counts, timestamps, model
 identifiers, recorded settings, source/skill/runtime hashes, metrics, evidence
 links and bounded, hash-verified candidate Python source. Prompts, native session traces, raw provider payloads and credentials are
 not copied to the site. Only intentionally public archives belong in the catalog;
-adding a private service response or an automatic latest-artifact search would
-change this contract. Archive code is never a deployment dependency.
+the daily view additionally checks the two dated nightly artifacts and public SwiGLU releases bound to main CI runs on those dates. Archive code is never a deployment dependency.
 
 Generated candidates, upstream fixtures and NPU measurements have distinct
 labels and denominators. Manual target execution has no CI execution identity;
@@ -40,11 +39,10 @@ effects retain their fixed-task uncertainty interval; they do not establish
 general skill benefit. CANNBench service score and baseline/candidate time ratio
 remain separate, including ratios below one.
 
-`Evidence dashboard` runs offline tests on relevant PRs. Its manual dispatch
+`Evidence dashboard` validates relevant PRs and refreshes Pages after a scheduled main nightly finishes, including a failed nightly. A completed manual main CI run also refreshes the view so that a newly published CANNBench result can appear. Its manual dispatch
 builds a fresh snapshot; `publish=true` deploys that artifact to GitHub Pages.
 GitHub Pages must use the Actions build type, with the intended deployment branch
-permitted in the `github-pages` environment. No cron, model credentials or device
-access is configured. The default manual action builds without deploying.
+permitted in the `github-pages` environment. The dashboard reads existing evidence with Actions read permission. The default manual action builds without deploying.
 
 Every build re-fetches and verifies each archive. A deleted or changed archive
 therefore becomes unavailable. This is not a continuous availability monitor:
@@ -62,6 +60,39 @@ diagnosis, but they are not the sole qualification archive.
 Local tests cover unavailable/malformed/checksum-invalid evidence, private-field
 exclusion, unsafe archives, duplicate JSON, contradictory coverage, stale results,
 distinct performance metrics and preservation of the previous snapshot.
+
+## Daily skill quality
+
+Run `python3 scripts/evidence_dashboard.py --daily --output /outside/new-snapshot`
+with an authenticated read-only `gh` session. The same command writes the CI
+job summary and the browsable snapshot with its public JSON. A manual dispatch
+with `publish=false` provides a preview. The `skill-quality-<run_id>` artifact
+retains the verified daily projection. The page links both source runs.
+
+The reporting day starts at midnight Moscow time (fixed UTC+03:00) and uses the scheduled workflow's creation
+time. Both consecutive days need one main nightly execution. The reader
+checks the exact run and attempt, archived bytes, plan, model attribution,
+source hashes, simulator numerics, suppression controls and independent
+sessions. The denominator is the entire planned cohort. First attempts
+determine gains and losses. Mixed outcomes, identical skills, incompatible
+execution conditions and insufficient evidence have distinct verdicts.
+A stale snapshot gives its dates. These observations describe the three
+nightly tasks (Add, reduction and broadcast) and one sample per task.
+
+For device performance, the build looks up the existing hardware workflow's
+published SwiGLU qualifications for main dispatches in the same window, using
+the origin run ID, release target and GitHub asset digest. It compares one
+qualified first attempt on each day only when model settings, prompt, checker,
+task, cases, runtime, runner environment and scoring match. It reports the
+geometric mean of yesterday's device time divided by today's, and both
+service scores. Multiple observations or missing evidence leave a gap.
+The existing manual CANNBench generation workflow supplies these releases.
+
+Two retained studies give the performance result context. The held-out
+test measures the first generated kernel from each skill revision. The
+20-case SwiGLU study shows the fixed-grid CANNBench edit and a separately
+warmed device replay of the shape dispatcher. Its source pins, assistance
+and runtime boundaries are available beside the per-case times.
 
 ## Public publication qualification (2026-11-06)
 
@@ -89,7 +120,7 @@ The temporary PR-branch deployment rule was removed, leaving the original
 
 This qualifies publication of the retained scopes, not a new generation or
 numerical run. Manual fixture results remain explicitly manual; their later CI
-checks are not presented as the origin of those numerics. Refresh remains manual.
+checks are not presented as the origin of those numerics. This publication used manual refresh.
 
 ## Visual explorer (issue #42)
 
@@ -122,8 +153,7 @@ disables filters. The archive parser, catalog, source pins, published counts and
 contracts are unchanged. The projection allowlist now additionally permits
 explicitly selected, bounded, hash-verified candidate Python source.
 
-No comparable history series, reference-kernel coverage or historical tiers are
-available in this catalog, so those boundaries have explicit empty-state text.
+Outside the dated daily comparison, the catalog has no continuous history series, reference-kernel coverage or historical tiers, so those boundaries have explicit empty-state text.
 Incomplete/unavailable comparisons do not show effects; unmatched NPU filters do
 not inherit simulator timing. Baseline/candidate geometric mean and service score
 are separate, including ratios below one.

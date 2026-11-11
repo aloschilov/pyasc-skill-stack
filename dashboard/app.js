@@ -207,6 +207,97 @@ function render(data) {
   $('records').replaceChildren(...records.map(renderRow)); $('empty').hidden = records.length > 0;
   renderComparisons(records); renderTiming(records);
 }
+const dailyLabels = {
+  'unavailable':'Insufficient verified observations', 'incompatible':'Execution conditions differ',
+  'same-skills':'Same skill bytes', 'tie':'Same first-attempt outcomes', 'mixed':'Gains and losses',
+  'improved':'More first-attempt qualifications', 'regressed':'Fewer first-attempt qualifications'
+};
+function renderDaily(daily) {
+  const panel = $('daily-quality');
+  if (!daily) { panel.textContent = 'No verified daily comparison in this snapshot.'; return; }
+  const dayNow = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
+  const historical = dayNow !== daily.dates[1];
+  panel.replaceChildren(el('h3', historical ? 'Today’s comparison is unavailable' : dailyLabels[daily.status]), el('p',
+    `${daily.dates.join(' → ')} · Europe/Moscow · ${historical ? 'Historical comparison: '+dailyLabels[daily.status] : 'Current comparison'}`));
+  daily.runs.forEach((r,i) => {
+    const line = el('p');
+    line.append(el('strong', daily.dates[i]+' · '));
+    if (r && r.cells) {
+      const values = Object.values(r.cells), passed = values.filter(v => v === 'passed').length;
+      line.append(el('span', `${passed}/${values.length} first attempts passed CaModel · ${r.model} · `));
+    } else { line.append(el('span',(daily.reasons?.[i] || 'Qualification unavailable')+' · ')); }
+    if (r) line.append(link(r.revision.slice(0,8), `https://github.com/aloschilov/pyasc-skill-stack/actions/runs/${r.run_id}/attempts/${r.attempt}`));
+    panel.append(line);
+  });
+  if (daily.runs.every(r => r && r.cells)) {
+    panel.append(el('p','Cohort: '+Object.keys(daily.runs[1].cells).join(', ')));
+  }
+  if (daily.gained?.length) panel.append(el('p','Gained: '+daily.gained.join(', ')));
+  if (daily.lost?.length) panel.append(el('p','Lost: '+daily.lost.join(', ')));
+  const hw = daily.hardware;
+  if (hw?.status === 'measured') {
+    const line = el('p', `Matched CANNBench first attempts · previous/current device time ${hw.previous_over_current.toFixed(3)}× across ${hw.count} cases · skill inputs ${hw.skills_changed ? 'changed' : 'unchanged'} · service score ${hw.scores[0].toFixed(4)} → ${hw.scores[1].toFixed(4)}. `);
+    line.append(link('Previous',hw.sources[0]), document.createTextNode(' · '),link('Current',hw.sources[1])); panel.append(line);
+  } else { panel.append(el('p','CANNBench speed change: no matched pair of qualified first attempts for these dates.')); }
+}
+function renderTransfer(study) {
+  const panel=$('skill-transfer');
+  if (study?.status !== 'available') { panel.textContent='Held-out comparison unavailable.'; return; }
+  const cases=Object.keys(study.cases.A), total=cases.length;
+  const passes=arm=>Object.values(study.cases[arm]).filter(v=>v==='passed').length;
+  panel.replaceChildren(el('h3','Held-out CANNBench tasks · tuning guide revision'),
+    el('p',`${study.model}: ${passes('A')}/${total} → ${passes('B')}/${total} first attempts passed CaModel (${study.arms.A.slice(0,7)} → ${study.arms.B.slice(0,7)}).`),
+    el('p',cases.map(k=>`${k}: ${study.cases.A[k]} → ${study.cases.B[k]}`).join(' · ')),
+    link('Fixed prompts, six generation sessions and numerical controls',study.url));
+}
+function renderSwiGLU(study, official) {
+  const panel = $('swiglu-study');
+  panel.replaceChildren();
+  if (official?.status === 'available') {
+    const change = (1/official.ratio-1)*100;
+    const serviceJob = el('a','CANNBench job '+official.job);
+    serviceJob.href = 'https://cannbench.com/jobs/'+official.job;
+    panel.append(el('h3','CI-generated SwiGLU · CANNBench'),
+      el('p',`${official.ratio.toFixed(3)}× baseline speed across the 19 cases that ran OpenCode-generated compute kernels, or ${Math.abs(change).toFixed(1)}% ${change >= 0 ? 'more' : 'less'} device time. All 20 passed. Case 12 ran the packed BF16 template.`),
+      el('p',`Service score (20 cases): ${official.score.toFixed(4)} · ${official.job} · ${official.submission}`),
+      serviceJob, document.createTextNode(' · '),
+      link('GitHub Actions generation',official.generation), document.createTextNode(' · '),
+      link('CANNBench timings and evaluated source package',official.release));
+    const details=el('details'); details.append(el('summary','Official timings for all 20 cases'));
+    const table=el('table'); table.append(el('caption','Same-job device times in microseconds'));
+    const head=table.createTHead().insertRow();
+    for (const title of ['Case','Compute kernel','Candidate','CANNBench baseline']) {
+      const th=el('th',title); th.scope='col'; head.append(th);
+    }
+    const body=table.createTBody();
+    for (const c of official.cases) {
+      const row=body.insertRow();
+      for (const value of [c.id,c.kernel,c.elapsed_us.toFixed(3),c.baseline_us.toFixed(3)]) row.insertCell().textContent=value;
+    }
+    details.append(table); panel.append(details);
+  }
+  if (study?.status !== 'available') { panel.append(el('p','Historical SwiGLU measurements unavailable.')); return; }
+  panel.append(el('h3','CANNBench · one OpenCode edit at eight blocks'),
+    el('p', `All 20 cases passed. Six wide cases improved ${study.parent_over_wide.toFixed(3)}× (geometric mean). Service scores: parent ${study.scores.parent.toFixed(4)}, retiled ${study.scores.wide.toFixed(4)}, reference ${study.scores.reference.toFixed(4)}.`),
+    link('Hardware reports and generation provenance',study.release),
+    el('h3','Shape dispatch · retained hardware replay'),
+    ...(study.local_generated_ratio ? [el('p',`Исторический замер на отдельном Ascend950PR: ${study.local_generated_ratio.toLocaleString('ru-RU',{minimumFractionDigits:3,maximumFractionDigits:3})}× относительно базы CANNBench по 19 кейсам SwiGLU с вычислительными ядрами OpenCode. Это примерно на ${Math.round((1/study.local_generated_ratio-1)*100)}% больше времени. Время кандидата измерялось локально, а время базы взято из CANNBench.`)] : []),
+    el('p', `Archive / generated dispatch time: ${study.archive_over_shape.toFixed(5)}× across 20 cases on the same PyASC extension and CPython 3.12. Generation included geometry feedback, API repair and an existing BF16 template.`),
+    link('Shape selection, sources and per-launch samples',study.shape_evidence));
+  const details = el('details'); details.append(el('summary','Compare all 20 cases'));
+  const table = el('table'); table.append(el('caption','Device time in microseconds. The final two columns use the separate same-runtime replay.'));
+  const head=table.createTHead().insertRow();
+  for (const title of ['Case','Parent','Retiled','PyASC reference','Shape dispatch','Archived replay']) {
+    const th=el('th',title); th.scope='col'; head.append(th);
+  }
+  const body=table.createTBody();
+  for (const r of study.cases) {
+    const row=body.insertRow(); const th=el('th',String(r.case)); th.scope='row'; row.append(th);
+    for (const k of ['parent','wide','reference','shape_us','replay_us']) row.insertCell().textContent=r[k].toFixed(3);
+  }
+  const wrap=el('div',undefined,'table-wrap'); wrap.tabIndex=0; wrap.setAttribute('role','region');
+  wrap.setAttribute('aria-label','SwiGLU case timings'); wrap.append(table); details.append(wrap); panel.append(details);
+}
 function freshness(data) {
   const hours = (Date.now()-Date.parse(data.built_at))/3600000;
   const missing = data.records.filter(r => !available(r)).length;
@@ -217,6 +308,37 @@ function validate(data) {
   // The builder owns archive validation. Check the rendered shape before displaying any result.
   const require = ok => { if (!ok) throw new Error('Invalid public summary'); };
   require(data.schema_version === 1 && Array.isArray(data.records) && Number.isFinite(Date.parse(data.built_at)) && Number.isInteger(data.max_age_hours) && data.max_age_hours > 0);
+  if (data.daily) {
+    const d=data.daily;
+    require(Object.hasOwn(dailyLabels,d.status) && d.timezone === 'Europe/Moscow' && Array.isArray(d.dates) && d.dates.length===2 && d.dates.every(v => /^\d{4}-\d{2}-\d{2}$/.test(v)) && Array.isArray(d.runs) && d.runs.length===2);
+    require(Date.parse(d.dates[1]) - Date.parse(d.dates[0]) === 86400000);
+    if (!['unavailable','incompatible'].includes(d.status)) require(d.runs.every(r => r?.cells));
+    for (const r of d.runs) if (r) {
+      require(Number.isSafeInteger(r.run_id) && r.run_id>0 && Number.isSafeInteger(r.attempt) && r.attempt>0 && /^[0-9a-f]{40}$/.test(r.revision));
+      if (r.cells) require(Object.keys(r.cells).length>0 && Object.values(r.cells).every(v => ['passed','failed'].includes(v)));
+    }
+    if (d.hardware?.status==='measured') {
+      require(d.hardware.count === 20 && typeof d.hardware.skills_changed === 'boolean' && d.hardware.sources.length === 2 && Number.isFinite(d.hardware.previous_over_current) && d.hardware.previous_over_current>0 && d.hardware.scores.length===2 && d.hardware.scores.every(Number.isFinite));
+      d.hardware.sources.forEach(safeURL);
+    }
+  }
+  if (data.transfer?.status === 'available') {
+    const t = data.transfer; safeURL(t.url);
+    require(typeof t.model === 'string' && ['A','B'].every(a => /^[a-f0-9]{40}$/.test(t.arms[a])));
+    const cases = Object.keys(t.cases.A);
+    require(cases.length === 3 && Object.keys(t.cases.B).length === cases.length &&
+      cases.every(k => ['A','B'].every(a => ['passed','failed'].includes(t.cases[a][k]))));
+  }
+  if (data.swiglu?.status === 'available') {
+    const s=data.swiglu; safeURL(s.release); safeURL(s.shape_evidence);
+    require(s.cases.length===20 && s.cases.every((r,i)=>r.case===i+1 && ['parent','wide','reference','shape_us','replay_us'].every(k=>Number.isFinite(r[k]) && r[k]>0)));
+    require(['wide','parent','reference'].every(k=>Number.isFinite(s.scores[k])) && [s.parent_over_wide,s.archive_over_shape].every(v=>Number.isFinite(v)&&v>0));
+  }
+  if (data.swiglu_performance?.status === 'available') {
+    const p=data.swiglu_performance; safeURL(p.generation); safeURL(p.release);
+    require(/^job_[0-9a-f]+$/.test(p.job) && /^sub_[0-9a-f]+$/.test(p.submission) && Number.isFinite(p.ratio) && p.ratio>0 && Number.isFinite(p.score) && p.cases.length===20 &&
+      p.cases.every((c,i)=>c.id===`level1/swi_glu_${i+1}` && ['elapsed_us','baseline_us'].every(k=>Number.isFinite(c[k]) && c[k]>0)));
+  }
   const ids = new Set();
   for (const r of data.records) {
     require(typeof r.id === 'string' && !ids.has(r.id) && Object.hasOwn(titles, r.kind)); ids.add(r.id);
@@ -245,7 +367,7 @@ function validate(data) {
   }
 }
 function unavailable() {
-  for (const id of ['overview','records','comparisons','timing','count']) $(id).replaceChildren();
+  for (const id of ['overview','records','comparisons','timing','count','daily-quality','skill-transfer','swiglu-study']) $(id).replaceChildren();
   $('empty').hidden = true;
   $('freshness').textContent = 'EVIDENCE UNAVAILABLE — the public summary could not be loaded or validated. No result is accepted here.';
   $('freshness').className = 'attention';
@@ -256,9 +378,9 @@ fetch('data.json', {cache:'no-store'}).then(r => {if (!r.ok) throw new Error('Mi
   for (const name of [...new Set(data.records.flatMap(models))].sort()) {
     const option = el('option', name); option.value = name; $('model').append(option);
   }
-  renderOverview(data); render(data); freshness(data);
+  renderDaily(data.daily); renderTransfer(data.transfer); renderSwiGLU(data.swiglu,data.swiglu_performance); renderOverview(data); render(data); freshness(data);
   for (const id of controls) $(id).addEventListener(id === 'search' ? 'input' : 'change', () => render(data));
   $('filters').addEventListener('submit', e => e.preventDefault());
   $('filters').addEventListener('reset', () => { for (const id of controls) $(id).value = id === 'search' ? '' : 'all'; render(data); });
-  setInterval(() => freshness(data), 60000);
+  setInterval(() => { freshness(data); renderDaily(data.daily); }, 60000);
 }).catch(unavailable);

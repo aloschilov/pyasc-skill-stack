@@ -259,6 +259,41 @@ def target(archive, entry):
         'excluded_reason': plan['excluded_reason'], 'manual_run': True}
 
 
+def first_hardware_protocol(archive, origin, generation, report):
+    # Old reports, repairs, partial attempts and continuations stay visible as
+    # historical evidence, but cannot become fresh day-over-day observations.
+    if generation.get('attempt') != 1 or any(n.endswith(('/repair-lineage.json','/continuation-lineage.json'))
+                                             for n in archive.members):
+        return None
+    try:
+        job = archive.json('evidence/package/job.json')['job']
+        task = archive.raw('evidence/package/task.json')
+        prompt = archive.raw('evidence/generation/attempt-1/prompt.txt')
+        require(generation['files']['generation/attempt-1/prompt.txt'] == digest(prompt)
+                and job['id'] == report['job_id'] and job['results']['result_stage'] == 'final'
+                and job['results']['anti_cheat_failed_cases'] == 0, 'Unverified run')
+        tools = {p:h for p,h in origin['source_hashes'].items() if p.startswith('integrations/cannbench/')}
+        require(tools and origin['context_hashes'] and generation['skill_hashes'], 'Missing controls')
+        config = archive.json('evidence/model-config.json')
+        skill_dir, = config['skills']['paths']
+        require(skill_dir.startswith('/') and skill_dir.endswith('/context/skills'), 'Unknown generation layout')
+        context_root = skill_dir[:-len('/skills')]
+        # Per-run absolute paths change even for identical OpenCode settings.
+        config_text = json.dumps(config, sort_keys=True).replace(context_root+'/', '<context>/')
+        normalized_prompt = prompt.decode().replace(context_root+'/', '<context>/')
+        context = {p:h for p,h in origin['context_hashes'].items() if not p.startswith('skills/')}
+        skill_inputs = {p:h for p,h in origin['context_hashes'].items() if p.startswith('skills/')}
+        require(context and skill_inputs, 'Missing generation inputs')
+        controls = [origin['pyasc'], context, tools, generation['model'], generation['provider_model_revision'],
+                    config_text, generation['opencode_version'], digest(task), normalized_prompt, report['hardware'], report['benchmark_version'],
+                    job['results']['setup_info']['environment'], job['results']['score_weight_profile'],
+                    job['results']['perf_metric']]
+        return {'protocol':digest(json.dumps(controls, sort_keys=True).encode()), 'generated_at':origin['created_at'],
+                'skills':digest(json.dumps(skill_inputs, sort_keys=True).encode())}
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
 def hardware(archive, entry):
     acceptance = archive.json('evidence/acceptance.json'); origin = archive.json('evidence/run.json')
     report = archive.json('evidence/package/report.json'); generation = archive.json('evidence/generation.json')
@@ -292,6 +327,7 @@ def hardware(archive, entry):
         'finished_at': report['finished_at'], 'comparisons': {}, 'service_score': finite(acceptance['service_score']),
         'baseline_time_ratio': ratio, 'elapsed_seconds': (timestamp(report['finished_at'])-timestamp(report['claimed_at'])).total_seconds(),
         'queue_seconds': (timestamp(report['claimed_at'])-timestamp(report['queued_at'])).total_seconds(),
+        'first_hardware': first_hardware_protocol(archive, origin, generation, report),
         'note': 'One retained candidate; no cross-model or overall skills-effect claim. Provider revision remains unknown.'}
 
 
@@ -398,12 +434,87 @@ def validate_projection(value):
     require(finite(value['elapsed_seconds']) >= 0 and re.fullmatch(r'[0-9a-f]{40}', value['stack_revision']), 'Invalid time or revision')
 
 
-def build(catalog_path, output, loader=fetch, now=None):
+def transfer_study(loader, pin):
+    tag, asset = pin['release'], pin['asset']
+    require(all(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', k) for k in (tag, asset)), 'Invalid transfer source')
+    release = f'https://github.com/{REPOSITORY}/releases'
+    archive = Archive(loader(f'{release}/download/{tag}/{asset}'), pin['sha256'])
+    plan, rows = archive.json('transfer-plan.json'), archive.json('cohort.json')
+    require([ [r['case'], r['arm']] for r in rows] == plan['sessions'] and plan['seeds'] == [19,23]
+            and all(k.startswith('skills/') for k in plan['changed_files']) and plan['changed_files'],
+            'Invalid transfer design')
+    outcomes = {'A':{}, 'B':{}}
+    sessions = set()
+    prompts = {}
+    for row in rows:
+        case, arm = row['case'], row['arm']
+        require(case not in outcomes[arm] and row['status'] in ('passed','failed') and len(row['session_ids']) == 1
+                and row['session_ids'][0] not in sessions, 'Missing or reused transfer session')
+        sessions.update(row['session_ids'])
+        require(prompts.setdefault(case,row['prompt_sha256']) == row['prompt_sha256'], 'Unmatched prompt')
+        if row['status'] == 'passed':
+            for phase, passed in [('real',True),('suppressed',False)]:
+                checks = row['phases'][phase]['checks']
+                require(row['phases'][phase]['status'] == 'passed' and [c['seed'] for c in checks] == plan['seeds']
+                        and all(c['numerical_pass'] is passed and c['launcher_calls'] > 0 for c in checks),
+                        'Incomplete first-attempt qualification')
+        outcomes[arm][case] = row['status']
+    require(outcomes['A'] and outcomes['A'].keys() == outcomes['B'].keys(), 'Unequal transfer denominators')
+    return {'status':'available','arms':plan['arms'],'model':plan['model'],'cases':outcomes,
+            'url':f'{release}/tag/{tag}'}
+
+
+def recent_hardware(dates):
+    """Resolve only CI-published SwiGLU tags named for main dispatches in the reporting window."""
+    from datetime import date
+    from daily_skill_quality import gh, runs_for_dates
+    from subprocess import CalledProcessError
+    found = []
+    for run in runs_for_dates(*(date.fromisoformat(d) for d in dates), workflow='ci.yml', event='workflow_dispatch'):
+        if run['head_branch'] != 'main' or run['path'] != '.github/workflows/ci.yml' or run['event'] != 'workflow_dispatch':
+            continue
+        rid = run['id']
+        require(type(rid) is int and rid > 0, 'Invalid CI origin')
+        for prefix in ('swi_glu', 'swiglu'):
+            tag = f'qualification-{prefix}-{rid}'
+            try:
+                release = json.loads(gh('api', f'repos/{REPOSITORY}/releases/tags/{tag}'))
+                break
+            except CalledProcessError as exc:
+                if '404' not in str(exc.output): raise
+        else:
+            continue
+        name = f'run-{rid}-qualification.tar.gz'
+        asset, = [a for a in release['assets'] if a['name'] == name]
+        require(release['tag_name'] == tag and not release['draft'] and release['target_commitish'] == run['head_sha']
+                and asset['size'] <= MAX_ARCHIVE and re.fullmatch(r'sha256:[a-f0-9]{64}', asset['digest']),
+                'Unverified hardware publication')
+        found.append({'id':f'swiglu-{rid}', 'kind':'hardware', 'run_id':rid, 'release':tag,
+                      'asset':name, 'sha256':asset['digest'][7:]})
+    return found
+
+
+def build(catalog_path, output, loader=fetch, now=None, daily=None, recent=recent_hardware):
     spec = catalog(catalog_path); now = now or datetime.now(timezone.utc)
     output = Path(output).resolve()
     require(output != ROOT and ROOT not in output.parents and not output.exists(), 'Use a new external output directory')
     records = []
-    for entry in spec['sources']:
+    entries = list(spec['sources'])
+    hardware_inventory_ok = True
+    publications = []
+    if daily is not None:
+        import subprocess
+        try:
+            pinned = {item['id']:item for item in entries}
+            publications = recent(daily['dates'])
+            for item in publications:
+                if item['id'] in pinned:
+                    require(pinned[item['id']] == item, 'Published hardware asset differs from reviewed pin')
+                else:
+                    entries.append(item)
+        except (OSError, ValueError, LookupError, TypeError, subprocess.SubprocessError):
+            hardware_inventory_ok = False
+    for entry in entries:
         release = 'https://github.com/'+REPOSITORY+'/releases/tag/'+entry['release']
         url = 'https://github.com/'+REPOSITORY+'/releases/download/'+entry['release']+'/'+entry['asset']
         record = {'id': entry['id'], 'kind': entry['kind'], 'release_url': release, 'archive_url': url,
@@ -424,6 +535,28 @@ def build(catalog_path, output, loader=fetch, now=None):
         records.append(record)
     payload = {'schema_version': 1, 'built_at': now.isoformat(), 'max_age_hours': spec['max_age_hours'],
         'catalog_sha256': digest(Path(catalog_path).read_bytes()), 'records': records}
+    if daily is not None:
+        from daily_skill_quality import hardware_pair
+        published_ids = {item['id'] for item in publications}
+        hardware_inventory_ok &= all(r['availability'] == 'available' for r in records if r['id'] in published_ids)
+        payload['daily'] = daily
+        payload['daily']['hardware'] = (hardware_pair(daily['dates'], records) if hardware_inventory_ok
+                                        else {'status':'unavailable'})
+    import swiglu_evidence
+    try:
+        payload['swiglu'] = swiglu_evidence.project(loader, spec['swiglu_study'])
+    except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
+        payload['swiglu'] = {'status':'unavailable'}
+    try:
+        pin = (swiglu_evidence.latest_performance(loader) if daily is not None else None) or spec.get('swiglu_performance')
+        if pin:
+            payload['swiglu_performance'] = swiglu_evidence.service_projection(loader,pin)
+    except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
+        payload['swiglu_performance'] = {'status':'unavailable'}
+    try:
+        payload['transfer'] = transfer_study(loader, spec['skill_transfer'])
+    except (OSError, ValueError, KeyError, TypeError, ArithmeticError, EOFError, tarfile.TarError, zlib.error):
+        payload['transfer'] = {'status':'unavailable'}
     output.mkdir(parents=True)
     for path in (ROOT/'dashboard').glob('*.html'): shutil.copy2(path, output/path.name)
     for path in (ROOT/'dashboard').glob('*.js'): shutil.copy2(path, output/path.name)
@@ -443,7 +576,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--catalog', type=Path, default=ROOT/'dashboard/sources.json')
     parser.add_argument('--output', type=Path, required=True)
-    args = parser.parse_args(); result = build(args.catalog, args.output)
+    parser.add_argument('--daily', action='store_true', help='Read the two main nightly artifacts with authenticated gh')
+    args = parser.parse_args()
+    daily = None
+    if args.daily:
+        from daily_skill_quality import ZONE, report, summary
+        daily = report(datetime.now(ZONE).date())
+    result = build(args.catalog, args.output, daily=daily)
+    if daily:
+        import os
+        message = summary(result['daily'], result['transfer'], result['swiglu'], result.get('swiglu_performance'))
+        print(message)
+        if os.environ.get('GITHUB_STEP_SUMMARY'):
+            with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:
+                stream.write(message+'\n')
     print(json.dumps({'built_at': result['built_at'], 'records': len(result['records']),
         'unavailable': sum(r['availability'] != 'available' for r in result['records'])}))
 

@@ -206,7 +206,7 @@ def verify(run):
     return manifest
 
 
-def submit_once(queue, run, ledger):
+def submit_once(queue, run, ledger, *, retry_maintenance=False):
     manifest = verify(run)
     digest = manifest['files']['submission.zip']
     record = ledger / (digest + '.json')
@@ -215,7 +215,12 @@ def submit_once(queue, run, ledger):
         state = json.loads(record.read_text())
         if state.get('phase') == 'rejected':
             if state['manifest_sha256'] == sha(run/'manifest.json'):
-                raise ValueError('Rejected request: prepare corrected inputs before submitting again')
+                detail = json.loads((run/'upload-error.json').read_text()) if retry_maintenance else {}
+                retry_allowed = (detail.get('type')=='SubmissionRejected' and 'HTTP 403' in detail.get('detail','')
+                                 and 'submission is paused during maintenance' in detail['detail']
+                                 and queue._client._get_json('/api/public/service-status')['maintenance']['enabled'] is False)
+                if not retry_allowed:
+                    raise ValueError('Rejected request: prepare corrected inputs before submitting again')
             previous = state.get('previous_intents', []) + [state]
         else:
             if state['manifest_sha256'] != sha(run/'manifest.json'):
