@@ -24,6 +24,9 @@ permissions:
 jobs:
   generate:
     if: inputs.action == 'performance' || inputs.action == 'performance-generate'
+    permissions:
+      contents: read
+      actions: read
     runs-on: cannbench-vm
     timeout-minutes: 86
     steps:
@@ -56,8 +59,10 @@ jobs:
           export CANNBENCH_VENV="$RUNNER_TEMP/perf-client-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           bash integrations/cannbench/setup-site-mcp.sh
           echo "PYTHON=$CANNBENCH_VENV/bin/python" >> "$GITHUB_ENV"
-      - name: Generate fresh PyASC compute kernels with OpenCode
+      - name: Generate PyASC compute and launch policy with OpenCode
         env:
+          GH_TOKEN: ${{ inputs.origin != '' && github.token || '' }}
+          KERNEL_ORIGIN: ${{ inputs.origin }}
           SWIGLU_SKILL_SOURCE: ${{ inputs.skills_revision != '' && format('{0}/.evaluation-skills', github.workspace) || '' }}
           OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -84,7 +89,7 @@ jobs:
     env:
       HELPER: integrations/cannbench/ci/swiglu_performance/evaluate.py
       IMAGE: ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:1efdcc8585b769715f640e9c9078c2e03cdf2157082d05b0c4b87974beea7407
-      ORIGIN: ${{ inputs.origin || github.run_id }}
+      ORIGIN: ${{ inputs.action == 'performance' && github.run_id || inputs.origin || github.run_id }}
       EVALUATION_RUN: ${{ (inputs.action == 'performance-resume' || inputs.action == 'performance-submit-prepared') && inputs.origin || github.run_id }}
     steps:
       - uses: actions/checkout@v4

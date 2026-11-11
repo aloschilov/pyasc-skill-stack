@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -25,6 +26,46 @@ def ended_at_limit(events):
         if event.get('type')=='step_finish':
             reasons.append(event['part'].get('reason'))
     return bool(reasons) and reasons[-1]=='length'
+
+
+def recover_kernel(root, origin, context, prompt, kernel_profile):
+    """Recover the original CI write only when the policy stage confirmed a length stop."""
+    if not re.fullmatch(r'[1-9][0-9]*',origin):
+        raise ValueError('Invalid kernel origin')
+    repo=os.environ['GITHUB_REPOSITORY']
+    run=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{origin}']))
+    if not (run['head_repository']['full_name']==repo and run['event']=='workflow_dispatch'
+            and run['path']=='.github/workflows/ci.yml' and run['conclusion']=='failure'):
+        raise ValueError('Expected a failed in-repository CI policy generation')
+    artifact=f"swiglu-generation-{origin}-{run['run_attempt']}"
+    prior=root/'original-kernel'
+    subprocess.run(['gh','run','download',origin,'--repo',repo,'--name',artifact,'--dir',str(prior)],check=True)
+    profile=ci.load(prior/'project/opencode.json')
+    prior_skills=Path(profile['skills']['paths'][0])
+    ci.trace((prior/'events.log').read_text(),prior_skills)
+    prior_prompt=(prior/'prompt.txt').read_text().replace(str(prior_skills.parent/'task'),str(context/'task'))
+    if ((prior/'project/policy.json').exists() or not ended_at_limit((prior/'policy-continuation.log').read_text())
+            or prior_prompt!=prompt
+            or ci.hashes(prior/'context')!=ci.hashes(context)):
+        raise ValueError('Prior kernel context, prompt or terminal policy state differs')
+    if profile['model']!=kernel_profile['model'] or profile['provider']!=kernel_profile['provider']:
+        raise ValueError('Prior kernel model profile differs')
+    # Bind the bytes in the retained file to OpenCode's completed write in the native session.
+    trace=ci.load(prior/'session.json')
+    authored=[]
+    for entry in trace['part']:
+        part=json.loads(entry['data'])
+        state=part.get('state',{})
+        args=state.get('input',{})
+        if part.get('tool')=='write' and state.get('status')=='completed' and Path(args.get('filePath','')).name=='candidate.py':
+            authored.append(args['content'].encode())
+    candidate=(prior/'project/candidate.py').read_bytes()
+    if candidate not in authored:
+        raise ValueError('Retained kernel differs from its model write')
+    (root/'project/candidate.py').write_bytes(candidate)
+    return {'run':origin,'attempt':run['run_attempt'],'revision':run['head_sha'],
+            'candidate_sha256':ci.smoke.sha(root/'project/candidate.py'),
+            'artifact':artifact,'profile_sha256':ci.smoke.sha(prior/'project/opencode.json')}
 
 
 def main(root):
@@ -64,27 +105,47 @@ def main(root):
                OPENCODE_DISABLE_CLAUDE_CODE_SKILLS='1')
     version = ci.call(['opencode','--version'],root/'version.log',env=env).strip()
     command=['opencode','run','--pure','--format','json','--dir',str(project),'-m',ci.MODEL]
-    events=ci.call([*command,prompt],root/'events.log',cwd=project,env=env,timeout=1200)
-    trace=ci.trace(events,context/'skills')
-    session=trace['session_id']
     database=private/'opencode/opencode.db'
-    ci.capture_session(database,session,root/'session.json')
-    command.extend(['--session',session])
 
     def finish_file(path,log,previous):
         if not path.is_file() and ended_at_limit(previous):
             reminder=f'The preceding response reached its output limit. Use the write tool now to create {path.name} from the instructions already loaded.'
-            previous=ci.call([*command,reminder],root/log,cwd=project,env=env,timeout=1200)
+            ci.call([*command,reminder],root/log,cwd=project,env=env,timeout=1200)
             ci.capture_session(database,session,root/'session.json')
         if not path.is_file():
             raise ValueError(f'Missing {path.name}; inspect the retained session and finish reason')
 
+    origin=os.environ.get('KERNEL_ORIGIN')
     candidate=project/'candidate.py'
-    finish_file(candidate,'kernel-continuation.log',events)
+    lineage={}
+    if origin:
+        lineage['kernel_origin']=recover_kernel(root,origin,context,prompt,profile)
+        session=None
+    else:
+        events=ci.call([*command,prompt],root/'events.log',cwd=project,env=env,timeout=1200)
+        trace=ci.trace(events,context/'skills')
+        session=trace['session_id']
+        ci.capture_session(database,session,root/'session.json')
+        command.extend(['--session',session])
+        finish_file(candidate,'kernel-continuation.log',events)
     before=ci.smoke.sha(candidate)
     policy_prompt=(HERE/'policy-prompt.txt').read_text()
+    if origin:
+        policy_prompt='Load the four native skills '+', '.join(ci.SKILLS)+'. Read candidate.py. '+policy_prompt
     (root/'policy-prompt.txt').write_text(policy_prompt)
+    policy_profile=json.loads(json.dumps(profile))
+    low=ci.load(ci.ROOT/'integrations/opencode/profiles/cloud-glm-5.3-low.json')
+    policy_profile['provider']['gateway']['models']=low['provider']['gateway']['models']
+    ci.save(root/'policy-profile.json',policy_profile)
+    # Project config is merged after other sources by the CLI. Keep both identical.
+    ci.save(root/'kernel-profile.json',profile)
+    ci.save(project/'opencode.json',policy_profile)
+    env['OPENCODE_CONFIG_CONTENT']=json.dumps(policy_profile)
     response=ci.call([*command,policy_prompt],root/'policy-events.log',cwd=project,env=env,timeout=1200)
+    if origin:
+        trace=ci.trace(response,context/'skills')
+        session=trace['session_id']
+        command.extend(['--session',session])
     ci.capture_session(database,session,root/'session.json')
     policy=project/'policy.json'
     finish_file(policy,'policy-continuation.log',response)
@@ -93,7 +154,8 @@ def main(root):
     validate(ci.load(policy))
     ci.save(root/'generation.json', {'run_id':identity['GITHUB_RUN_ID'], 'run_attempt':identity['GITHUB_RUN_ATTEMPT'],
             'revision':identity['GITHUB_SHA'], 'candidate_sha256':ci.smoke.sha(candidate),
-            'policy_prompt_sha256':ci.smoke.sha(root/'policy-prompt.txt'),
+            **lineage, 'kernel_profile_sha256':ci.smoke.sha(root/'kernel-profile.json'),
+            'policy_profile':'cloud-glm-5.3-low', 'policy_prompt_sha256':ci.smoke.sha(root/'policy-prompt.txt'),
             'skills_revision':skill_revision, 'policy_sha256':ci.smoke.sha(policy),
             'prompt_sha256':ci.smoke.sha(root/'prompt.txt'), 'model':ci.MODEL, 'opencode':version,
             'profile_sha256':ci.smoke.sha(project/'opencode.json'), 'session_id':trace['session_id'],

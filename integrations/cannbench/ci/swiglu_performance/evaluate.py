@@ -176,7 +176,7 @@ def service(root, stage):
     shutil.copyfile(package/'submission.zip',public/'submission.zip')
     shutil.copyfile(root/'generation/project/candidate.py',public/'candidate.py')
     g = manifest['generation']
-    attribution = {k:g[k] for k in ('policy_sha256','skills_revision') if k in g}
+    attribution = {k:g[k] for k in ('policy_sha256','skills_revision','kernel_origin','policy_profile','kernel_profile_sha256') if k in g}
     if 'policy_sha256' in g:
         require(sha(root/'generation/project/policy.json')==g['policy_sha256'], 'Published policy identity differs')
     save(public/'performance.json',{'schema':1,**attribution,'job_id':job['id'],'submission_id':job['submission_id'],
