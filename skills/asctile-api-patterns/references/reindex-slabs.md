@@ -12,6 +12,15 @@ With `reuse_alloc=2`, the measured public gather kernels used 24 bytes per
 output lane at unroll 1 and 28 at unroll 2 for aligned BF16 half-rows of
 seven elements. These are compiled live-buffer costs. Recheck allocations
 when applying this estimate to a different specialization or compiler.
+Each row has `H` output lanes. For `T` rows the two footprints in bytes are
+`24*T*H` and `28*T*H`. The corresponding costs per row are `24*H` and
+`28*H`. Subtract any fixed workspace from available UB before division.
+
+For a positive row count and active vector count `A`, compute the candidate
+row bound as `min(16384 // (2*H*s), available_ub // (24*H), ceil(R/A))`.
+Return the caller's existing public gather route tag for either unroll.
+Test dispatch at a smaller UB that fits only one iteration and at another
+that forces a shorter tile. A single full-capacity test can hide a unit error.
 
 1. Target up to 16 KiB per contiguous input DMA on this build. Start with the
    largest power-of-two row count within all three bounds. Use the DMA target
