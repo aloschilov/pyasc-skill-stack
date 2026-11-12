@@ -196,6 +196,10 @@ different tile sizes pads every short row and misses the dense-slab path.
 | Several moderate half-rows fit in UB with useful work across the grid | Two strided rank-two input copies and a bounded rank-two store. Use padded physical width for allocation and logical H for DMA. | Choose rows and unroll from [row geometry](references/strided-row-tiles.md). On this build 3 KiB per half-row is a measured starting cutover to streaming. |
 | Wide contiguous halves, a single long row, or too few rows to fill the grid with row tiles | Two rank-one contiguous chunk reads with source offsets H apart and a rank-one store. | T counts **elements**. There are `R * ceil(H/T)` live chunks. Keep each chunk inside its half-row and bound its tail as in the [flat template](templates/streamed-swiglu-flat.py). |
 
+For short FP32 row grids, round the rows needed for 8 KiB **up** to a
+power of two, then check UB. If the resulting tile count fits the reported
+AIVs, emit a direct one-tile-per-block body with a bounded final copy.
+
 The archive-bundled CPython 3.12 evaluator uses CPU-backed Torch tensors
 and the PyASC launcher transfers them for device execution. Keep the input
 on its supplied device. Call `ensure_npu_platform()`, allocate

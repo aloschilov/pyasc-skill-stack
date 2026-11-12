@@ -11,7 +11,10 @@ from the useful payload and check local allocation using W including
 padding. The copy's real shape still uses H.
 
 - Start with the smallest power-of-two height T giving at least 8 KiB of
-  useful half-tile payload. A whole row is the minimum. This gives less
+  useful half-tile payload. For positive R and H, compute
+  `needed = (8192 + H*s - 1) // (H*s)`, then
+  `T = 1 << (needed - 1).bit_length()`. Rounding down at either step
+  gives too little payload for unaligned widths. A whole row is the minimum. This gives less
   than 16 KiB when a row is smaller than 8 KiB. Halve T until it fits the
   row count and the single-iteration UB budget. If a single row exceeds
   the budget, report that the row kernel cannot fit. A column-chunk
@@ -35,7 +38,12 @@ padding. The copy's real shape still uses H.
 - At that height select unroll 2 if its footprint fits and ceil(rows/T)
   supplies at least two tiles per active AIV on average. Otherwise keep
   the height at unroll 1. Launch min(available AIVs, ceil(rows/T)) blocks.
-  The grid-stride loop owns the final partial tile.
+  For FP32 when `ceil(rows/T) <= available AIVs`, specialize a single-wave
+  kernel: one tile directly at `block_idx*T`, no grid-stride loop, unroll 1.
+  Bound the real height on both loads and the store. With fewer available
+  blocks than tiles, the grid-stride loop must cover all remaining tiles.
+  For example on 72 AIVs, 143 rows of 536 FP32 values **per half**
+  select T=4 and 36 blocks; 273 rows of 509 select T=8 and 35 blocks.
 
 Exercise the selector with a smaller UB that fits only one iteration, a
 smaller UB that forces a shorter height, and short grids. Compare warmed

@@ -17,6 +17,16 @@ using a qualified active-device resource query. Stable forms must
 preserve NaN and Inf behavior from `golden.py`. GELU has both `none` and `tanh`
 attributes and requires distinct kernels or tile widths.
 
+For Exp, specialize the public scalar attributes at compile time. Evaluate
+`scale*x + shift` in the golden compute dtype; for a positive base multiply
+by its natural logarithm before the exponential. Compute the scalar logarithm
+once outside the JIT, at the precision of the public golden. Elide identity
+multiplications and a zero shift. Do not fold a zero multiplier into a
+constant: infinities and NaNs still participate. Use one contiguous copy in
+and one copy out per tile. Bound the last transfer in the same launch.
+Benchmark a direct one-tile body when the whole input fits one wave, and
+a grid-stride pipelined loop when there are enough tiles for multiple waves.
+
 ### High-level GeLU campaign (historical)
 
 Use `compiler-team/pyasc@adadd7d66ed0ee16d33d79487bf584899a26ef1e` — the
