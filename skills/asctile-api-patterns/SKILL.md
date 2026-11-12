@@ -196,6 +196,25 @@ different tile sizes pads every short row and misses the dense-slab path.
 | Several moderate half-rows fit in UB with useful work across the grid | Two strided rank-two input copies and a bounded rank-two store. Use padded physical width for allocation and logical H for DMA. | Choose rows and unroll from [row geometry](references/strided-row-tiles.md). On this build 3 KiB per half-row is a measured starting cutover to streaming. |
 | Wide contiguous halves, a single long row, or too few rows to fill the grid with row tiles | Two rank-one contiguous chunk reads with source offsets H apart and a rank-one store. | T counts **elements**. There are `R * ceil(H/T)` live chunks. Keep each chunk inside its half-row and bound its tail as in the [flat template](templates/streamed-swiglu-flat.py). |
 
+The archive-bundled CPython 3.12 evaluator uses CPU-backed Torch tensors
+and the PyASC launcher transfers them for device execution. Keep the input
+on its supplied device. Call `ensure_npu_platform()`, allocate
+`out = input.new_empty(out_shape)`, and pass the input, output and any
+cached integer indices directly to the public JIT. Calling `.to("npu")`
+or importing `torch_npu` fails on this wheel. SwiGLU needs no host tensor
+containing copied input halves. Launch syntax is **one integer**:
+`kernel[vector_blocks(work_items)](input, out, ...)`. Compute work_items
+inside the selected branch. Even a single wide row can contain many chunks.
+
+For the row branch, the selected height T belongs in the copy itself.
+Load one tile at `[r,0]` and one at `[r,H]`, each physical shape
+`[T,W]` and real shape `[min(T,R-r),H]`. Write one tile to the same
+valid output rectangle. A loop of T separate one-row copies loses batching.
+Use `@asctile.jit(reuse_alloc=2)` with the compiled UB estimates below.
+Keep `T`, `W` and `U` compile-time constants. A grid-stride
+`asctile.range(block_idx, tile_count, block_count, unroll_factor=U)`
+owns one tile per iteration, including the bounded final tile.
+
 For short BF16 rows test slab eligibility first. If UB, useful row count
 or DMA alignment declines the gather, try bounded rows. On other builds
 check the public reindex lowering and compiled footprint. Use dispatch
