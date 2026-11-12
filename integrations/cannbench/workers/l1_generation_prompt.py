@@ -92,7 +92,12 @@ def prompt(task, skills):
             "Trace both public launches at 72 AIVs: BF16 1023x1023, base 2, unit scale and "
             "zero shift must select contiguous T4848 U3; FP16 1024x1024, base -1, unit "
             "scale and zero shift must select stride T4864 U3. Use the general input-byte, "
-            "alignment and UB rules from the skill for arbitrary inputs."
+            "alignment and UB rules from the skill for arbitrary inputs. Compute contiguous "
+            "tiles per block inside the JIT from runtime size, tile and block_num(), retaining "
+            "compile-time unroll 3. For a one-wave tile budget at least T*(8+itemsize) bytes "
+            "for the measured live values. Reject a tile exceeding available UB and enter "
+            "the qualified streaming fallback. Keep one-wave, U3 short-stream and long-stream "
+            "unroll independent in their actual JIT loops."
         )
     return "\n".join(sections)
 

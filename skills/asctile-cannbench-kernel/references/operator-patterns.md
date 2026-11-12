@@ -66,6 +66,17 @@ If it fits, launch `ceil_div(N, T)` blocks, one tile per block, with a
 bounded final transfer and no grid-stride loop. Rounding down can leave a
 second wave for a tiny remainder. Measure this path against streaming.
 
+On the public 950PR build, count both live FP32 lanes in the one-wave
+affine Exp body. With allocation reuse, the observed requirements for
+the 16-bit and FP32 input specializations were exactly 10 and 12 bytes
+per tile element. One 29024-element BF16 tile used 290240 bytes, and one
+29088-element FP32 tile used 349056 bytes. The device had 253952 bytes.
+For this emitter, reject a one-wave tile when
+`T * (8 + itemsize) > available_ub`. Include additional workspace and
+a larger live footprint if the emitted specialization requires them.
+Send a rejected tile to the existing UB-qualified streaming path before
+launch. Tile size and actual JIT unroll must match the estimate.
+
 For short 16-bit streams, also evaluate three tiles per AIV. On the
 public 950PR, start with this path for about 24–32 KiB of useful input
 per AIV when unroll 3 fits. With `q = 32 // itemsize`, compute
@@ -96,7 +107,15 @@ For contiguous ownership set `M = ceil_div(N,T)` and
 empty final iteration with `offset = min(N, tile_id*T)` and use
 `valid = min(N-offset,T)`. This produces a nonnegative real extent in one
 expression. Recheck the generated schedule in its public entry point. The
-matched contiguous BF16 control above used these scalar minima. A later
+matched contiguous BF16 control above used these scalar minima. Its count
+was computed inside the JIT with `ceildiv(ceildiv(size,T), block_num())`
+from a runtime size argument. Keep the count and starting tile runtime
+values when reproducing that emitter. The unroll factor remains a
+compile-time 3. A separate experiment using the same tile, grid, scalar
+math and a compile-time loop count took 5.195/5.032 µs for bounded
+BF16 copies and 4.759/4.841 µs with full copies split from the tail.
+Those two trials support the comparison of bounds inside that series.
+The earlier runtime-count results came from a different session. A later
 generation with explicit conditional clamps recorded 4.430 µs at the same
 public BF16 shape. That cross-run difference includes other codegen changes. Keep the affine scalars explicit launch arguments
 in every specialization. Larger streams still need the multi-wave rule.
