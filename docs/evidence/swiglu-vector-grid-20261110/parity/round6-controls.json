@@ -1,0 +1,1804 @@
+{
+  "results": [
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "fourth-index_gather-3488-2",
+      "samples_us": [
+        7.43,
+        6.54,
+        6.016
+      ],
+      "median_us": 6.54
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "fourth-index_gather-4096-2",
+      "samples_us": [
+        7.227,
+        5.929,
+        6.033
+      ],
+      "median_us": 6.033
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "job-auto",
+      "samples_us": [
+        7.195,
+        6.347,
+        6.123
+      ],
+      "median_us": 6.347
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "duowave-index_gather-4096-2",
+      "samples_us": [
+        8.551,
+        7.573,
+        7.543
+      ],
+      "median_us": 7.573
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "duowave-index_gather-6960-2",
+      "samples_us": [
+        7.298,
+        6.18,
+        6.193
+      ],
+      "median_us": 6.193
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "twov-index_gather-3488-2",
+      "samples_us": [
+        6.912,
+        6.471,
+        6.319
+      ],
+      "median_us": 6.471
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "duowave-index_gather-3488-2",
+      "samples_us": [
+        8.654,
+        8.056,
+        7.917
+      ],
+      "median_us": 8.056
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "singlewave-index_gather-3488-2",
+      "samples_us": [
+        8.72,
+        8.056,
+        7.925
+      ],
+      "median_us": 8.056
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "fourth-index_gather-3488-4",
+      "samples_us": [
+        7.384,
+        6.164,
+        6.302
+      ],
+      "median_us": 6.302
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "twov-index_gather-3488-4",
+      "samples_us": [
+        6.95,
+        6.299,
+        6.218
+      ],
+      "median_us": 6.299
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "singlewave-index_gather-6960-2",
+      "samples_us": [
+        7.052,
+        6.215,
+        6.314
+      ],
+      "median_us": 6.314
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "twov-index_gather-4096-2",
+      "samples_us": [
+        7.131,
+        6.102,
+        6.03
+      ],
+      "median_us": 6.102
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "singlewave-index_gather-4096-2",
+      "samples_us": [
+        8.711,
+        7.633,
+        7.37
+      ],
+      "median_us": 7.633
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "fourth-index_gather-6960-2",
+      "samples_us": [
+        6.964,
+        6.629,
+        6.579
+      ],
+      "median_us": 6.629
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "duowave-index_gather-3488-4",
+      "samples_us": [
+        7.904,
+        7.124,
+        7.089
+      ],
+      "median_us": 7.124
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "twov-index_gather-6960-2",
+      "samples_us": [
+        7.291,
+        6.348,
+        6.772
+      ],
+      "median_us": 6.772
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "fourth-auto",
+      "samples_us": [
+        7.326,
+        5.926,
+        6.1
+      ],
+      "median_us": 6.1
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 0,
+      "configuration": "singlewave-index_gather-3488-4",
+      "samples_us": [
+        7.714,
+        7.368,
+        7.062
+      ],
+      "median_us": 7.368
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "fourth-index_gather-4096-2",
+      "samples_us": [
+        6.191,
+        6.222,
+        6.171
+      ],
+      "median_us": 6.191
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "fourth-index_gather-3488-4",
+      "samples_us": [
+        7.01,
+        6.285,
+        6.309
+      ],
+      "median_us": 6.309
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "job-auto",
+      "samples_us": [
+        7.28,
+        6.106,
+        6.036
+      ],
+      "median_us": 6.106
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "singlewave-index_gather-4096-2",
+      "samples_us": [
+        7.565,
+        7.553,
+        7.55
+      ],
+      "median_us": 7.553
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "twov-index_gather-3488-4",
+      "samples_us": [
+        7.252,
+        6.179,
+        6.262
+      ],
+      "median_us": 6.262
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "twov-index_gather-3488-2",
+      "samples_us": [
+        7.21,
+        6.096,
+        6.592
+      ],
+      "median_us": 6.592
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "duowave-index_gather-3488-4",
+      "samples_us": [
+        7.105,
+        6.684,
+        7.048
+      ],
+      "median_us": 7.048
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "twov-index_gather-6960-2",
+      "samples_us": [
+        6.425,
+        6.573,
+        6.323
+      ],
+      "median_us": 6.425
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "twov-index_gather-4096-2",
+      "samples_us": [
+        7.038,
+        6.149,
+        6.156
+      ],
+      "median_us": 6.156
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "singlewave-index_gather-6960-2",
+      "samples_us": [
+        6.916,
+        6.285,
+        6.239
+      ],
+      "median_us": 6.285
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "duowave-index_gather-3488-2",
+      "samples_us": [
+        9.115,
+        7.881,
+        8.172
+      ],
+      "median_us": 8.172
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "fourth-auto",
+      "samples_us": [
+        6.205,
+        5.889,
+        5.833
+      ],
+      "median_us": 5.889
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "singlewave-index_gather-3488-4",
+      "samples_us": [
+        6.672,
+        6.836,
+        6.784
+      ],
+      "median_us": 6.784
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "duowave-index_gather-6960-2",
+      "samples_us": [
+        7.505,
+        6.279,
+        6.24
+      ],
+      "median_us": 6.279
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "duowave-index_gather-4096-2",
+      "samples_us": [
+        8.148,
+        7.442,
+        7.332
+      ],
+      "median_us": 7.442
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "singlewave-index_gather-3488-2",
+      "samples_us": [
+        8.527,
+        8.175,
+        8.253
+      ],
+      "median_us": 8.253
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "fourth-index_gather-6960-2",
+      "samples_us": [
+        6.679,
+        6.642,
+        6.617
+      ],
+      "median_us": 6.642
+    },
+    {
+      "group": "pairq",
+      "case": 12,
+      "round": 1,
+      "configuration": "fourth-index_gather-3488-2",
+      "samples_us": [
+        7.279,
+        6.132,
+        6.277
+      ],
+      "median_us": 6.277
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "shortedge-flat_chunks-8208-2",
+      "samples_us": [
+        8.791,
+        8.355,
+        7.923
+      ],
+      "median_us": 8.355
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "fifth-auto",
+      "samples_us": [
+        8.146,
+        7.794,
+        7.799
+      ],
+      "median_us": 7.799
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "shortedge-flat_chunks-5472-2",
+      "samples_us": [
+        8.256,
+        7.74,
+        7.807
+      ],
+      "median_us": 7.807
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "fifth-flat_chunks-8208-1",
+      "samples_us": [
+        8.752,
+        8.298,
+        8.205
+      ],
+      "median_us": 8.298
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "fifth-flat_chunks-5472-2",
+      "samples_us": [
+        8.054,
+        7.996,
+        7.721
+      ],
+      "median_us": 7.996
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "fifth-flat_chunks-8208-2",
+      "samples_us": [
+        8.386,
+        8.388,
+        8.017
+      ],
+      "median_us": 8.386
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "shortedge-flat_chunks-4104-2",
+      "samples_us": [
+        7.862,
+        7.642,
+        7.738
+      ],
+      "median_us": 7.738
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "fifth-flat_chunks-4104-2",
+      "samples_us": [
+        8.373,
+        7.932,
+        7.786
+      ],
+      "median_us": 7.932
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "job-auto",
+      "samples_us": [
+        8.137,
+        7.923,
+        7.957
+      ],
+      "median_us": 7.957
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "shortedge-flat_chunks-8208-1",
+      "samples_us": [
+        8.168,
+        7.916,
+        7.884
+      ],
+      "median_us": 7.916
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "fifth-flat_chunks-5472-3",
+      "samples_us": [
+        8.628,
+        8.098,
+        8.193
+      ],
+      "median_us": 8.193
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 0,
+      "configuration": "shortedge-flat_chunks-5472-3",
+      "samples_us": [
+        8.246,
+        7.692,
+        7.819
+      ],
+      "median_us": 7.819
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "shortedge-flat_chunks-5472-3",
+      "samples_us": [
+        7.795,
+        7.665,
+        7.768
+      ],
+      "median_us": 7.768
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "shortedge-flat_chunks-4104-2",
+      "samples_us": [
+        7.724,
+        7.746,
+        7.77
+      ],
+      "median_us": 7.746
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "shortedge-flat_chunks-8208-2",
+      "samples_us": [
+        7.935,
+        8.03,
+        7.946
+      ],
+      "median_us": 7.946
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "fifth-flat_chunks-4104-2",
+      "samples_us": [
+        7.841,
+        7.823,
+        7.846
+      ],
+      "median_us": 7.841
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "fifth-flat_chunks-5472-2",
+      "samples_us": [
+        7.922,
+        7.976,
+        7.756
+      ],
+      "median_us": 7.922
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "fifth-flat_chunks-8208-2",
+      "samples_us": [
+        8.343,
+        7.949,
+        8.366
+      ],
+      "median_us": 8.343
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "fifth-auto",
+      "samples_us": [
+        7.764,
+        7.748,
+        7.795
+      ],
+      "median_us": 7.764
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "shortedge-flat_chunks-5472-2",
+      "samples_us": [
+        7.733,
+        7.841,
+        7.808
+      ],
+      "median_us": 7.808
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "fifth-flat_chunks-8208-1",
+      "samples_us": [
+        8.164,
+        8.013,
+        8.347
+      ],
+      "median_us": 8.164
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "shortedge-flat_chunks-8208-1",
+      "samples_us": [
+        7.793,
+        7.934,
+        7.762
+      ],
+      "median_us": 7.793
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "fifth-flat_chunks-5472-3",
+      "samples_us": [
+        7.788,
+        8.109,
+        7.759
+      ],
+      "median_us": 7.788
+    },
+    {
+      "group": "edgeq",
+      "case": 8,
+      "round": 1,
+      "configuration": "job-auto",
+      "samples_us": [
+        7.801,
+        7.742,
+        7.759
+      ],
+      "median_us": 7.759
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 0,
+      "configuration": "fifth-auto",
+      "samples_us": [
+        6.989,
+        7.234,
+        6.303
+      ],
+      "median_us": 6.989
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 0,
+      "configuration": "sololate-index_gather-4096-2",
+      "samples_us": [
+        7.007,
+        6.28,
+        6.354
+      ],
+      "median_us": 6.354
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 0,
+      "configuration": "sololate-index_gather-6960-2",
+      "samples_us": [
+        7.182,
+        6.49,
+        6.479
+      ],
+      "median_us": 6.49
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 0,
+      "configuration": "solo-index_gather-4096-2",
+      "samples_us": [
+        6.895,
+        6.219,
+        5.929
+      ],
+      "median_us": 6.219
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 0,
+      "configuration": "solo-index_gather-6960-2",
+      "samples_us": [
+        6.851,
+        6.529,
+        6.232
+      ],
+      "median_us": 6.529
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 0,
+      "configuration": "sololate-index_gather-3488-2",
+      "samples_us": [
+        7.207,
+        6.249,
+        6.315
+      ],
+      "median_us": 6.315
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 0,
+      "configuration": "job-auto",
+      "samples_us": [
+        7.29,
+        6.291,
+        6.346
+      ],
+      "median_us": 6.346
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 0,
+      "configuration": "solo-index_gather-3488-2",
+      "samples_us": [
+        7.127,
+        6.133,
+        6.16
+      ],
+      "median_us": 6.16
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 1,
+      "configuration": "sololate-index_gather-4096-2",
+      "samples_us": [
+        6.5,
+        6.385,
+        6.807
+      ],
+      "median_us": 6.5
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 1,
+      "configuration": "fifth-auto",
+      "samples_us": [
+        6.247,
+        6.4,
+        6.103
+      ],
+      "median_us": 6.247
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 1,
+      "configuration": "solo-index_gather-3488-2",
+      "samples_us": [
+        5.804,
+        6.084,
+        6.08
+      ],
+      "median_us": 6.08
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 1,
+      "configuration": "solo-index_gather-4096-2",
+      "samples_us": [
+        6.317,
+        6.237,
+        6.323
+      ],
+      "median_us": 6.317
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 1,
+      "configuration": "job-auto",
+      "samples_us": [
+        6.594,
+        6.456,
+        6.529
+      ],
+      "median_us": 6.529
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 1,
+      "configuration": "sololate-index_gather-3488-2",
+      "samples_us": [
+        6.353,
+        6.369,
+        6.38
+      ],
+      "median_us": 6.369
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 1,
+      "configuration": "solo-index_gather-6960-2",
+      "samples_us": [
+        6.271,
+        6.213,
+        6.343
+      ],
+      "median_us": 6.271
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 1,
+      "configuration": "sololate-index_gather-6960-2",
+      "samples_us": [
+        6.496,
+        6.531,
+        6.669
+      ],
+      "median_us": 6.531
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 2,
+      "configuration": "sololate-index_gather-6960-2",
+      "samples_us": [
+        6.443,
+        6.497,
+        6.548
+      ],
+      "median_us": 6.497
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 2,
+      "configuration": "job-auto",
+      "samples_us": [
+        6.53,
+        6.321,
+        6.482
+      ],
+      "median_us": 6.482
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 2,
+      "configuration": "sololate-index_gather-3488-2",
+      "samples_us": [
+        6.297,
+        6.246,
+        6.349
+      ],
+      "median_us": 6.297
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 2,
+      "configuration": "sololate-index_gather-4096-2",
+      "samples_us": [
+        6.361,
+        6.451,
+        6.415
+      ],
+      "median_us": 6.415
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 2,
+      "configuration": "solo-index_gather-3488-2",
+      "samples_us": [
+        5.986,
+        6.112,
+        6.215
+      ],
+      "median_us": 6.112
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 2,
+      "configuration": "fifth-auto",
+      "samples_us": [
+        6.252,
+        6.171,
+        6.368
+      ],
+      "median_us": 6.252
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 2,
+      "configuration": "solo-index_gather-4096-2",
+      "samples_us": [
+        6.04,
+        6.34,
+        6.389
+      ],
+      "median_us": 6.34
+    },
+    {
+      "group": "soloq",
+      "case": 12,
+      "round": 2,
+      "configuration": "solo-index_gather-6960-2",
+      "samples_us": [
+        6.264,
+        6.222,
+        6.204
+      ],
+      "median_us": 6.222
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 0,
+      "configuration": "inter8-auto",
+      "samples_us": [
+        16.203,
+        15.468,
+        15.643
+      ],
+      "median_us": 15.643
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 0,
+      "configuration": "sololate-auto",
+      "samples_us": [
+        17.468,
+        16.044,
+        16.028
+      ],
+      "median_us": 16.044
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 0,
+      "configuration": "group8-auto",
+      "samples_us": [
+        18.212,
+        17.258,
+        17.333
+      ],
+      "median_us": 17.333
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 0,
+      "configuration": "inter2-auto",
+      "samples_us": [
+        16.573,
+        15.492,
+        15.589
+      ],
+      "median_us": 15.589
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fifth-auto",
+      "samples_us": [
+        17.75,
+        15.743,
+        15.743
+      ],
+      "median_us": 15.743
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 0,
+      "configuration": "inter4-auto",
+      "samples_us": [
+        16.201,
+        15.648,
+        15.49
+      ],
+      "median_us": 15.648
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 0,
+      "configuration": "solo-auto",
+      "samples_us": [
+        16.923,
+        15.749,
+        15.575
+      ],
+      "median_us": 15.749
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 0,
+      "configuration": "group2-auto",
+      "samples_us": [
+        16.273,
+        15.582,
+        15.79
+      ],
+      "median_us": 15.79
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 0,
+      "configuration": "group4-auto",
+      "samples_us": [
+        16.121,
+        15.998,
+        15.463
+      ],
+      "median_us": 15.998
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 0,
+      "configuration": "job-auto",
+      "samples_us": [
+        16.55,
+        16.027,
+        15.76
+      ],
+      "median_us": 16.027
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 1,
+      "configuration": "group8-auto",
+      "samples_us": [
+        17.352,
+        17.182,
+        17.154
+      ],
+      "median_us": 17.182
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fifth-auto",
+      "samples_us": [
+        15.868,
+        17.387,
+        15.887
+      ],
+      "median_us": 15.887
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 1,
+      "configuration": "solo-auto",
+      "samples_us": [
+        16.482,
+        15.605,
+        15.756
+      ],
+      "median_us": 15.756
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 1,
+      "configuration": "inter2-auto",
+      "samples_us": [
+        15.392,
+        15.441,
+        15.556
+      ],
+      "median_us": 15.441
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 1,
+      "configuration": "inter8-auto",
+      "samples_us": [
+        15.672,
+        15.555,
+        15.624
+      ],
+      "median_us": 15.624
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 1,
+      "configuration": "job-auto",
+      "samples_us": [
+        16.049,
+        16.165,
+        16.198
+      ],
+      "median_us": 16.165
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 1,
+      "configuration": "sololate-auto",
+      "samples_us": [
+        15.99,
+        15.96,
+        16.161
+      ],
+      "median_us": 15.99
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 1,
+      "configuration": "group2-auto",
+      "samples_us": [
+        15.637,
+        15.659,
+        15.531
+      ],
+      "median_us": 15.637
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 1,
+      "configuration": "inter4-auto",
+      "samples_us": [
+        15.639,
+        15.739,
+        15.552
+      ],
+      "median_us": 15.639
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 1,
+      "configuration": "group4-auto",
+      "samples_us": [
+        15.442,
+        15.449,
+        15.314
+      ],
+      "median_us": 15.442
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 2,
+      "configuration": "group4-auto",
+      "samples_us": [
+        15.775,
+        15.474,
+        15.516
+      ],
+      "median_us": 15.516
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 2,
+      "configuration": "group8-auto",
+      "samples_us": [
+        17.057,
+        17.252,
+        17.365
+      ],
+      "median_us": 17.252
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 2,
+      "configuration": "job-auto",
+      "samples_us": [
+        16.044,
+        15.77,
+        16.111
+      ],
+      "median_us": 16.044
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 2,
+      "configuration": "inter8-auto",
+      "samples_us": [
+        15.585,
+        15.547,
+        15.54
+      ],
+      "median_us": 15.547
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 2,
+      "configuration": "solo-auto",
+      "samples_us": [
+        15.64,
+        15.612,
+        15.461
+      ],
+      "median_us": 15.612
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 2,
+      "configuration": "sololate-auto",
+      "samples_us": [
+        15.996,
+        15.915,
+        16.12
+      ],
+      "median_us": 15.996
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 2,
+      "configuration": "fifth-auto",
+      "samples_us": [
+        15.629,
+        15.668,
+        15.699
+      ],
+      "median_us": 15.668
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 2,
+      "configuration": "inter4-auto",
+      "samples_us": [
+        15.585,
+        15.463,
+        15.804
+      ],
+      "median_us": 15.585
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 2,
+      "configuration": "inter2-auto",
+      "samples_us": [
+        15.619,
+        15.549,
+        15.839
+      ],
+      "median_us": 15.619
+    },
+    {
+      "group": "soloq",
+      "case": 20,
+      "round": 2,
+      "configuration": "group2-auto",
+      "samples_us": [
+        15.457,
+        15.516,
+        15.432
+      ],
+      "median_us": 15.457
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "pairedge-index_gather-6944-1",
+      "samples_us": [
+        6.925,
+        6.935,
+        6.098
+      ],
+      "median_us": 6.925
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "pairedge-index_gather-6944-2",
+      "samples_us": [
+        7.394,
+        7.094,
+        7.046
+      ],
+      "median_us": 7.094
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "solo-index_gather-6944-1",
+      "samples_us": [
+        7.095,
+        6.61,
+        7.307
+      ],
+      "median_us": 7.095
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "solo-index_gather-3472-4",
+      "samples_us": [
+        6.58,
+        6.438,
+        6.206
+      ],
+      "median_us": 6.438
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "solo-index_gather-13888-1",
+      "samples_us": [
+        8.121,
+        7.46,
+        7.737
+      ],
+      "median_us": 7.737
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "pairedge-index_gather-3472-4",
+      "samples_us": [
+        8.891,
+        8.456,
+        8.718
+      ],
+      "median_us": 8.718
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "solo-index_gather-3472-2",
+      "samples_us": [
+        6.86,
+        6.268,
+        6.541
+      ],
+      "median_us": 6.541
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "fifth-auto",
+      "samples_us": [
+        7.32,
+        6.052,
+        6.116
+      ],
+      "median_us": 6.116
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "pairedge-index_gather-13888-1",
+      "samples_us": [
+        7.26,
+        6.534,
+        6.506
+      ],
+      "median_us": 6.534
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "solo-index_gather-6944-2",
+      "samples_us": [
+        7.066,
+        7.077,
+        6.871
+      ],
+      "median_us": 7.066
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "job-auto",
+      "samples_us": [
+        6.703,
+        6.27,
+        6.15
+      ],
+      "median_us": 6.27
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 0,
+      "configuration": "pairedge-index_gather-3472-2",
+      "samples_us": [
+        6.893,
+        6.184,
+        6.202
+      ],
+      "median_us": 6.202
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "solo-index_gather-3472-4",
+      "samples_us": [
+        6.487,
+        6.021,
+        6.4
+      ],
+      "median_us": 6.4
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "solo-index_gather-6944-1",
+      "samples_us": [
+        6.727,
+        7.004,
+        6.701
+      ],
+      "median_us": 6.727
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "pairedge-index_gather-6944-1",
+      "samples_us": [
+        6.118,
+        6.022,
+        6.187
+      ],
+      "median_us": 6.118
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "pairedge-index_gather-13888-1",
+      "samples_us": [
+        6.596,
+        6.586,
+        6.564
+      ],
+      "median_us": 6.586
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "pairedge-index_gather-3472-2",
+      "samples_us": [
+        6.004,
+        6.327,
+        6.061
+      ],
+      "median_us": 6.061
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "pairedge-index_gather-6944-2",
+      "samples_us": [
+        7.003,
+        6.985,
+        7.016
+      ],
+      "median_us": 7.003
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "job-auto",
+      "samples_us": [
+        6.84,
+        6.284,
+        6.215
+      ],
+      "median_us": 6.284
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "pairedge-index_gather-3472-4",
+      "samples_us": [
+        8.732,
+        8.781,
+        8.962
+      ],
+      "median_us": 8.781
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "solo-index_gather-13888-1",
+      "samples_us": [
+        7.973,
+        7.135,
+        7.739
+      ],
+      "median_us": 7.739
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "fifth-auto",
+      "samples_us": [
+        5.878,
+        6.129,
+        6.004
+      ],
+      "median_us": 6.004
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "solo-index_gather-6944-2",
+      "samples_us": [
+        7.371,
+        6.377,
+        6.923
+      ],
+      "median_us": 6.923
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 1,
+      "configuration": "solo-index_gather-3472-2",
+      "samples_us": [
+        6.471,
+        6.375,
+        6.416
+      ],
+      "median_us": 6.416
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "job-auto",
+      "samples_us": [
+        6.374,
+        6.027,
+        6.11
+      ],
+      "median_us": 6.11
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "solo-index_gather-3472-4",
+      "samples_us": [
+        6.602,
+        6.218,
+        6.462
+      ],
+      "median_us": 6.462
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "solo-index_gather-13888-1",
+      "samples_us": [
+        8.279,
+        7.865,
+        7.529
+      ],
+      "median_us": 7.865
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "pairedge-index_gather-6944-2",
+      "samples_us": [
+        6.839,
+        6.991,
+        7.048
+      ],
+      "median_us": 6.991
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "fifth-auto",
+      "samples_us": [
+        6.026,
+        6.031,
+        6.124
+      ],
+      "median_us": 6.031
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "solo-index_gather-6944-2",
+      "samples_us": [
+        6.609,
+        6.923,
+        6.563
+      ],
+      "median_us": 6.609
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "solo-index_gather-6944-1",
+      "samples_us": [
+        7.254,
+        6.477,
+        6.677
+      ],
+      "median_us": 6.677
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "solo-index_gather-3472-2",
+      "samples_us": [
+        6.29,
+        6.516,
+        6.548
+      ],
+      "median_us": 6.516
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "pairedge-index_gather-3472-4",
+      "samples_us": [
+        8.732,
+        8.631,
+        8.488
+      ],
+      "median_us": 8.631
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "pairedge-index_gather-3472-2",
+      "samples_us": [
+        6.107,
+        6.104,
+        6.058
+      ],
+      "median_us": 6.104
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "pairedge-index_gather-13888-1",
+      "samples_us": [
+        6.651,
+        6.588,
+        6.538
+      ],
+      "median_us": 6.588
+    },
+    {
+      "group": "peq",
+      "case": 12,
+      "round": 2,
+      "configuration": "pairedge-index_gather-6944-1",
+      "samples_us": [
+        6.006,
+        6.156,
+        6.027
+      ],
+      "median_us": 6.027
+    }
+  ]
+}

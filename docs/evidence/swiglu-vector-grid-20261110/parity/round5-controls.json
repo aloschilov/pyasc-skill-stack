@@ -1,0 +1,2744 @@
+{
+  "archives_sha256": [
+    "7b37bc4a120d5db87cccea1f240e30a770ff020612cc4ba9ec23198be8ffe32e",
+    "2b92001aeb5ef08e692d600c5d3b81db4aa109aaa6ed1d649142aa3fda6a5a43"
+  ],
+  "results": [
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-compact_slab-48-2",
+      "samples_us": [
+        17.066,
+        16.094,
+        16.141
+      ],
+      "median_us": 16.141
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "duowave-compact_slab-64-2",
+      "samples_us": [
+        17.152,
+        16.646,
+        16.698
+      ],
+      "median_us": 16.698
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-compact_slab-96-2",
+      "samples_us": [
+        17.131,
+        16.553,
+        16.835
+      ],
+      "median_us": 16.835
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "duowave-compact_slab-48-2",
+      "samples_us": [
+        17.396,
+        16.248,
+        16.33
+      ],
+      "median_us": 16.33
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-compact_slab-64-2",
+      "samples_us": [
+        17.383,
+        16.478,
+        16.468
+      ],
+      "median_us": 16.478
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-compact_slab-64-3",
+      "samples_us": [
+        16.8,
+        16.52,
+        16.316
+      ],
+      "median_us": 16.52
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-auto",
+      "samples_us": [
+        16.596,
+        15.629,
+        15.792
+      ],
+      "median_us": 15.792
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "duowave-compact_slab-64-3",
+      "samples_us": [
+        17.368,
+        16.3,
+        16.518
+      ],
+      "median_us": 16.518
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-compact_slab-64-2",
+      "samples_us": [
+        16.841,
+        15.778,
+        15.696
+      ],
+      "median_us": 15.778
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-compact_slab-96-2",
+      "samples_us": [
+        16.962,
+        15.879,
+        15.925
+      ],
+      "median_us": 15.925
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-compact_slab-64-3",
+      "samples_us": [
+        17.166,
+        16.57,
+        16.457
+      ],
+      "median_us": 16.57
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-compact_slab-48-2",
+      "samples_us": [
+        17.221,
+        16.45,
+        16.159
+      ],
+      "median_us": 16.45
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "job-auto",
+      "samples_us": [
+        16.267,
+        16.015,
+        16.122
+      ],
+      "median_us": 16.122
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 0,
+      "configuration": "duowave-compact_slab-96-2",
+      "samples_us": [
+        17.807,
+        16.844,
+        16.717
+      ],
+      "median_us": 16.844
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "job-auto",
+      "samples_us": [
+        15.578,
+        16.075,
+        15.907
+      ],
+      "median_us": 15.907
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-compact_slab-48-2",
+      "samples_us": [
+        16.28,
+        16.096,
+        16.21
+      ],
+      "median_us": 16.21
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-compact_slab-64-2",
+      "samples_us": [
+        15.699,
+        15.648,
+        15.769
+      ],
+      "median_us": 15.699
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "duowave-compact_slab-48-2",
+      "samples_us": [
+        16.278,
+        16.236,
+        16.192
+      ],
+      "median_us": 16.236
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-compact_slab-64-2",
+      "samples_us": [
+        16.378,
+        16.262,
+        16.499
+      ],
+      "median_us": 16.378
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-compact_slab-64-3",
+      "samples_us": [
+        16.505,
+        16.451,
+        16.424
+      ],
+      "median_us": 16.451
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "duowave-compact_slab-64-3",
+      "samples_us": [
+        16.693,
+        16.244,
+        17.448
+      ],
+      "median_us": 16.693
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-compact_slab-96-2",
+      "samples_us": [
+        17.084,
+        16.71,
+        16.791
+      ],
+      "median_us": 16.791
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-auto",
+      "samples_us": [
+        15.764,
+        15.588,
+        15.811
+      ],
+      "median_us": 15.764
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "duowave-compact_slab-96-2",
+      "samples_us": [
+        16.796,
+        16.522,
+        16.568
+      ],
+      "median_us": 16.568
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-compact_slab-64-3",
+      "samples_us": [
+        16.187,
+        17.175,
+        16.288
+      ],
+      "median_us": 16.288
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-compact_slab-96-2",
+      "samples_us": [
+        15.971,
+        16.299,
+        15.716
+      ],
+      "median_us": 15.971
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-compact_slab-48-2",
+      "samples_us": [
+        16.332,
+        16.293,
+        16.21
+      ],
+      "median_us": 16.293
+    },
+    {
+      "group": "waves",
+      "case": 20,
+      "round": 1,
+      "configuration": "duowave-compact_slab-64-2",
+      "samples_us": [
+        16.172,
+        16.751,
+        16.704
+      ],
+      "median_us": 16.704
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "singlewave-index_gather-464-2",
+      "samples_us": [
+        8.823,
+        7.98,
+        7.922
+      ],
+      "median_us": 7.98
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "twov-index_gather-464-2",
+      "samples_us": [
+        7.032,
+        5.98,
+        6.378
+      ],
+      "median_us": 6.378
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "twov-index_gather-464-4",
+      "samples_us": [
+        6.982,
+        6.165,
+        6.142
+      ],
+      "median_us": 6.165
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "fourth-auto",
+      "samples_us": [
+        6.773,
+        6.267,
+        6.308
+      ],
+      "median_us": 6.308
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "fourth-index_gather-624-3",
+      "samples_us": [
+        7.103,
+        6.167,
+        6.143
+      ],
+      "median_us": 6.167
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "singlewave-index_gather-928-2",
+      "samples_us": [
+        6.835,
+        5.99,
+        6.003
+      ],
+      "median_us": 6.003
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "twov-index_gather-928-2",
+      "samples_us": [
+        6.732,
+        6.528,
+        6.146
+      ],
+      "median_us": 6.528
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "singlewave-index_gather-464-4",
+      "samples_us": [
+        7.611,
+        6.86,
+        6.884
+      ],
+      "median_us": 6.884
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "duowave-index_gather-464-4",
+      "samples_us": [
+        7.65,
+        6.913,
+        7.075
+      ],
+      "median_us": 7.075
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "singlewave-index_gather-624-3",
+      "samples_us": [
+        6.892,
+        6.318,
+        6.62
+      ],
+      "median_us": 6.62
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "duowave-index_gather-624-3",
+      "samples_us": [
+        7.238,
+        6.66,
+        6.358
+      ],
+      "median_us": 6.66
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "twov-index_gather-624-3",
+      "samples_us": [
+        6.647,
+        6.194,
+        6.576
+      ],
+      "median_us": 6.576
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "fourth-index_gather-928-2",
+      "samples_us": [
+        6.804,
+        6.012,
+        6.074
+      ],
+      "median_us": 6.074
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "duowave-index_gather-928-2",
+      "samples_us": [
+        6.875,
+        5.978,
+        6.089
+      ],
+      "median_us": 6.089
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "fourth-index_gather-464-2",
+      "samples_us": [
+        6.362,
+        6.104,
+        5.994
+      ],
+      "median_us": 6.104
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "duowave-index_gather-464-2",
+      "samples_us": [
+        8.599,
+        7.766,
+        7.863
+      ],
+      "median_us": 7.863
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "fourth-index_gather-464-4",
+      "samples_us": [
+        6.897,
+        6.215,
+        5.998
+      ],
+      "median_us": 6.215
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 0,
+      "configuration": "job-auto",
+      "samples_us": [
+        7.036,
+        6.528,
+        6.469
+      ],
+      "median_us": 6.528
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "fourth-index_gather-464-4",
+      "samples_us": [
+        6.232,
+        6.113,
+        6.173
+      ],
+      "median_us": 6.173
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "duowave-index_gather-624-3",
+      "samples_us": [
+        6.425,
+        6.391,
+        6.991
+      ],
+      "median_us": 6.425
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "fourth-auto",
+      "samples_us": [
+        6.262,
+        6.089,
+        6.073
+      ],
+      "median_us": 6.089
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "fourth-index_gather-624-3",
+      "samples_us": [
+        6.174,
+        6.15,
+        6.199
+      ],
+      "median_us": 6.174
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "twov-index_gather-464-4",
+      "samples_us": [
+        6.181,
+        6.111,
+        6.065
+      ],
+      "median_us": 6.111
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "singlewave-index_gather-464-2",
+      "samples_us": [
+        7.912,
+        7.904,
+        7.973
+      ],
+      "median_us": 7.912
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "twov-index_gather-464-2",
+      "samples_us": [
+        6.43,
+        6.442,
+        6.162
+      ],
+      "median_us": 6.43
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "twov-index_gather-928-2",
+      "samples_us": [
+        6.38,
+        6.042,
+        6.163
+      ],
+      "median_us": 6.163
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "singlewave-index_gather-464-4",
+      "samples_us": [
+        7.226,
+        6.803,
+        6.847
+      ],
+      "median_us": 6.847
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "duowave-index_gather-464-2",
+      "samples_us": [
+        7.803,
+        7.735,
+        8.093
+      ],
+      "median_us": 7.803
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "singlewave-index_gather-624-3",
+      "samples_us": [
+        6.471,
+        6.292,
+        6.453
+      ],
+      "median_us": 6.453
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "singlewave-index_gather-928-2",
+      "samples_us": [
+        6.211,
+        6.033,
+        6.457
+      ],
+      "median_us": 6.211
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "duowave-index_gather-464-4",
+      "samples_us": [
+        6.878,
+        7.273,
+        6.807
+      ],
+      "median_us": 6.878
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "twov-index_gather-624-3",
+      "samples_us": [
+        6.078,
+        6.217,
+        6.105
+      ],
+      "median_us": 6.105
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "fourth-index_gather-928-2",
+      "samples_us": [
+        6.473,
+        6.355,
+        6.116
+      ],
+      "median_us": 6.355
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "duowave-index_gather-928-2",
+      "samples_us": [
+        6.157,
+        6.05,
+        6.214
+      ],
+      "median_us": 6.157
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "job-auto",
+      "samples_us": [
+        6.526,
+        6.341,
+        6.498
+      ],
+      "median_us": 6.498
+    },
+    {
+      "group": "waves",
+      "case": 9,
+      "round": 1,
+      "configuration": "fourth-index_gather-464-2",
+      "samples_us": [
+        5.926,
+        6.186,
+        6.197
+      ],
+      "median_us": 6.186
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "job-auto",
+      "samples_us": [
+        5.562,
+        4.72,
+        5.094
+      ],
+      "median_us": 5.094
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-batched_rows-2-2",
+      "samples_us": [
+        5.853,
+        5.406,
+        5.396
+      ],
+      "median_us": 5.406
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-batched_rows-4-3",
+      "samples_us": [
+        6.863,
+        6.067,
+        5.841
+      ],
+      "median_us": 6.067
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-auto",
+      "samples_us": [
+        5.603,
+        4.882,
+        4.643
+      ],
+      "median_us": 4.882
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-batched_rows-8-1",
+      "samples_us": [
+        6.223,
+        5.532,
+        5.397
+      ],
+      "median_us": 5.532
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-batched_rows-8-2",
+      "samples_us": [
+        6.065,
+        5.437,
+        5.478
+      ],
+      "median_us": 5.478
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-batched_rows-8-2",
+      "samples_us": [
+        5.438,
+        5.125,
+        5.185
+      ],
+      "median_us": 5.185
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-batched_rows-4-3",
+      "samples_us": [
+        5.781,
+        5.469,
+        5.246
+      ],
+      "median_us": 5.469
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-batched_rows-8-1",
+      "samples_us": [
+        6.067,
+        5.574,
+        5.406
+      ],
+      "median_us": 5.574
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-batched_rows-16-1",
+      "samples_us": [
+        6.373,
+        5.773,
+        5.686
+      ],
+      "median_us": 5.773
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-batched_rows-16-1",
+      "samples_us": [
+        5.998,
+        5.77,
+        5.855
+      ],
+      "median_us": 5.855
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-batched_rows-2-2",
+      "samples_us": [
+        5.912,
+        5.493,
+        5.602
+      ],
+      "median_us": 5.602
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-batched_rows-8-1",
+      "samples_us": [
+        5.527,
+        5.466,
+        5.5
+      ],
+      "median_us": 5.5
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-batched_rows-4-3",
+      "samples_us": [
+        5.228,
+        5.197,
+        5.336
+      ],
+      "median_us": 5.228
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-batched_rows-8-2",
+      "samples_us": [
+        5.159,
+        5.134,
+        5.2
+      ],
+      "median_us": 5.159
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-batched_rows-2-2",
+      "samples_us": [
+        5.661,
+        5.264,
+        5.263
+      ],
+      "median_us": 5.264
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-batched_rows-8-1",
+      "samples_us": [
+        5.432,
+        5.431,
+        5.449
+      ],
+      "median_us": 5.432
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-batched_rows-16-1",
+      "samples_us": [
+        5.73,
+        5.744,
+        5.725
+      ],
+      "median_us": 5.73
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-batched_rows-16-1",
+      "samples_us": [
+        5.722,
+        5.836,
+        5.714
+      ],
+      "median_us": 5.722
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-batched_rows-4-3",
+      "samples_us": [
+        6.271,
+        6.398,
+        5.743
+      ],
+      "median_us": 6.271
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-batched_rows-2-2",
+      "samples_us": [
+        5.541,
+        5.728,
+        5.643
+      ],
+      "median_us": 5.643
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "job-auto",
+      "samples_us": [
+        4.718,
+        4.853,
+        4.798
+      ],
+      "median_us": 4.798
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-batched_rows-8-2",
+      "samples_us": [
+        5.457,
+        5.453,
+        5.41
+      ],
+      "median_us": 5.453
+    },
+    {
+      "group": "smallq",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-auto",
+      "samples_us": [
+        4.734,
+        4.61,
+        4.854
+      ],
+      "median_us": 4.734
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "bflinear-flat_chunks-4832-2",
+      "samples_us": [
+        8.42,
+        8.112,
+        7.716
+      ],
+      "median_us": 8.112
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "fourth-flat_chunks-14464-1",
+      "samples_us": [
+        9.409,
+        9.005,
+        9.058
+      ],
+      "median_us": 9.058
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "bflinear-flat_chunks-8192-2",
+      "samples_us": [
+        9.636,
+        9.363,
+        9.09
+      ],
+      "median_us": 9.363
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "bflinear-flat_chunks-9648-2",
+      "samples_us": [
+        8.177,
+        8.055,
+        8.078
+      ],
+      "median_us": 8.078
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "fourth-flat_chunks-7232-2",
+      "samples_us": [
+        8.234,
+        7.585,
+        7.974
+      ],
+      "median_us": 7.974
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "fourth-flat_chunks-8192-2",
+      "samples_us": [
+        7.816,
+        7.69,
+        7.612
+      ],
+      "median_us": 7.69
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "bflinear-flat_chunks-7232-2",
+      "samples_us": [
+        7.68,
+        7.797,
+        7.522
+      ],
+      "median_us": 7.68
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "job-auto",
+      "samples_us": [
+        8.263,
+        8.06,
+        8.284
+      ],
+      "median_us": 8.263
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "fourth-flat_chunks-9648-2",
+      "samples_us": [
+        8.334,
+        7.988,
+        8.145
+      ],
+      "median_us": 8.145
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "fourth-flat_chunks-4832-2",
+      "samples_us": [
+        8.007,
+        7.644,
+        7.6
+      ],
+      "median_us": 7.644
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "fourth-auto",
+      "samples_us": [
+        7.467,
+        7.686,
+        7.876
+      ],
+      "median_us": 7.686
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 0,
+      "configuration": "bflinear-flat_chunks-14464-1",
+      "samples_us": [
+        9.786,
+        9.254,
+        9.497
+      ],
+      "median_us": 9.497
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "fourth-flat_chunks-8192-2",
+      "samples_us": [
+        8.156,
+        8.046,
+        7.608
+      ],
+      "median_us": 8.046
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "fourth-flat_chunks-7232-2",
+      "samples_us": [
+        7.541,
+        7.787,
+        7.826
+      ],
+      "median_us": 7.787
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "bflinear-flat_chunks-7232-2",
+      "samples_us": [
+        7.698,
+        7.525,
+        7.433
+      ],
+      "median_us": 7.525
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "fourth-flat_chunks-9648-2",
+      "samples_us": [
+        8.086,
+        8.119,
+        8.041
+      ],
+      "median_us": 8.086
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "job-auto",
+      "samples_us": [
+        7.97,
+        7.937,
+        8.084
+      ],
+      "median_us": 7.97
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "bflinear-flat_chunks-8192-2",
+      "samples_us": [
+        9.222,
+        9.267,
+        9.337
+      ],
+      "median_us": 9.267
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "bflinear-flat_chunks-14464-1",
+      "samples_us": [
+        9.379,
+        9.354,
+        9.204
+      ],
+      "median_us": 9.354
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "fourth-flat_chunks-14464-1",
+      "samples_us": [
+        9.166,
+        9.218,
+        9.259
+      ],
+      "median_us": 9.218
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "fourth-auto",
+      "samples_us": [
+        7.721,
+        7.658,
+        7.623
+      ],
+      "median_us": 7.658
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "bflinear-flat_chunks-4832-2",
+      "samples_us": [
+        7.65,
+        7.984,
+        7.521
+      ],
+      "median_us": 7.65
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "fourth-flat_chunks-4832-2",
+      "samples_us": [
+        7.688,
+        7.429,
+        7.845
+      ],
+      "median_us": 7.688
+    },
+    {
+      "group": "smallq",
+      "case": 16,
+      "round": 1,
+      "configuration": "bflinear-flat_chunks-9648-2",
+      "samples_us": [
+        8.077,
+        8.164,
+        7.955
+      ],
+      "median_us": 8.077
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-128-2-72",
+      "samples_us": [
+        16.774,
+        16.193,
+        16.222
+      ],
+      "median_us": 16.222
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-128-1-72",
+      "samples_us": [
+        19.841,
+        19.451,
+        19.013
+      ],
+      "median_us": 19.451
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-192-1-68",
+      "samples_us": [
+        20.478,
+        19.444,
+        19.734
+      ],
+      "median_us": 19.734
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-96-2-68",
+      "samples_us": [
+        17.51,
+        16.218,
+        16.139
+      ],
+      "median_us": 16.218
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-64-2-64",
+      "samples_us": [
+        17.472,
+        16.677,
+        16.812
+      ],
+      "median_us": 16.812
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-128-1-72",
+      "samples_us": [
+        20.801,
+        19.492,
+        19.15
+      ],
+      "median_us": 19.492
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-128-2-68",
+      "samples_us": [
+        16.348,
+        16.342,
+        16.461
+      ],
+      "median_us": 16.348
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-128-2-68",
+      "samples_us": [
+        16.732,
+        16.431,
+        16.095
+      ],
+      "median_us": 16.431
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-192-1-68",
+      "samples_us": [
+        20.573,
+        19.466,
+        19.485
+      ],
+      "median_us": 19.485
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-128-2-72",
+      "samples_us": [
+        18.35,
+        17.472,
+        17.085
+      ],
+      "median_us": 17.472
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-192-1-72",
+      "samples_us": [
+        21.194,
+        20.215,
+        20.077
+      ],
+      "median_us": 20.215
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-48-2-68",
+      "samples_us": [
+        17.189,
+        16.793,
+        16.407
+      ],
+      "median_us": 16.793
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-64-2-64",
+      "samples_us": [
+        17.23,
+        16.578,
+        16.561
+      ],
+      "median_us": 16.578
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-128-2-72",
+      "samples_us": [
+        17.585,
+        16.454,
+        16.535
+      ],
+      "median_us": 16.535
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-64-2-64",
+      "samples_us": [
+        17.383,
+        16.668,
+        16.753
+      ],
+      "median_us": 16.753
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-64-2-68",
+      "samples_us": [
+        16.684,
+        15.774,
+        15.783
+      ],
+      "median_us": 15.783
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-96-2-68",
+      "samples_us": [
+        16.353,
+        16.009,
+        15.973
+      ],
+      "median_us": 16.009
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-128-1-72",
+      "samples_us": [
+        19.517,
+        19.352,
+        19.027
+      ],
+      "median_us": 19.352
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-96-2-68",
+      "samples_us": [
+        17.259,
+        15.977,
+        16.463
+      ],
+      "median_us": 16.463
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-64-2-72",
+      "samples_us": [
+        15.807,
+        15.74,
+        15.77
+      ],
+      "median_us": 15.77
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-192-1-72",
+      "samples_us": [
+        20.831,
+        19.742,
+        19.878
+      ],
+      "median_us": 19.878
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-64-2-68",
+      "samples_us": [
+        16.695,
+        15.667,
+        15.633
+      ],
+      "median_us": 15.667
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "singlewave-48-2-68",
+      "samples_us": [
+        17.378,
+        16.468,
+        16.304
+      ],
+      "median_us": 16.468
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-192-1-72",
+      "samples_us": [
+        21.604,
+        19.869,
+        19.959
+      ],
+      "median_us": 19.959
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "job-0-0-72",
+      "samples_us": [
+        16.555,
+        15.761,
+        15.746
+      ],
+      "median_us": 15.761
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-64-2-68",
+      "samples_us": [
+        16.095,
+        15.843,
+        15.65
+      ],
+      "median_us": 15.843
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "twov-128-2-68",
+      "samples_us": [
+        17.435,
+        16.465,
+        16.459
+      ],
+      "median_us": 16.465
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-48-2-68",
+      "samples_us": [
+        18.163,
+        16.07,
+        16.088
+      ],
+      "median_us": 16.088
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-192-1-68",
+      "samples_us": [
+        19.649,
+        19.57,
+        19.09
+      ],
+      "median_us": 19.57
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-192-1-72",
+      "samples_us": [
+        20.179,
+        19.523,
+        19.781
+      ],
+      "median_us": 19.781
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-128-1-72",
+      "samples_us": [
+        19.126,
+        19.019,
+        19.456
+      ],
+      "median_us": 19.126
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-48-2-68",
+      "samples_us": [
+        16.245,
+        15.483,
+        16.029
+      ],
+      "median_us": 16.029
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-128-2-68",
+      "samples_us": [
+        16.542,
+        16.381,
+        16.988
+      ],
+      "median_us": 16.542
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-64-2-64",
+      "samples_us": [
+        16.563,
+        16.408,
+        16.498
+      ],
+      "median_us": 16.498
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-64-2-72",
+      "samples_us": [
+        15.613,
+        15.523,
+        15.875
+      ],
+      "median_us": 15.613
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-64-2-68",
+      "samples_us": [
+        15.715,
+        15.655,
+        15.84
+      ],
+      "median_us": 15.715
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-128-2-72",
+      "samples_us": [
+        16.173,
+        16.468,
+        16.468
+      ],
+      "median_us": 16.468
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "job-0-0-72",
+      "samples_us": [
+        15.81,
+        16.102,
+        15.832
+      ],
+      "median_us": 15.832
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-96-2-68",
+      "samples_us": [
+        16.064,
+        16.332,
+        16.054
+      ],
+      "median_us": 16.064
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-192-1-72",
+      "samples_us": [
+        20.448,
+        20.354,
+        20.281
+      ],
+      "median_us": 20.354
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-64-2-68",
+      "samples_us": [
+        15.821,
+        15.557,
+        15.911
+      ],
+      "median_us": 15.821
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-192-1-68",
+      "samples_us": [
+        19.234,
+        19.611,
+        19.648
+      ],
+      "median_us": 19.611
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-48-2-68",
+      "samples_us": [
+        16.273,
+        16.269,
+        16.755
+      ],
+      "median_us": 16.273
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-128-1-72",
+      "samples_us": [
+        18.893,
+        19.175,
+        19.422
+      ],
+      "median_us": 19.175
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-128-2-72",
+      "samples_us": [
+        16.241,
+        16.188,
+        16.394
+      ],
+      "median_us": 16.241
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-192-1-68",
+      "samples_us": [
+        19.195,
+        19.548,
+        19.257
+      ],
+      "median_us": 19.257
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-192-1-68",
+      "samples_us": [
+        18.855,
+        19.259,
+        19.193
+      ],
+      "median_us": 19.193
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-48-2-68",
+      "samples_us": [
+        15.765,
+        16.262,
+        15.814
+      ],
+      "median_us": 15.814
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-64-2-64",
+      "samples_us": [
+        16.454,
+        16.654,
+        16.779
+      ],
+      "median_us": 16.654
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-128-2-68",
+      "samples_us": [
+        16.392,
+        16.536,
+        16.579
+      ],
+      "median_us": 16.536
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-192-1-72",
+      "samples_us": [
+        19.756,
+        20.049,
+        20.146
+      ],
+      "median_us": 20.049
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-64-2-68",
+      "samples_us": [
+        15.604,
+        15.969,
+        18.688
+      ],
+      "median_us": 15.969
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-128-2-72",
+      "samples_us": [
+        17.323,
+        17.23,
+        17.19
+      ],
+      "median_us": 17.23
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-128-2-68",
+      "samples_us": [
+        16.3,
+        16.473,
+        16.238
+      ],
+      "median_us": 16.3
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-128-1-72",
+      "samples_us": [
+        19.287,
+        18.275,
+        19.333
+      ],
+      "median_us": 19.287
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "singlewave-96-2-68",
+      "samples_us": [
+        16.394,
+        16.089,
+        16.457
+      ],
+      "median_us": 16.394
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-96-2-68",
+      "samples_us": [
+        16.706,
+        16.594,
+        16.455
+      ],
+      "median_us": 16.594
+    },
+    {
+      "group": "gridq",
+      "case": 20,
+      "round": 1,
+      "configuration": "twov-64-2-64",
+      "samples_us": [
+        16.576,
+        17.414,
+        16.495
+      ],
+      "median_us": 16.576
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-8-3-64",
+      "samples_us": [
+        6.227,
+        5.425,
+        5.509
+      ],
+      "median_us": 5.509
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-4-2-72",
+      "samples_us": [
+        6.143,
+        5.826,
+        6.127
+      ],
+      "median_us": 6.127
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-4-2-64",
+      "samples_us": [
+        4.977,
+        4.45,
+        4.479
+      ],
+      "median_us": 4.479
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-8-2-64",
+      "samples_us": [
+        5.659,
+        5.094,
+        5.163
+      ],
+      "median_us": 5.163
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-8-2-64",
+      "samples_us": [
+        5.607,
+        5.258,
+        5.343
+      ],
+      "median_us": 5.343
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-4-2-72",
+      "samples_us": [
+        5.34,
+        4.754,
+        4.562
+      ],
+      "median_us": 4.754
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-4-2-68",
+      "samples_us": [
+        4.547,
+        4.699,
+        4.773
+      ],
+      "median_us": 4.699
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-2-4-64",
+      "samples_us": [
+        5.103,
+        4.402,
+        4.49
+      ],
+      "median_us": 4.49
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-4-2-68",
+      "samples_us": [
+        6.261,
+        6.063,
+        6.304
+      ],
+      "median_us": 6.261
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "exactrow-4-1-64",
+      "samples_us": [
+        6.49,
+        6.54,
+        6.362
+      ],
+      "median_us": 6.49
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "job-0-0-72",
+      "samples_us": [
+        5.095,
+        4.774,
+        4.927
+      ],
+      "median_us": 4.927
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-4-2-64",
+      "samples_us": [
+        4.49,
+        4.613,
+        4.616
+      ],
+      "median_us": 4.613
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-8-3-64",
+      "samples_us": [
+        6.124,
+        5.517,
+        5.649
+      ],
+      "median_us": 5.649
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-2-4-64",
+      "samples_us": [
+        4.997,
+        4.495,
+        4.508
+      ],
+      "median_us": 4.508
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 0,
+      "configuration": "fourth-4-1-64",
+      "samples_us": [
+        6.825,
+        6.346,
+        6.391
+      ],
+      "median_us": 6.391
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-4-2-72",
+      "samples_us": [
+        5.746,
+        5.823,
+        5.668
+      ],
+      "median_us": 5.746
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-2-4-64",
+      "samples_us": [
+        4.747,
+        4.505,
+        4.736
+      ],
+      "median_us": 4.736
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-4-2-64",
+      "samples_us": [
+        4.575,
+        4.494,
+        4.555
+      ],
+      "median_us": 4.555
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-8-3-64",
+      "samples_us": [
+        5.519,
+        5.591,
+        5.643
+      ],
+      "median_us": 5.591
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-4-2-72",
+      "samples_us": [
+        4.565,
+        4.566,
+        4.526
+      ],
+      "median_us": 4.565
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-4-1-64",
+      "samples_us": [
+        6.395,
+        6.343,
+        6.421
+      ],
+      "median_us": 6.395
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-4-2-68",
+      "samples_us": [
+        4.807,
+        4.587,
+        4.62
+      ],
+      "median_us": 4.62
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-4-2-64",
+      "samples_us": [
+        4.422,
+        4.461,
+        4.414
+      ],
+      "median_us": 4.422
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "job-0-0-72",
+      "samples_us": [
+        4.957,
+        4.746,
+        4.771
+      ],
+      "median_us": 4.771
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-8-2-64",
+      "samples_us": [
+        5.294,
+        5.331,
+        5.206
+      ],
+      "median_us": 5.294
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "fourth-8-2-64",
+      "samples_us": [
+        5.124,
+        5.1,
+        5.077
+      ],
+      "median_us": 5.1
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-8-3-64",
+      "samples_us": [
+        5.638,
+        5.484,
+        5.529
+      ],
+      "median_us": 5.529
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-4-2-68",
+      "samples_us": [
+        5.982,
+        6.185,
+        6.311
+      ],
+      "median_us": 6.185
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-4-1-64",
+      "samples_us": [
+        6.286,
+        6.199,
+        6.365
+      ],
+      "median_us": 6.286
+    },
+    {
+      "group": "gones",
+      "case": 1,
+      "round": 1,
+      "configuration": "exactrow-2-4-64",
+      "samples_us": [
+        4.387,
+        4.458,
+        4.478
+      ],
+      "median_us": 4.458
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "micros-96-2-72",
+      "samples_us": [
+        17.521,
+        16.286,
+        16.345
+      ],
+      "median_us": 16.345
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "microc-96-2-72",
+      "samples_us": [
+        16.768,
+        16.714,
+        16.421
+      ],
+      "median_us": 16.714
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "micros-128-2-72",
+      "samples_us": [
+        16.439,
+        16.762,
+        17.082
+      ],
+      "median_us": 16.762
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "microc-128-2-72",
+      "samples_us": [
+        16.945,
+        16.613,
+        16.564
+      ],
+      "median_us": 16.613
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "micros-192-1-72",
+      "samples_us": [
+        21.301,
+        20.89,
+        21.057
+      ],
+      "median_us": 21.057
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "fourth-64-2-72",
+      "samples_us": [
+        16.234,
+        15.77,
+        15.637
+      ],
+      "median_us": 15.77
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "microc-128-3-72",
+      "samples_us": [
+        17.155,
+        16.383,
+        16.384
+      ],
+      "median_us": 16.384
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "micros-128-3-72",
+      "samples_us": [
+        17.75,
+        17.272,
+        17.351
+      ],
+      "median_us": 17.351
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "micros-128-1-72",
+      "samples_us": [
+        22.201,
+        21.001,
+        20.799
+      ],
+      "median_us": 21.001
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "job-0-0-72",
+      "samples_us": [
+        16.375,
+        15.962,
+        16.06
+      ],
+      "median_us": 16.06
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "microc-64-2-72",
+      "samples_us": [
+        16.182,
+        15.832,
+        15.875
+      ],
+      "median_us": 15.875
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "micros-64-2-72",
+      "samples_us": [
+        16.578,
+        16.67,
+        16.455
+      ],
+      "median_us": 16.578
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "microc-192-1-72",
+      "samples_us": [
+        19.326,
+        19.23,
+        19.172
+      ],
+      "median_us": 19.23
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 0,
+      "configuration": "microc-128-1-72",
+      "samples_us": [
+        19.019,
+        18.291,
+        17.567
+      ],
+      "median_us": 18.291
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "microc-128-3-72",
+      "samples_us": [
+        16.508,
+        16.763,
+        16.6
+      ],
+      "median_us": 16.6
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "micros-64-2-72",
+      "samples_us": [
+        16.691,
+        16.273,
+        16.478
+      ],
+      "median_us": 16.478
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "microc-64-2-72",
+      "samples_us": [
+        15.962,
+        15.908,
+        15.964
+      ],
+      "median_us": 15.962
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "microc-128-1-72",
+      "samples_us": [
+        18.396,
+        18.045,
+        17.686
+      ],
+      "median_us": 18.045
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "fourth-64-2-72",
+      "samples_us": [
+        15.642,
+        15.67,
+        15.719
+      ],
+      "median_us": 15.67
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "micros-128-2-72",
+      "samples_us": [
+        17.956,
+        17.152,
+        16.771
+      ],
+      "median_us": 17.152
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "microc-96-2-72",
+      "samples_us": [
+        16.202,
+        15.998,
+        16.211
+      ],
+      "median_us": 16.202
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "microc-192-1-72",
+      "samples_us": [
+        18.799,
+        19.034,
+        19.41
+      ],
+      "median_us": 19.034
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "micros-192-1-72",
+      "samples_us": [
+        20.687,
+        20.256,
+        20.669
+      ],
+      "median_us": 20.669
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "microc-128-2-72",
+      "samples_us": [
+        16.252,
+        16.675,
+        16.137
+      ],
+      "median_us": 16.252
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "micros-96-2-72",
+      "samples_us": [
+        16.641,
+        16.532,
+        16.378
+      ],
+      "median_us": 16.532
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "micros-128-1-72",
+      "samples_us": [
+        20.742,
+        20.972,
+        20.563
+      ],
+      "median_us": 20.742
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "job-0-0-72",
+      "samples_us": [
+        16.157,
+        16.085,
+        16.114
+      ],
+      "median_us": 16.114
+    },
+    {
+      "group": "microq",
+      "case": 20,
+      "round": 1,
+      "configuration": "micros-128-3-72",
+      "samples_us": [
+        17.276,
+        17.456,
+        17.347
+      ],
+      "median_us": 17.347
+    }
+  ]
+}

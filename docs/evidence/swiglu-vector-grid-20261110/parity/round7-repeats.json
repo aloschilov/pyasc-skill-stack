@@ -1,0 +1,1272 @@
+{
+  "device": "Ascend950PR_9599",
+  "trace_archive_sha256": "1b9579ad41ddf904fd8c983181003fe4dfc1215938a8e442a1a9ea1d0f200766",
+  "results": [
+    {
+      "case": 1,
+      "variant": "seventh",
+      "shape": [
+        1024,
+        2048
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 4.506,
+      "samples_us": [
+        5.039,
+        4.506,
+        4.429
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 2,
+      "variant": "seventh",
+      "shape": [
+        2048,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 23.579,
+      "samples_us": [
+        24.24,
+        23.316,
+        23.579
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 147456
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 3,
+      "variant": "seventh",
+      "shape": [
+        4096,
+        8192
+      ],
+      "dtype": "bfloat16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 45.34,
+      "samples_us": [
+        45.34,
+        45.072,
+        45.708
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 114688
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 4,
+      "variant": "seventh",
+      "shape": [
+        8192,
+        16384
+      ],
+      "dtype": "float16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 241.66,
+      "samples_us": [
+        241.66,
+        242.768,
+        241.499
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 196608
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 5,
+      "variant": "seventh",
+      "shape": [
+        2039,
+        65520
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 522.427,
+      "samples_us": [
+        522.412,
+        522.734,
+        522.427
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 196608
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 6,
+      "variant": "seventh",
+      "shape": [
+        1022,
+        2047
+      ],
+      "dtype": "bfloat16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 5.261,
+      "samples_us": [
+        5.994,
+        5.261,
+        5.185
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 163840
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 7,
+      "variant": "seventh",
+      "shape": [
+        1009,
+        2016
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 5.799,
+      "samples_us": [
+        6.613,
+        5.742,
+        5.799
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 96768
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 8,
+      "variant": "seventh",
+      "shape": [
+        1538,
+        1537
+      ],
+      "dtype": "float32",
+      "dim": 0,
+      "correct": true,
+      "median_us": 8.432,
+      "samples_us": [
+        8.432,
+        8.926,
+        7.833
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 98496
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 9,
+      "variant": "seventh",
+      "shape": [
+        363,
+        367,
+        14
+      ],
+      "dtype": "bfloat16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 6.98,
+      "samples_us": [
+        7.044,
+        6.98,
+        6.128
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 116928
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 10,
+      "variant": "seventh",
+      "shape": [
+        2049,
+        1024
+      ],
+      "dtype": "float16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 4.956,
+      "samples_us": [
+        5.777,
+        4.956,
+        4.622
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 11,
+      "variant": "seventh",
+      "shape": [
+        3,
+        7,
+        13,
+        1018
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 2.891,
+      "samples_us": [
+        3.699,
+        2.891,
+        2.739
+      ],
+      "launch_grid": [
+        35,
+        35,
+        35,
+        35
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 49152
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 12,
+      "variant": "seventh",
+      "shape": [
+        1000003,
+        2
+      ],
+      "dtype": "bfloat16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 5.977,
+      "samples_us": [
+        7.317,
+        5.977,
+        5.977
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 90112
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 13,
+      "variant": "seventh",
+      "shape": [
+        11,
+        13,
+        16,
+        67
+      ],
+      "dtype": "float32",
+      "dim": 2,
+      "correct": true,
+      "median_us": 2.629,
+      "samples_us": [
+        3.102,
+        2.629,
+        2.479
+      ],
+      "launch_grid": [
+        36,
+        36,
+        36,
+        36
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 25728
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 14,
+      "variant": "seventh",
+      "shape": [
+        3,
+        7,
+        11,
+        13,
+        1012
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 6.877,
+      "samples_us": [
+        7.311,
+        6.828,
+        6.877
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 15,
+      "variant": "seventh",
+      "shape": [
+        512,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 7.465,
+      "samples_us": [
+        7.838,
+        7.465,
+        7.169
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 49152
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 16,
+      "variant": "seventh",
+      "shape": [
+        254,
+        16383
+      ],
+      "dtype": "bfloat16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 7.933,
+      "samples_us": [
+        8.329,
+        7.933,
+        7.614
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 144640
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 17,
+      "variant": "seventh",
+      "shape": [
+        4096,
+        1023
+      ],
+      "dtype": "float16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 7.379,
+      "samples_us": [
+        7.956,
+        7.379,
+        7.187
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 97280
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 18,
+      "variant": "seventh",
+      "shape": [
+        2,
+        1023,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 22.602,
+      "samples_us": [
+        26.425,
+        22.577,
+        22.602
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 147456
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 19,
+      "variant": "seventh",
+      "shape": [
+        4,
+        510,
+        4097
+      ],
+      "dtype": "bfloat16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 13.21,
+      "samples_us": [
+        14.094,
+        13.21,
+        12.948
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 163840
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 20,
+      "variant": "seventh",
+      "shape": [
+        2,
+        3,
+        17,
+        512,
+        100
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 15.615,
+      "samples_us": [
+        16.185,
+        15.578,
+        15.615
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 102400
+        }
+      ],
+      "repeat": 1,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 1,
+      "variant": "seventh",
+      "shape": [
+        1024,
+        2048
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 5.377,
+      "samples_us": [
+        5.377,
+        4.495,
+        5.522
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 2,
+      "variant": "seventh",
+      "shape": [
+        2048,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 23.482,
+      "samples_us": [
+        24.35,
+        23.482,
+        23.358
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 147456
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 3,
+      "variant": "seventh",
+      "shape": [
+        4096,
+        8192
+      ],
+      "dtype": "bfloat16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 45.354,
+      "samples_us": [
+        44.921,
+        45.488,
+        45.354
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 114688
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 4,
+      "variant": "seventh",
+      "shape": [
+        8192,
+        16384
+      ],
+      "dtype": "float16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 232.567,
+      "samples_us": [
+        233.809,
+        232.396,
+        232.567
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 196608
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 5,
+      "variant": "seventh",
+      "shape": [
+        2039,
+        65520
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 522.318,
+      "samples_us": [
+        522.446,
+        521.644,
+        522.318
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 196608
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 6,
+      "variant": "seventh",
+      "shape": [
+        1022,
+        2047
+      ],
+      "dtype": "bfloat16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 5.029,
+      "samples_us": [
+        5.682,
+        5.004,
+        5.029
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 163840
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 7,
+      "variant": "seventh",
+      "shape": [
+        1009,
+        2016
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 5.828,
+      "samples_us": [
+        6.344,
+        5.8,
+        5.828
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 96768
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 8,
+      "variant": "seventh",
+      "shape": [
+        1538,
+        1537
+      ],
+      "dtype": "float32",
+      "dim": 0,
+      "correct": true,
+      "median_us": 8.361,
+      "samples_us": [
+        8.361,
+        8.636,
+        7.666
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 98496
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 9,
+      "variant": "seventh",
+      "shape": [
+        363,
+        367,
+        14
+      ],
+      "dtype": "bfloat16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 7.085,
+      "samples_us": [
+        7.089,
+        7.085,
+        6.033
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 116928
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 10,
+      "variant": "seventh",
+      "shape": [
+        2049,
+        1024
+      ],
+      "dtype": "float16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 4.755,
+      "samples_us": [
+        5.414,
+        4.755,
+        4.547
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 11,
+      "variant": "seventh",
+      "shape": [
+        3,
+        7,
+        13,
+        1018
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 2.809,
+      "samples_us": [
+        3.53,
+        2.774,
+        2.809
+      ],
+      "launch_grid": [
+        35,
+        35,
+        35,
+        35
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 49152
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 12,
+      "variant": "seventh",
+      "shape": [
+        1000003,
+        2
+      ],
+      "dtype": "bfloat16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 6.561,
+      "samples_us": [
+        6.561,
+        6.047,
+        6.861
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 90112
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 13,
+      "variant": "seventh",
+      "shape": [
+        11,
+        13,
+        16,
+        67
+      ],
+      "dtype": "float32",
+      "dim": 2,
+      "correct": true,
+      "median_us": 2.547,
+      "samples_us": [
+        3.1,
+        2.547,
+        2.421
+      ],
+      "launch_grid": [
+        36,
+        36,
+        36,
+        36
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 25728
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 14,
+      "variant": "seventh",
+      "shape": [
+        3,
+        7,
+        11,
+        13,
+        1012
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 7.552,
+      "samples_us": [
+        7.552,
+        6.619,
+        7.993
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 15,
+      "variant": "seventh",
+      "shape": [
+        512,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 7.234,
+      "samples_us": [
+        7.729,
+        7.234,
+        6.96
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 49152
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 16,
+      "variant": "seventh",
+      "shape": [
+        254,
+        16383
+      ],
+      "dtype": "bfloat16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 7.668,
+      "samples_us": [
+        8.305,
+        7.668,
+        7.492
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 144640
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 17,
+      "variant": "seventh",
+      "shape": [
+        4096,
+        1023
+      ],
+      "dtype": "float16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 8.291,
+      "samples_us": [
+        8.291,
+        8.43,
+        7.512
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 97280
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 18,
+      "variant": "seventh",
+      "shape": [
+        2,
+        1023,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 22.605,
+      "samples_us": [
+        23.52,
+        22.605,
+        22.569
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 147456
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 19,
+      "variant": "seventh",
+      "shape": [
+        4,
+        510,
+        4097
+      ],
+      "dtype": "bfloat16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 13.126,
+      "samples_us": [
+        14.052,
+        13.126,
+        12.832
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 163840
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    },
+    {
+      "case": 20,
+      "variant": "seventh",
+      "shape": [
+        2,
+        3,
+        17,
+        512,
+        100
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 15.824,
+      "samples_us": [
+        16.455,
+        15.824,
+        15.609
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "allocations": [
+        {
+          "UB": 102400
+        }
+      ],
+      "repeat": 2,
+      "candidate_sha256": "92268fc85dd5308f8c33940e9fefde5797b681d325b1010079fb63801cdc5da1"
+    }
+  ]
+}

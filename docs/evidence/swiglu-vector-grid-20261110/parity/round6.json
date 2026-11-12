@@ -1,0 +1,2461 @@
+{
+  "device": "Ascend950PR_9599",
+  "candidate_sha256": "6abe5ea8a1dede05bab6feb6dce59cbb215f94a11bda4cb4387ee74637737f6d",
+  "trace_archive_sha256": "efa1de9dfd0b97f01de1314c0f5b0b9a3819936ca4eb086b88387ccf85c08f78",
+  "results": [
+    {
+      "case": 1,
+      "variant": "sixth",
+      "shape": [
+        1024,
+        2048
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 4.528,
+      "samples_us": [
+        5.164,
+        4.378,
+        4.528
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 4,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 1024,
+            "returned": 65536
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 4,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 1024,
+            "returned": 65536
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 4,
+            "unroll": 2,
+            "per_lane": 20,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 1024,
+            "returned": 81920
+          }
+        },
+        {
+          "function": "row_geometry",
+          "integers": {
+            "rows": 1024,
+            "half": 1024,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "payload": 2048,
+            "quantum": 16,
+            "t": 4,
+            "tiles": 256,
+            "active": 72,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 1024
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 1024,
+            "half": 1024,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 4096,
+            "tile": 4,
+            "unroll": 2,
+            "CORES": 72,
+            "half_bytes": 2048
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 1024,
+            "half": 1024,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 4,
+            "u": 2,
+            "size": 2048
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "rows": 1024,
+            "half": 1024,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 4,
+            "unroll": 2,
+            "groups": 256,
+            "blocks": 72,
+            "align": 16,
+            "width": 1024,
+            "exact_blocks": 64
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_aligned_rows",
+          "AI_VECTOR_CORE",
+          5.164
+        ],
+        [
+          "swiglu_aligned_rows",
+          "AI_VECTOR_CORE",
+          4.378
+        ],
+        [
+          "swiglu_aligned_rows",
+          "AI_VECTOR_CORE",
+          4.528
+        ]
+      ]
+    },
+    {
+      "case": 2,
+      "variant": "sixth",
+      "shape": [
+        2048,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 23.268,
+      "samples_us": [
+        23.942,
+        23.245,
+        23.268
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "align32_down_elems",
+          "integers": {
+            "n": 2048,
+            "unit": 8,
+            "itemsize": 4,
+            "returned": 2048
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 2048,
+            "half": 2048,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 16384,
+            "chunk_elems": 2048,
+            "chunk": 2048,
+            "CORES": 72,
+            "half_bytes": 8192
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 2048,
+            "half": 2048,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 2048,
+            "u": 2,
+            "size": 8192,
+            "h": 2
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "rows": 2048,
+            "half": 2048,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 4,
+            "tile": 2,
+            "unroll": 3,
+            "groups": 1024,
+            "blocks": 72,
+            "align": 8,
+            "width": 2048,
+            "exact_blocks": 64
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 147456
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          23.942
+        ],
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          23.245
+        ],
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          23.268
+        ]
+      ]
+    },
+    {
+      "case": 3,
+      "variant": "sixth",
+      "shape": [
+        4096,
+        8192
+      ],
+      "dtype": "bfloat16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 45.396,
+      "samples_us": [
+        45.396,
+        45.087,
+        45.623
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "align32_down_elems",
+          "integers": {
+            "n": 4096,
+            "unit": 16,
+            "itemsize": 2,
+            "returned": 4096
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 4096,
+            "half": 4096,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 16384,
+            "chunk_elems": 4096,
+            "chunk": 4096,
+            "CORES": 72,
+            "half_bytes": 8192
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 4096,
+            "half": 4096,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 4096,
+            "u": 2,
+            "size": 8192
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "rows": 4096,
+            "half": 4096,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 4096,
+            "unroll": 4,
+            "groups": 1,
+            "work": 4096,
+            "blocks": 64,
+            "traffic": 67108864,
+            "aligned_grid": 64,
+            "unit": 16,
+            "rem": 4096
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 114688
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_flat",
+          "AI_VECTOR_CORE",
+          45.396
+        ],
+        [
+          "swiglu_flat",
+          "AI_VECTOR_CORE",
+          45.087
+        ],
+        [
+          "swiglu_flat",
+          "AI_VECTOR_CORE",
+          45.623
+        ]
+      ]
+    },
+    {
+      "case": 4,
+      "variant": "sixth",
+      "shape": [
+        8192,
+        16384
+      ],
+      "dtype": "float16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 241.792,
+      "samples_us": [
+        241.602,
+        241.792,
+        242.224
+      ],
+      "launch_grid": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "align32_down_elems",
+          "integers": {
+            "n": 10560,
+            "unit": 16,
+            "itemsize": 2,
+            "returned": 10560
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 1,
+            "half": 67108864,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 268435456,
+            "chunk_elems": 67108864,
+            "chunk": 10560,
+            "CORES": 72,
+            "half_bytes": 134217728
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 1,
+            "half": 67108864,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 10560,
+            "u": 2,
+            "size": 134217728,
+            "traffic": 268435456
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "rows": 1,
+            "half": 67108864,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 8192,
+            "unroll": 3,
+            "groups": 1,
+            "work": 8192,
+            "blocks": 64,
+            "traffic": 268435456,
+            "unit": 16,
+            "rem": 0
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 196608
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_flat",
+          "AI_VECTOR_CORE",
+          241.602
+        ],
+        [
+          "swiglu_flat",
+          "AI_VECTOR_CORE",
+          241.792
+        ],
+        [
+          "swiglu_flat",
+          "AI_VECTOR_CORE",
+          242.224
+        ]
+      ]
+    },
+    {
+      "case": 5,
+      "variant": "sixth",
+      "shape": [
+        2039,
+        65520
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 521.996,
+      "samples_us": [
+        524.095,
+        521.996,
+        520.44
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "align32_down_elems",
+          "integers": {
+            "n": 10560,
+            "unit": 8,
+            "itemsize": 4,
+            "returned": 10560
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 2039,
+            "half": 32760,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 262080,
+            "chunk_elems": 32760,
+            "chunk": 10560,
+            "CORES": 72,
+            "half_bytes": 131040
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 2039,
+            "half": 32760,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 10560,
+            "u": 2,
+            "size": 131040,
+            "traffic": 534381120
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "rows": 2039,
+            "half": 32760,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 4,
+            "tile": 8192,
+            "unroll": 2,
+            "groups": 1,
+            "work": 8156,
+            "blocks": 72,
+            "traffic": 534381120,
+            "unit": 8,
+            "rem": 32760
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 196608
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          524.095
+        ],
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          521.996
+        ],
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          520.44
+        ]
+      ]
+    },
+    {
+      "case": 6,
+      "variant": "sixth",
+      "shape": [
+        1022,
+        2047
+      ],
+      "dtype": "bfloat16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 5.129,
+      "samples_us": [
+        5.576,
+        5.129,
+        5.111
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "align32_down_elems",
+          "integers": {
+            "n": 10560,
+            "unit": 16,
+            "itemsize": 2,
+            "returned": 10560
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 1,
+            "half": 1046017,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 4184068,
+            "chunk_elems": 1046032,
+            "chunk": 10560,
+            "CORES": 72,
+            "half_bytes": 2092034
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 1,
+            "half": 1046017,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 10560,
+            "u": 2,
+            "size": 2092034,
+            "traffic": 4184068
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "rows": 1,
+            "half": 1046017,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 8192,
+            "unroll": 2,
+            "groups": 1,
+            "work": 128,
+            "blocks": 72,
+            "traffic": 4184068,
+            "unit": 16,
+            "rem": 456193
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 163840
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_striped",
+          "AI_VECTOR_CORE",
+          5.576
+        ],
+        [
+          "swiglu_striped",
+          "AI_VECTOR_CORE",
+          5.129
+        ],
+        [
+          "swiglu_striped",
+          "AI_VECTOR_CORE",
+          5.111
+        ]
+      ]
+    },
+    {
+      "case": 7,
+      "variant": "sixth",
+      "shape": [
+        1009,
+        2016
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 5.84,
+      "samples_us": [
+        6.661,
+        5.84,
+        5.768
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 8,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 1008,
+            "returned": 129024
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 8,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 1008,
+            "returned": 129024
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 8,
+            "unroll": 2,
+            "per_lane": 20,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 1008,
+            "returned": 161280
+          }
+        },
+        {
+          "function": "row_geometry",
+          "integers": {
+            "rows": 1009,
+            "half": 1008,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "payload": 2016,
+            "quantum": 16,
+            "t": 8,
+            "tiles": 127,
+            "active": 72,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 1008
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 1009,
+            "half": 1008,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 4032,
+            "tile": 8,
+            "unroll": 1,
+            "CORES": 72,
+            "half_bytes": 2016
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 1009,
+            "half": 1008,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 8,
+            "u": 1,
+            "size": 2016
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "rows": 1009,
+            "half": 1008,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 8,
+            "unroll": 1,
+            "groups": 127,
+            "blocks": 72,
+            "align": 16,
+            "width": 1008,
+            "exact_blocks": 64
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 96768
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          6.661
+        ],
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          5.84
+        ],
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          5.768
+        ]
+      ]
+    },
+    {
+      "case": 8,
+      "variant": "sixth",
+      "shape": [
+        1538,
+        1537
+      ],
+      "dtype": "float32",
+      "dim": 0,
+      "correct": true,
+      "median_us": 7.909,
+      "samples_us": [
+        8.453,
+        7.909,
+        7.681
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "align32_down_elems",
+          "integers": {
+            "n": 10560,
+            "unit": 8,
+            "itemsize": 4,
+            "returned": 10560
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 1,
+            "half": 1181953,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 9455624,
+            "chunk_elems": 1181960,
+            "chunk": 10560,
+            "CORES": 72,
+            "half_bytes": 4727812
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 1,
+            "half": 1181953,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 10560,
+            "u": 2,
+            "size": 4727812,
+            "waves": 4,
+            "traffic": 9455624,
+            "lanes": 4104,
+            "unit": 8,
+            "wanted": 3,
+            "rest": 1
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "rows": 1,
+            "half": 1181953,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 4,
+            "tile": 4104,
+            "unroll": 2,
+            "groups": 1,
+            "work": 289,
+            "blocks": 72,
+            "traffic": 9455624,
+            "unit": 8,
+            "rem": 1
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 98496
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_flat_edge",
+          "AI_VECTOR_CORE",
+          8.453
+        ],
+        [
+          "swiglu_flat_edge",
+          "AI_VECTOR_CORE",
+          7.909
+        ],
+        [
+          "swiglu_flat_edge",
+          "AI_VECTOR_CORE",
+          7.681
+        ]
+      ]
+    },
+    {
+      "case": 9,
+      "variant": "sixth",
+      "shape": [
+        363,
+        367,
+        14
+      ],
+      "dtype": "bfloat16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 6.203,
+      "samples_us": [
+        7.321,
+        6.203,
+        6.179
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 133221,
+            "half": 7,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 28,
+            "dma_cap": 585,
+            "ub_cap": 1511,
+            "aiv_cap": 1851,
+            "bound": 585,
+            "t": 512,
+            "in_tile_bytes": 14336,
+            "out_tile_bytes": 7168,
+            "idx_tile_bytes": 14336,
+            "tiles": 261,
+            "CORES": 72,
+            "half_bytes": 14
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 133221,
+            "half": 7,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 512,
+            "u": 2,
+            "size": 14,
+            "quantum": 16,
+            "wave": 928
+          }
+        },
+        {
+          "function": "small_indices",
+          "integers": {
+            "h": 7,
+            "t": 928
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 2,
+            "rows": 133221,
+            "half": 7,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 928,
+            "unroll": 2,
+            "groups": 144,
+            "blocks": 72
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 116928
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_wave_slab",
+          "AI_VECTOR_CORE",
+          7.321
+        ],
+        [
+          "swiglu_wave_slab",
+          "AI_VECTOR_CORE",
+          6.203
+        ],
+        [
+          "swiglu_wave_slab",
+          "AI_VECTOR_CORE",
+          6.179
+        ]
+      ]
+    },
+    {
+      "case": 10,
+      "variant": "sixth",
+      "shape": [
+        2049,
+        1024
+      ],
+      "dtype": "float16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 6.093,
+      "samples_us": [
+        6.093,
+        4.809,
+        6.91
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 8,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 512,
+            "returned": 65536
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 8,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 512,
+            "returned": 65536
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 8,
+            "unroll": 2,
+            "per_lane": 20,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 512,
+            "returned": 81920
+          }
+        },
+        {
+          "function": "row_geometry",
+          "integers": {
+            "rows": 2049,
+            "half": 512,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "payload": 1024,
+            "quantum": 16,
+            "t": 8,
+            "tiles": 257,
+            "active": 72,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 512
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 2049,
+            "half": 512,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 2048,
+            "tile": 8,
+            "unroll": 2,
+            "CORES": 72,
+            "half_bytes": 1024
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 2049,
+            "half": 512,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 8,
+            "u": 2,
+            "size": 1024
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "rows": 2049,
+            "half": 512,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 8,
+            "unroll": 2,
+            "groups": 257,
+            "blocks": 72,
+            "align": 16,
+            "width": 512,
+            "exact_blocks": 64
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          6.093
+        ],
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          4.809
+        ],
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          6.91
+        ]
+      ]
+    },
+    {
+      "case": 11,
+      "variant": "sixth",
+      "shape": [
+        3,
+        7,
+        13,
+        1018
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 2.971,
+      "samples_us": [
+        3.661,
+        2.971,
+        2.748
+      ],
+      "launch_grid": [
+        35,
+        35,
+        35,
+        35
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 8,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 512,
+            "returned": 65536
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 8,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 512,
+            "returned": 65536
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 8,
+            "unroll": 2,
+            "per_lane": 28,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 512,
+            "returned": 114688
+          }
+        },
+        {
+          "function": "row_geometry",
+          "integers": {
+            "rows": 273,
+            "half": 509,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "payload": 2036,
+            "quantum": 8,
+            "t": 8,
+            "tiles": 35,
+            "active": 35,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 512
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 273,
+            "half": 509,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 4072,
+            "tile": 8,
+            "unroll": 1,
+            "CORES": 72,
+            "half_bytes": 2036
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 273,
+            "half": 509,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 8,
+            "u": 1,
+            "size": 2036
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 3,
+            "rows": 273,
+            "half": 509,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 4,
+            "tile": 8,
+            "unroll": 1,
+            "groups": 35,
+            "blocks": 35,
+            "align": 8,
+            "width": 512,
+            "exact_blocks": 32
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 49152
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_short_rows",
+          "AI_VECTOR_CORE",
+          3.661
+        ],
+        [
+          "swiglu_short_rows",
+          "AI_VECTOR_CORE",
+          2.971
+        ],
+        [
+          "swiglu_short_rows",
+          "AI_VECTOR_CORE",
+          2.748
+        ]
+      ]
+    },
+    {
+      "case": 12,
+      "variant": "sixth",
+      "shape": [
+        1000003,
+        2
+      ],
+      "dtype": "bfloat16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 6.77,
+      "samples_us": [
+        6.77,
+        7.13,
+        6.397
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 1000003,
+            "half": 1,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 4,
+            "dma_cap": 4096,
+            "ub_cap": 10581,
+            "aiv_cap": 13889,
+            "bound": 4096,
+            "t": 4096,
+            "in_tile_bytes": 16384,
+            "out_tile_bytes": 8192,
+            "idx_tile_bytes": 16384,
+            "tiles": 245,
+            "CORES": 72,
+            "half_bytes": 2
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 1000003,
+            "half": 1,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 4096,
+            "u": 2,
+            "size": 2,
+            "quantum": 16,
+            "waves": 4,
+            "h": 3488
+          }
+        },
+        {
+          "function": "small_indices",
+          "integers": {
+            "h": 1,
+            "t": 3488
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "rows": 1000003,
+            "half": 1,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 3488,
+            "unroll": 2,
+            "groups": 287,
+            "blocks": 72
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 76736
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_direct_slab",
+          "AI_VECTOR_CORE",
+          6.77
+        ],
+        [
+          "swiglu_direct_slab",
+          "AI_VECTOR_CORE",
+          7.13
+        ],
+        [
+          "swiglu_direct_slab",
+          "AI_VECTOR_CORE",
+          6.397
+        ]
+      ]
+    },
+    {
+      "case": 13,
+      "variant": "sixth",
+      "shape": [
+        11,
+        13,
+        16,
+        67
+      ],
+      "dtype": "float32",
+      "dim": 2,
+      "correct": true,
+      "median_us": 2.468,
+      "samples_us": [
+        3.035,
+        2.468,
+        2.436
+      ],
+      "launch_grid": [
+        36,
+        36,
+        36,
+        36
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 4,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 536,
+            "returned": 34304
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 4,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 536,
+            "returned": 34304
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 4,
+            "unroll": 2,
+            "per_lane": 28,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 536,
+            "returned": 60032
+          }
+        },
+        {
+          "function": "row_geometry",
+          "integers": {
+            "rows": 143,
+            "half": 536,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "payload": 2144,
+            "quantum": 8,
+            "t": 4,
+            "tiles": 36,
+            "active": 36,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 536
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 143,
+            "half": 536,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 4288,
+            "tile": 4,
+            "unroll": 1,
+            "CORES": 72,
+            "half_bytes": 2144
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 143,
+            "half": 536,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 4,
+            "u": 1,
+            "size": 2144
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 2,
+            "rows": 143,
+            "half": 536,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 4,
+            "tile": 4,
+            "unroll": 1,
+            "groups": 36,
+            "blocks": 36,
+            "align": 8,
+            "width": 536,
+            "exact_blocks": 32
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 25728
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_short_rows",
+          "AI_VECTOR_CORE",
+          3.035
+        ],
+        [
+          "swiglu_short_rows",
+          "AI_VECTOR_CORE",
+          2.468
+        ],
+        [
+          "swiglu_short_rows",
+          "AI_VECTOR_CORE",
+          2.436
+        ]
+      ]
+    },
+    {
+      "case": 14,
+      "variant": "sixth",
+      "shape": [
+        3,
+        7,
+        11,
+        13,
+        1012
+      ],
+      "dtype": "float16",
+      "dim": -1,
+      "correct": true,
+      "median_us": 7.371,
+      "samples_us": [
+        7.565,
+        7.371,
+        6.759
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 16,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 512,
+            "returned": 131072
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 16,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 512,
+            "returned": 131072
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 16,
+            "unroll": 2,
+            "per_lane": 20,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 512,
+            "returned": 163840
+          }
+        },
+        {
+          "function": "row_geometry",
+          "integers": {
+            "rows": 3003,
+            "half": 506,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "payload": 1012,
+            "quantum": 16,
+            "t": 16,
+            "tiles": 188,
+            "active": 72,
+            "lane_unroll1": 16,
+            "lane_unroll2": 20,
+            "width": 512
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 3003,
+            "half": 506,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 2024,
+            "tile": 16,
+            "unroll": 2,
+            "CORES": 72,
+            "half_bytes": 1012
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 3003,
+            "half": 506,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 16,
+            "u": 2,
+            "size": 1012,
+            "w": 512,
+            "small": 8
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 4,
+            "rows": 3003,
+            "half": 506,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 8,
+            "unroll": 2,
+            "groups": 376,
+            "blocks": 72,
+            "align": 16,
+            "width": 512,
+            "exact_blocks": 64
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 81920
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          7.565
+        ],
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          7.371
+        ],
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          6.759
+        ]
+      ]
+    },
+    {
+      "case": 15,
+      "variant": "sixth",
+      "shape": [
+        512,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 7.718,
+      "samples_us": [
+        7.718,
+        8.451,
+        7.063
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "align32_down_elems",
+          "integers": {
+            "n": 2048,
+            "unit": 8,
+            "itemsize": 4,
+            "returned": 2048
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 512,
+            "half": 2048,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 16384,
+            "chunk_elems": 2048,
+            "chunk": 2048,
+            "CORES": 72,
+            "half_bytes": 8192
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 512,
+            "half": 2048,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 2048,
+            "u": 2,
+            "size": 8192
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "rows": 512,
+            "half": 2048,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 4,
+            "tile": 2048,
+            "unroll": 2,
+            "groups": 1,
+            "work": 512,
+            "blocks": 72,
+            "traffic": 8388608,
+            "unit": 8,
+            "rem": 2048
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 49152
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          7.718
+        ],
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          8.451
+        ],
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          7.063
+        ]
+      ]
+    },
+    {
+      "case": 16,
+      "variant": "sixth",
+      "shape": [
+        254,
+        16383
+      ],
+      "dtype": "bfloat16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 8.031,
+      "samples_us": [
+        8.031,
+        8.817,
+        7.392
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "align32_down_elems",
+          "integers": {
+            "n": 10560,
+            "unit": 16,
+            "itemsize": 2,
+            "returned": 10560
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 1,
+            "half": 2080641,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 8322564,
+            "chunk_elems": 2080656,
+            "chunk": 10560,
+            "CORES": 72,
+            "half_bytes": 4161282
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 1,
+            "half": 2080641,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 10560,
+            "u": 2,
+            "size": 4161282,
+            "waves": 4,
+            "traffic": 8322564,
+            "chunks": 288,
+            "lanes": 7232
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "rows": 1,
+            "half": 2080641,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 7232,
+            "unroll": 2,
+            "groups": 1,
+            "work": 288,
+            "blocks": 72,
+            "traffic": 8322564,
+            "unit": 16,
+            "rem": 518529
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 144640
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          8.031
+        ],
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          8.817
+        ],
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          7.392
+        ]
+      ]
+    },
+    {
+      "case": 17,
+      "variant": "sixth",
+      "shape": [
+        4096,
+        1023
+      ],
+      "dtype": "float16",
+      "dim": 0,
+      "correct": true,
+      "median_us": 7.732,
+      "samples_us": [
+        8.154,
+        7.732,
+        7.347
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "align32_down_elems",
+          "integers": {
+            "n": 10560,
+            "unit": 16,
+            "itemsize": 2,
+            "returned": 10560
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 1,
+            "half": 2095104,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 8380416,
+            "chunk_elems": 2095104,
+            "chunk": 10560,
+            "CORES": 72,
+            "half_bytes": 4190208
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 1,
+            "half": 2095104,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 10560,
+            "u": 2,
+            "size": 4190208,
+            "traffic": 8380416,
+            "lanes": 4864,
+            "target": 5120,
+            "pairs": 3,
+            "n": 432,
+            "unit": 16
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 0,
+            "rows": 1,
+            "half": 2095104,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 4864,
+            "unroll": 2,
+            "groups": 1,
+            "work": 431,
+            "blocks": 72,
+            "traffic": 8380416,
+            "unit": 16,
+            "rem": 344064
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 97280
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          8.154
+        ],
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          7.732
+        ],
+        [
+          "swiglu_inline_tail",
+          "AI_VECTOR_CORE",
+          7.347
+        ]
+      ]
+    },
+    {
+      "case": 18,
+      "variant": "sixth",
+      "shape": [
+        2,
+        1023,
+        4096
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 22.747,
+      "samples_us": [
+        23.433,
+        22.536,
+        22.747
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "align32_down_elems",
+          "integers": {
+            "n": 2048,
+            "unit": 8,
+            "itemsize": 4,
+            "returned": 2048
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 2046,
+            "half": 2048,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 16384,
+            "chunk_elems": 2048,
+            "chunk": 2048,
+            "CORES": 72,
+            "half_bytes": 8192
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 2046,
+            "half": 2048,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 2048,
+            "u": 2,
+            "size": 8192,
+            "h": 2
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 2,
+            "rows": 2046,
+            "half": 2048,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 4,
+            "tile": 2,
+            "unroll": 3,
+            "groups": 1023,
+            "blocks": 72,
+            "align": 8,
+            "width": 2048,
+            "exact_blocks": 64
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 147456
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          23.433
+        ],
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          22.536
+        ],
+        [
+          "swiglu_rows",
+          "AI_VECTOR_CORE",
+          22.747
+        ]
+      ]
+    },
+    {
+      "case": 19,
+      "variant": "sixth",
+      "shape": [
+        4,
+        510,
+        4097
+      ],
+      "dtype": "bfloat16",
+      "dim": 1,
+      "correct": true,
+      "median_us": 13.452,
+      "samples_us": [
+        13.908,
+        13.452,
+        13.229
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "align32_down_elems",
+          "integers": {
+            "n": 10560,
+            "unit": 16,
+            "itemsize": 2,
+            "returned": 10560
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 4,
+            "half": 1044735,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 4178940,
+            "chunk_elems": 1044736,
+            "chunk": 10560,
+            "CORES": 72,
+            "half_bytes": 2089470
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 4,
+            "half": 1044735,
+            "itemsize": 2,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 10560,
+            "u": 2,
+            "size": 2089470,
+            "traffic": 16715760
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 1,
+            "rows": 4,
+            "half": 1044735,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 2,
+            "tile": 8192,
+            "unroll": 2,
+            "groups": 1,
+            "work": 512,
+            "blocks": 72,
+            "traffic": 16715760,
+            "unit": 16,
+            "rem": 454911
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 163840
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_striped",
+          "AI_VECTOR_CORE",
+          13.908
+        ],
+        [
+          "swiglu_striped",
+          "AI_VECTOR_CORE",
+          13.452
+        ],
+        [
+          "swiglu_striped",
+          "AI_VECTOR_CORE",
+          13.229
+        ]
+      ]
+    },
+    {
+      "case": 20,
+      "variant": "sixth",
+      "shape": [
+        2,
+        3,
+        17,
+        512,
+        100
+      ],
+      "dtype": "float32",
+      "dim": -1,
+      "correct": true,
+      "median_us": 15.5,
+      "samples_us": [
+        17.082,
+        15.5,
+        15.287
+      ],
+      "launch_grid": [
+        72,
+        72,
+        72,
+        72
+      ],
+      "launches": 1,
+      "dispatch": [
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 64,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 56,
+            "returned": 57344
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 64,
+            "unroll": 1,
+            "per_lane": 16,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 56,
+            "returned": 57344
+          }
+        },
+        {
+          "function": "footprint",
+          "integers": {
+            "height": 64,
+            "unroll": 2,
+            "per_lane": 28,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 56,
+            "returned": 100352
+          }
+        },
+        {
+          "function": "row_geometry",
+          "integers": {
+            "rows": 52224,
+            "half": 50,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "payload": 200,
+            "quantum": 8,
+            "t": 64,
+            "tiles": 816,
+            "active": 72,
+            "lane_unroll1": 16,
+            "lane_unroll2": 28,
+            "width": 56
+          }
+        },
+        {
+          "function": "previous_select",
+          "integers": {
+            "rows": 52224,
+            "half": 50,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "UB": 253952,
+            "in_row_bytes": 400,
+            "tile": 64,
+            "unroll": 2,
+            "CORES": 72,
+            "half_bytes": 200
+          }
+        },
+        {
+          "function": "select",
+          "integers": {
+            "rows": 52224,
+            "half": 50,
+            "itemsize": 4,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "t": 64,
+            "u": 2,
+            "size": 200
+          }
+        },
+        {
+          "function": "small_indices",
+          "integers": {
+            "h": 50,
+            "t": 64
+          }
+        },
+        {
+          "function": "swi_glu",
+          "integers": {
+            "dim": 4,
+            "rows": 52224,
+            "half": 50,
+            "ub_bytes": 253952,
+            "aivs": 72,
+            "itemsize": 4,
+            "tile": 64,
+            "unroll": 2,
+            "groups": 816
+          }
+        }
+      ],
+      "allocations": [
+        {
+          "UB": 102400
+        }
+      ],
+      "tasks": [
+        [
+          "swiglu_full_slab",
+          "AI_VECTOR_CORE",
+          17.082
+        ],
+        [
+          "swiglu_full_slab",
+          "AI_VECTOR_CORE",
+          15.5
+        ],
+        [
+          "swiglu_full_slab",
+          "AI_VECTOR_CORE",
+          15.287
+        ]
+      ]
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+--- sixth/swi_glu.py	2026-11-12 05:06:35.992879902 +0300
++++ seventh/swi_glu.py	2026-11-12 05:46:51.569000205 +0300
+@@ -132,6 +132,40 @@
+         asctile.copy_out(out, gy, [r0 * H])
+ 
+ @asctile.jit(always_compile=False)
++def swiglu_permuted_pairs(x: asctile.GlobalAddress, y: asctile.GlobalAddress, i0: asctile.GlobalAddress, R: asctile.ConstExpr[int], H: asctile.ConstExpr[int], TR: asctile.ConstExpr[int], U: asctile.ConstExpr[int]):
++    # Rank-1 global tensors
++    gx = asctile.global_tensor(x, [2 * R * H])
++    gy = asctile.global_tensor(y, [R * H])
++    gi0 = asctile.global_tensor(i0, [TR * H])
++
++    # Copy each cached int32 index tensor ONCE, full length, no padding
++    idx0 = asctile.copy_in(gi0, [0], [TR * H])
++    idx1 = idx0 + H
++
++    ntiles = (R + TR - 1) // TR
++
++    # Grid-stride loop over row tiles
++    block=asctile.block_idx()
++    n=asctile.block_num()
++    first=(block%2)*(n//2)+block//2
++    for t in asctile.range(first, ntiles, n, unroll_factor=U):
++        r0 = t * TR
++        valid = min(TR, R - r0)
++
++        # Load one contiguous slab (gate+value), bounded by valid row count
++        slab = asctile.copy_in(gx, [2 * r0 * H], [2 * TR * H],
++                               real_shape=[2 * valid * H], pad_value=0.0)
++
++        # Gather gate / value elements via the cached indices
++        g = asctile.reindex(slab,idx0).to(asctile.float32)
++        denom = asctile.exp(-g)+1.0
++        activated = g/denom
++        v = asctile.reindex(slab,idx1).to(asctile.float32)
++        out = (activated*v).to(slab.dtype)
++        # Store at row offset, bounded by valid row count
++        asctile.copy_out(out, gy, [r0 * H], real_shape=[valid * H])
++
++@asctile.jit(always_compile=False)
+ def swiglu_direct_slab(x: asctile.GlobalAddress, y: asctile.GlobalAddress, i0: asctile.GlobalAddress, R: asctile.ConstExpr[int], H: asctile.ConstExpr[int], TR: asctile.ConstExpr[int], U: asctile.ConstExpr[int]):
+     # Rank-1 global tensors
+     gx = asctile.global_tensor(x, [2 * R * H])
+@@ -753,6 +787,11 @@
+     route, t, u = previous_select(rows, half, itemsize, is_pair, is_bf16, ub_bytes, aivs)
+     size = half * itemsize
+     if route=='index_gather' and is_bf16 and half==1:
++        # A DMA-sized pair slab can cover this input in four compact waves.
++        grid = 1 << (aivs.bit_length() - 1)
++        count = (rows + t - 1) // t
++        if u == 2 and 3 * grid < count <= 4 * grid and 28*t <= ub_bytes:
++            return route, t, u
+         quantum=32//itemsize
+         waves=4
+         h=((rows+waves*aivs-1)//(waves*aivs)+quantum-1)//quantum*quantum
+@@ -904,7 +943,11 @@
+             if half>1:
+                 swiglu_wave_slab[blocks](x,y,i0,i1,rows,half,tile,unroll,blocks,reuse_alloc=2)
+             else:
+-                swiglu_direct_slab[blocks](x,y,i0,rows,half,tile,unroll,reuse_alloc=2)
++                compact = 1 << (blocks.bit_length()-1)
++                if unroll == 2 and 3*compact < groups <= 4*compact:
++                    blocks = compact
++                pair_fn = swiglu_permuted_pairs if blocks==compact and blocks%2==0 and 3*compact < groups <= 4*compact else swiglu_direct_slab
++                pair_fn[blocks](x,y,i0,rows,half,tile,unroll,reuse_alloc=2)
+         elif is_bf16 and half == 1:
+             i0,i1=gather_indices(half,tile,x.device)
+             swiglu_late_slab[blocks](x,y,i0,i1,rows,half,tile,unroll,reuse_alloc=2)

@@ -1,0 +1,425 @@
+{
+  "device": "Ascend950PR_9599",
+  "trace_archive_sha256": "cc49591068d98e180c7123846f011f2f4af6f0d1797978e2a47a98bde39b6585",
+  "protocol": "Independent process and full golden for each case and configuration in each of two seeded randomized rounds.",
+  "results": [
+    {
+      "case": 12,
+      "repeat": 0,
+      "configuration": "job-auto-0-0-0",
+      "median_us": 6.592,
+      "samples_us": [
+        7.315,
+        6.592,
+        6.552
+      ]
+    },
+    {
+      "case": 15,
+      "repeat": 0,
+      "configuration": "sixth-auto-0-0-0",
+      "median_us": 7.137,
+      "samples_us": [
+        7.842,
+        7.045,
+        7.137
+      ]
+    },
+    {
+      "case": 12,
+      "repeat": 0,
+      "configuration": "pperm-index_gather-3488-2-72",
+      "median_us": 6.249,
+      "samples_us": [
+        7.023,
+        6.154,
+        6.249
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 0,
+      "configuration": "bflinear-flat_chunks-8288-2-72",
+      "median_us": 13.329,
+      "samples_us": [
+        13.96,
+        13.329,
+        13.16
+      ]
+    },
+    {
+      "case": 10,
+      "repeat": 0,
+      "configuration": "exactrow-batched_rows-8-2-64",
+      "median_us": 5.955,
+      "samples_us": [
+        5.955,
+        5.141,
+        6.318
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 0,
+      "configuration": "sixth-auto-0-0-0",
+      "median_us": 13.193,
+      "samples_us": [
+        14.149,
+        13.136,
+        13.193
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 0,
+      "configuration": "bflinear-flat_chunks-7264-2-72",
+      "median_us": 13.112,
+      "samples_us": [
+        13.663,
+        13.049,
+        13.112
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 0,
+      "configuration": "rowwave-flat_chunks-8288-2-72",
+      "median_us": 13.869,
+      "samples_us": [
+        14.546,
+        13.575,
+        13.869
+      ]
+    },
+    {
+      "case": 12,
+      "repeat": 0,
+      "configuration": "pperm-index_gather-4096-2-64",
+      "median_us": 6.075,
+      "samples_us": [
+        6.769,
+        5.981,
+        6.075
+      ]
+    },
+    {
+      "case": 10,
+      "repeat": 0,
+      "configuration": "job-auto-0-0-0",
+      "median_us": 5.597,
+      "samples_us": [
+        5.703,
+        4.8,
+        5.597
+      ]
+    },
+    {
+      "case": 15,
+      "repeat": 0,
+      "configuration": "job-auto-0-0-0",
+      "median_us": 7.651,
+      "samples_us": [
+        8.391,
+        7.404,
+        7.651
+      ]
+    },
+    {
+      "case": 15,
+      "repeat": 0,
+      "configuration": "exactrow-batched_rows-4-2-64",
+      "median_us": 7.503,
+      "samples_us": [
+        8.039,
+        7.503,
+        7.194
+      ]
+    },
+    {
+      "case": 10,
+      "repeat": 0,
+      "configuration": "sixth-auto-0-0-0",
+      "median_us": 4.814,
+      "samples_us": [
+        5.352,
+        4.814,
+        4.622
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 0,
+      "configuration": "job-auto-0-0-0",
+      "median_us": 13.606,
+      "samples_us": [
+        13.977,
+        12.946,
+        13.606
+      ]
+    },
+    {
+      "case": 12,
+      "repeat": 0,
+      "configuration": "sixth-index_gather-4096-2-64",
+      "median_us": 6.088,
+      "samples_us": [
+        6.733,
+        6.071,
+        6.088
+      ]
+    },
+    {
+      "case": 12,
+      "repeat": 0,
+      "configuration": "pairedge-index_gather-3472-2-72",
+      "median_us": 6.346,
+      "samples_us": [
+        6.845,
+        6.246,
+        6.346
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 0,
+      "configuration": "rowwave-flat_chunks-7264-2-72",
+      "median_us": 14.256,
+      "samples_us": [
+        14.828,
+        14.256,
+        14.123
+      ]
+    },
+    {
+      "case": 12,
+      "repeat": 0,
+      "configuration": "sixth-auto-0-0-0",
+      "median_us": 6.415,
+      "samples_us": [
+        7.203,
+        6.415,
+        6.367
+      ]
+    },
+    {
+      "case": 15,
+      "repeat": 0,
+      "configuration": "exactrow-batched_rows-2-2-64",
+      "median_us": 7.1,
+      "samples_us": [
+        7.545,
+        7.1,
+        7.01
+      ]
+    },
+    {
+      "case": 15,
+      "repeat": 1,
+      "configuration": "sixth-auto-0-0-0",
+      "median_us": 7.231,
+      "samples_us": [
+        7.803,
+        7.231,
+        7.005
+      ]
+    },
+    {
+      "case": 12,
+      "repeat": 1,
+      "configuration": "pairedge-index_gather-3472-2-72",
+      "median_us": 6.792,
+      "samples_us": [
+        7.692,
+        6.792,
+        6.757
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 1,
+      "configuration": "rowwave-flat_chunks-7264-2-72",
+      "median_us": 13.955,
+      "samples_us": [
+        14.787,
+        13.913,
+        13.955
+      ]
+    },
+    {
+      "case": 15,
+      "repeat": 1,
+      "configuration": "exactrow-batched_rows-2-2-64",
+      "median_us": 7.463,
+      "samples_us": [
+        7.79,
+        7.463,
+        6.905
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 1,
+      "configuration": "job-auto-0-0-0",
+      "median_us": 13.098,
+      "samples_us": [
+        13.699,
+        13.076,
+        13.098
+      ]
+    },
+    {
+      "case": 12,
+      "repeat": 1,
+      "configuration": "sixth-auto-0-0-0",
+      "median_us": 6.128,
+      "samples_us": [
+        6.909,
+        6.126,
+        6.128
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 1,
+      "configuration": "rowwave-flat_chunks-8288-2-72",
+      "median_us": 13.89,
+      "samples_us": [
+        14.479,
+        13.796,
+        13.89
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 1,
+      "configuration": "bflinear-flat_chunks-7264-2-72",
+      "median_us": 13.125,
+      "samples_us": [
+        13.875,
+        13.086,
+        13.125
+      ]
+    },
+    {
+      "case": 12,
+      "repeat": 1,
+      "configuration": "pperm-index_gather-3488-2-72",
+      "median_us": 6.493,
+      "samples_us": [
+        6.952,
+        6.493,
+        6.493
+      ]
+    },
+    {
+      "case": 12,
+      "repeat": 1,
+      "configuration": "job-auto-0-0-0",
+      "median_us": 6.729,
+      "samples_us": [
+        7.208,
+        6.524,
+        6.729
+      ]
+    },
+    {
+      "case": 12,
+      "repeat": 1,
+      "configuration": "sixth-index_gather-4096-2-64",
+      "median_us": 6.481,
+      "samples_us": [
+        7.062,
+        6.481,
+        6.193
+      ]
+    },
+    {
+      "case": 12,
+      "repeat": 1,
+      "configuration": "pperm-index_gather-4096-2-64",
+      "median_us": 6.017,
+      "samples_us": [
+        6.891,
+        5.962,
+        6.017
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 1,
+      "configuration": "bflinear-flat_chunks-8288-2-72",
+      "median_us": 13.509,
+      "samples_us": [
+        13.892,
+        12.972,
+        13.509
+      ]
+    },
+    {
+      "case": 10,
+      "repeat": 1,
+      "configuration": "exactrow-batched_rows-8-2-64",
+      "median_us": 5.655,
+      "samples_us": [
+        5.852,
+        5.171,
+        5.655
+      ]
+    },
+    {
+      "case": 10,
+      "repeat": 1,
+      "configuration": "job-auto-0-0-0",
+      "median_us": 5.773,
+      "samples_us": [
+        5.839,
+        4.889,
+        5.773
+      ]
+    },
+    {
+      "case": 15,
+      "repeat": 1,
+      "configuration": "exactrow-batched_rows-4-2-64",
+      "median_us": 7.723,
+      "samples_us": [
+        7.865,
+        7.723,
+        7.163
+      ]
+    },
+    {
+      "case": 19,
+      "repeat": 1,
+      "configuration": "sixth-auto-0-0-0",
+      "median_us": 13.23,
+      "samples_us": [
+        13.954,
+        13.23,
+        13.048
+      ]
+    },
+    {
+      "case": 10,
+      "repeat": 1,
+      "configuration": "sixth-auto-0-0-0",
+      "median_us": 5.479,
+      "samples_us": [
+        5.479,
+        4.522,
+        5.655
+      ]
+    },
+    {
+      "case": 15,
+      "repeat": 1,
+      "configuration": "job-auto-0-0-0",
+      "median_us": 7.48,
+      "samples_us": [
+        7.838,
+        7.394,
+        7.48
+      ]
+    }
+  ]
+}

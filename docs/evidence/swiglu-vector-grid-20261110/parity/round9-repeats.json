@@ -1,0 +1,1405 @@
+{
+  "device": "Ascend950PR_9599",
+  "repeat_packet_sha256": [
+    "cbd328af792e688091dda4607c16dfa5abb3ceb70cf1ffa127a8d3f9ab47fd44",
+    "968962653eebe5bb3560ad4b01968fac1eba943a1565dcc2349529f6a320f205"
+  ],
+  "runs": [
+    {
+      "ordered_full_traces_sha256": "c83ca5e6a39e1d167b8e0f87f901b4885272c74dec24696606ba19ec1f9b3d92",
+      "results": [
+        {
+          "case": 1,
+          "variant": "ninth",
+          "shape": [
+            1024,
+            2048
+          ],
+          "dtype": "float16",
+          "dim": -1,
+          "correct": true,
+          "median_us": 4.575,
+          "samples_us": [
+            5.09,
+            4.486,
+            4.575
+          ],
+          "launch_grid": [
+            64,
+            64,
+            64,
+            64
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 81920
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_aligned_rows"
+          ]
+        },
+        {
+          "case": 2,
+          "variant": "ninth",
+          "shape": [
+            2048,
+            4096
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 23.222,
+          "samples_us": [
+            23.977,
+            23.16,
+            23.222
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 147456
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_rows"
+          ]
+        },
+        {
+          "case": 3,
+          "variant": "ninth",
+          "shape": [
+            4096,
+            8192
+          ],
+          "dtype": "bfloat16",
+          "dim": -1,
+          "correct": true,
+          "median_us": 45.224,
+          "samples_us": [
+            45.273,
+            45.224,
+            44.972
+          ],
+          "launch_grid": [
+            64,
+            64,
+            64,
+            64
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 114688
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_flat"
+          ]
+        },
+        {
+          "case": 4,
+          "variant": "ninth",
+          "shape": [
+            8192,
+            16384
+          ],
+          "dtype": "float16",
+          "dim": 0,
+          "correct": true,
+          "median_us": 242.285,
+          "samples_us": [
+            242.711,
+            241.574,
+            242.285
+          ],
+          "launch_grid": [
+            64,
+            64,
+            64,
+            64
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 196608
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_flat"
+          ]
+        },
+        {
+          "case": 5,
+          "variant": "ninth",
+          "shape": [
+            2039,
+            65520
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 519.929,
+          "samples_us": [
+            519.202,
+            519.929,
+            519.983
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 196608
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_inline_tail"
+          ]
+        },
+        {
+          "case": 6,
+          "variant": "ninth",
+          "shape": [
+            1022,
+            2047
+          ],
+          "dtype": "bfloat16",
+          "dim": 0,
+          "correct": true,
+          "median_us": 5.5,
+          "samples_us": [
+            5.806,
+            5.116,
+            5.5
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 163840
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_striped"
+          ]
+        },
+        {
+          "case": 7,
+          "variant": "ninth",
+          "shape": [
+            1009,
+            2016
+          ],
+          "dtype": "float16",
+          "dim": -1,
+          "correct": true,
+          "median_us": 5.955,
+          "samples_us": [
+            6.35,
+            5.887,
+            5.955
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 96768
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_rows"
+          ]
+        },
+        {
+          "case": 8,
+          "variant": "ninth",
+          "shape": [
+            1538,
+            1537
+          ],
+          "dtype": "float32",
+          "dim": 0,
+          "correct": true,
+          "median_us": 8.583,
+          "samples_us": [
+            8.583,
+            8.856,
+            7.672
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 98496
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_flat_edge"
+          ]
+        },
+        {
+          "case": 9,
+          "variant": "ninth",
+          "shape": [
+            363,
+            367,
+            14
+          ],
+          "dtype": "bfloat16",
+          "dim": -1,
+          "correct": true,
+          "median_us": 6.063,
+          "samples_us": [
+            6.772,
+            6.063,
+            6.0
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 142912
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_local_waves"
+          ]
+        },
+        {
+          "case": 10,
+          "variant": "ninth",
+          "shape": [
+            2049,
+            1024
+          ],
+          "dtype": "float16",
+          "dim": 1,
+          "correct": true,
+          "median_us": 5.512,
+          "samples_us": [
+            5.512,
+            4.705,
+            5.53
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 81920
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_rows"
+          ]
+        },
+        {
+          "case": 11,
+          "variant": "ninth",
+          "shape": [
+            3,
+            7,
+            13,
+            1018
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 2.853,
+          "samples_us": [
+            3.459,
+            2.853,
+            2.71
+          ],
+          "launch_grid": [
+            35,
+            35,
+            35,
+            35
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 49152
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_short_rows"
+          ]
+        },
+        {
+          "case": 12,
+          "variant": "ninth",
+          "shape": [
+            1000003,
+            2
+          ],
+          "dtype": "bfloat16",
+          "dim": 1,
+          "correct": true,
+          "median_us": 6.193,
+          "samples_us": [
+            7.141,
+            6.193,
+            5.941
+          ],
+          "launch_grid": [
+            64,
+            64,
+            64,
+            64
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 90112
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_selected_pairs"
+          ]
+        },
+        {
+          "case": 13,
+          "variant": "ninth",
+          "shape": [
+            11,
+            13,
+            16,
+            67
+          ],
+          "dtype": "float32",
+          "dim": 2,
+          "correct": true,
+          "median_us": 2.401,
+          "samples_us": [
+            3.01,
+            2.345,
+            2.401
+          ],
+          "launch_grid": [
+            36,
+            36,
+            36,
+            36
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 25728
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_short_rows"
+          ]
+        },
+        {
+          "case": 14,
+          "variant": "ninth",
+          "shape": [
+            3,
+            7,
+            11,
+            13,
+            1012
+          ],
+          "dtype": "float16",
+          "dim": -1,
+          "correct": true,
+          "median_us": 6.581,
+          "samples_us": [
+            7.023,
+            6.581,
+            6.437
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 112640
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_rows"
+          ]
+        },
+        {
+          "case": 15,
+          "variant": "ninth",
+          "shape": [
+            512,
+            4096
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 7.495,
+          "samples_us": [
+            7.495,
+            8.423,
+            6.902
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 49152
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_inline_tail"
+          ]
+        },
+        {
+          "case": 16,
+          "variant": "ninth",
+          "shape": [
+            254,
+            16383
+          ],
+          "dtype": "bfloat16",
+          "dim": 0,
+          "correct": true,
+          "median_us": 7.869,
+          "samples_us": [
+            8.148,
+            7.869,
+            7.494
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 144640
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_inline_tail"
+          ]
+        },
+        {
+          "case": 17,
+          "variant": "ninth",
+          "shape": [
+            4096,
+            1023
+          ],
+          "dtype": "float16",
+          "dim": 0,
+          "correct": true,
+          "median_us": 7.781,
+          "samples_us": [
+            8.159,
+            7.781,
+            7.346
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 97280
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_inline_tail"
+          ]
+        },
+        {
+          "case": 18,
+          "variant": "ninth",
+          "shape": [
+            2,
+            1023,
+            4096
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 22.876,
+          "samples_us": [
+            23.187,
+            22.557,
+            22.876
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 147456
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_rows"
+          ]
+        },
+        {
+          "case": 19,
+          "variant": "ninth",
+          "shape": [
+            4,
+            510,
+            4097
+          ],
+          "dtype": "bfloat16",
+          "dim": 1,
+          "correct": true,
+          "median_us": 13.31,
+          "samples_us": [
+            15.118,
+            13.201,
+            13.31
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 163840
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_striped"
+          ]
+        },
+        {
+          "case": 20,
+          "variant": "ninth",
+          "shape": [
+            2,
+            3,
+            17,
+            512,
+            100
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 16.362,
+          "samples_us": [
+            16.362,
+            22.266,
+            15.502
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 102400
+            }
+          ],
+          "repeat": 1,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_selected_compact"
+          ]
+        }
+      ]
+    },
+    {
+      "ordered_full_traces_sha256": "7f91245565a6f6ed8e2e88d53538e7d625d72d671e7e9e9ae617b81d5e6177a5",
+      "results": [
+        {
+          "case": 1,
+          "variant": "ninth",
+          "shape": [
+            1024,
+            2048
+          ],
+          "dtype": "float16",
+          "dim": -1,
+          "correct": true,
+          "median_us": 4.587,
+          "samples_us": [
+            5.328,
+            4.587,
+            4.53
+          ],
+          "launch_grid": [
+            64,
+            64,
+            64,
+            64
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 81920
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_aligned_rows"
+          ]
+        },
+        {
+          "case": 2,
+          "variant": "ninth",
+          "shape": [
+            2048,
+            4096
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 23.501,
+          "samples_us": [
+            23.853,
+            23.501,
+            23.118
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 147456
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_rows"
+          ]
+        },
+        {
+          "case": 3,
+          "variant": "ninth",
+          "shape": [
+            4096,
+            8192
+          ],
+          "dtype": "bfloat16",
+          "dim": -1,
+          "correct": true,
+          "median_us": 45.722,
+          "samples_us": [
+            45.722,
+            45.835,
+            45.362
+          ],
+          "launch_grid": [
+            64,
+            64,
+            64,
+            64
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 114688
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_flat"
+          ]
+        },
+        {
+          "case": 4,
+          "variant": "ninth",
+          "shape": [
+            8192,
+            16384
+          ],
+          "dtype": "float16",
+          "dim": 0,
+          "correct": true,
+          "median_us": 234.88,
+          "samples_us": [
+            234.694,
+            234.88,
+            235.205
+          ],
+          "launch_grid": [
+            64,
+            64,
+            64,
+            64
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 196608
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_flat"
+          ]
+        },
+        {
+          "case": 5,
+          "variant": "ninth",
+          "shape": [
+            2039,
+            65520
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 519.828,
+          "samples_us": [
+            519.828,
+            518.707,
+            544.48
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 196608
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_inline_tail"
+          ]
+        },
+        {
+          "case": 6,
+          "variant": "ninth",
+          "shape": [
+            1022,
+            2047
+          ],
+          "dtype": "bfloat16",
+          "dim": 0,
+          "correct": true,
+          "median_us": 5.609,
+          "samples_us": [
+            5.864,
+            5.609,
+            5.605
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 163840
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_striped"
+          ]
+        },
+        {
+          "case": 7,
+          "variant": "ninth",
+          "shape": [
+            1009,
+            2016
+          ],
+          "dtype": "float16",
+          "dim": -1,
+          "correct": true,
+          "median_us": 5.895,
+          "samples_us": [
+            6.596,
+            5.895,
+            5.767
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 96768
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_rows"
+          ]
+        },
+        {
+          "case": 8,
+          "variant": "ninth",
+          "shape": [
+            1538,
+            1537
+          ],
+          "dtype": "float32",
+          "dim": 0,
+          "correct": true,
+          "median_us": 7.899,
+          "samples_us": [
+            8.609,
+            7.705,
+            7.899
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 98496
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_flat_edge"
+          ]
+        },
+        {
+          "case": 9,
+          "variant": "ninth",
+          "shape": [
+            363,
+            367,
+            14
+          ],
+          "dtype": "bfloat16",
+          "dim": -1,
+          "correct": true,
+          "median_us": 6.681,
+          "samples_us": [
+            6.682,
+            6.681,
+            6.205
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 142912
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_local_waves"
+          ]
+        },
+        {
+          "case": 10,
+          "variant": "ninth",
+          "shape": [
+            2049,
+            1024
+          ],
+          "dtype": "float16",
+          "dim": 1,
+          "correct": true,
+          "median_us": 5.735,
+          "samples_us": [
+            5.735,
+            5.348,
+            6.157
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 81920
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_rows"
+          ]
+        },
+        {
+          "case": 11,
+          "variant": "ninth",
+          "shape": [
+            3,
+            7,
+            13,
+            1018
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 2.865,
+          "samples_us": [
+            3.378,
+            2.865,
+            2.653
+          ],
+          "launch_grid": [
+            35,
+            35,
+            35,
+            35
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 49152
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_short_rows"
+          ]
+        },
+        {
+          "case": 12,
+          "variant": "ninth",
+          "shape": [
+            1000003,
+            2
+          ],
+          "dtype": "bfloat16",
+          "dim": 1,
+          "correct": true,
+          "median_us": 7.026,
+          "samples_us": [
+            7.026,
+            7.13,
+            6.045
+          ],
+          "launch_grid": [
+            64,
+            64,
+            64,
+            64
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 90112
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_selected_pairs"
+          ]
+        },
+        {
+          "case": 13,
+          "variant": "ninth",
+          "shape": [
+            11,
+            13,
+            16,
+            67
+          ],
+          "dtype": "float32",
+          "dim": 2,
+          "correct": true,
+          "median_us": 2.456,
+          "samples_us": [
+            3.868,
+            2.456,
+            2.374
+          ],
+          "launch_grid": [
+            36,
+            36,
+            36,
+            36
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 25728
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_short_rows"
+          ]
+        },
+        {
+          "case": 14,
+          "variant": "ninth",
+          "shape": [
+            3,
+            7,
+            11,
+            13,
+            1012
+          ],
+          "dtype": "float16",
+          "dim": -1,
+          "correct": true,
+          "median_us": 6.383,
+          "samples_us": [
+            6.838,
+            6.383,
+            6.208
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 112640
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_rows"
+          ]
+        },
+        {
+          "case": 15,
+          "variant": "ninth",
+          "shape": [
+            512,
+            4096
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 6.966,
+          "samples_us": [
+            7.874,
+            6.966,
+            6.764
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 49152
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_inline_tail"
+          ]
+        },
+        {
+          "case": 16,
+          "variant": "ninth",
+          "shape": [
+            254,
+            16383
+          ],
+          "dtype": "bfloat16",
+          "dim": 0,
+          "correct": true,
+          "median_us": 8.111,
+          "samples_us": [
+            8.111,
+            8.984,
+            7.477
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 144640
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_inline_tail"
+          ]
+        },
+        {
+          "case": 17,
+          "variant": "ninth",
+          "shape": [
+            4096,
+            1023
+          ],
+          "dtype": "float16",
+          "dim": 0,
+          "correct": true,
+          "median_us": 8.167,
+          "samples_us": [
+            8.167,
+            9.901,
+            7.169
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 97280
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_inline_tail"
+          ]
+        },
+        {
+          "case": 18,
+          "variant": "ninth",
+          "shape": [
+            2,
+            1023,
+            4096
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 22.62,
+          "samples_us": [
+            22.95,
+            22.62,
+            22.295
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 147456
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_rows"
+          ]
+        },
+        {
+          "case": 19,
+          "variant": "ninth",
+          "shape": [
+            4,
+            510,
+            4097
+          ],
+          "dtype": "bfloat16",
+          "dim": 1,
+          "correct": true,
+          "median_us": 13.766,
+          "samples_us": [
+            13.766,
+            18.485,
+            12.981
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 163840
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_striped"
+          ]
+        },
+        {
+          "case": 20,
+          "variant": "ninth",
+          "shape": [
+            2,
+            3,
+            17,
+            512,
+            100
+          ],
+          "dtype": "float32",
+          "dim": -1,
+          "correct": true,
+          "median_us": 15.885,
+          "samples_us": [
+            16.835,
+            15.885,
+            15.854
+          ],
+          "launch_grid": [
+            72,
+            72,
+            72,
+            72
+          ],
+          "launches": 1,
+          "allocations": [
+            {
+              "UB": 102400
+            }
+          ],
+          "repeat": 2,
+          "candidate_sha256": "fe5c68d9183f9bd2d1698026c2be2d1ffe0a3971f6fbaf351d380cd8cdb652a5",
+          "kernels": [
+            "swiglu_selected_compact"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+--- tenth/swi_glu.py	2026-11-12 09:10:35.161608977 +0300
++++ eleventh/swi_glu.py	2026-11-12 09:52:55.465735492 +0300
+@@ -2,6 +2,17 @@
+ 
+ 
+ @asctile.jit(always_compile=False)
++def swiglu_whole_row(x:asctile.GlobalAddress,y:asctile.GlobalAddress,R:asctile.ConstExpr[int],H:asctile.ConstExpr[int],U:asctile.ConstExpr[int],N:asctile.ConstExpr[int]):
++    gx=asctile.global_tensor(x,[2*R*H]);gy=asctile.global_tensor(y,[R*H]);b=asctile.block_idx()
++    for step in asctile.range(R//N,unroll_factor=U):
++        row=step*N+b
++        gate=asctile.copy_in(gx,[row*2*H],[H]);val=asctile.copy_in(gx,[row*2*H+H],[H])
++        gf=gate.to(asctile.float32);vf=val.to(asctile.float32)
++        out=((gf/(asctile.exp(-gf)+1.0))*vf).to(gate.dtype)
++        asctile.copy_out(out,gy,[row*H])
++
++
++@asctile.jit(always_compile=False)
+ def swiglu_seed_waves(x: asctile.GlobalAddress, y: asctile.GlobalAddress, i0: asctile.GlobalAddress, R: asctile.ConstExpr[int], H: asctile.ConstExpr[int], TR: asctile.ConstExpr[int], U: asctile.ConstExpr[int]):
+     # Rank-1 global tensors
+     gx = asctile.global_tensor(x, [2 * R * H])
+@@ -1041,6 +1052,17 @@
+     return tile
+ 
+ 
++def whole_row_grid(rows, half, tile, itemsize, cap, ub_bytes):
++    if itemsize != 4 or half != tile or cap < 1 or half % 8:
++        return 0
++    if not 8192 <= half * itemsize <= 16384 or not 4 * cap <= rows < 8 * cap:
++        return 0
++    if 2 * rows * half * itemsize > 64 * 1024**2 or 48 * tile > ub_bytes:
++        return 0
++    grid = choose_even_grid(rows, cap)
++    return grid if rows % (4 * grid) == 0 else 0
++
++
+ def select(rows, half, itemsize, is_pair, is_bf16, ub_bytes, aivs):
+     route, t, u = previous_select(rows, half, itemsize, is_pair, is_bf16, ub_bytes, aivs)
+     size = half * itemsize
+@@ -1071,6 +1093,8 @@
+             return 'compact_slab',t,u
+     if route != 'flat_chunks':
+         return route,t,u
++    if whole_row_grid(rows, half, t, itemsize, aivs, ub_bytes):
++        return 'whole_rows', t, 4
+     if itemsize == 4 and 8192 <= size <= 16384 and rows >= 8*aivs:
+         h = max(1,16384//size)
+         if h*((half+7)//8*8)*36 <= ub_bytes:
+@@ -1116,7 +1140,7 @@
+             return route,min(t,8192),2
+     return route,t,u
+ 
+-ROUTES = {"column_stream":"flat", "packed_pairs":"packed", "index_gather":"reindex", "batched_rows":"2d", "flat_chunks":"flat"}
++ROUTES = {"whole_rows":"flat", "column_stream":"flat", "packed_pairs":"packed", "index_gather":"reindex", "batched_rows":"2d", "flat_chunks":"flat"}
+ from functools import lru_cache
+ from math import prod
+ 
+@@ -1170,6 +1194,12 @@
+             aligned_grid=1 << (blocks.bit_length()-1)
+             if work >= 8*blocks and work % aligned_grid == 0:
+                 blocks=aligned_grid
++        if layout == 'whole_rows':
++            row_blocks = whole_row_grid(rows, half, tile, itemsize, blocks, ub_bytes)
++            if row_blocks:
++                swiglu_whole_row[row_blocks](x,y,rows,half,unroll,row_blocks,opt_level=3,reuse_alloc=2)
++                return out
++            unroll = 2
+         flat_fn = swiglu_flat
+         if itemsize == 4 and (half == tile or (rows > aivs and half%tile)):
+             flat_fn = swiglu_inline_tail
+@@ -1213,7 +1243,7 @@
+         if is_bf16 and 2*tile*half <= 32768 and tile*half % 16 == 0:
+             i0,i1=small_indices(half,tile,x.device)
+             if half > 1 and groups > blocks and groups <= 2 * blocks and unroll == 2:
+-                wave_fn = swiglu_seed_waves if tile % 2 == 0 and (tile * half) % 32 == 0 else swiglu_local_waves
++                wave_fn = swiglu_local_waves
+                 wave_fn[blocks](x,y,i0,rows,half,tile,unroll,reuse_alloc=2)
+             elif half>1:
+                 swiglu_wave_slab[blocks](x,y,i0,i1,rows,half,tile,unroll,blocks,reuse_alloc=2)
