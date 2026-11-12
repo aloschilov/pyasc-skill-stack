@@ -54,8 +54,23 @@ original-dtype output buffer directly. Do not widen input tensors on the
 host, allocate intermediate FP32 host tensors, or cast back on the host.
 A passing golden and an AI_VECTOR_CORE task do not account for that work.
 Bound the last transfer in the same launch.
-Benchmark a direct one-tile body when the whole input fits one wave, and
-a grid-stride pipelined loop when there are enough tiles for multiple waves.
+For a direct one-wave Exp candidate, round the work per available AIV
+**up** to the tile alignment. Let `A` be available AIVs, `N` elements,
+and `T = align_up(ceil_div(N, A), alignment_in_elements)`. Check the
+compiled live UB budget for this dtype, including casts and temporaries.
+If it fits, launch `ceil_div(N, T)` blocks, one tile per block, with a
+bounded final transfer and no grid-stride loop. Rounding down can leave a
+second wave for a tiny remainder. Measure this path against streaming.
+
+For multi-wave Exp, use an explicit pipelined range with compile-time
+unroll and allocation reuse. In two shuffled 950PR runs with identical
+arithmetic and verified outputs, 8192 elements and unroll 2 took
+5.471/5.788 µs on 1M FP16 and 14.342/14.869 µs on 4M FP32. Try that
+geometry when the compiled UB permits it. For 16M BF16, benchmark both
+4096 with unroll 3 (26.249/27.110 µs) and 8192 with unroll 2
+(27.266/27.120 µs). These samples exercise a single set of scalar
+attributes per dtype. Repeat the A–B–A check and qualify every public
+shape after selecting the geometry.
 
 ### High-level GeLU campaign (historical)
 
