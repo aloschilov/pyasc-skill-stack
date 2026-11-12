@@ -259,15 +259,52 @@ test('CI submission shows 19 generated cases and the independent historical comp
     model:'gateway/glm-5.3',revision:'d'.repeat(40),all_ratio:0.81,finished_at:'2026-11-11T17:08:38+00:00'}]};
   await load(payload);
   const timing=page.locator('#timing');
-  assert.match(await timing.innerText(),/0.800×.*0.810×.*67.0000/s);
-  await timing.getByText('20/20 passed').click();
-  assert.equal(await timing.getByRole('table',{name:'Official device time (µs)'}).locator('tbody tr').count(),20);
+  assert.match(await timing.innerText(),/0.800×/);
+  assert.match(await timing.innerText(),/Including it gives 0.810×/);
+  assert.match(await timing.innerText(),/67.0000/);
+  await timing.getByText('All 20 cases and service metrics').click();
+  const cases = timing.getByRole('table',{name:'Official device time (µs)'});
+  assert.equal(await cases.locator('tbody tr').count(),20);
+  assert.match(await cases.locator('tbody tr').nth(11).innerText(),/12 · template/);
+  assert.equal((await cases.locator('tbody tr').first().locator('td').allTextContents())[0],'—');
+  assert.equal(await timing.getByRole('link',{name:'job_abc'}).getAttribute('href'),'https://cannbench.com/jobs/job_abc');
   await page.locator('#search').fill('unrelated');
   assert.equal(await timing.getByText('job_abc').count(),0);
+  assert.equal(await page.locator('#swiglu-study').getByText('Official timings for all 20 cases').count(),0);
+
+  // Previously published snapshots can have a single service record without run history.
+  delete payload.cannbench_performance;
+  await load(payload);
   const panel = page.locator('#swiglu-study');
   assert.match(await panel.textContent(),/0.800× baseline speed.*19 cases.*25.0% more device time/);
   assert.equal(await panel.getByRole('link',{name:'GitHub Actions generation'}).getAttribute('href'),payload.swiglu_performance.generation);
-  assert.equal(await panel.getByRole('link',{name:'CANNBench job job_abc'}).getAttribute('href'),'https://cannbench.com/jobs/job_abc');
-  await panel.getByText('Official timings for all 20 cases').click();
-  assert.equal(await panel.locator('tbody tr').count(),20);
+});
+
+test('hardware comparison ranks paired generated cases and switches receipts on narrow screens', async () => {
+  const payload = data();
+  const release='https://github.com/example/repo/releases/tag/';
+  const older = {status:'available',job:'job_ab',submission:'sub_ab', model:'glm',revision:'d'.repeat(40),
+    generation:'https://github.com/example/repo/actions/runs/2', release:release+'ab',
+    ratio:1,all_ratio:1,score:40,finished_at:'2026-11-11T12:00:00Z',
+    cases:Array.from({length:20},(_,i)=>({id:'level1/swi_glu_'+(i+1),kernel:i===11?'_swiglu_pair_groups':'rows',elapsed_us:10,baseline_us:10}))};
+  const newer = {...older,job:'job_cd',submission:'sub_cd',release:release+'cd',finished_at:'2026-11-12T12:00:00Z',
+    previous:{job:older.job,release:older.release,changed_baselines:1,previous_over_current:0.99},
+    cases:older.cases.map((c,i)=>({...c, previous_elapsed_us:10,elapsed_us:i===10?13:i===11?25:i===12?9:10}))};
+  payload.cannbench_performance={complete:true,runs:[newer,older]};
+  await load(payload);
+  const timing=page.locator('#timing');
+  const rows=timing.getByRole('table',{name:'Largest time changes · generated cases'}).locator('tbody tr');
+  assert.match(await rows.first().innerText(),/11\s+10.00\s+13.00\s+30.0% slower/);
+  assert.match(await rows.nth(1).innerText(),/13\s+10.00\s+9.00\s+10.0% faster/);
+  assert.match(await timing.innerText(),/1 faster · 1 slower · 17 unchanged/);
+  assert.match(await timing.innerText(),/1.01% slower/);
+  assert.match(await timing.innerText(),/changed service baselines: 1/);
+  await timing.getByText('All 20 cases and service metrics').click();
+  await page.setViewportSize({width:390,height:900});
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await accessibility();
+  await timing.getByRole('radio').nth(1).check();
+  assert.equal(await rows.count(),0);
+  assert.match(await timing.innerText(),/No verified previous-run comparison/);
+  assert.equal(await timing.getByRole('link',{name:'Source and service receipt'}).getAttribute('href'),older.release);
 });
