@@ -115,9 +115,15 @@ compile-time 3. A separate experiment using the same tile, grid, scalar
 math and a compile-time loop count took 5.195/5.032 µs for bounded
 BF16 copies and 4.759/4.841 µs with full copies split from the tail.
 Those two trials support the comparison of bounds inside that series.
-The earlier runtime-count results came from a different session. A later
-generation with explicit conditional clamps recorded 4.430 µs at the same
-public BF16 shape. That cross-run difference includes other codegen changes. Keep the affine scalars explicit launch arguments
+In two further shuffled rounds, matched contiguous kernels using the same
+tile, 72 blocks, unroll 3 and scalar math compared runtime and fixed trip
+counts on five public shapes. On the BF16 base-only input they took
+4.263/3.686 µs with a runtime count and 5.396/5.155 µs with a fixed
+count. On the shift-only input the corresponding medians were 3.477/3.455
+and 4.562/4.679 µs. The runtime-count version was faster in both rounds
+on all five shapes. Interleaving the tiles on BF16 gave 3.672/3.831 µs;
+its ordering relative to runtime contiguous changed between rounds.
+Keep the affine scalars explicit launch arguments
 in every specialization. Larger streams still need the multi-wave rule.
 
 For multi-wave Exp, use an explicit pipelined range with compile-time

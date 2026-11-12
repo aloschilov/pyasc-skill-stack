@@ -118,6 +118,24 @@ height when B < 2 or R < 2*N*B. Test that fallback explicitly on a shape
 where the total row count differs from the incoming tile height. Verify the emitted
 allocation and golden output, including the final partial tile.
 
+For direct-division FP16, the 20-byte coefficient already includes
+both stages. Applying another factor of two in the unroll test selected
+one stage in a clean generation. Use this selector before the ordinary
+row fallback. Its result is a height in rows for the two-stage row JIT.
+A zero delegates both height and unroll to the ordinary selector.
+
+```python
+def padded_fp16_two_stage_height(rows, half, dtype, aivs, usable_ub):
+    if dtype != torch.float16 or min(rows, half, aivs, usable_ub) <= 0 or half % 16 == 0:
+        return 0
+    width = ((half + 15) // 16) * 16
+    limit = min(12288 // (2 * width), usable_ub // (20 * width))
+    if limit < 2 or rows < 2 * aivs * limit:
+        return 0
+    waves = (rows + aivs * limit - 1) // (aivs * limit)
+    return (rows + aivs * waves - 1) // (aivs * waves)
+```
+
 At R=3003, H=506, W=512 and N=72, B=12 gives four waves and T=11.
 Independent warmed medians were 6.530 and 6.359 µs, versus 6.781 and
 7.080 µs with the original height of eight. For the aligned 512-wide
