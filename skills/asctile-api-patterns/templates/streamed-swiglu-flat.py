@@ -1,5 +1,6 @@
 """Process [R, 2H] in full contiguous chunks and one partial chunk per row."""
 
+import torch
 from asc.experimental import asctile
 
 
@@ -63,3 +64,17 @@ def swiglu_flat(
             out_tile = out_f.to(out_dtype)
 
             asctile.copy_out(out_tile, gy, [row * H + col], real_shape=[valid])
+
+
+
+def whole_bf16_grid(rows, half, dtype, aivs, usable_ub):
+    """Select complete four-stage groups for a grid of aligned BF16 rows."""
+    if dtype != torch.bfloat16 or aivs < 1 or rows < 8 * aivs:
+        return 0
+    if half % 16 or not 8192 <= 2 * half <= 32768 or 32 * half > usable_ub:
+        return 0
+    low = (7 * aivs + 7) // 8
+    for blocks in range(aivs, low - 1, -1):
+        if rows % (4 * blocks) == 0:
+            return blocks
+    return 0

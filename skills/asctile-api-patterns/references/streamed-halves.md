@@ -36,6 +36,21 @@ shuffled controls took 521.929/521.204 µs, versus 529.821/529.377 µs
 at 4096 and unroll 3, or 524.550/524.646 µs at 8192 and unroll 2.
 The public baseline is 522.100 µs; retain independent full-suite checks.
 
+### Complete aligned BF16 half-rows
+
+With at least eight waves of aligned BF16 rows, test a four-stage pipeline
+over complete half-rows of 8–32 KiB. For this fixed-copy emitter reserve
+32 bytes per lane for dispatch. Search from the available grid down to
+seven eighths of it for the largest grid dividing the row count into
+whole groups of four per block. With 4096 rows of 4096 BF16 lanes and 72
+available AIVs, the selected grid is 64, the tile is one half-row and
+the four-stage kernel used 114688 UB bytes. Five full standalone David
+series gave 45.011–45.636 µs against 48.590 µs. A clean source dispatching
+the same shape to 2D copies took 74.447 µs. A separate flat 4096-lane
+three-stage control on 72 blocks took 45.392 µs. These measurements support
+choosing whole-row copies for this shape; remeasure unroll and grid at
+fixed layout before attributing the gain to either parameter.
+
 ### Moderate FP32 and BF16 streams
 
 For moderate streams consult the [two shape-dependent schedules](../templates/moderate-swiglu-stream.py).
