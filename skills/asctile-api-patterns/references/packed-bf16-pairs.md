@@ -3,13 +3,16 @@
 For SwiGLU on a contiguous final axis of length two, flatten the outer
 dimensions into a pair count. One contiguous BF16 read covers both operands.
 Select the implementation according to the target and the candidate contract.
-On the archive-bundled 950PR public PyASC build with `asctile.reindex` and
-reusable int32 indices, route eligible pairs through the existing
-[short-half slab gather](reindex-slabs.md). For H=1 the two vectors contain
-even and odd element offsets. Load each vector once per block, gather BF16
-from a single contiguous input tile and cast each half to FP32 for SwiGLU.
-Derive the row count and loop unroll using the same DMA, UB and work bounds
-as the other qualified gathers. Keep the partial tile in the main grid.
+On the archive-bundled public Ascend950PR_9599 build, route eligible
+pairs through the [short-half slab gather](reindex-slabs.md). Each tile
+reads consecutive BF16 pairs once. Cache the even gate offsets on the
+input device and derive the odd value offsets in UB. Use direct signed
+int16 indices when both vectors fit the index range and the index DMA
+is aligned. For larger offsets, use the qualified int32 route. Gather
+and widen the gate, compute its activation in FP32, then gather and widen
+the value. Size the tile and unroll from the DMA target, available UB and
+useful work per AIV. Apply the compact four-wave grid and block ordering
+when the reindex geometry qualifies. Keep the valid tail in the same launch.
 
 On the native-enabled 950PR pin qualified below, use the
 [register kernel and selector](../templates/register-bf16-swiglu.py).

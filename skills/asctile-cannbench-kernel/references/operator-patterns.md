@@ -237,6 +237,8 @@ exercises three useful candidates:
   chunks. Load gate and value from offsets separated by H, and include
   useful column chunks when choosing the grid. Compare loop unroll 1, 2
   and 3 using compiled UB for the exact dtype, tile and JIT options.
+  See [flat SwiGLU streams](../../asctile-api-patterns/references/streamed-halves.md)
+  for whole-row specialization and block scheduling.
 
 Use the active vector-resource query for these routes. Recheck warm and
 cache-flushed timings under the runner's actual sampling convention before
