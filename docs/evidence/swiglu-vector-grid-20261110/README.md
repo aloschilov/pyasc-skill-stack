@@ -1,5 +1,7 @@
 # SwiGLU launch grids on Ascend950PR_9599
 
+Independent OpenCode regeneration on David produced one 2D kernel, matched 12/20 previous grids and passed all 20 golden checks. Its CANNBench geometric mean was 0.6792×, and 1/20 medians met the saved archive thresholds. [Generated source, measured grids and per-case table](clean-opencode/README.md)
+
 The final fixed SwiGLU candidate met all 20 saved archive times in its third full run on David. Its geometric mean against CANNBench was 1.0482×. [Qualified source, per-case table and repeat results](parity/README.md#qualified-fixed-candidate)
 
 All 20 published Season 2 SwiGLU cases passed the full golden check for cap64, auto, UB-height auto, packed pairs, the gate-only variant, the native register variant, the archived job replay and the public shape-dispatch and reindex candidates. Cap64 and auto share tile shapes and math. The UB variant starts from auto and selects the height of padded short rows from the active UB capacity. Cap64 limits each launch to 64 independent work items. Auto uses the vector resources reported for the active context, bounded by the work available to that launch. A separately owned row tail launches one block.
