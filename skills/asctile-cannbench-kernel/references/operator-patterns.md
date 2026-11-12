@@ -192,18 +192,20 @@ tails and NaN/Inf positions for every new candidate.
 
 For SwiGLU, normalize the split axis first. When the contiguous BF16 input
 is split on its final axis of length two, each row is a neighbor pair
-`(gate, value)`. Choose the packed pair path in
-[AscTile API patterns](../../asctile-api-patterns/references/packed-bf16-pairs.md)
-before the short-row height selector. Include the UB-selected tile, the single
-block-stride launch with a bounded final copy, and the gate-only exponential
-from that pattern. Confirm the observed launch count and compiled UB allocation.
+`(gate, value)`. Select the implementation for the active build using the
+[BF16 pair pattern](../../asctile-api-patterns/references/packed-bf16-pairs.md).
+On the qualified archive-bundled public 950PR build, admit these pairs into
+the existing short-half reindex route before any transpose shortcut. Derive
+tile and unroll from the slab geometry. Confirm the actual kernel, grid,
+bounded final copy and compiled UB allocation.
 For an already validated contiguous
 tensor the guard is `dtype == torch.bfloat16 and d == rank - 1 and shape[d] == 2`.
 Here `d` is the normalized **axis index**, not its extent. Verify the launched
 kernel on a rank-two [R, 2] input; golden values alone also pass on the old
 row route. A last dimension of 14, for example,
 contains two adjacent **halves** of length seven, not seven interleaved pairs.
-Keep the UB-sized row path for other short rows. Dispatch from layout and dtype,
+Admit wider short BF16 halves to the same slab eligibility check. Use the
+UB-sized row path when that check declines the gather. Dispatch from layout and dtype,
 never the case ID or a particular outer shape.
 
 For other contiguous splits, express the input as `[R, 2H]`, where
@@ -235,12 +237,17 @@ exercises three useful candidates:
 - When several half-rows fit in UB, batch them into a two-dimensional tile
   with a 32-byte-aligned physical width. Bound both the row count and the
   logical width on reads and stores. The archive targets roughly 8–16 KiB
-  per half-tile for short rows. Tune the height against both DMA size and
-  grid occupancy.
+  per half-tile for short rows. For the public 950PR kernel, choose height
+  from the logical transfer size and choose unroll from the padded UB
+  footprint of the emitted arithmetic and work per AIV. For FP16, widen
+  the halves, divide the gate directly by its sigmoid denominator and use
+  the qualified FP16 coefficient in the [2D row geometry](../../asctile-api-patterns/references/strided-row-tiles.md).
 - When a half-row is already a long contiguous stream, split it into flat
   chunks. Load gate and value from offsets separated by H, and include
   useful column chunks when choosing the grid. Compare loop unroll 1, 2
   and 3 using compiled UB for the exact dtype, tile and JIT options.
+  See [flat SwiGLU streams](../../asctile-api-patterns/references/streamed-halves.md)
+  for whole-row specialization and block scheduling.
 
 Use the active vector-resource query for these routes. Recheck warm and
 cache-flushed timings under the runner's actual sampling convention before

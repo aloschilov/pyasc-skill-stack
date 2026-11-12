@@ -1,5 +1,9 @@
 # SwiGLU launch grids on Ascend950PR_9599
 
+Two independently generated SwiGLU operators passed all 20 output checks on Ascend950PR_9599. The GLM-5.3 candidate used one row kernel and reached 0.6792×. With the revised skills, the DeepSeek-V4.1-Flash candidate used BF16 slab gathers on two cases, strided row copies on eleven and flat chunks on seven, reaching 0.9906×. Both used 69 blocks on case 11 and 72 on the other cases. The ratios compare published CANNBench baseline times with local warmed medians over all 20 cases. Both the generator model and the skill inputs changed between runs.
+
+The [layout study archive](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-swiglu-layout-pr57/swiglu-layout-5443610.tar.gz) contains the per-case timings, generated sources, model inputs and tuning controls. Its SHA-256 is `81f5aaea2e2bf46610f1d328dd7359b844e1b4f1ea247c1cf43a58618091faad`. [Read the per-case comparison](https://github.com/aloschilov/pyasc-skill-stack/blob/544361050987084139d2442d17892fbd509dea73/docs/evidence/swiglu-vector-grid-20261110/layout-dispatch-opencode/README.md).
+
 All 20 published Season 2 SwiGLU cases passed the full golden check for cap64, auto, UB-height auto, packed pairs, the gate-only variant, the native register variant, the archived job replay and the fresh shape-dispatch candidate. Cap64 and auto share tile shapes and math. The UB variant starts from auto and selects the height of padded short rows from the active UB capacity. Cap64 limits each launch to 64 independent work items. Auto uses the vector resources reported for the active context, bounded by the work available to that launch. A separately owned row tail launches one block.
 
 ## Measured grids and device time
