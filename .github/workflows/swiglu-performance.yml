@@ -1,0 +1,187 @@
+name: SwiGLU generated performance
+on:
+  workflow_call:
+    inputs:
+      action:
+        type: string
+        required: true
+      skills_revision:
+        type: string
+        required: false
+      origin:
+        type: string
+        required: false
+    secrets:
+      OPENCODE_API_KEY:
+        required: true
+      BENCHSITE_API_TOKEN:
+        required: true
+      QUALIFICATION_PUBLISH_TOKEN:
+        required: false
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    if: inputs.action == 'performance' || inputs.action == 'performance-generate'
+    permissions:
+      contents: read
+      actions: read
+    runs-on: cannbench-vm
+    timeout-minutes: 86
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate skill revision
+        if: inputs.skills_revision != ''
+        env:
+          REVISION: ${{ inputs.skills_revision }}
+        run: '[[ "$REVISION" =~ ^[0-9a-f]{40}$ ]]'
+      - uses: actions/checkout@v4
+        if: inputs.skills_revision != ''
+        with:
+          ref: ${{ inputs.skills_revision }}
+          path: .evaluation-skills
+          persist-credentials: false
+          sparse-checkout: skills
+      - name: Install pinned OpenCode
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_dir=$(mktemp -d)
+          curl --fail --location --retry 2 --max-time 240 -o "$tool_dir/cli.tar.gz" https://github.com/anomalyco/opencode/releases/download/v1.19.0/opencode-linux-arm64.tar.gz
+          echo "e9841d43d3e1a8f36ed2691592d3b8b4fb097e606c8b559a277a1b845840e26b  $tool_dir/cli.tar.gz" | sha256sum --check
+          tar xzf "$tool_dir/cli.tar.gz" -C "$tool_dir"
+          echo "$tool_dir" >> "$GITHUB_PATH"
+      - name: Prepare benchmark client
+        run: |
+          export CANNBENCH_VENV="$RUNNER_TEMP/perf-client-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          bash integrations/cannbench/setup-site-mcp.sh
+          echo "PYTHON=$CANNBENCH_VENV/bin/python" >> "$GITHUB_ENV"
+      - name: Generate PyASC compute and launch policy with OpenCode
+        env:
+          GH_TOKEN: ${{ inputs.origin != '' && github.token || '' }}
+          KERNEL_ORIGIN: ${{ inputs.origin }}
+          SWIGLU_SKILL_SOURCE: ${{ inputs.skills_revision != '' && format('{0}/.evaluation-skills', github.workspace) || '' }}
+          OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          BENCHSITE_API_TOKEN: ${{ secrets.BENCHSITE_API_TOKEN }}
+        run: '"$PYTHON" integrations/cannbench/ci/swiglu_performance/generate.py "$RUNNER_TEMP/swiglu-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: swiglu-generation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/swiglu-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+
+  evaluate:
+    needs: generate
+    if: >-
+      always() && !cancelled() &&
+      ((inputs.action == 'performance' && needs.generate.result == 'success') ||
+       inputs.action == 'performance-evaluate' || inputs.action == 'performance-resume' || inputs.action == 'performance-submit-prepared')
+    runs-on: cannbench-vm
+    timeout-minutes: 340
+    permissions:
+      actions: read
+      contents: write
+    env:
+      HELPER: integrations/cannbench/ci/swiglu_performance/evaluate.py
+      IMAGE: ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:1efdcc8585b769715f640e9c9078c2e03cdf2157082d05b0c4b87974beea7407
+      ORIGIN: ${{ inputs.action == 'performance' && github.run_id || inputs.origin || github.run_id }}
+      EVALUATION_RUN: ${{ (inputs.action == 'performance-resume' || inputs.action == 'performance-submit-prepared') && inputs.origin || github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Open evaluation directory and prepare benchmark client
+        env:
+          RESUME: ${{ inputs.action == 'performance-resume' || inputs.action == 'performance-submit-prepared' }}
+        run: |
+          set -eu
+          [[ "$EVALUATION_RUN" =~ ^[1-9][0-9]*$ ]]
+          base="$HOME/.local/state/pyasc-swiglu-performance"
+          root="$base/$EVALUATION_RUN"
+          mkdir -p -m 700 "$base"
+          if [[ "$RESUME" == true ]]; then test -f "$root/prepared/manifest.json"; else mkdir -m 700 "$root"; fi
+          echo "ROOT=$root" >> "$GITHUB_ENV"
+          export CANNBENCH_VENV="$RUNNER_TEMP/swiglu-eval-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          bash integrations/cannbench/setup-site-mcp.sh
+          echo "PYTHON=$CANNBENCH_VENV/bin/python" >> "$GITHUB_ENV"
+      - name: Verify original GitHub Actions generation
+        if: inputs.action != 'performance-resume' && inputs.action != 'performance-submit-prepared'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: '"$PYTHON" "$HELPER" restore "$ROOT" --origin "$ORIGIN"'
+      - name: Run numerical CaModel controls and lower the same bytes to AscendC
+        if: inputs.action != 'performance-resume' && inputs.action != 'performance-submit-prepared'
+        run: |
+          set -eu
+          mkdir "$ROOT/qualification"
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
+            --user "$(id -u):$(id -g)" -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
+            -v "$GITHUB_WORKSPACE:/src:ro" -v "$ROOT/qualification:/result" \
+            -v "$ROOT/generation:/generation:ro" -w /tmp "$IMAGE" \
+            python3.12 /src/integrations/cannbench/ci/swiglu_performance/qualify.py /generation /result
+      - name: Package source and reproduce its wheel build
+        if: inputs.action != 'performance-resume' && inputs.action != 'performance-submit-prepared'
+        env:
+          CANNBENCH_AGGREGATION_TOKEN: ${{ vars.CANNBENCH_AGGREGATION_TOKEN }}
+        run: |
+          set -eu
+          "$PYTHON" "$HELPER" package "$ROOT"
+          mkdir "$ROOT/build-test"
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
+            --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$ROOT/prepared/submission.zip:/submission.zip:ro" -v "$ROOT/build-test:/build" \
+            -w /build "$IMAGE" bash -c 'python3 -m zipfile -e /submission.zip /build && bash build.sh && python3 -m zipfile -t dist/*.whl'
+      - uses: actions/upload-artifact@v4
+        if: inputs.action != 'performance-resume' && inputs.action != 'performance-submit-prepared'
+        id: checkpoint
+        with:
+          name: swiglu-prepared-${{ github.run_id }}
+          path: |
+            ${{ env.ROOT }}/prepared/submission.zip
+            ${{ env.ROOT }}/generation/generation.json
+            ${{ env.ROOT }}/qualification/camodel.json
+          if-no-files-found: error
+      - name: Submit once and collect service timings
+        env:
+          STAGE: ${{ inputs.action == 'performance-resume' && 'resume' || inputs.action == 'performance-submit-prepared' && 'reopen' || 'submit' }}
+          GH_TOKEN: ${{ inputs.action == 'performance-submit-prepared' && github.token || '' }}
+          BENCHSITE_API_TOKEN: ${{ secrets.BENCHSITE_API_TOKEN }}
+          PREPARED_ARTIFACT_ID: ${{ steps.checkpoint.outputs.artifact-id }}
+        run: '"$PYTHON" "$HELPER" "$STAGE" "$ROOT"'
+      - name: Publish measured cases with the evaluated source package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_TOKEN: ${{ secrets.QUALIFICATION_PUBLISH_TOKEN }}
+        run: |
+          set -eu
+          cd "$ROOT/public"
+          sha256sum -c SHA256SUMS
+          tag="qualification-swiglu-performance-$EVALUATION_RUN"
+          revision=$(jq -er '.evaluation_revision | select(test("^[0-9a-f]{40}$"))' performance.json)
+          ref=$(git ls-remote --refs "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$tag")
+          target=(--target "$revision")
+          if [ -n "$ref" ]; then
+            # An existing lightweight qualification tag binds this receipt to its evaluation.
+            test "${ref%%[[:space:]]*}" = "$revision"
+            target=()
+          elif [ -n "$PUBLISH_TOKEN" ]; then
+            # Creating a tag on a workflow-changing branch revision may require Workflows write.
+            if GH_TOKEN="$PUBLISH_TOKEN" gh api "repos/$GITHUB_REPOSITORY" --silent; then
+              export GH_TOKEN="$PUBLISH_TOKEN"
+            fi
+          fi
+          if gh release view "$tag" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            temp=$(mktemp -d)
+            gh release download "$tag" -R "$GITHUB_REPOSITORY" -D "$temp"
+            cmp SHA256SUMS "$temp/SHA256SUMS"
+            (cd "$temp" && sha256sum -c SHA256SUMS)
+          else
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" "${target[@]}" \
+              --title "CI-generated SwiGLU · CANNBench $EVALUATION_RUN" --notes "CI generation, 19 generated compute cases and one packed template. Per-case service measurements and exact submitted source package are attached." \
+              performance.json candidate.py submission.zip SHA256SUMS
+          fi

@@ -10,7 +10,11 @@ on:
         description: 'Optional single-model operator NPU evaluation (uses one credit); resume never submits'
         type: choice
         default: none
-        options: [none, generate, repair, continue, resume]
+        options: [none, generate, repair, continue, resume, performance-generate, performance, performance-evaluate, performance-resume, performance-submit-prepared]
+      skills_revision:
+        description: 'Optional full in-repository commit of the four skills for SwiGLU performance generation'
+        type: string
+        default: ''
       operator:
         description: 'Checked-in operator recipe; ignored for continue/resume'
         type: string
@@ -66,6 +70,8 @@ jobs:
   # PR gate: L1 unit tests + static checks (no Docker, no CANN)
   # ==========================================================================
   pr-gate:
+    outputs:
+      evaluate_swiglu: ${{ steps.skill-change.outputs.changed }}
     # Native arm64 on the self-hosted Mac runner (label `arm64`). This gate is
     # pure static checks + L1 unit tests (no Docker, no CANN); CI now runs
     # entirely on the Mac runner with no x86 emulation. (Formerly GitHub-hosted
@@ -76,6 +82,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      - name: Detect changes to skills used by the CANNBench generator
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: skill-change
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -eu
+          if [ "$(git show -s --format='%(trailers:key=CANNBench-Evaluation,valueonly)' HEAD)" = skip ]; then
+            echo "CANNBench evaluation skipped by the main commit trailer." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git fetch --no-tags --depth=1 origin "$BEFORE"
+          files=$(git diff --name-only "$BEFORE" HEAD -- skills/asctile-api-patterns skills/asctile-build-run-verify skills/asctile-cannbench-kernel skills/asctile-syntax-constraints)
+          if [ -n "$files" ]; then echo 'changed=true' >> "$GITHUB_OUTPUT"; fi
 
       - uses: actions/setup-python@v5
         with:
@@ -287,9 +308,32 @@ jobs:
             exit 1
           fi
 
+  swiglu-on-skill-change:
+    needs: [pr-gate, examples-gate]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.pr-gate.outputs.evaluate_swiglu == 'true'
+    uses: ./.github/workflows/swiglu-performance.yml
+    with:
+      action: performance
+    permissions:
+      contents: write
+      actions: read
+    secrets: inherit
+
+  swiglu-performance:
+    if: github.event_name == 'workflow_dispatch' && startsWith(inputs.cannbench_action, 'performance')
+    uses: ./.github/workflows/swiglu-performance.yml
+    with:
+      action: ${{ inputs.cannbench_action }}
+      skills_revision: ${{ inputs.skills_revision }}
+      origin: ${{ inputs.origin_run }}
+    permissions:
+      contents: write
+      actions: read
+    secrets: inherit
+
   generated-hardware:
     needs: [pr-gate, examples-gate]
-    if: github.event_name == 'workflow_dispatch' && inputs.cannbench_action != 'none' && inputs.cannbench_action != ''
+    if: github.event_name == 'workflow_dispatch' && inputs.cannbench_action != 'none' && inputs.cannbench_action != '' && !startsWith(inputs.cannbench_action, 'performance')
     uses: ./.github/workflows/cannbench-generated.yml
     permissions:
       contents: write

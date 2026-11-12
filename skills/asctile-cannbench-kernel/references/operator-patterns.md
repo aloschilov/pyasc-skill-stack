@@ -220,7 +220,15 @@ exercises three useful candidates:
   `r * 2 * H + h` and `r * 2 * H + H + h`. They also work for H greater
   than one. The archive loads two reusable int32 index tiles per block.
   Include their transfers and UB allocation, and use an index-construction
-  method allowed by the candidate contract. For H=1, compare this public
+  method allowed by the candidate contract. On the CANNBench 950PR image,
+  SwiGLU case 9 stopped before its gather kernel because device-side
+  `torch.arange` required a missing `aclnnArange` binary. For a shape-only
+  address table, construct the two int32 arrays on the host, upload them
+  once per layout and device, and keep all input-dependent math in the
+  generated kernel. With the same generated source, this host change let the
+  H=7 slab run in 14.77 µs and all 20 cases pass.
+  [CI-generated source and service measurements](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-performance-43061369765).
+  For H=1, compare this public
   route with the register specialization when native code is enabled.
   For this slab route, derive height and loop unroll from the input DMA
   bytes, compiled UB footprint and useful tiles per AIV. Apply the
@@ -245,6 +253,21 @@ Use the active vector-resource query for these routes. Recheck warm and
 cache-flushed timings under the runner's actual sampling convention before
 transferring a threshold or unroll choice from another runtime.
 
+Check which guard wins when the BF16 packed-pair and generic gather routes
+overlap. In the matched 950PR replay, the generated H=7 gather took 15.229 µs
+versus 6.385 µs for the archived candidate. The H=1 dispatch took 10.625 µs
+versus 6.345 µs. Retain the selected kernel name, tile height, unroll, compiled
+UB and warmed samples for both shapes before promoting a short-row default.
+[Per-case replay and source](../../../docs/evidence/swiglu-vector-grid-20261110/README.md)
+
+For a reproducible public `asctile.reindex` check, use CPython 3.12, PyASC
+`ed793e45` and
+`ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:1efdcc8585b769715f640e9c9078c2e03cdf2157082d05b0c4b87974beea7407`.
+The arm64 CaModel probe gathered both halves of 16 and 4,096 BF16 pairs with
+exact results. Recheck the complete generated kernel on the submission runtime
+before comparing device times across wheels.
+[Probe, image and per-architecture wheel hashes](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-swiglu-retile-20261110/reindex-cp312-camodel.tar.gz)
+
 For the padded SwiGLU kernel on PyASC `6b3447b4`, the BF16 specialization
 at height 512 and physical width 16 requested 655,360 UB bytes on the 950PR.
 Budget at least 1,280 bytes per physical row (80 bytes per padded lane) for
@@ -262,6 +285,23 @@ On Ascend950PR_9599 with CANN 9.2.0 and PyASC `6b3447b4`, case 6 with
 one BF16 row improved from 1,294.781 to 74.646 µs, and case 19 with four
 BF16 rows and an uneven tail improved from 1,504.377 to 334.773 µs.
 These are medians of three warm device calls after a full-output golden check.
+
+On CANNBench 950PR (CANN 9.2.0), that tile change at eight blocks sped up
+all six wide cases by **13.0×** geometrically. The other 14 retained the
+same emitted kernels and grid (1.0004×). All 20 passed. The generated
+candidate scored 32.7712, versus 32.2349 for its parent and 42.8164 for
+the PyASC reference. Check live lanes and the number of independent
+column tiles before raising the block cap. The torch_npu op-api dispatches
+to `aclnnSwiGlu`; its published CANN tiler considers UB and available
+vector cores, then prefers fewer tiles at equal occupancy.
+[Matched service profiles](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-retile-20261110) ·
+[op-plugin dispatch](https://github.com/Ascend/op-plugin/blob/eee88cf400f796c150db5a6203c4218b5af7ea18/op_plugin/config/op_plugin_functions.yaml#L6996-L7004) ·
+[CANN tiler](https://gitcode.com/cann/ops-nn/blob/f7a6b3e2c4f4c1bb4a2890dfb1e589170f21b307/activation/swi_glu/op_host/swi_glu_tiling.cpp)
+
+For a shape-dependent constexpr, count the emitted specializations before
+shipping an AOT package. The full SwiGLU tile family produced 1,266 device
+sources. Building common layouts eagerly and compiling the others at first
+use preserved the official cases’ machine code and passed the service build.
 
 Measure the grid separately at fixed geometry. With the parent's tile and
 the same inputs, 8 → 32 → 64 blocks took 1,294.781 → 307.247 → 162.471 µs

@@ -198,13 +198,113 @@ test('malformed kernel source projection fails closed', async () => {
 test('workflow navigation preserves the distinct July and November assignments', async () => {
   await load();
   await page.getByRole('link', {name:'BPMN workflows'}).click();
+  await page.locator('#heads b').first().waitFor();
   assert.deepEqual(await page.locator('#heads b').allTextContents(), ['Caller','Author','Reviewer','Verifier','Tuner']);
   await page.getByRole('button', {name:'Phase 4', exact:true}).click();
   assert.match(await page.locator('#phase').innerText(), /tuning/i);
   await page.getByRole('link', {name:'July · Asc2'}).click();
+  await page.locator('#heads b').first().waitFor();
   assert.deepEqual(await page.locator('#heads b').allTextContents(), ['Main Agent','Design','Evaluation','Implementation','Acceptance Review','Verification']);
   await page.getByRole('button', {name:'Phase 2', exact:true}).click();
   await page.locator('#count').click();
   await page.locator('#handoffs button').first().click();
   assert.match(await page.locator('#example').innerText(), /July assignment:/);
+});
+
+test('daily comparison shows first attempts, dated sources and a missing hardware pair', async () => {
+  const payload=data();
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const yesterday=new Date(Date.parse(today+'T12:00:00Z')-86400000).toISOString().slice(0,10);
+  payload.daily={status:'same-skills',timezone:'Europe/Moscow',dates:[yesterday,today],
+    runs:[1,2].map(n=>({run_id:n,attempt:1,revision:'b'.repeat(40),cells:{add:'passed',reduce:'failed'},model:'glm'})),
+    hardware:{status:'unavailable'}};
+  await load(payload);
+  const daily=page.locator('#daily-quality');
+  assert.match(await daily.innerText(),/Same skill bytes/);
+  assert.match(await daily.innerText(),/1\/2 first attempts/);
+  assert.match(await daily.innerText(),/no matched pair/);
+  assert.equal(await daily.locator('a').count(),2);
+  payload.daily.dates=['2020-01-01','2020-01-02'];
+  await load(payload);
+  assert.match(await daily.innerText(),/Today’s comparison is unavailable/);
+});
+
+test('the six SwiGLU columns keep their headers and device times readable', async () => {
+  const payload = data();
+  payload.swiglu = {
+    status:'available', release:'https://github.com/example/repo/releases/tag/test',
+    shape_evidence:'https://github.com/example/repo', parent_over_wide:13, archive_over_shape:0.88,
+    scores:{parent:32, wide:33, reference:43},
+    cases:Array.from({length:20}, (_,i)=>({case:i+1, parent:273.4, wide:26.1,
+      reference:16.2, shape_us:15.229, replay_us:6.385}))
+  };
+  await load(payload);
+  const panel = page.locator('#swiglu-study');
+  await panel.locator('summary').click();
+  assert.equal(await panel.locator('tbody tr').count(), 20);
+  for (const width of [1440,390]) {
+    await page.setViewportSize({width,height:900});
+    assert(await panel.locator('th, td').evaluateAll(cells =>
+      cells.every(c => c.scrollWidth <= c.clientWidth + 1 && c.clientWidth >= 52)));
+  }
+});
+
+test('CI submission shows 19 generated cases and the independent historical comparison', async () => {
+  const payload = data();
+  const base = 'https://github.com/aloschilov/pyasc-skill-stack';
+  payload.swiglu_performance = {status:'available', ratio:0.8, score:67, job:'job_abc', submission:'sub_def',
+    release:base+'/releases/tag/example', generation:base+'/actions/runs/12345',
+    cases:Array.from({length:20},(_,i)=>({id:'level1/swi_glu_'+(i+1),kernel:i===11?'_swiglu_pair_groups':'rows',elapsed_us:10,baseline_us:8}))};
+  payload.cannbench_performance = {complete:true,runs:[{...payload.swiglu_performance,
+    model:'gateway/glm-5.3',revision:'d'.repeat(40),all_ratio:0.81,finished_at:'2026-11-11T17:08:38+00:00'}]};
+  await load(payload);
+  const timing=page.locator('#timing');
+  assert.match(await timing.innerText(),/0.800×/);
+  assert.match(await timing.innerText(),/Including it gives 0.810×/);
+  assert.match(await timing.innerText(),/67.0000/);
+  await timing.getByText('All 20 cases and service metrics').click();
+  const cases = timing.getByRole('table',{name:'Official device time (µs)'});
+  assert.equal(await cases.locator('tbody tr').count(),20);
+  assert.match(await cases.locator('tbody tr').nth(11).innerText(),/12 · template/);
+  assert.equal((await cases.locator('tbody tr').first().locator('td').allTextContents())[0],'—');
+  assert.equal(await timing.getByRole('link',{name:'job_abc'}).getAttribute('href'),'https://cannbench.com/jobs/job_abc');
+  await page.locator('#search').fill('unrelated');
+  assert.equal(await timing.getByText('job_abc').count(),0);
+  assert.equal(await page.locator('#swiglu-study').getByText('Official timings for all 20 cases').count(),0);
+
+  // Previously published snapshots can have a single service record without run history.
+  delete payload.cannbench_performance;
+  await load(payload);
+  const panel = page.locator('#swiglu-study');
+  assert.match(await panel.textContent(),/0.800× baseline speed.*19 cases.*25.0% more device time/);
+  assert.equal(await panel.getByRole('link',{name:'GitHub Actions generation'}).getAttribute('href'),payload.swiglu_performance.generation);
+});
+
+test('hardware comparison ranks paired generated cases and switches receipts on narrow screens', async () => {
+  const payload = data();
+  const release='https://github.com/example/repo/releases/tag/';
+  const older = {status:'available',job:'job_ab',submission:'sub_ab', model:'glm',revision:'d'.repeat(40),
+    generation:'https://github.com/example/repo/actions/runs/2', release:release+'ab',
+    ratio:1,all_ratio:1,score:40,finished_at:'2026-11-11T12:00:00Z',
+    cases:Array.from({length:20},(_,i)=>({id:'level1/swi_glu_'+(i+1),kernel:i===11?'_swiglu_pair_groups':'rows',elapsed_us:10,baseline_us:10}))};
+  const newer = {...older,job:'job_cd',submission:'sub_cd',release:release+'cd',finished_at:'2026-11-12T12:00:00Z',
+    previous:{job:older.job,release:older.release,changed_baselines:1,previous_over_current:0.99},
+    cases:older.cases.map((c,i)=>({...c, previous_elapsed_us:10,elapsed_us:i===10?13:i===11?25:i===12?9:10}))};
+  payload.cannbench_performance={complete:true,runs:[newer,older]};
+  await load(payload);
+  const timing=page.locator('#timing');
+  const rows=timing.getByRole('table',{name:'Largest time changes · generated cases'}).locator('tbody tr');
+  assert.match(await rows.first().innerText(),/11\s+10.00\s+13.00\s+30.0% slower/);
+  assert.match(await rows.nth(1).innerText(),/13\s+10.00\s+9.00\s+10.0% faster/);
+  assert.match(await timing.innerText(),/1 faster · 1 slower · 17 unchanged/);
+  assert.match(await timing.innerText(),/1.01% slower/);
+  assert.match(await timing.innerText(),/changed service baselines: 1/);
+  await timing.getByText('All 20 cases and service metrics').click();
+  await page.setViewportSize({width:390,height:900});
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await accessibility();
+  await timing.getByRole('radio').nth(1).check();
+  assert.equal(await rows.count(),0);
+  assert.match(await timing.innerText(),/No verified previous-run comparison/);
+  assert.equal(await timing.getByRole('link',{name:'Source and service receipt'}).getAttribute('href'),older.release);
 });

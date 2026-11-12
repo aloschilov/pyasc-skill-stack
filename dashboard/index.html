@@ -11,14 +11,16 @@
 </head>
 <body>
   <a class="skip" href="#explore">Skip to evidence</a>
-  <header><a class="brand" href="https://github.com/aloschilov/pyasc-skill-stack">PYASC <span>/ SKILL STACK</span></a><nav aria-label="Sections"><a href="#explore">Evidence</a><a href="#analysis">Comparisons</a><a href="workflows/asctile-november-detailed.html">BPMN workflows</a><a href="#boundaries">Boundaries</a></nav></header>
+  <header><a class="brand" href="https://github.com/aloschilov/pyasc-skill-stack">PYASC <span>/ SKILL STACK</span></a><nav aria-label="Sections"><a href="#timing-heading">CANNBench</a><a href="#explore">Evidence</a><a href="#analysis">Comparisons</a><a href="workflows/asctile-november-detailed.html">BPMN workflows</a><a href="#boundaries">Boundaries</a></nav></header>
   <main>
-    <div class="page-heading"><div><p class="eyebrow">RETAINED QUALIFICATION / READ ONLY</p><h1>Evidence explorer</h1><p class="intro">What was checked, where it ran, and what the results support.</p></div><span class="tag">Manual refresh</span></div>
+    <div class="page-heading"><div><h1>Skill evaluation results</h1></div></div>
     <div id="freshness" role="status">Loading evidence…</div>
     <noscript><p class="attention">JavaScript is required to explore this snapshot. No results are displayed. <a href="data.json">Read the public summary JSON.</a></p></noscript>
+    <section aria-labelledby="timing-heading"><div class="section-heading"><h2 id="timing-heading">Timing &amp; service metrics</h2></div><div id="timing"></div></section>
+    <section aria-labelledby="daily-heading"><h2 id="daily-heading">Did the skills improve since yesterday?</h2><div id="daily-quality" class="panel"></div></section>
     <section id="overview" class="overview" aria-label="Snapshot overview"></section>
     <section id="explore" aria-labelledby="matrix-heading">
-      <div class="section-heading"><div><p class="eyebrow">01 / COVERAGE</p><h2 id="matrix-heading">Capability &amp; results matrix</h2></div><span id="count" role="status"></span></div>
+      <div class="section-heading"><div><h2 id="matrix-heading">Capability &amp; results matrix</h2></div><span id="count" role="status"></span></div>
       <p class="section-note" id="filter-help">Filters select whole retained records. Task and model matches keep the original cohort denominators; they do not produce per-task or per-model pass rates.</p>
       <form id="filters" class="toolbar" aria-label="Filter results" aria-describedby="filter-help">
         <label class="search">Task / operator / record<input id="search" type="search" placeholder="e.g. broadcast, swi_glu" autocomplete="off"></label>
@@ -35,14 +37,14 @@
       <p id="empty" class="empty" hidden>No retained records match these filters. Reset filters to see the full snapshot.</p>
     </section>
     <section id="analysis" aria-labelledby="analysis-heading">
-      <div class="section-heading"><div><p class="eyebrow">02 / PAIRED EXPERIMENTS</p><h2 id="analysis-heading">Skills, context &amp; model comparisons</h2></div></div>
+      <div class="section-heading"><div><h2 id="analysis-heading">Skills, context &amp; model comparisons</h2></div></div>
       <p class="section-note">Qualification differences in percentage points, with conditional 95% intervals. Zero means no observed difference. Fixed tasks and few repetitions do not establish general skills benefit or a model ranking. Failures remain in each cohort.</p>
-      <div id="comparisons" class="comparison-grid"></div>
+      <div id="skill-transfer" class="panel"></div><div id="comparisons" class="comparison-grid"></div>
     </section>
-    <section aria-labelledby="timing-heading"><div class="section-heading"><div><p class="eyebrow">03 / HARDWARE</p><h2 id="timing-heading">Timing &amp; service metrics</h2></div></div><div id="timing"></div></section>
+    <section aria-labelledby="swiglu-heading"><h2 id="swiglu-heading">Earlier SwiGLU tuning experiments</h2><div id="swiglu-study" class="panel"></div></section>
     <section id="boundaries" class="limits" aria-labelledby="limits-heading">
       <h2 id="limits-heading">Read the boundaries</h2>
-      <div class="boundary-grid"><div><h3>Different evidence, different denominators</h3><p>Simulator results are not NPU results. Upstream fixtures are not generated kernels. Trial counts, fixture catalog size and device cases stay separate; there is no combined pass score. A completed experiment can contain failed candidates.</p></div><div><h3>History &amp; reference coverage</h3><p>No comparable time series is provided by the current public summary. No history trend is inferred across these different runs. Reference-kernel coverage and historical capability tiers are not published in this catalog.</p></div><div><h3>Trace every result</h3><p>Evidence is checked at build time, not continuously. Result age and page age are labelled separately. Open a record for task IDs, source revisions, skill hashes, settings and immutable archive checksums.</p></div></div>
+      <div class="boundary-grid"><div><h3>Different evidence, different denominators</h3><p>Simulator results are not NPU results. Upstream fixtures are not generated kernels. Trial counts, fixture catalog size and device cases stay separate; there is no combined pass score. A completed experiment can contain failed candidates.</p></div><div><h3>History &amp; reference coverage</h3><p>The daily comparison pairs consecutive Moscow calendar days and reports changes in first-attempt outcomes on the same tasks. Reference-kernel coverage and historical capability tiers are not published in this catalog.</p></div><div><h3>Trace every result</h3><p>Evidence is checked at build time, not continuously. Result age and page age are labelled separately. Open a record for task IDs, source revisions, skill hashes, settings and immutable archive checksums.</p></div></div>
     </section>
   </main>
   <footer><a href="data.json">Public summary JSON</a><a href="https://github.com/aloschilov/pyasc-skill-stack/issues">Report a gap</a><span>No generation or device access</span></footer>

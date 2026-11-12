@@ -1,8 +1,14 @@
 name: Evidence dashboard
 
 on:
+  release:
+    types: [published]
+  workflow_run:
+    workflows: ['Opt-in generation', 'CI']
+    types: [completed]
+    branches: [main]
   pull_request:
-    paths: ['dashboard/**', 'scripts/evidence_dashboard.py', 'tests/unit/python/test_evidence_dashboard.py', 'tests/browser/**', '.github/workflows/evidence-pages.yml']
+    paths: ['dashboard/**', 'scripts/evidence_dashboard.py', 'scripts/daily_skill_quality.py', 'scripts/swiglu_evidence.py', 'docs/evidence/swiglu-vector-grid-20261110/**', 'tests/unit/python/test_daily_skill_quality.py', 'tests/unit/python/test_evidence_dashboard.py', 'tests/browser/**', '.github/workflows/evidence-pages.yml']
   workflow_dispatch:
     inputs:
       publish:
@@ -14,21 +20,30 @@ permissions:
   contents: read
 
 concurrency:
-  group: evidence-pages
+  group: evidence-pages-${{ github.event_name == 'pull_request' && github.run_id || 'publication' }}
   cancel-in-progress: false
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'qualification-swiglu-performance-')) ||
+      (github.event_name != 'release' && github.event_name != 'workflow_run') ||
+      (github.event.workflow_run.head_repository.full_name == github.repository &&
+       ((github.event.workflow_run.name == 'Opt-in generation' && github.event.workflow_run.event == 'schedule') ||
+        (github.event.workflow_run.name == 'CI' && contains(fromJSON('["push","workflow_dispatch"]'), github.event.workflow_run.event))))
+    # The locked Playwright release supports Ubuntu 24.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'release' && 'main' || github.sha }}
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - run: python3 -m unittest discover -s tests/unit/python -p test_evidence_dashboard.py
+      - run: python3 -m unittest discover -s tests/unit/python -p test_daily_skill_quality.py
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -37,32 +52,43 @@ jobs:
       - run: node --check dashboard/app.js
       - run: npm ci
         working-directory: tests/browser
-      - run: npx playwright install --with-deps chromium
-        working-directory: tests/browser
+      - run: google-chrome --version
       - run: npm test
+        env:
+          PLAYWRIGHT_CHANNEL: chrome
         working-directory: tests/browser
 
   build:
     needs: test
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      actions: read
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'release' && 'main' || github.sha }}
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - name: Fetch pinned public archives and project safe summaries (GET only)
-        run: python3 scripts/evidence_dashboard.py --output "$RUNNER_TEMP/public-evidence"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/evidence_dashboard.py --daily --output "$RUNNER_TEMP/public-evidence"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skill-quality-${{ github.run_id }}
+          path: ${{ runner.temp }}/public-evidence/data.json
       - uses: actions/upload-pages-artifact@v4
         with:
           path: ${{ runner.temp }}/public-evidence
 
   deploy:
     needs: build
-    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    if: github.event_name == 'release' || github.event_name == 'workflow_run' || (github.event_name == 'workflow_dispatch' && inputs.publish)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

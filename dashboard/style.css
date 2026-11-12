@@ -240,6 +240,24 @@ table {
   table-layout: fixed;
   min-width: 960px;
 }
+#swiglu-study table {
+  table-layout: auto;
+  min-width: 40rem;
+  font-variant-numeric: tabular-nums;
+}
+#swiglu-study td, #swiglu-study thead th {
+  text-align: right;
+  white-space: nowrap;
+}
+#swiglu-study thead th:first-child {
+  text-align: left;
+}
+#swiglu-study h3:not(:first-child), #swiglu-study details {
+  margin-top: 1rem;
+}
+#skill-transfer {
+  margin-top: .75rem;
+}
 caption {
   text-align: left;
   padding: 10px 15px;
@@ -256,19 +274,19 @@ th {
   color: var(--muted);
   padding: 11px 14px;
 }
-th:first-child {
+#explore th:first-child {
   width: 24%;
 }
-th:nth-child(2) {
+#explore th:nth-child(2) {
   width: 18%;
 }
-th:nth-child(3) {
+#explore th:nth-child(3) {
   width: 18%;
 }
-th:nth-child(4) {
+#explore th:nth-child(4) {
   width: 24%;
 }
-th:last-child {
+#explore th:last-child {
   width: 16%;
 }
 td {
@@ -609,3 +627,36 @@ footer {
 }
 
 .source-button { display: block; margin-top: 8px; color: var(--accent); }
+
+#timing, .run-metrics { display: grid; gap: 12px; }
+#daily-heading, #swiglu-heading, #overview { margin-top: 24px; }
+.hardware-result h3 { font-size: 20px; }
+.run-metrics small { font-size: 12px; color: var(--muted); }
+.run-history label { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+.run-history input { width: auto; min-height: auto; margin: 0; accent-color: var(--accent); }
+.run-history tr:has(input:checked) { background: #edf5f2; }
+.run-history td:first-child { text-align: left; }
+.run-metrics { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); margin: 18px 0 12px; }
+.run-metrics > div { border-left: 3px solid var(--line); padding-left: 12px; }
+.run-metrics strong { display: block; font-size: 25px; font-variant-numeric: tabular-nums; }
+.case-scroll { overflow-x: auto; }
+.case-scroll table { table-layout: auto; min-width: 0; font-variant-numeric: tabular-nums; }
+.case-scroll th, .case-scroll td { text-align: right; padding: 7px 10px; white-space: nowrap; }
+.case-scroll th:first-child { text-align: left; }
+.case-scroll th { text-transform: none; }
+.case-scroll tbody th { background: transparent; font-size: 12px; color: var(--ink); border-top: 1px solid var(--line); }
+.case-scroll caption { padding-left: 0; }
+.case-scroll .slower { color: var(--red); }
+.case-scroll .faster { color: var(--green); }
+.hardware-result { overflow-wrap: anywhere; }
+.hardware-result summary { font-weight: 600; }
+
+@media (max-width: 700px) {
+  .run-history th, .run-history td, .hardware-result > div > .case-scroll th {
+    padding: 6px 4px;
+    white-space: normal;
+  }
+  .run-history label { gap: 4px; }
+  .run-history time { max-width: 7em; white-space: normal; }
+  .run-history td { overflow-wrap: normal; }
+}
