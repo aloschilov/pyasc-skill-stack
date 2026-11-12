@@ -61,6 +61,24 @@ two-stage medians were 23.670/24.096 µs and the three-stage medians were
 on 72 blocks and 23.553/23.216 µs on 64. The published 950PR baseline
 is 23.650 µs. Keep the natural grid unless its change qualifies separately.
 
+Check this branch before applying the default 8 KiB row-height selector.
+The returned positive height is the JIT height in rows. The physical width
+equals the logical half-width because this branch requires aligned FP32.
+
+```python
+def three_stage_row_height(rows, half, dtype, aivs, usable_ub):
+    if dtype != torch.float32 or rows <= 0 or half <= 0 or aivs <= 0 or half % 8:
+        return 0
+    rows_per_dma = 16384 // (4 * half)
+    if rows_per_dma < 2:
+        return 0
+    height = 1 << (rows_per_dma.bit_length() - 1)
+    tiles = (rows + height - 1) // height
+    if height > 4 or tiles < 8 * aivs or 36 * height * half > usable_ub:
+        return 0
+    return height
+```
+
 For the one-wave FP32 path, keep each logical half-row together. On
 950PR, splitting each half into two column strips increased the grid
 from 36 to 72 or from 35 to 70. At 143 rows by 536 FP32 lanes per half,
