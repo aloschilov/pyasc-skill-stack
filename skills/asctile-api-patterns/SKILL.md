@@ -199,6 +199,13 @@ different tile sizes pads every short row and misses the dense-slab path.
 For short FP32 row grids, round the rows needed for 8 KiB **up** to a
 power of two, then check UB. If the resulting tile count fits the reported
 AIVs, emit a direct one-tile-per-block body with a bounded final copy.
+Carry the unit through the host/JIT boundary: `tiles = (R+T-1)//T`,
+`blocks = vector_blocks(tiles)`, then `rows_single[blocks](...)`.
+If the selector already returned blocks, pass that integer unchanged. Never
+multiply it by tile height or width. A 36-tile workload on 72 AIVs must
+launch 36 blocks. In a direct body guard `if r < R` before computing
+`min(T,R-r)` or issuing DMA; an excess block would otherwise have a
+negative real shape. A grid-stride body is required if blocks < tiles.
 
 The archive-bundled CPython 3.12 evaluator uses CPU-backed Torch tensors
 and the PyASC launcher transfers them for device execution. Keep the input
