@@ -16,7 +16,12 @@ def digest(path):
 def extract(events, destination):
     records = [json.loads(line) for line in events.read_text().splitlines() if line]
     assert not any(e["type"] in {"error", "tool_use"} for e in records)
-    response = "".join(e["part"]["text"] for e in records if e["type"] == "text")
+    if not records or records[-1]["type"] != "step_finish" or records[-1]["part"]["reason"] != "stop":
+        raise ValueError("OpenCode did not finish its answer")
+    # The CLI can compress its context and continue after a length-limited step.
+    # Its summary and synthetic continuation are separate from the final answer.
+    start = max(i for i, event in enumerate(records) if event["type"] == "step_start")
+    response = "".join(e["part"]["text"] for e in records[start:] if e["type"] == "text")
     fenced = re.fullmatch(r"\s*```(?:python|py)?[ \t]*\r?\n(.*?)^```\s*", response, re.DOTALL | re.MULTILINE)
     source = fenced.group(1) if fenced else response
     tree = ast.parse(source)
