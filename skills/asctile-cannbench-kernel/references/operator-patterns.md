@@ -34,7 +34,11 @@ helper, then launch with those tensors unchanged. A host check such as
 
 For Exp, declare a module-level JIT function and bind scalar attributes at
 each launch. Pass `scale: float`, `shift: float` and `log_base: float` as
-runtime FP32 scalars. Pass the decisions to omit identities as separate
+runtime FP32 scalars. Multiply and add those arguments directly to the
+FP32 tile, for example `acc = acc * scale` and `acc = acc + shift`.
+The archive wheel resolves JIT dependencies before execution and has no
+`asctile.cast_scalar`. A Python `float` launch argument with this annotation
+already has the required scalar ABI. Pass the decisions to omit identities as separate
 `asctile.ConstExpr` flags: `scale != 1`, `shift != 0`, `log_base != 1`.
 Use `log_base = 1.0` for a nonpositive base. A nested kernel factory
 capturing Python values can compile the first values for a dtype into a
@@ -78,8 +82,12 @@ compute and numerical checks for all attributes.
 For contiguous ownership set `M = ceil_div(N,T)` and
 `C = ceil_div(M,actual_blocks)`. Block `b` handles the `C` tiles from
 `b*C` in `asctile.range(C, unroll_factor=3)`. Clamp the offset of any
-empty final iteration to N and bound the real transfer extent to the
-remaining elements. Keep the affine scalars explicit launch arguments
+empty final iteration with `offset = min(N, tile_id*T)` and use
+`valid = min(N-offset,T)`. This produces a nonnegative real extent in one
+expression. Recheck the generated schedule in its public entry point. The
+matched contiguous BF16 control above used these scalar minima. A later
+generation with explicit conditional clamps recorded 4.430 µs at the same
+public BF16 shape. That cross-run difference includes other codegen changes. Keep the affine scalars explicit launch arguments
 in every specialization. Larger streams still need the multi-wave rule.
 
 For multi-wave Exp, use an explicit pipelined range with compile-time
