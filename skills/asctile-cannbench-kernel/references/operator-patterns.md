@@ -32,7 +32,16 @@ are ordinary CPU-backed Torch tensors. Select the NPU with the runtime
 helper, then launch with those tensors unchanged. A host check such as
 `if x.device.type != "npu": raise ...` rejects valid hardware work.
 
-For Exp, specialize the public scalar attributes at compile time. Evaluate
+For Exp, declare a module-level JIT function and bind scalar attributes at
+each launch. Pass `scale: float`, `shift: float` and `log_base: float` as
+runtime FP32 scalars. Pass the decisions to omit identities as separate
+`asctile.ConstExpr` flags: `scale != 1`, `shift != 0`, `log_base != 1`.
+Use `log_base = 1.0` for a nonpositive base. A nested kernel factory
+capturing Python values can compile the first values for a dtype into a
+binary that subsequent invocations reuse. An input with the same shape and
+dtype must produce different correct values as the public attributes change.
+Exercise two sets of attributes and then repeat the first in one process;
+check each call against the independent golden. Evaluate
 `scale*x + shift` in the golden compute dtype; for a positive base multiply
 by its natural logarithm before the exponential. Compute the scalar logarithm
 once outside the JIT, at the precision of the public golden. Elide identity
