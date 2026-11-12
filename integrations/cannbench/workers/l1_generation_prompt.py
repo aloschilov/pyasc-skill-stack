@@ -68,7 +68,9 @@ def prompt(task, skills):
             "returning the module: at 72 AIVs and 253952 UB bytes, R=133221 and H=7 "
             "give height 928 and two tiles per block; H=1 reaches the ordinary slab. "
             "Use the general selector for arbitrary inputs. Include the branch itself "
-            "in the executable entry point."
+            "in the executable entry point. For wide aligned FP32 half-rows with a nearly "
+            "full remainder, apply the UB-bounded exact-divisor search from the flat skill "
+            "before its ordinary width/unroll fallback. Use the selected values in the launch."
         )
     return "\n".join(sections)
 

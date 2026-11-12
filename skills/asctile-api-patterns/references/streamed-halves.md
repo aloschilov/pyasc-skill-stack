@@ -15,6 +15,27 @@ misses simultaneously live UB temporaries.
 
 Derive the number of chunks from the logical half-row width and the UB-qualified tile. Specialize the address calculation when a half-row fits in one chunk or when the whole input is one row. For full aligned chunks use full-width copies. Use the true extent on a final partial chunk. Distribute only live chunks across the available vector blocks.
 
+### Wide aligned FP32 half-rows with a nearly full remainder
+
+For the qualified direct-division kernel, when many wide FP32 half-rows
+leave at least three quarters of an ordinary tile as a remainder, size an
+exact full-copy chunk before dispatching the remainder loop. Start from
+the ordinary width `base`. Apply this rule when `R >= A`, H is aligned
+to the 32-byte DMA quantum (eight FP32 lanes), and `H % base >= 3*base/4`.
+For three-stage allocation reuse on this build the failed 8192-lane
+compile reported 294,912 bytes, or 36 bytes per lane. Take an initial
+capacity of `min(H, usable_UB//36)`, rounded down to eight lanes. From
+that capacity descend by eight to find the largest width greater than
+`base` that divides H. Choose it with unroll 3 if at least three waves
+of chunks remain. With no such divisor keep the existing geometry.
+Qualify the actual compiled allocation for the selected full-copy kernel.
+
+For 2039 rows of 32760 FP32 lanes per half, 72 AIVs and 253952 available
+UB bytes this gives five chunks of 6552 with no tail pass. The two
+shuffled controls took 521.929/521.204 µs, versus 529.821/529.377 µs
+at 4096 and unroll 3, or 524.550/524.646 µs at 8192 and unroll 2.
+The public baseline is 522.100 µs; retain independent full-suite checks.
+
 Compare consecutive chunks per block with a grid-stride loop. Consecutive ranges can use the quotient and remainder of total chunks divided by the active blocks to balance work without dummy iterations. For long grids of FP32 rows, also try one strided descriptor for several complete rows. For widened FP16 or BF16 compare a third pipeline stage against the larger tile allowed by two stages. Check the compiled allocation, full output and warmed device times before adopting a regime.
 
 Use one supported `for t in asctile.range(begin, end, unroll_factor=U)` loop. Its logical step is one. For a balanced range with quotient q and remainder r, use the two prefix counts `q*b + min(b,r)` at block boundaries b and b+1. Define both outside runtime conditionals. A single chunk per row still has R distinct work items with source offsets `2*t*H` and `(2*t+1)*H`. A single row with many chunks instead uses `col=t*T`. Test both cases, multiple chunks on multiple rows, and a partial final chunk against the full output.
