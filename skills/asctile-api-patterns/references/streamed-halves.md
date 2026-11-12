@@ -2,6 +2,17 @@
 
 Start from the [qualified flat kernel](../templates/streamed-swiglu-flat.py) on the public 950PR build. Preserve its loop bounds and per-row addresses when generating the host selector.
 
+Keep the allocation policy in the generated decorator: `@asctile.jit(reuse_alloc=2)`.
+The bound and the kernel must describe the same allocation. On the archive-bundled
+950PR, a direct-division flat kernel with that policy, T=4096 and U=2 used
+81,920 bytes for FP16/BF16 and 98,304 for FP32, including the remainder branch.
+As a first compile choose the power of two at or below
+`min(H, 16384 // itemsize, usable_UB // 32)`; count T in output lanes.
+Validate full and partial chunks at the actual geometry before expanding it.
+Do not reuse these coefficients for an unqualified emitter, an additional
+pipeline stage or a different allocation policy. Counting only GM buffers
+misses simultaneously live UB temporaries.
+
 Derive the number of chunks from the logical half-row width and the UB-qualified tile. Specialize the address calculation when a half-row fits in one chunk or when the whole input is one row. For full aligned chunks use full-width copies. Use the true extent on a final partial chunk. Distribute only live chunks across the available vector blocks.
 
 Compare consecutive chunks per block with a grid-stride loop. Consecutive ranges can use the quotient and remainder of total chunks divided by the active blocks to balance work without dummy iterations. For long grids of FP32 rows, also try one strided descriptor for several complete rows. For widened FP16 or BF16 compare a third pipeline stage against the larger tile allowed by two stages. Check the compiled allocation, full output and warmed device times before adopting a regime.

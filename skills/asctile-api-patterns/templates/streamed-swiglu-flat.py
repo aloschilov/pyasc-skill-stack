@@ -3,7 +3,7 @@
 from asc.experimental import asctile
 
 
-@asctile.jit(always_compile=False)
+@asctile.jit(reuse_alloc=2)
 def swiglu_flat(
     x: asctile.GlobalAddress,
     y: asctile.GlobalAddress,
