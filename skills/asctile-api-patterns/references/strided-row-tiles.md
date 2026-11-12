@@ -30,7 +30,9 @@ padding. The copy's real shape still uses H.
   unroll 2 (163,840 bytes for 8,192 lanes). The reciprocal form used 24.
   Use the qualified direct-division coefficient for FP16 and retain the
   conservative 16 bytes/lane at unroll 1. Distinguish FP16 from BF16 in
-  the host selector. Keep the existing upper bounds of 28 bytes/lane
+  the host selector. Pass the caller's actual dtype or dtype tag to this
+  selector. The element byte count alone maps both FP16 and BF16 to 2
+  and cannot choose the correct two-stage capacity. Keep the existing upper bounds of 28 bytes/lane
   for FP32 and 32 for BF16 at unroll 2 until their emitted forms have
   been qualified. Subtract fixed workspace from the available UB once.
   Verify the compiled allocation on each new kernel/build before
@@ -59,8 +61,12 @@ specialize the body to use the block index directly. Keep the row count
 on the final tile bounded. Compare the fixed-grid body with the normal
 loop at the same launch size, tile extent and unroll.
 
-For a pipelined FP16 row kernel with a padded half-width and multiple
-waves, also test a height between adjacent powers of two. On the public
+### Padded FP16 rows across multiple waves
+
+On the qualified direct-division kernel, use the wave-balanced height below
+for padded FP16 rows when the bounds allow at least two waves. Select this
+geometry before testing the unroll of the resulting tile. Keep the ordinary
+row selector for BF16, aligned halves and short grids. On the public
 950PR direct-division build, take a 12 KiB per-half DMA target and cap
 the height by the available UB. With physical width W, active AIVs N and
 usable UB U, the positive height bound is

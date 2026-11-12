@@ -30,6 +30,7 @@ def prompt(task, skills):
         include(api / "SKILL.md", "### Choose a memory layout", "### Batch short rows")
         include(api / "references/reindex-slabs.md", "# Row geometry", "## Reducing the index reads")
         include(api / "references/strided-row-tiles.md", "# Height and unroll", "Exercise the selector")
+        include(api / "references/strided-row-tiles.md", "### Padded FP16 rows", "At R=3003")
         include(api / "references/streamed-halves.md", "# Flat SwiGLU", "Compare consecutive chunks")
         include(api / "templates/streamed-swiglu-flat.py")
     elif op == "exp":
