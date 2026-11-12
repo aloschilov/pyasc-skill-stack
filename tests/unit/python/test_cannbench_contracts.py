@@ -17,6 +17,11 @@ class CandidateContracts(unittest.TestCase):
     def test_profile_excludes_exp_host_casts_but_accepts_jit_casts(self):
         kernel = "@asctile.jit(reuse_alloc=2)\ndef kernel(tile): return tile.to(asctile.float32)\n"
         check_exp_host_casts(kernel + "def exp(x): return x.new_empty(x.shape)\n")
+        nested = ("def make_kernel():\n    @asctile.jit(reuse_alloc=2)\n"
+                  "    def kernel(tile): return tile.to(asctile.float32)\n")
+        check_exp_host_casts(nested + "    return kernel\n")
+        with self.assertRaisesRegex(ValueError, "Exp host tensor conversion"):
+            check_exp_host_casts(nested + "    return x.float()\n")
         for call in ("x.to(torch.float32)", "x.float()", "tmp.type_as(x)"):
             with self.subTest(call=call), self.assertRaisesRegex(ValueError, "Exp host tensor conversion"):
                 check_exp_host_casts(kernel + "def exp(x): return " + call)

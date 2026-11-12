@@ -22,16 +22,21 @@ def check_exp_host_casts(source):
     This scoped source check supplements output checks; it is not a sandbox.
     Exp has no index tensors or other host metadata requiring tensor conversion.
     """
-    tree = ast.parse(source)
-    for fn in (node for node in tree.body if isinstance(node, ast.FunctionDef)):
-        decorators = [d.func if isinstance(d, ast.Call) else d for d in fn.decorator_list]
-        if any(isinstance(d, ast.Attribute) and d.attr == "jit" and
-               isinstance(d.value, ast.Name) and d.value.id == "asctile" for d in decorators):
-            continue
-        for node in ast.walk(fn):
-            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-                    and node.func.attr in {"to", "float", "half", "bfloat16", "type", "type_as"}):
-                raise ValueError(f"Exp host tensor conversion in {fn.name} at line {node.lineno}")
+    class HostCalls(ast.NodeVisitor):
+        def visit_FunctionDef(self, fn):
+            decorators = [d.func if isinstance(d, ast.Call) else d for d in fn.decorator_list]
+            if any(isinstance(d, ast.Attribute) and d.attr == "jit" and
+                   isinstance(d.value, ast.Name) and d.value.id == "asctile" for d in decorators):
+                return
+            self.generic_visit(fn)
+
+        def visit_Call(self, node):
+            if (isinstance(node.func, ast.Attribute) and
+                    node.func.attr in {"to", "float", "half", "bfloat16", "type", "type_as"}):
+                raise ValueError(f"Exp host tensor conversion at line {node.lineno}")
+            self.generic_visit(node)
+
+    HostCalls().visit(ast.parse(source))
 
 
 def measure(candidate, case, operator=None):
