@@ -47,6 +47,20 @@ padding. The copy's real shape still uses H.
   For example on 72 AIVs, 143 rows of 536 FP32 values **per half**
   select T=4 and 36 blocks; 273 rows of 509 select T=8 and 35 blocks.
 
+For long FP32 grids with DMA-aligned half-rows, size one 2D copy towards
+16 KiB and try three pipeline stages before the ordinary row fallback.
+Use the greatest power-of-two height at or below `16384 // (4*H)`.
+For the measured regime require two to four rows per tile, at least eight
+waves of row tiles, and `36 * T * H <= usable_ub` with the qualified
+direct-division emitter and allocation reuse. Pass `T, H, 3` to the
+existing row kernel. A partial final tile still uses its real row count.
+For 2048 rows with aligned FP32 half-width 2048 the actual three-stage
+allocation was 147456 bytes at T=2. At fixed T=2 and 72 blocks the
+two-stage medians were 23.670/24.096 µs and the three-stage medians were
+23.277/23.115 µs. In two additional runs three stages took 23.416/23.251 µs
+on 72 blocks and 23.553/23.216 µs on 64. The published 950PR baseline
+is 23.650 µs. Keep the natural grid unless its change qualifies separately.
+
 For the one-wave FP32 path, keep each logical half-row together. On
 950PR, splitting each half into two column strips increased the grid
 from 36 to 72 or from 35 to 70. At 143 rows by 536 FP32 lanes per half,
