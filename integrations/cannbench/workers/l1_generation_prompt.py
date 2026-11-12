@@ -22,6 +22,7 @@ def prompt(task, skills):
 
     include(task / "proto.yaml")
     include(task / "golden.py")
+    include(api / "SKILL.md", "## Surface to use", "`asctile.concat` is variadic")
     if op == "swi_glu":
         include(api / "SKILL.md", "### Choose a memory layout", "### Batch short rows")
         include(api / "references/reindex-slabs.md", "# Row geometry", "## Reducing the index reads")

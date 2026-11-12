@@ -17,6 +17,13 @@ using a qualified active-device resource query. Stable forms must
 preserve NaN and Inf behavior from `golden.py`. GELU has both `none` and `tanh`
 attributes and requires distinct kernels or tile widths.
 
+On the archive-bundled evaluator import `from asc.experimental import asctile`.
+Generate the kernel with `@asctile.jit(reuse_alloc=2)`; allocate with
+`out = x.new_empty(x.shape)` on the caller's device and invoke
+`kernel[vector_blocks(work_items)](x, out, ...)`. Read the
+[ranked copy example](../../asctile-api-patterns/SKILL.md#surface-to-use)
+before writing the body. The evaluator has no `asc.tile` module.
+
 For Exp, specialize the public scalar attributes at compile time. Evaluate
 `scale*x + shift` in the golden compute dtype; for a positive base multiply
 by its natural logarithm before the exponential. Compute the scalar logarithm
