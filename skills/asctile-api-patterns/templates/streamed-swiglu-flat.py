@@ -73,8 +73,23 @@ def whole_bf16_grid(rows, half, dtype, aivs, usable_ub):
         return 0
     if half % 16 or not 8192 <= 2 * half <= 32768 or 32 * half > usable_ub:
         return 0
+    return _uniform_four_stage_grid(rows, aivs)
+
+
+def long_fp16_grid(rows, half, dtype, aivs, usable_ub):
+    """Select a uniform grid of full 16 KiB DMA chunks for a long FP16 row."""
+    tile = 8192
+    if dtype != torch.float16 or rows != 1 or aivs < 1 or half % tile:
+        return 0
+    chunks = half // tile
+    if chunks < 64 * aivs or 28 * tile > usable_ub:
+        return 0
+    return _uniform_four_stage_grid(chunks, aivs)
+
+
+def _uniform_four_stage_grid(items, aivs):
     low = (7 * aivs + 7) // 8
     for blocks in range(aivs, low - 1, -1):
-        if rows % (4 * blocks) == 0:
+        if items % (4 * blocks) == 0:
             return blocks
     return 0

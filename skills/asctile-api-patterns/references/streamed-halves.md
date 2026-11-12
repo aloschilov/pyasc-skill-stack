@@ -51,6 +51,25 @@ three-stage control on 72 blocks took 45.392 µs. These measurements support
 choosing whole-row copies for this shape; remeasure unroll and grid at
 fixed layout before attributing the gain to either parameter.
 
+### Long aligned FP16 single-row streams
+
+For a long pair of contiguous FP16 halves, a 16 KiB DMA chunk contains
+8192 lanes. With the direct-division flat emitter, unroll 4 and
+`reuse_alloc=2`, compilation at 9216 lanes required 258048 UB bytes
+(28 bytes per lane) on the 253952-byte device. The 8192-lane specialization
+fit. Use `long_fp16_grid` from the flat template before the generic
+capacity-based chunk rule. It restricts this tuning to a single row, at
+least 64 waves of full chunks, a fitting UB footprint, and a grid near
+the available AIV count that gives every block complete groups of four.
+
+For a half of 67108864 FP16 elements, 8192 chunks on 64 blocks give
+128 per block. The same 8192-lane, four-stage kernel took 241.468 and
+241.040 µs on 64 blocks against 245.958 and 246.154 µs on 72 in two
+shuffled runs. At three stages and 64 blocks it took 241.797 and 241.396 µs.
+The public 950PR threshold is 241.490 µs. The grid effect was larger than
+the difference between the two unrolls. Verify the public dispatcher and
+repeat the standalone suite after generating a new source.
+
 ### Moderate FP32 and BF16 streams
 
 For moderate streams consult the [two shape-dependent schedules](../templates/moderate-swiglu-stream.py).
