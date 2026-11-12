@@ -82,6 +82,18 @@ def prompt(task, skills):
             "before launching the generic chunk kernel. Return the allocated output when this helper "
             "launches. Use the selected values in the actual public entry point."
         )
+    elif op == "exp":
+        sections.append(
+            "In the public Exp entry point, select the qualified short 16-bit regime before "
+            "generic streaming. For 24–32 KiB of input per available AIV and a UB-qualified "
+            "aligned three-tile schedule, pass unroll 3 in both paths. Use the contiguous "
+            "schedule if any of apply_scale, apply_shift or apply_log is active, including "
+            "the base-only case. For FP16 identity use grid-stride with the same unroll. "
+            "Trace both public launches at 72 AIVs: BF16 1023x1023, base 2, unit scale and "
+            "zero shift must select contiguous T4848 U3; FP16 1024x1024, base -1, unit "
+            "scale and zero shift must select stride T4864 U3. Use the general input-byte, "
+            "alignment and UB rules from the skill for arbitrary inputs."
+        )
     return "\n".join(sections)
 
 

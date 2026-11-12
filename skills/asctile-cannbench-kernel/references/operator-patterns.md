@@ -79,6 +79,17 @@ groups for the affine path when qualifying this regime. For identity
 FP16, try grid-stride first (3.671/3.556 µs). Keep the public FP32
 compute and numerical checks for all attributes.
 
+Select ownership using all three flags from the scalar ABI. In this
+three-tile regime, set `U=3` for both schedules. Use contiguous groups
+if `apply_scale or apply_shift or apply_log` and grid-stride for the
+FP16 identity. Here `apply_log` means that the emitted logarithm
+multiplier differs from one. A positive base of two, scale one and zero
+shift still multiplies by log(2) on device. At 72 AIVs the BF16 shape
+1023 by 1023 gives T=4848; the FP16 shape 1024 by 1024 gives T=4864.
+Trace the real public launch with these attributes after generation.
+An independent clean generator sent both calls down its generic stride
+path with unroll 1 and took 5.587 and 4.959 µs on the public cases.
+
 For contiguous ownership set `M = ceil_div(N,T)` and
 `C = ceil_div(M,actual_blocks)`. Block `b` handles the `C` tiles from
 `b*C` in `asctile.range(C, unroll_factor=3)`. Clamp the offset of any
