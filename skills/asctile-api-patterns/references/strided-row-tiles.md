@@ -47,6 +47,15 @@ padding. The copy's real shape still uses H.
   For example on 72 AIVs, 143 rows of 536 FP32 values **per half**
   select T=4 and 36 blocks; 273 rows of 509 select T=8 and 35 blocks.
 
+For the one-wave FP32 path, keep each logical half-row together. On
+950PR, splitting each half into two column strips increased the grid
+from 36 to 72 or from 35 to 70. At 143 rows by 536 FP32 lanes per half,
+the full row took 2.390/2.477 µs in two fresh processes and the split
+took 2.884/3.169 µs. At 273 rows by 509 the corresponding times were
+2.981/2.808 and 3.403/3.004 µs. The height, arithmetic and valid
+extents were fixed. Record the profiled grid and compiled loop body
+when validating a new generation.
+
 Exercise the selector with a smaller UB that fits only one iteration, a
 smaller UB that forces a shorter height, and short grids. Compare warmed
 task times and the full golden on the target.

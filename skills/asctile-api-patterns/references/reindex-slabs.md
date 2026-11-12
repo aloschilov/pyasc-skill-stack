@@ -108,6 +108,21 @@ applying this ordering to another short-row layout. Building full vectors by bro
 and per-group offsets increased the device median for the tested
 4,096-row BF16 pair tile.
 
+## Two-wave BF16 half-rows
+
+On the qualified 950PR, compare the DMA-sized slab with two adjacent
+tiles per AIV for BF16 half-rows wider than one element. The latter is
+a separate candidate with a larger DMA. Compute
+`T = align_up(ceil_div(R, 2*A), 16)` in rows. Select the two-wave
+schedule when the resulting tile count is exactly `2*A`, all index
+and DMA extents align and `2*T*H-1 <= 32767`. Use the cached full-length
+signed-int16 gate index, derive the value index in UB, and use the
+bounded contiguous interval per block described below, with unroll two.
+Check the UB for this emitted kernel. At 928 by 7 its compiled requirement
+was 142,912 bytes. Recheck the compiler allocation for other geometries
+or index lowerings. Fall back to the conservative slab when it cannot
+fit. Keep the single-lane pair selector separate.
+
 For short BF16 half-rows wider than one element, try mapping two complete
 waves onto the runtime AIV count. Round the proposed row height up to the
 32-byte DMA quantum and recheck the compiled UB footprint, the signed index
@@ -135,6 +150,8 @@ kernel used 116,928 bytes. Its separate
 full-wave loop and bounded tail measured 6.830 and 6.863 µs. The kernels also
 differ in how they bound full tiles. Benchmark the entire kernel when
 choosing the schedule for another shape.
+
+## Dense FP32 slabs
 
 For dense FP32 slabs with no partial row tile, time an alternate first
 tile per block while leaving the UB layout, block count and loop stride

@@ -29,6 +29,7 @@ def prompt(task, skills):
     if op == "swi_glu":
         include(api / "SKILL.md", "### Choose a memory layout", "### Batch short rows")
         include(api / "references/reindex-slabs.md", "# Row geometry", "## Reducing the index reads")
+        include(api / "references/reindex-slabs.md", "## Two-wave BF16", "## Dense FP32 slabs")
         include(api / "references/strided-row-tiles.md", "# Height and unroll", "Exercise the selector")
         include(api / "references/strided-row-tiles.md", "### Padded FP16 rows", "At R=3003")
         include(api / "references/streamed-halves.md", "# Flat SwiGLU", "Compare consecutive chunks")
