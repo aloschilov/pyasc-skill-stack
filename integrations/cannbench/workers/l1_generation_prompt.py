@@ -35,6 +35,7 @@ def prompt(task, skills):
         include(api / "references/streamed-halves.md", "# Flat SwiGLU", "Compare consecutive chunks")
         include(api / "templates/streamed-swiglu-flat.py")
         include(api / "templates/two-wave-swiglu-slab.py")
+        include(api / "templates/moderate-swiglu-stream.py")
     elif op == "exp":
         include(api / "SKILL.md", "## Elementwise pattern", "### Choose a memory layout")
         include(skills / "asctile-cannbench-kernel/references/operator-patterns.md",
@@ -59,7 +60,7 @@ def prompt(task, skills):
     )
     if op == "swi_glu":
         sections.append(
-            "Integrate both supplied kernel templates into the returned module. "
+            "Integrate the supplied kernel templates into the returned module. "
             "In the public swi_glu function, after deriving R, H, actual dtype, AIVs "
             "and available UB, call two_wave_tile before the ordinary slab selector. "
             "A positive height launches two_wave_swiglu on that AIV count with one cached "
@@ -70,7 +71,9 @@ def prompt(task, skills):
             "Use the general selector for arbitrary inputs. Include the branch itself "
             "in the executable entry point. For wide aligned FP32 half-rows with a nearly "
             "full remainder, apply the UB-bounded exact-divisor search from the flat skill "
-            "before its ordinary width/unroll fallback. Use the selected values in the launch."
+            "before its ordinary width/unroll fallback. For the flat route call launch_moderate_flat "
+            "before launching the generic chunk kernel. Return the allocated output when this helper "
+            "launches. Use the selected values in the actual public entry point."
         )
     return "\n".join(sections)
 

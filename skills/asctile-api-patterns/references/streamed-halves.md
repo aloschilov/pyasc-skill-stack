@@ -36,6 +36,20 @@ shuffled controls took 521.929/521.204 µs, versus 529.821/529.377 µs
 at 4096 and unroll 3, or 524.550/524.646 µs at 8192 and unroll 2.
 The public baseline is 522.100 µs; retain independent full-suite checks.
 
+### Moderate FP32 and BF16 streams
+
+For moderate streams consult the [two shape-dependent schedules](../templates/moderate-swiglu-stream.py).
+In the flat dispatcher, call `launch_moderate_flat` with the input, allocated output,
+logical row count and half-width, detected AIV count and usable UB. Return the output
+when it launches. Keep the ordinary flat path for other shapes and budgets.
+For a single FP32 row the selector rounds down to an eight-lane DMA quantum and
+uses one bounded quantum per active tail block. For a few wide BF16 rows it
+uses two complete grids of column chunks per row and traverses the rows at each
+column. In five complete David series the FP32 schedule at four waves of 4104
+lanes took 7.689–8.435 µs (950PR baseline 8.540 µs). The BF16 schedule at
+four rows of 1044735 lanes, chunk 7264, took 12.670–13.851 µs (14.280 µs).
+Both used 72 blocks. Check the actual generated entry point and remeasure it.
+
 Compare consecutive chunks per block with a grid-stride loop. Consecutive ranges can use the quotient and remainder of total chunks divided by the active blocks to balance work without dummy iterations. For long grids of FP32 rows, also try one strided descriptor for several complete rows. For widened FP16 or BF16 compare a third pipeline stage against the larger tile allowed by two stages. Check the compiled allocation, full output and warmed device times before adopting a regime.
 
 Use one supported `for t in asctile.range(begin, end, unroll_factor=U)` loop. Its logical step is one. For a balanced range with quotient q and remainder r, use the two prefix counts `q*b + min(b,r)` at block boundaries b and b+1. Define both outside runtime conditionals. A single chunk per row still has R distinct work items with source offsets `2*t*H` and `(2*t+1)*H`. A single row with many chunks instead uses `col=t*T`. Test both cases, multiple chunks on multiple rows, and a partial final chunk against the full output.
