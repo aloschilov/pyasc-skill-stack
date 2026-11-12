@@ -90,6 +90,10 @@ jobs:
           BEFORE: ${{ github.event.before }}
         run: |
           set -eu
+          if [ "$(git show -s --format='%(trailers:key=CANNBench-Evaluation,valueonly)' HEAD)" = skip ]; then
+            echo "CANNBench evaluation skipped by the main commit trailer." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           git fetch --no-tags --depth=1 origin "$BEFORE"
           files=$(git diff --name-only "$BEFORE" HEAD -- skills/asctile-api-patterns skills/asctile-build-run-verify skills/asctile-cannbench-kernel skills/asctile-syntax-constraints)
           if [ -n "$files" ]; then echo 'changed=true' >> "$GITHUB_OUTPUT"; fi
