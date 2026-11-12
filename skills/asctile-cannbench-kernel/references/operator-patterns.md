@@ -22,7 +22,12 @@ Generate the kernel with `@asctile.jit(reuse_alloc=2)`; allocate with
 `out = x.new_empty(x.shape)` on the caller's device and invoke
 `kernel[vector_blocks(work_items)](x, out, ...)`. Read the
 [ranked copy example](../../asctile-api-patterns/SKILL.md#surface-to-use)
-before writing the body. The evaluator has no `asc.tile` module. Its inputs
+before writing the body. Generate one unconditional device path for nonempty
+inputs. The wrapper consists only of platform selection, scalar attributes,
+shape/resource calculations, output allocation, the JIT launch and
+`return out`. There is no Python numerical fallback: passing CPU-backed
+tensors is the normal hardware path. Treat the Torch golden as an independent
+test oracle; never embed it in the implementation. The evaluator has no `asc.tile` module. Its inputs
 are ordinary CPU-backed Torch tensors. Select the NPU with the runtime
 helper, then launch with those tensors unchanged. A host check such as
 `if x.device.type != "npu": raise ...` rejects valid hardware work.

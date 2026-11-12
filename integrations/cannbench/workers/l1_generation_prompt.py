@@ -21,7 +21,10 @@ def prompt(task, skills):
         sections.append(f"= {path.name}\n{body.strip()}\n")
 
     include(task / "proto.yaml")
-    include(task / "golden.py")
+    # Keep the executable Torch oracle in the independent evaluation path.
+    # The Exp skill and public proto specify every scalar and promotion rule.
+    if op == "swi_glu":
+        include(task / "golden.py")
     include(api / "SKILL.md", "## Surface to use", "`asctile.concat` is variadic")
     if op == "swi_glu":
         include(api / "SKILL.md", "### Choose a memory layout", "### Batch short rows")
