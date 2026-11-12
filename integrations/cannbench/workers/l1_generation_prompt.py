@@ -34,6 +34,7 @@ def prompt(task, skills):
         include(api / "references/strided-row-tiles.md", "### Padded FP16 rows", "At R=3003")
         include(api / "references/streamed-halves.md", "# Flat SwiGLU", "Compare consecutive chunks")
         include(api / "templates/streamed-swiglu-flat.py")
+        include(api / "templates/two-wave-swiglu-slab.py")
     elif op == "exp":
         include(api / "SKILL.md", "## Elementwise pattern", "### Choose a memory layout")
         include(skills / "asctile-cannbench-kernel/references/operator-patterns.md",

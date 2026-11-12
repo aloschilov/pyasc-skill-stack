@@ -110,6 +110,15 @@ and per-group offsets increased the device median for the tested
 
 ## Two-wave BF16 half-rows
 
+In the generated host wrapper call the
+[two-wave selector and kernel](../templates/two-wave-swiglu-slab.py)
+before the generic DMA-limited slab. When the selector returns a positive
+height, launch this kernel with the queried AIV count. Cache one full gate
+index on the caller's device, keyed by device, half-width and height:
+for `k = torch.arange(tile*half, device=x.device, dtype=torch.int32)`,
+store `(k + half*(k//half)).to(torch.int16)`. Pass that tensor as the
+third kernel argument. A zero return falls through to ordinary selection.
+
 On the qualified 950PR, compare the DMA-sized slab with two adjacent
 tiles per AIV for BF16 half-rows wider than one element. The latter is
 a separate candidate with a larger DMA. Compute
