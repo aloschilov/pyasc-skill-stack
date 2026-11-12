@@ -196,46 +196,117 @@ function serviceFilterRecord(p, data) {
     tasks:p.cases.map(c => ({id:c.id})), counts:{qualified:20}, status:'complete',
     freshness:(Date.parse(data.built_at)-Date.parse(p.finished_at))/3600000 > data.max_age_hours ? 'stale':'recent'};
 }
+function deviceDelta(current, previous) {
+  return 100 * (current - previous) / previous;
+}
+function deltaText(percent, precision = 1) {
+  if (percent === 0) return 'Unchanged';
+  return Math.abs(percent).toFixed(precision) + '% ' + (percent > 0 ? 'slower' : 'faster');
+}
+function caseTable(run, cases, full) {
+  const table = el('table');
+  table.append(el('caption', full ? 'Official device time (µs)' : 'Largest time changes · generated cases'));
+  const columns = ['Case', 'Previous (µs)', 'Selected (µs)', 'Time change', 'Baseline (µs)'];
+  if (full) columns.push('Compute', 'Baseline / selected', 'Service t_hw (µs)', 'Case score');
+  const head = table.createTHead().insertRow();
+  for (const title of columns) {
+    const th = el('th', title); th.scope = 'col'; head.append(th);
+  }
+  const body = table.createTBody();
+  for (const c of cases) {
+    const row = body.insertRow();
+    const number = c.id.split('_').pop();
+    const label = el('th', c.kernel === '_swiglu_pair_groups' ? number + ' · template' : number);
+    label.scope = 'row'; row.append(label);
+    const previous = run.previous ? c.previous_elapsed_us : null;
+    row.insertCell().textContent = previous?.toFixed(2) ?? '—';
+    row.insertCell().textContent = c.elapsed_us.toFixed(2);
+    const change = row.insertCell();
+    if (previous != null) {
+      const percent = deviceDelta(c.elapsed_us, previous);
+      change.textContent = deltaText(percent);
+      change.className = percent > 0 ? 'slower' : percent < 0 ? 'faster' : '';
+    } else change.textContent = '—';
+    row.insertCell().textContent = c.baseline_us.toFixed(2);
+    if (full) {
+      for (const value of [c.kernel, (c.baseline_us / c.elapsed_us).toFixed(3) + '×', c.t_hw_us ?? '—', c.perf_score?.toFixed(4) ?? '—']) {
+        row.insertCell().textContent = value;
+      }
+    }
+  }
+  const wrap = el('div', undefined, 'case-scroll');
+  wrap.tabIndex = 0; wrap.setAttribute('role', 'region');
+  wrap.setAttribute('aria-label', table.caption.textContent);
+  wrap.append(table);
+  return wrap;
+}
 function serviceTable(runs) {
-  const table=el('table');
-  table.append(el('caption','CI-generated SwiGLU · official CANNBench evaluations on 950PR, catalog 2.0.0'));
-  const head=table.createTHead().insertRow();
-  for (const title of ['Finished (UTC)','Generation','CANNBench job','Baseline / candidate (19 generated)','Baseline / candidate (all 20)','Service score (all 20)','Previous / current time (19)','Per-case timings']) {
-    const th=el('th',title); th.scope='col'; head.append(th);
+  const panel = el('article', undefined, 'panel hardware-result');
+  const result = el('div');
+  const history = el('table');
+  history.append(el('caption','Choose a CANNBench evaluation to compare its cases'));
+  const head = history.createTHead().insertRow();
+  for (const title of ['Finished (UTC)', 'Skill revision', 'Speed vs baseline (19)', 'Service score (20)']) {
+    const th = el('th', title); th.scope = 'col'; head.append(th);
   }
-  const body=table.createTBody();
-  for (const p of runs) {
-    const row=body.insertRow();
-    row.insertCell().textContent=p.finished_at.slice(0,16).replace('T',' ');
-    row.insertCell().append(link(`${p.model} · ${p.revision.slice(0,7)}`,p.generation));
-    const skill=link('skills '+(p.skills_revision||p.revision).slice(0,7),
-      'https://github.com/aloschilov/pyasc-skill-stack/commit/'+(p.skills_revision||p.revision));
-    row.cells[1].append(document.createElement('br'),skill);
-    if (p.policy_generation) row.cells[1].append(document.createElement('br'),
-      link('Policy · '+(p.policy_profile || p.model),p.policy_generation));
-    const job=el('a',p.job); job.href='https://cannbench.com/jobs/'+p.job;
-    row.insertCell().append(job);
-    for (const ratio of [p.ratio,p.all_ratio]) row.insertCell().textContent=ratio.toFixed(3)+'×';
-    row.insertCell().textContent=p.score.toFixed(4);
-    const change=row.insertCell();
+  const body = history.createTBody();
+  for (const [i, p] of runs.entries()) {
+    const row = body.insertRow();
+    const selector = el('input');
+    selector.type = 'radio'; selector.name = 'hardware-run'; selector.checked = i === 0;
+    const label = el('label');
+    const date = el('time', new Date(p.finished_at).toISOString().slice(0,16).replace('T',' '));
+    date.dateTime = p.finished_at;
+    label.append(selector, date);
+    row.insertCell().append(label);
+    selector.addEventListener('change', () => show(p));
+    const skills = p.skills_revision || p.revision;
+    row.insertCell().append(link(skills.slice(0,7), 'https://github.com/aloschilov/pyasc-skill-stack/commit/'+skills));
+    row.insertCell().textContent = p.ratio.toFixed(3)+'×';
+    row.insertCell().textContent = p.score.toFixed(4);
+  }
+  const wrap = el('div', undefined, 'case-scroll run-history');
+  wrap.tabIndex = 0; wrap.setAttribute('role','region'); wrap.setAttribute('aria-label',history.caption.textContent);
+  wrap.append(history);
+  panel.append(el('h3','SwiGLU · Ascend 950PR · official cases 2.0.0'), wrap, result);
+  function show(p) {
+    const metrics = el('div', undefined, 'run-metrics');
+    const metric = (value, title, note) => {
+      const block = el('div');
+      block.append(el('span', title), el('strong', value), el('small', note));
+      metrics.append(block);
+    };
+    metric(p.ratio.toFixed(3)+'×', 'Speed vs CANNBench baseline', deltaText(deviceDelta(1,p.ratio))+' across 19 generated cases (geometric mean)');
     if (p.previous) {
-      change.append(link(p.previous.previous_over_current.toFixed(3)+'×',p.previous.release),
-        el('div','Compared with '+p.previous.job+' · '+p.previous.changed_baselines+' changed baselines','subtle'));
-    } else change.textContent='—';
-    const details=el('details'); details.append(el('summary','20/20 passed'),link('Source and service receipt',p.release));
-    const times=el('table'); times.append(el('caption','Official device time (µs)'));
-    const cols=times.createTHead().insertRow();
-    for (const title of ['Case','Compute','Candidate','Baseline','Baseline / candidate','Service t_hw (µs)','Case score','Previous candidate (µs)']) {
-      const th=el('th',title); th.scope='col'; cols.append(th);
+      metric(deltaText(deviceDelta(1, p.previous.previous_over_current), 2), 'Time vs previous run', 'Same 19 generated cases · geometric mean');
     }
-    const rows=times.createTBody();
-    for (const c of p.cases) {
-      const line=rows.insertRow();
-      for (const value of [c.id,c.kernel,c.elapsed_us,c.baseline_us,(c.baseline_us/c.elapsed_us).toFixed(3)+'×',c.t_hw_us??'—',c.perf_score?.toFixed(4)??'—',c.previous_elapsed_us??'—']) line.insertCell().textContent=value;
+    metric(p.score.toFixed(4), 'CANNBench service score', 'All 20 official cases');
+    const provenance = el('p', undefined, 'links');
+    const job = el('a', p.job); job.href = 'https://cannbench.com/jobs/'+p.job;
+    provenance.append(job, link(p.model+' · '+p.revision.slice(0,7), p.generation),
+      link('Source and service receipt', p.release));
+    if (p.policy_generation) provenance.append(link('Policy · '+(p.policy_profile || p.model),p.policy_generation));
+    const coverage = el('p', '20/20 passed. Case 12 used the packed BF16 template. Including it gives '+p.all_ratio.toFixed(3)+'× baseline speed.');
+    result.replaceChildren(metrics, coverage, provenance);
+    if (p.previous) {
+      const comparable = p.cases.filter(c => c.kernel !== '_swiglu_pair_groups');
+      const delta = c => deviceDelta(c.elapsed_us, c.previous_elapsed_us);
+      const faster = comparable.filter(c => delta(c) < 0).length;
+      const slower = comparable.filter(c => delta(c) > 0).length;
+      const context = el('p', faster+' faster · '+slower+' slower · '+(comparable.length-faster-slower)+' unchanged vs ');
+      context.append(link(p.previous.job, p.previous.release));
+      if (p.previous.changed_baselines) context.append(' · changed service baselines: '+p.previous.changed_baselines);
+      comparable.sort((a,b) => Math.abs(delta(b)) - Math.abs(delta(a)));
+      result.append(context, caseTable(p, comparable.slice(0,3), false));
+    } else {
+      result.append(el('p', 'No verified previous-run comparison for this evaluation.'));
     }
-    details.append(times); row.insertCell().append(details);
+    const details = el('details');
+    details.append(el('summary', 'All 20 cases and service metrics'), caseTable(p, p.cases, true));
+    result.append(details);
   }
-  const wrapper=el('div',undefined,'table-wrap'); wrapper.append(table); return wrapper;
+  show(runs[0]);
+  return panel;
 }
 function renderTiming(records, data) {
   const panels = records.filter(r => available(r) && r.baseline_time_ratio != null).map(r => {
@@ -248,7 +319,13 @@ function renderTiming(records, data) {
   });
   const history=data.cannbench_performance;
   const runs=(history?.runs || []).filter(p=>matches(serviceFilterRecord(p,data)));
-  if (runs.length) panels.unshift(serviceTable(runs));
+  if (runs.length) {
+    const archived = el('details');
+    archived.append(el('summary','Other retained hardware qualifications'), ...panels);
+    panels.length = 0;
+    panels.push(serviceTable(runs));
+    if (archived.childElementCount > 1) panels.push(archived);
+  }
   if (history?.complete===false) panels.push(el('p','Some service receipts could not be verified.','attention'));
   $('timing').replaceChildren(...(panels.length ? panels : [el('p', 'No retained NPU timing evidence matches these filters. Simulator qualification does not supply a device timing ratio.', 'empty')]));
 }
@@ -352,7 +429,8 @@ function renderSwiGLU(study, official) {
 function freshness(data) {
   const hours = (Date.now()-Date.parse(data.built_at))/3600000;
   const missing = data.records.filter(r => !available(r)).length;
-  $('freshness').textContent = `${hours > 24 ? 'STALE PAGE — ' : ''}Evidence checked ${data.built_at}. ${missing} unavailable records. Result freshness threshold: ${data.max_age_hours} hours. ${hours > 24 ? 'Rebuild before relying on current availability.' : 'Retained snapshot · not a live device monitor.'}`;
+  const checked = new Date(data.built_at).toISOString().slice(0,16).replace('T',' ');
+  $('freshness').textContent = `${hours > 24 ? 'STALE PAGE — ' : ''}Evidence checked ${checked} UTC · ${missing} unavailable records · results older than ${data.max_age_hours} hours marked stale.`;
   $('freshness').className = hours > 24 || missing ? 'attention' : '';
 }
 function validate(data) {
@@ -388,7 +466,8 @@ function validate(data) {
   for (const p of data.cannbench_performance?.runs || []) {
     if (p.previous) {
       safeURL(p.previous.release);
-      require(/^job_[0-9a-f]+$/.test(p.previous.job) && Number.isFinite(p.previous.previous_over_current) && p.previous.previous_over_current>0 &&
+      require(p.cases.every(c=>Number.isFinite(c.previous_elapsed_us) && c.previous_elapsed_us>0) &&
+        /^job_[0-9a-f]+$/.test(p.previous.job) && Number.isFinite(p.previous.previous_over_current) && p.previous.previous_over_current>0 &&
         Number.isInteger(p.previous.changed_baselines) && p.previous.changed_baselines>=0 && p.previous.changed_baselines<=19);
     }
     require(typeof p.model==='string' && /^[0-9a-f]{40}$/.test(p.revision) && Number.isFinite(Date.parse(p.finished_at)) && p.all_ratio>0 && Number.isFinite(p.all_ratio));
@@ -437,7 +516,7 @@ fetch('data.json', {cache:'no-store'}).then(r => {if (!r.ok) throw new Error('Mi
   for (const name of [...new Set(data.records.concat((data.cannbench_performance?.runs||[]).map(p=>serviceFilterRecord(p,data))).flatMap(models))].sort()) {
     const option = el('option', name); option.value = name; $('model').append(option);
   }
-  renderDaily(data.daily); renderTransfer(data.transfer); renderSwiGLU(data.swiglu,data.swiglu_performance); renderOverview(data); render(data); freshness(data);
+  renderDaily(data.daily); renderTransfer(data.transfer); renderSwiGLU(data.swiglu,data.cannbench_performance?.runs?.length ? null : data.swiglu_performance); renderOverview(data); render(data); freshness(data);
   for (const id of controls) $(id).addEventListener(id === 'search' ? 'input' : 'change', () => render(data));
   $('filters').addEventListener('submit', e => e.preventDefault());
   $('filters').addEventListener('reset', () => { for (const id of controls) $(id).value = id === 'search' ? '' : 'all'; render(data); });

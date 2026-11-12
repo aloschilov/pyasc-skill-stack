@@ -61,6 +61,13 @@ Local tests cover unavailable/malformed/checksum-invalid evidence, private-field
 exclusion, unsafe archives, duplicate JSON, contradictory coverage, stale results,
 distinct performance metrics and preservation of the previous snapshot.
 
+The first hardware table lists verified SwiGLU evaluations by finish time. Select
+a row to compare its generated cases with the preceding verified run. The three
+largest absolute percentage changes appear first. Expand the full table for
+all 20 timings, including the BF16 template on case 12. Time change compares
+candidate microseconds across runs. Baseline speed compares the candidate
+with CANNBench within one run. The service score covers all 20 cases.
+
 ## Daily skill quality
 
 Run `python3 scripts/evidence_dashboard.py --daily --output /outside/new-snapshot`
