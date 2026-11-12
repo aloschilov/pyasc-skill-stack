@@ -22,7 +22,10 @@ Generate the kernel with `@asctile.jit(reuse_alloc=2)`; allocate with
 `out = x.new_empty(x.shape)` on the caller's device and invoke
 `kernel[vector_blocks(work_items)](x, out, ...)`. Read the
 [ranked copy example](../../asctile-api-patterns/SKILL.md#surface-to-use)
-before writing the body. The evaluator has no `asc.tile` module.
+before writing the body. The evaluator has no `asc.tile` module. Its inputs
+are ordinary CPU-backed Torch tensors. Select the NPU with the runtime
+helper, then launch with those tensors unchanged. A host check such as
+`if x.device.type != "npu": raise ...` rejects valid hardware work.
 
 For Exp, specialize the public scalar attributes at compile time. Evaluate
 `scale*x + shift` in the golden compute dtype; for a positive base multiply

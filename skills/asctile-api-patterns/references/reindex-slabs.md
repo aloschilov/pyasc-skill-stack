@@ -29,6 +29,10 @@ and `asctile.reindex(slab, value_idx_ub)` before widening each gathered
 half. Store the resulting contiguous output at `r*H`, with true extent
 `min(T,R-r)*H`. The final partial tile belongs to the same launch.
 
+Declare the device function itself with `@asctile.jit(reuse_alloc=2)`. The
+selector below is paired with this allocation policy. Merely writing
+`@asctile.jit(always_compile=False)` does not select allocation reuse.
+Check the emitted decorator on the slab as well as the row kernel.
 With `reuse_alloc=2`, aligned BF16 half-rows of one and seven elements used
 24 bytes per output lane at unroll 1 and 28 at unroll 2. These are compiled live-buffer costs. Recheck allocations
 when applying this estimate to a different specialization or compiler.
