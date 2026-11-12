@@ -18,7 +18,11 @@ integer lane metadata on the host with `k = torch.arange(T*H, dtype=torch.int32,
 device=input.device)`, `gate_idx = 2*H*(k//H) + k%H` and
 `value_idx = gate_idx + H`. Cache by device, H and T. This metadata
 is independent of input values. Pass the index tensors as kernel arguments
-and load them before the tile loop. For a slab starting at row r, copy
+and load them before the tile loop. Like data pointers, index arguments are
+`GlobalAddress` and cannot be passed straight to `copy_in`. For each
+metadata pointer use a ranked descriptor first; for example
+`ig = asctile.global_tensor(gate_idx_ptr, [T*H])` and
+`gate_idx_ub = asctile.copy_in(ig, [0], [T*H])`. For a slab starting at row r, copy
 `2*T*H` input lanes at offset `2*r*H`, with true extent
 `2*min(T,R-r)*H` and zero padding. Use `asctile.reindex(slab, gate_idx_ub)`
 and `asctile.reindex(slab, value_idx_ub)` before widening each gathered
