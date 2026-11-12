@@ -57,6 +57,19 @@ def prompt(task, skills):
         "another candidate, or leave placeholders. Return the entire module as one Python "
         "code block, ready for evaluation unchanged.\n"
     )
+    if op == "swi_glu":
+        sections.append(
+            "Integrate both supplied kernel templates into the returned module. "
+            "In the public swi_glu function, after deriving R, H, actual dtype, AIVs "
+            "and available UB, call two_wave_tile before the ordinary slab selector. "
+            "A positive height launches two_wave_swiglu on that AIV count with one cached "
+            "signed-int16 gate-index tensor and returns the output. Zero falls through "
+            "to the generic slab, rows or flat kernels. Trace this exact branch before "
+            "returning the module: at 72 AIVs and 253952 UB bytes, R=133221 and H=7 "
+            "give height 928 and two tiles per block; H=1 reaches the ordinary slab. "
+            "Use the general selector for arbitrary inputs. Include the branch itself "
+            "in the executable entry point."
+        )
     return "\n".join(sections)
 
 
