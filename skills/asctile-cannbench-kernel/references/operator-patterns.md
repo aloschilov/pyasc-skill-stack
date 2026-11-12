@@ -30,7 +30,13 @@ by its natural logarithm before the exponential. Compute the scalar logarithm
 once outside the JIT, at the precision of the public golden. Elide identity
 multiplications and a zero shift. Do not fold a zero multiplier into a
 constant: infinities and NaNs still participate. Use one contiguous copy in
-and one copy out per tile. Bound the last transfer in the same launch.
+and one copy out per tile. The two casts belong **inside the JIT**:
+`lane_dtype = loaded.dtype`, `acc = loaded.to(asctile.float32)`,
+then `asctile.copy_out(y.to(lane_dtype), out_gm, ...)`. Return the
+original-dtype output buffer directly. Do not widen input tensors on the
+host, allocate intermediate FP32 host tensors, or cast back on the host.
+A passing golden and an AI_VECTOR_CORE task do not account for that work.
+Bound the last transfer in the same launch.
 Benchmark a direct one-tile body when the whole input fits one wave, and
 a grid-stride pipelined loop when there are enough tiles for multiple waves.
 

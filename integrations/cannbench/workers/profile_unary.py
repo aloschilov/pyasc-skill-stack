@@ -4,6 +4,7 @@ Call in a fresh process for each case. Expected cwd: generation/task/{cases.csv,
 golden.py} and a Python package containing the candidate and runtime helper.
 Raw tasks and launch grids are returned along with the median of three calls.
 """
+import ast
 import csv
 import hashlib
 import importlib
@@ -13,6 +14,24 @@ import statistics
 import sys
 from pathlib import Path
 from unittest.mock import patch
+
+
+def check_exp_host_casts(source):
+    """Reject tensor conversion methods outside the public JIT in an Exp candidate.
+
+    This scoped source check supplements output checks; it is not a sandbox.
+    Exp has no index tensors or other host metadata requiring tensor conversion.
+    """
+    tree = ast.parse(source)
+    for fn in (node for node in tree.body if isinstance(node, ast.FunctionDef)):
+        decorators = [d.func if isinstance(d, ast.Call) else d for d in fn.decorator_list]
+        if any(isinstance(d, ast.Attribute) and d.attr == "jit" and
+               isinstance(d.value, ast.Name) and d.value.id == "asctile" for d in decorators):
+            continue
+        for node in ast.walk(fn):
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                    and node.func.attr in {"to", "float", "half", "bfloat16", "type", "type_as"}):
+                raise ValueError(f"Exp host tensor conversion in {fn.name} at line {node.lineno}")
 
 
 def measure(candidate, case, operator=None):
@@ -26,6 +45,8 @@ def measure(candidate, case, operator=None):
         row, = (r for r in csv.DictReader(f) if int(r["case_id"]) == case)
     if operator is None:
         operator = {"Exp": "exp", "SwiGlu": "swi_glu"}[row["operator"]]
+    if operator == "exp":
+        check_exp_host_casts((Path(*candidate.split(".")) / "exp.py").read_text())
     op = getattr(importlib.import_module(f"{candidate}.{operator}"), operator)
     golden = getattr(importlib.import_module("generation.task.golden"), operator)
     shape, = json.loads(row["input_shape"])
