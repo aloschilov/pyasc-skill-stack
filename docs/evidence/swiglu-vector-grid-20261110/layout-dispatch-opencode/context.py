@@ -1,4 +1,4 @@
-"""Print the pinned public contract and skill sections used for the second draw."""
+"""Print the pinned public contract and skill sections used for the scoped generation attempts."""
 import subprocess
 import sys
 
@@ -17,21 +17,21 @@ SECTIONS = (
 REQUEST = "docs/evidence/swiglu-vector-grid-20261110/clean-opencode/request.txt"
 
 
-def pinned_file(checkout, path):
-    return subprocess.check_output(["git", "-C", checkout, "show", f"{SKILLS_REV}:{path}"]).decode()
+def pinned_file(checkout, revision, path):
+    return subprocess.check_output(["git", "-C", checkout, "show", f"{revision}:{path}"]).decode()
 
 
-def prompt(checkout):
+def prompt(checkout, revision=SKILLS_REV):
     parts = []
     for path, start, end in SECTIONS:
-        body = pinned_file(checkout, path)
+        body = pinned_file(checkout, revision, path)
         if start:
             body = body[body.index(start):]
         if end:
             body = body[:body.index(end)]
         parts.extend((f"= {path}\n", body))
-    return "".join(parts) + pinned_file(checkout, REQUEST)
+    return "".join(parts) + pinned_file(checkout, revision, REQUEST)
 
 
 if __name__ == "__main__":
-    sys.stdout.write(prompt(sys.argv[1]))
+    sys.stdout.write(prompt(*sys.argv[1:]))
