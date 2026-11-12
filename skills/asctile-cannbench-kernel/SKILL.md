@@ -16,6 +16,14 @@ local-validation and submission guides apply when you own those steps. Check
 that the wrapper defines its launch grid and bounds every store by the
 allocated output shape before handing the file back.
 
+For a from-scratch full-suite SwiGLU, use the
+[split-half layout dispatch](../asctile-api-patterns/SKILL.md#choose-a-memory-layout-for-split-half-swiglu)
+when writing the entry point and device kernels. Follow each reachable
+branch from the public callable through its actual DMA and gather operations.
+Check that a short BF16 pair and a wider short BF16 half-row reach the slab
+kernel, a moderate row reaches the strided kernel and a wide stream reaches
+the chunk kernel. These are geometry checks on the generated code.
+
 ## AscTile snapshot
 
 Use the runtime/source pin recorded by the current run's manifest. The manual
