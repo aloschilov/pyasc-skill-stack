@@ -62,6 +62,26 @@ If it fits, launch `ceil_div(N, T)` blocks, one tile per block, with a
 bounded final transfer and no grid-stride loop. Rounding down can leave a
 second wave for a tiny remainder. Measure this path against streaming.
 
+For short 16-bit streams, also evaluate three tiles per AIV. On the
+public 950PR, start with this path for about 24–32 KiB of useful input
+per AIV when unroll 3 fits. With `q = 32 // itemsize`, compute
+`T = ceil_div(N, 3*A*q)*q` elements and launch `min(A, ceil_div(N,T))`
+blocks. Check the compiled allocation against UB. In two matched runs
+with the same hardware, arithmetic, grid and tile, contiguous per-block
+ownership took 3.755/3.715 µs on the BF16 affine input versus
+4.221/4.168 µs for grid-stride ownership. On the FP16 shifted input
+these schedules took 3.602/3.596 and 3.512/3.676 µs. Use contiguous
+groups for the affine path when qualifying this regime. For identity
+FP16, try grid-stride first (3.671/3.556 µs). Keep the public FP32
+compute and numerical checks for all attributes.
+
+For contiguous ownership set `M = ceil_div(N,T)` and
+`C = ceil_div(M,actual_blocks)`. Block `b` handles the `C` tiles from
+`b*C` in `asctile.range(C, unroll_factor=3)`. Clamp the offset of any
+empty final iteration to N and bound the real transfer extent to the
+remaining elements. Keep the affine scalars explicit launch arguments
+in every specialization. Larger streams still need the multi-wave rule.
+
 For multi-wave Exp, use an explicit pipelined range with compile-time
 unroll and allocation reuse. In two shuffled 950PR runs with identical
 arithmetic and verified outputs, 8192 elements and unroll 2 took
