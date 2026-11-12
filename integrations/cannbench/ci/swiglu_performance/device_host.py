@@ -1,5 +1,6 @@
 """Launch the SwiGlu AscendC objects on the current torch NPU stream."""
 import ctypes as C
+import json
 from functools import lru_cache
 from pathlib import Path
 import struct
@@ -99,21 +100,27 @@ def gather_indices(half, tile, device):
                  for index in slab_indices(half, tile))
 
 
+@lru_cache(maxsize=1)
+def policy():
+    from .geometry import validate
+    return validate(json.loads((Path(__file__).parent/'policy.json').read_bytes()))
+
+
 def swi_glu(input, dim=-1):
     from .geometry import key, layout
     dtype = str(input.dtype).removeprefix('torch.')
     if not input.is_contiguous():
         raise ValueError('Expected a contiguous input')
-    shape, rows, half, route, const, groups = layout(input.shape, dim, dtype)
+    shape, rows, half, route, const, blocks = layout(input.shape, dim, dtype, policy(), core_count(input.device.index))
     out = torch.empty(shape, device=input.device, dtype=input.dtype)
-    if not groups:
+    if not blocks:
         return out
     pointers = [device_ptr(input), device_ptr(out)]
     if route == 'slab':
-        pointers.extend(device_ptr(t) for t in gather_indices(*const, input.device))
-    scalars = [rows] if route == 'slab' else [rows, groups if route == '_swiglu_pair_groups' else half]
+        pointers.extend(device_ptr(t) for t in gather_indices(*const[:2], input.device))
+    scalars = [rows] if route == 'slab' else [rows, (rows+const[0]-1)//const[0] if route == '_swiglu_pair_groups' else half]
     packed = struct.pack('<' + 'Q'*len(pointers) + 'i'*len(scalars), *pointers, *scalars)
     packed = packed.ljust((len(packed)+7)//8*8, bytes(1))
-    launch(device_object(key(dtype, route, const)), route, min(groups, core_count(input.device.index)),
+    launch(device_object(key(dtype, route, const)), route, blocks,
            packed, stream_ptr(input))
     return out

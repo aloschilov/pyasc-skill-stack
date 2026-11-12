@@ -123,7 +123,8 @@ class DailyQuality(unittest.TestCase):
         report = {'schema':1, 'evaluation_run':'1234', 'origin_run':'1233','hardware':'950pr',
                   'benchmark_version':'2.0.0','job_id':'job_abc','submission_id':'sub_abc',
                   'candidate_sha256':'a'*64,'package_sha256':'b'*64,'cases':cases,'service_score':17,
-                  'generated_ratio':0.5}
+                  'generated_ratio':0.5,'revision':'d'*40,'model':'gateway/test',
+                  'finished_at':'2026-11-10T08:00:00Z'}
 
         def project():
             raw = json.dumps(report).encode()

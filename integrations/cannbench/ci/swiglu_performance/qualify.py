@@ -15,17 +15,17 @@ from asc.lib.utils import get_ascend_path
 from asc.runtime import config
 from asc.runtime.jit import MockTensor
 
-from geometry import DTYPES, all_specs, key, layout, slab_indices
+from geometry import DTYPES, all_specs, key, layout, slab_indices, validate
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]/'workers'))
 from local_compile_gate import prepare_specialization
 
-PACKED = HERE.parents[3]/'skills/asctile-api-patterns/templates/packed-bf16-swiglu.py'
-NAMES = {'rows':6,'slab':7,'flat':5}
+PACKED = Path('context/skills/asctile-api-patterns/templates/packed-bf16-swiglu.py')
+NAMES = {'rows':7,'slab':8,'flat':6}
 
 
-def load_kernels(path):
+def load_kernels(path, template_path):
     tree = ast.parse(path.read_bytes())
     defs = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
     for n in tree.body:
@@ -37,11 +37,16 @@ def load_kernels(path):
             raise ValueError('Compute module must contain only PyASC imports and kernel definitions')
     if {n.name:len(n.args.args) for n in defs} != NAMES or len(defs) != 3:
         raise ValueError('Generated kernel names or signatures differ from the device ABI')
-    packed_tree = ast.parse(PACKED.read_bytes())
+    for fn in defs:
+        u=fn.args.args[-1].arg
+        if not any(k.arg=='unroll_factor' and isinstance(k.value,ast.Name) and k.value.id==u
+                   for k in ast.walk(fn) if isinstance(k,ast.keyword)):
+            raise ValueError(fn.name+' must use the dispatched constexpr unroll factor')
+    packed_tree = ast.parse(template_path.read_bytes())
     packed, = [n for n in packed_tree.body if isinstance(n, ast.FunctionDef) and n.name=='_swiglu_pair_groups']
     # Preserve the authored bytes of each measured implementation. Only the template entry is imported separately.
     template = Path('/tmp/swiglu-public-template.py')
-    template.write_text('from asc.experimental import asctile\n'+'\n'.join(PACKED.read_text().splitlines()[
+    template.write_text('from asc.experimental import asctile\n'+'\n'.join(template_path.read_text().splitlines()[
         packed.decorator_list[0].lineno-1:packed.end_lineno])+'\n')
     kernels = {}
     for filename, names in ((path,NAMES),(template,['_swiglu_pair_groups'])):
@@ -90,34 +95,34 @@ def lower(kernel, dtype, route, const, folder):
     compiler._gen_dst_kernel('/tmp',Path('@SRC@'),Path('@OBJ@'))
     if [Path(row[0]).name for row in commands] != ['bisheng','ld.lld']:
         raise ValueError('Expected a single vector compilation and link')
-    return commands
+    return commands, {str(k):int(v) for k,v in memory.items()}
 
 
-def check(kernels, dtype, shape, axis, seed):
+def check(kernels, dtype, shape, axis, seed, policy):
     print('CaModel', dtype, shape, axis, seed, flush=True)
     torch.manual_seed(seed)
     x = torch.randn(shape, dtype=getattr(torch,dtype))
     x.flatten()[:7] = torch.tensor([float('inf'),-float('inf'),float('nan'),-100.,0.,1.,100.])
     a,b = x.float().chunk(2,axis)
     expected = (torch.nn.functional.silu(a)*b).to(x.dtype)
-    shape, rows, half, route, const, groups = layout(shape,axis,dtype)
+    shape, rows, half, route, const, blocks = layout(shape,axis,dtype,policy,3)
     out = torch.full(shape, float('nan'),dtype=x.dtype)
     kwargs = [x,out]
     if route == 'slab':
-        indices = [torch.tensor(index,dtype=torch.int32) for index in slab_indices(*const)]
+        indices = [torch.tensor(index,dtype=torch.int32) for index in slab_indices(*const[:2])]
         kwargs.extend([*indices,rows])
     else:
-        kwargs.extend([rows,groups if route=='_swiglu_pair_groups' else half])
+        kwargs.extend([rows,(rows+const[0]-1)//const[0] if route=='_swiglu_pair_groups' else half])
     try:
         torch.testing.assert_close(out,expected,equal_nan=True)
     except AssertionError:
         pass
     else:
         raise ValueError('Suppressed launch passed the numerical oracle')
-    kernels[route][min(3,groups)](*kwargs,*const)
+    kernels[route][blocks](*kwargs,*const)
     torch.testing.assert_close(out,expected,equal_nan=True)
     return {'shape':list(x.shape),'dim':axis,'dtype':dtype,'route':route,'seed':seed,
-            'positive':True,'suppressed_rejected':True}
+            'blocks':blocks,'constexprs':const,'positive':True,'suppressed_rejected':True}
 
 
 def main(root, output):
@@ -126,19 +131,28 @@ def main(root, output):
     digest = sha256(candidate.read_bytes()).hexdigest()
     if digest != json.loads((root/'generation.json').read_bytes())['candidate_sha256']:
         raise ValueError('Generation checkpoint changed')
-    kernels = load_kernels(candidate)
+    raw_policy = (root/'project/policy.json').read_bytes()
+    policy_hash = sha256(raw_policy).hexdigest()
+    if policy_hash != json.loads((root/'generation.json').read_bytes())['policy_sha256']:
+        raise ValueError('Generation policy changed')
+    policy = validate(json.loads(raw_policy))
+    template_path = root/PACKED
+    kernels = load_kernels(candidate, template_path)
     checks = []
     for dtype in DTYPES:
         for shape,axis in [((131,14),1),((129,2),1),((3,128,8),1),((1,65538),1)]:
             for seed in (19,23):
-                checks.append(check(kernels,dtype,shape,axis,seed))
+                checks.append(check(kernels,dtype,shape,axis,seed,policy))
     project = output/'package-source'
     folder = project/'csrc/ops/swi_glu/op_kernel'
     folder.mkdir(parents=True)
-    flags = {key(dtype,r,c):lower(kernels[r],dtype,r,c,folder) for dtype,r,c in all_specs()}
+    flags, allocations = {}, {}
+    for dtype,r,c in all_specs(policy):
+        name = key(dtype,r,c)
+        flags[name],allocations[name] = lower(kernels[r],dtype,r,c,folder)
     (project/'flags.json').write_text(json.dumps(flags,sort_keys=True))
     (output/'camodel.json').write_text(json.dumps({'backend':'Model','candidate_sha256':digest,
-        'template_sha256':sha256(PACKED.read_bytes()).hexdigest(), 'checks':checks,
+        'template_sha256':sha256(template_path.read_bytes()).hexdigest(), 'checks':checks,'policy_sha256':policy_hash,'allocations':allocations,
         'sources':{p.name:sha256(p.read_bytes()).hexdigest() for p in sorted(folder.iterdir())}},indent=2))
     print('Qualified',len(checks),'numerical/control pairs and',len(flags),'vector specializations')
 

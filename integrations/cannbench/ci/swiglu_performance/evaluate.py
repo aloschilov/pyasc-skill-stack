@@ -38,10 +38,10 @@ def restore(root, origin):
         return json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/'+endpoint]))
     run = api('runs/'+origin)
     attempt = run['run_attempt']
-    require(run['head_repository']['full_name']==repo and run['event']=='workflow_dispatch'
+    require(run['head_repository']['full_name']==repo and (run['event']=='workflow_dispatch' or (run['event']=='push' and run['head_branch']=='main'))
             and run['path']=='.github/workflows/ci.yml', 'Wrong generation workflow')
     jobs = api(f'runs/{origin}/attempts/{attempt}/jobs')['jobs']
-    require(any(j['name']=='swiglu-performance / generate' and j['conclusion']=='success' for j in jobs),
+    require(any(j['name'] in ('swiglu-performance / generate','swiglu-on-skill-change / generate') and j['conclusion']=='success' for j in jobs),
             'Generation job did not succeed')
     dest = root/'generation'
     dest.mkdir()
@@ -51,6 +51,8 @@ def restore(root, origin):
     require(str(g['run_id'])==origin and int(g['run_attempt'])==attempt and g['revision']==run['head_sha']
             and g['model']==ci.MODEL and set(g['loaded_skills'])==set(ci.SKILLS)
             and sha(dest/'project/candidate.py')==g['candidate_sha256']
+            and sha(dest/'project/policy.json')==g['policy_sha256']
+            and sha(dest/'policy-prompt.txt')==g['policy_prompt_sha256']
             and sha(dest/'prompt.txt')==g['prompt_sha256']
             and sha(dest/'project/opencode.json')==g['profile_sha256'], 'Generation receipt mismatch')
     ci.check_hashes(dest/'context',g['context_hashes'])
@@ -64,23 +66,25 @@ def package(root):
     src = root/'qualification/package-source'
     checks = load(root/'qualification/camodel.json')
     require(checks['candidate_sha256']==sha(gen/'project/candidate.py')==g['candidate_sha256']
+            and checks['policy_sha256']==sha(gen/'project/policy.json')==g['policy_sha256']
             and len(checks['checks'])==24 and all(c['positive'] and c['suppressed_rejected'] for c in checks['checks']),
             'Missing CaModel numerical evidence')
     cpp = src/'csrc/ops/swi_glu/op_kernel'
     require(checks['sources']==ci.hashes(cpp)
-            and set(load(src/'flags.json'))=={key(*s) for s in all_specs()}, 'Incomplete lowering')
+            and set(load(src/'flags.json'))=={key(*s) for s in all_specs(load(gen/'project/policy.json'))}, 'Incomplete lowering')
     catalog = load(gen/'catalog.json')
     require(catalog['benchmark_version']=='2.0.0' and catalog['required_cases']==20, 'Unexpected catalog')
     entries = {str(p.relative_to(src)):p.read_bytes() for p in [src/'flags.json', *sorted(cpp.glob('*.cpp'))]}
     entries.update({
         'build.sh':b'#!/usr/bin/env bash\nset -eu\ncd "$(dirname "$0")"\npython3 build_device.py\npython3 setup.py bdist_wheel\n',
-        'setup.py':b'from setuptools import setup\nsetup(name="cann_bench", version="2.0.0", packages=["cann_bench"], package_data={"cann_bench":["device/*.o"]})\n',
+        'setup.py':b'from setuptools import setup\nsetup(name="cann_bench", version="2.0.0", packages=["cann_bench"], package_data={"cann_bench":["device/*.o","policy.json"]})\n',
         'cann_bench/__init__.py':b'from .swi_glu import swi_glu\n',
         'cann_bench/swi_glu.py':(HERE/'device_host.py').read_bytes(),
+        'cann_bench/policy.json':(gen/'project/policy.json').read_bytes(),
         'cann_bench/geometry.py':(HERE/'geometry.py').read_bytes(),
         'build_device.py':(HERE/'build_device.py').read_bytes(),
         'pyasc_source/candidate.py':(gen/'project/candidate.py').read_bytes(),
-        'pyasc_source/packed-bf16-swiglu.py':(ci.ROOT/'skills/asctile-api-patterns/templates/packed-bf16-swiglu.py').read_bytes()})
+        'pyasc_source/packed-bf16-swiglu.py':(gen/'context/skills/asctile-api-patterns/templates/packed-bf16-swiglu.py').read_bytes()})
     archive = package/'submission.zip'
     with zipfile.ZipFile(archive,'x') as z:
         for name,data in sorted(entries.items()):
@@ -156,7 +160,10 @@ def service(root, stage):
         compute = set(device) & {'rows','slab','flat','_swiglu_pair_groups'}
         require(len(compute)==1 and case['accuracy']['passed'] is True,'Cannot attribute hardware case')
         name, = compute
-        cases.append({'id':case['case_id'],'kernel':name,'elapsed_us':case['elapsed_us'],
+        service_fields = {k:case[k] for k in ('perf_score','t_hw_us') if case.get(k) is not None}
+        require(all(type(v) in (int,float) and math.isfinite(v) and v >= 0 for v in service_fields.values()),
+                'Invalid CANNBench case metric')
+        cases.append({**service_fields,'id':case['case_id'],'kernel':name,'elapsed_us':case['elapsed_us'],
                       'baseline_us':case['baseline_perf_us']})
     require({c['id'] for c in cases}=={f'level1/swi_glu_{i}' for i in range(1,21)}
             and len(cases)==20 and {c['id'] for c in cases if c['kernel']=='_swiglu_pair_groups'}=={'level1/swi_glu_12'},
@@ -169,7 +176,10 @@ def service(root, stage):
     shutil.copyfile(package/'submission.zip',public/'submission.zip')
     shutil.copyfile(root/'generation/project/candidate.py',public/'candidate.py')
     g = manifest['generation']
-    save(public/'performance.json',{'schema':1,'job_id':job['id'],'submission_id':job['submission_id'],
+    attribution = {k:g[k] for k in ('policy_sha256','skills_revision','kernel_origin','policy_profile','kernel_profile_sha256') if k in g}
+    if 'policy_sha256' in g:
+        require(sha(root/'generation/project/policy.json')==g['policy_sha256'], 'Published policy identity differs')
+    save(public/'performance.json',{'schema':1,**attribution,'job_id':job['id'],'submission_id':job['submission_id'],
         'origin_run':g['run_id'],'origin_attempt':g['run_attempt'],'revision':g['revision'],
         'evaluation_run':os.environ['EVALUATION_RUN'],'evaluation_revision':manifest['evaluation_revision'],
         'candidate_sha256':g['candidate_sha256'],'package_sha256':manifest['files']['submission.zip'],

@@ -5,6 +5,9 @@ on:
       action:
         type: string
         required: true
+      skills_revision:
+        type: string
+        required: false
       origin:
         type: string
         required: false
@@ -21,12 +24,27 @@ permissions:
 jobs:
   generate:
     if: inputs.action == 'performance' || inputs.action == 'performance-generate'
+    permissions:
+      contents: read
+      actions: read
     runs-on: cannbench-vm
-    timeout-minutes: 28
+    timeout-minutes: 86
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Validate skill revision
+        if: inputs.skills_revision != ''
+        env:
+          REVISION: ${{ inputs.skills_revision }}
+        run: '[[ "$REVISION" =~ ^[0-9a-f]{40}$ ]]'
+      - uses: actions/checkout@v4
+        if: inputs.skills_revision != ''
+        with:
+          ref: ${{ inputs.skills_revision }}
+          path: .evaluation-skills
+          persist-credentials: false
+          sparse-checkout: skills
       - name: Install pinned OpenCode
         shell: bash
         run: |
@@ -41,8 +59,11 @@ jobs:
           export CANNBENCH_VENV="$RUNNER_TEMP/perf-client-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           bash integrations/cannbench/setup-site-mcp.sh
           echo "PYTHON=$CANNBENCH_VENV/bin/python" >> "$GITHUB_ENV"
-      - name: Generate fresh PyASC compute kernels with OpenCode
+      - name: Generate PyASC compute and launch policy with OpenCode
         env:
+          GH_TOKEN: ${{ inputs.origin != '' && github.token || '' }}
+          KERNEL_ORIGIN: ${{ inputs.origin }}
+          SWIGLU_SKILL_SOURCE: ${{ inputs.skills_revision != '' && format('{0}/.evaluation-skills', github.workspace) || '' }}
           OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           BENCHSITE_API_TOKEN: ${{ secrets.BENCHSITE_API_TOKEN }}
@@ -68,7 +89,7 @@ jobs:
     env:
       HELPER: integrations/cannbench/ci/swiglu_performance/evaluate.py
       IMAGE: ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:1efdcc8585b769715f640e9c9078c2e03cdf2157082d05b0c4b87974beea7407
-      ORIGIN: ${{ inputs.origin || github.run_id }}
+      ORIGIN: ${{ inputs.action == 'performance' && github.run_id || inputs.origin || github.run_id }}
       EVALUATION_RUN: ${{ (inputs.action == 'performance-resume' || inputs.action == 'performance-submit-prepared') && inputs.origin || github.run_id }}
     steps:
       - uses: actions/checkout@v4
@@ -134,19 +155,33 @@ jobs:
         run: '"$PYTHON" "$HELPER" "$STAGE" "$ROOT"'
       - name: Publish measured cases with the evaluated source package
         env:
-          GH_TOKEN: ${{ secrets.QUALIFICATION_PUBLISH_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_TOKEN: ${{ secrets.QUALIFICATION_PUBLISH_TOKEN }}
         run: |
           set -eu
           cd "$ROOT/public"
           sha256sum -c SHA256SUMS
           tag="qualification-swiglu-performance-$EVALUATION_RUN"
+          revision=$(jq -er '.evaluation_revision | select(test("^[0-9a-f]{40}$"))' performance.json)
+          ref=$(git ls-remote --refs "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$tag")
+          target=(--target "$revision")
+          if [ -n "$ref" ]; then
+            # An existing lightweight qualification tag binds this receipt to its evaluation.
+            test "${ref%%[[:space:]]*}" = "$revision"
+            target=()
+          elif [ -n "$PUBLISH_TOKEN" ]; then
+            # Creating a tag on a workflow-changing branch revision may require Workflows write.
+            if GH_TOKEN="$PUBLISH_TOKEN" gh api "repos/$GITHUB_REPOSITORY" --silent; then
+              export GH_TOKEN="$PUBLISH_TOKEN"
+            fi
+          fi
           if gh release view "$tag" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             temp=$(mktemp -d)
             gh release download "$tag" -R "$GITHUB_REPOSITORY" -D "$temp"
             cmp SHA256SUMS "$temp/SHA256SUMS"
             (cd "$temp" && sha256sum -c SHA256SUMS)
           else
-            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" "${target[@]}" \
               --title "CI-generated SwiGLU · CANNBench $EVALUATION_RUN" --notes "CI generation, 19 generated compute cases and one packed template. Per-case service measurements and exact submitted source package are attached." \
               performance.json candidate.py submission.zip SHA256SUMS
           fi

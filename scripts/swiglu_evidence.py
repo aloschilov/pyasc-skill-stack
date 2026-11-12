@@ -4,6 +4,7 @@ import hashlib
 import json
 import math
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from statistics import geometric_mean, median
 
@@ -96,20 +97,87 @@ def service_projection(fetch, pin):
                 and (c['id']=='level1/swi_glu_12')==(c['kernel']=='_swiglu_pair_groups')
                 and all(type(c[k]) in (int,float) and math.isfinite(c[k]) and c[k]>0
                         for k in ['elapsed_us','baseline_us']), 'Invalid measured kernel or timing')
+        require(all(type(c[k]) in (int,float) and math.isfinite(c[k]) and c[k]>=0
+                    for k in ('perf_score','t_hw_us') if k in c), 'Invalid service case metric')
     ratio = geometric_mean(c['baseline_us']/c['elapsed_us'] for c in cases if c['kernel']!='_swiglu_pair_groups')
     require(math.isclose(ratio,result['generated_ratio'],rel_tol=1e-10)
             and math.isfinite(result['service_score']), 'Service aggregate differs from per-case times')
+    require(re.fullmatch(r'[a-f0-9]{40}', result['revision'])
+            and re.fullmatch(r'[A-Za-z0-9./_-]{1,100}', result['model']), 'Invalid generation attribution')
+    finished = datetime.fromisoformat(result['finished_at'].replace('Z','+00:00'))
+    finished = (finished if finished.tzinfo else finished.replace(tzinfo=timezone.utc)).astimezone(timezone.utc)
+    # Publish only fields with a checked contract, even if the service adds metadata.
+    skill_revision=result.get('skills_revision',result['revision'])
+    require(re.fullmatch(r'[0-9a-f]{40}',skill_revision),'Invalid skill revision')
+    if 'policy_sha256' in result:
+        require(re.fullmatch(r'[a-f0-9]{64}',result['policy_sha256']), 'Invalid model policy identity')
+    generation_base=RELEASE.removesuffix('/releases')+'/actions/runs/'
+    kernel_run=origin
+    lineage=result.get('kernel_origin')
+    if lineage is not None:
+        kernel_run=str(lineage['run'])
+        require(re.fullmatch(r'[1-9][0-9]+',kernel_run) and lineage['candidate_sha256']==result['candidate_sha256'],
+                'Kernel recovery changed the compute source')
+    policy_profile=result.get('policy_profile')
+    require(policy_profile is None or re.fullmatch(r'[a-zA-Z0-9.-]{1,60}',policy_profile),'Invalid policy profile')
+    public_cases = [{k:c[k] for k in ('id','kernel','baseline_us','elapsed_us','perf_score','t_hw_us') if k in c}
+                    for c in sorted(cases,key=lambda c:int(c['id'].split('_')[-1]))]
     return {'status':'available','ratio':ratio,'score':result['service_score'],'job':result['job_id'],
-            'submission':result['submission_id'],'generation':RELEASE.removesuffix('/releases')+'/actions/runs/'+origin,
-            'release':f'{RELEASE}/tag/{tag}', 'cases':sorted(cases,key=lambda c:int(c['id'].split('_')[-1]))}
+            'submission':result['submission_id'],'generation':generation_base+kernel_run,
+            'policy_generation':generation_base+origin if result.get('policy_sha256') else None,
+            'policy_profile':policy_profile,
+            'all_ratio':geometric_mean(c['baseline_us']/c['elapsed_us'] for c in cases),
+            'finished_at':finished.isoformat(),'model':result['model'],'revision':result['revision'],
+            'skills_revision':skill_revision, 'policy_sha256':result.get('policy_sha256'),
+            'candidate_sha256':result['candidate_sha256'], 'release':f'{RELEASE}/tag/{tag}', 'cases':public_cases}
 
 
-def latest_performance(fetch):
-    releases = json.loads(fetch('https://api.github.com/repos/aloschilov/pyasc-skill-stack/releases?per_page=100'))
-    for release in releases:
-        if release['draft'] or release['prerelease'] or not re.fullmatch(r'qualification-swiglu-performance-[1-9][0-9]+',release['tag_name']):
-            continue
-        asset, = [a for a in release['assets'] if a['name']=='performance.json']
-        require(asset['size']<128*1024 and asset['digest'].startswith('sha256:'), 'Invalid performance asset')
-        return {'release':release['tag_name'], 'sha256':asset['digest'][7:]}
-    return None
+def service_history(fetch, pinned, discover):
+    """Retain comparable service receipts; a broken publication cannot erase earlier measurements."""
+    pins = {pinned['release']:pinned} if pinned else {}
+    complete = True
+    errors = (OSError, ValueError, LookupError, TypeError, ArithmeticError, AttributeError)
+    if discover:
+        page = 1
+        try:
+            while True:
+                releases = json.loads(fetch(f'https://api.github.com/repos/aloschilov/pyasc-skill-stack/releases?per_page=100&page={page}'))
+                require(isinstance(releases,list), 'Invalid releases response')
+                for release in releases:
+                    tag = release['tag_name']
+                    if release['draft'] or release['prerelease'] or not re.fullmatch(r'qualification-swiglu-performance-[1-9][0-9]+',tag):
+                        continue
+                    try:
+                        asset, = [a for a in release['assets'] if a['name']=='performance.json']
+                        require(0 < asset['size'] < 128*1024 and re.fullmatch(r'sha256:[a-f0-9]{64}',asset['digest']), 'Invalid performance asset')
+                        pin = {'release':tag, 'sha256':asset['digest'][7:]}
+                        if tag in pins:
+                            require(pins[tag]['sha256']==pin['sha256'], 'Reviewed performance pin differs')
+                        pins[tag] = pin
+                    except errors:
+                        complete = False
+                if len(releases)<100:
+                    break
+                page += 1
+        except errors:
+            complete = False
+    runs = {}
+    for pin in pins.values():
+        try:
+            record = service_projection(fetch,pin)
+            old = runs.setdefault(record['job'],record)
+            require(old==record,'Conflicting service job identity')
+        except errors:
+            complete = False
+    history = sorted(runs.values(),key=lambda r:r['finished_at'],reverse=True)
+    if complete:
+        for current,previous in zip(history,history[1:]):
+            paired = list(zip(previous['cases'],current['cases']))
+            generated = [(a,b) for a,b in paired if b['kernel']!='_swiglu_pair_groups']
+            current['previous'] = {
+                'job':previous['job'],'release':previous['release'],
+                'previous_over_current':geometric_mean(a['elapsed_us']/b['elapsed_us'] for a,b in generated),
+                'changed_baselines':sum(a['baseline_us']!=b['baseline_us'] for a,b in generated)}
+            for old,new in paired:
+                new['previous_elapsed_us']=old['elapsed_us']
+    return {'complete':complete,'runs':history}
