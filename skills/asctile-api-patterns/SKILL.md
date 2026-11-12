@@ -180,6 +180,30 @@ fastest; UB fill is not the objective. Read
 [top-down tuning from CANN samples](references/cann-performance-tuning.md)
 before a performance iteration.
 
+### Choose a memory layout for split-half SwiGLU
+
+When generating a complete operator on the archive-bundled public 950PR
+build, implement the following dispatch in the generated module. Normalize
+the split axis `d`, then derive `R = prod(shape[:d])` and
+`H = (shape[d] // 2) * prod(shape[d+1:])`. A contiguous input is logically
+`[R, 2*H]`. This describes the addresses for **three** physical copy patterns.
+Choose the pattern before sizing its tile. A single 2D descriptor with
+different tile sizes pads every short row and misses the dense-slab path.
+
+| First applicable layout | Generated device operations | Tile and work units |
+|---|---|---|
+| BF16, `H * itemsize <= 32`, and an aligned multirow slab fits | One rank-one input copy of complete rows, two local `asctile.reindex` gathers, one rank-one output store. This includes H=1 and odd H. | Size T in **rows** using the [DMA and UB bounds](references/reindex-slabs.md). One work item owns up to T complete rows, including the final partial slab. |
+| Several moderate half-rows fit in UB with useful work across the grid | Two strided rank-two input copies and a bounded rank-two store. Use padded physical width for allocation and logical H for DMA. | Choose rows and unroll from [row geometry](references/strided-row-tiles.md). On this build 3 KiB per half-row is a measured starting cutover to streaming. |
+| Wide contiguous halves, a single long row, or too few rows to fill the grid with row tiles | Two rank-one contiguous chunk reads with source offsets H apart and a rank-one store. | T counts **elements**. There are `R * ceil(H/T)` live chunks. Keep each chunk inside its half-row and bound its tail as in the [flat template](templates/streamed-swiglu-flat.py). |
+
+For short BF16 rows test slab eligibility first. If UB, useful row count
+or DMA alignment declines the gather, try bounded rows. On other builds
+check the public reindex lowering and compiled footprint. Use dispatch
+from shape, dtype and runtime resources, including for unseen shapes.
+For a mixed-shape task, trace at least one reachable launch of each selected
+family. Check both one-element and multi-element halves in the slab branch:
+a `[T,16]` copy with a one-column real shape still uses the padded row path.
+
 ### Batch short rows within the active UB budget
 
 First check the physical layout. For contiguous, interleaved BF16 pairs

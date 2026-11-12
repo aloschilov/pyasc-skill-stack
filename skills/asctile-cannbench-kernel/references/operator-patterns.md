@@ -204,7 +204,8 @@ Here `d` is the normalized **axis index**, not its extent. Verify the launched
 kernel on a rank-two [R, 2] input; golden values alone also pass on the old
 row route. A last dimension of 14, for example,
 contains two adjacent **halves** of length seven, not seven interleaved pairs.
-Keep the UB-sized row path for other short rows. Dispatch from layout and dtype,
+Admit wider short BF16 halves to the same slab eligibility check. Use the
+UB-sized row path when that check declines the gather. Dispatch from layout and dtype,
 never the case ID or a particular outer shape.
 
 For other contiguous splits, express the input as `[R, 2H]`, where

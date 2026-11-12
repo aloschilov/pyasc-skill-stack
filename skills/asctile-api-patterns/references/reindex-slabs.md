@@ -12,10 +12,18 @@ Use this geometry inside the short-half gather branch (`H*s <= 32` bytes).
 It also covers contiguous BF16 pairs (`H=1`, normalized final axis of length
 two). On this public build with cached int32 indices, let dense pairs reach
 the same gather selector as other short BF16 halves. An early return for
-the legacy transpose specialization would hide the eligible gather. Reuse
-the existing gather selector and kernel. Keep the existing bounded row
-fallback when alignment or capacity declines a tile. Preserve the established
-2D and flat routes for wider halves.
+the legacy transpose specialization would hide the eligible gather. For a new module, define a public slab kernel and call it from the
+host selector. View input and output as rank-one descriptors. Build reusable
+integer lane metadata on the host with `k = torch.arange(T*H, dtype=torch.int32,
+device=input.device)`, `gate_idx = 2*H*(k//H) + k%H` and
+`value_idx = gate_idx + H`. Cache by device, H and T. This metadata
+is independent of input values. Pass the index tensors as kernel arguments
+and load them before the tile loop. For a slab starting at row r, copy
+`2*T*H` input lanes at offset `2*r*H`, with true extent
+`2*min(T,R-r)*H` and zero padding. Use `asctile.reindex(slab, gate_idx_ub)`
+and `asctile.reindex(slab, value_idx_ub)` before widening each gathered
+half. Store the resulting contiguous output at `r*H`, with true extent
+`min(T,R-r)*H`. The final partial tile belongs to the same launch.
 
 With `reuse_alloc=2`, aligned BF16 half-rows of one and seven elements used
 24 bytes per output lane at unroll 1 and 28 at unroll 2. These are compiled live-buffer costs. Recheck allocations
