@@ -3,7 +3,24 @@
 Use after the shape, alignment, payload and enlarged-tile UB checks in
 references/strided-row-tiles.md. N is the actual launch grid.
 """
+import torch
 from asc.experimental import asctile
+
+
+def paired_fp16_height(rows, half, dtype, blocks, usable_ub):
+    """Return zero when either half-row DMA or the enlarged UB tile cannot fit."""
+    if dtype != torch.float16 or min(rows, half, blocks, usable_ub) <= 0:
+        return 0
+    if (half * 2) % 32:
+        return 0
+    height, tail = divmod(rows, 2 * blocks)
+    if height < 2 or not 0 < tail <= height // 4:
+        return 0
+    if not 8192 <= height * half * 2 <= 16384:
+        return 0
+    if 20 * (height + tail) * half > usable_ub:
+        return 0
+    return height
 
 
 @asctile.jit(reuse_alloc=2)

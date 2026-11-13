@@ -100,7 +100,7 @@ def prompt(task, skills):
             "body, including full tiles and remainders. A call from a JIT to an ordinary "
             "Python swiglu element helper fails dependency resolution on this wheel. "
 
-            "Normalize dim to d. Use shape[d]//2 for the output shape at that axis, "
+            "Check -rank <= dim < rank and normalize a negative dim once. Use shape[d]//2 for the output shape at that axis, "
             "and H=(shape[d]//2)*prod(shape[d+1:]) for every tile selector, global "
             "descriptor and JIT width. R=prod(shape[:d]). Verify 2*R*H equals the input "
             "numel. Trace (8192,16384),dim=0: output (4096,16384), R=1, H=67108864. "
@@ -149,7 +149,7 @@ def prompt(task, skills):
             "Assert that R273/H509 on 72 AIVs launches the single-wave JIT at N35/T8/W512. Audit both inputs and the store on the final one-row block. Keep batched half reads on rank-two [R,2*H]. "
             "For aligned FP16 apply the two-wave-plus-tail "
             "test before ordinary rows. Trace R1009/H1008 on 72 AIVs to T7/U2/N72, "
-            "calling paired_rows when the positive tail and the enlarged tile fit. On this shape the last block reads both halves and stores eight rows starting at 1001. "
+            "calling paired_fp16_height and passing its positive result to paired_rows. At R577/H1032 the selector returns zero: 2064 bytes per FP16 half-row is not 32-byte aligned. On this shape the last block reads both halves and stores eight rows starting at 1001. "
             "At every call to a uniform-height full-copy 2D body prove R % T == 0 and W == H. "
             "Trace the bounded FP32 fallback on R2047/T2: its final DMA spans one row. "
             "For the ordinary and single-wave row paths, call fit_row_height with "

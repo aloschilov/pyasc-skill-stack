@@ -384,14 +384,16 @@ def padded_fp16_two_stage_height(rows, half, dtype, aivs, usable_ub):
 For aligned FP16 rows, check for two full waves plus a small row tail
 before the ordinary DMA-height and unroll fallback. Let
 `T, tail = divmod(R, 2*A)` for the detected AIV count A. Select this
-two-stage schedule only for aligned H, T >= 2, a per-half payload
+two-stage schedule only for a 32-byte aligned FP16 half-row
+(`(2*H) % 32 == 0`), T >= 2, a per-half payload
 `8192 <= 2*T*H <= 16384`, a fitting two-stage UB footprint
 `20*T*H <= U`, and `tail <= T//4`. Use A blocks, height T,
 width H and two stages. When the tail is positive and the enlarged tile fits
 (`20*(T+tail)*H <= U`), use the strided assignment in
 `templates/paired-fp16-rows.py`. Block b starts its first tile at b*T
 and its second at (A+b)*T. Only the last block enlarges its second copy
-to T+tail. Both reads and the store have that same static extent. Use
+to T+tail. Call `paired_fp16_height` in the host dispatcher. It returns zero
+for an FP16 half-width of 1032 because its byte length is 2064. Both reads and the store have that same static extent. Use
 distinct JIT tensor variables in branches with different static shapes.
 Otherwise use the bounded tile-index loop, retaining its ordinary height.
 
