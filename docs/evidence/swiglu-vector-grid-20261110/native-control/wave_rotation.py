@@ -33,15 +33,15 @@ def render(base, mode):
     return base[:start] + part + base[stop:]
 
 
-def prepare(base, task):
+def prepare(base, task, shapes, modes):
     source = (base / "swi_glu.py").read_text()
-    for key in ("public", "neighbor"):
+    for key, shape in shapes.items():
         dest = Path(key)
         fixture = dest / "generation/task"
         fixture.mkdir(parents=True)
         shutil.copyfile(task/"golden.py", fixture/"golden.py")
         shapefile = fixture/"cases.csv"
-        if key == "public":
+        if shape is None:
             shutil.copyfile(task/"cases.csv", shapefile)
         else:
             with (task/"cases.csv").open(newline="") as f:
@@ -49,13 +49,13 @@ def prepare(base, task):
                 row, = (r for r in reader if r["case_id"] == "13")
             if json.loads(row["input_shape"]) != [[11, 13, 16, 67]]:
                 raise ValueError(row["input_shape"])
-            row["input_shape"] = "[[11, 11, 16, 67]]"
+            row["input_shape"] = json.dumps([shape])
             row["value_range"] = "[-2, 2]"
             with shapefile.open("w", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=row)
                 writer.writeheader()
                 writer.writerow(row)
-        for mode in ("runtime", "static", "subtract"):
+        for mode in modes:
             pkg = dest / mode
             pkg.mkdir()
             (pkg/"__init__.py").touch()
@@ -63,11 +63,10 @@ def prepare(base, task):
             shutil.copyfile(base/"_pyasc_runtime.py", pkg/"_pyasc_runtime.py")
 
 
-def run(worker):
+def run(worker, shapes, modes):
     plan = []
     for r in range(1, 4):
-        order = [(r,key,mode) for key in ("public","neighbor")
-                 for mode in ("runtime","static","subtract")]
+        order = [(r,key,mode) for key in shapes for mode in modes]
         random.Random(73120 + r).shuffle(order)
         plan.extend(order)
     Path("plan.json").write_text(json.dumps(plan))
@@ -87,6 +86,12 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     for arg in ("base","task","worker"):
         p.add_argument(arg, type=Path)
+    p.add_argument("--adjacent", action="store_true", help="compare odd/even grids with matched tails")
     args = p.parse_args()
-    prepare(args.base.resolve(), args.task.resolve())
-    sys.exit(run(args.worker.resolve()))
+    shapes = {"public": None, "neighbor": [11, 11, 16, 67]}
+    modes = ("runtime", "static", "subtract")
+    if args.adjacent:
+        shapes = {f"rows{n}": [n, 1, 16, 67] for n in (139, 143, 140, 144)}
+        modes = ("runtime", "subtract")
+    prepare(args.base.resolve(), args.task.resolve(), shapes, modes)
+    sys.exit(run(args.worker.resolve(), shapes, modes))
