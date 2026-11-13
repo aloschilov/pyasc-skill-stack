@@ -33,3 +33,28 @@ A separate run on David used `torch_npu.npu_swiglu` from torch_npu 2.10.0 with t
 | 13 | 18 | Boost and L2 clean | 3.607 | 1.500 | 0.4159× |
 
 Both modes passed the public golden. The published 950PR metadata caps submitted durations at `3 * t_hw_us`, rounded to three decimal places. Cases 11 and 13 are at that cap and the metadata marks NPU revalidation as pending. The original uncapped timings are unavailable in this release. Projected CSVs, correctness and process statuses had bundle SHA-256 `7bcadbf784fa964eeacc4cabbd0fb1bcdfaa7971cc62b6161f1a040a30a7069b`. The results above refer to native SwiGLU. The OpenCode measurements in the MR use the three-call PyAsc profiler.
+
+## Fixed grid and resident allocation controls
+
+The two experiments used the same W52 module on David. In the tile experiment, `base` is the unedited module. `s1` distributes whole rows evenly across the grid. `s2` and `s4` distribute two and four column stripes over that grid. In case 11 their maximum local shapes were 17×256 and 35×128. In case 13 they were 8×272 and 16×136. Replaying the actual emitted copies on the host verified both input halves and one output write per element for all eight case/variant combinations.
+
+The allocation experiment used W52 without source changes. `staged` called the public wrapper nine times with a CPU tensor. `resident` replayed the same low-level launch nine times within the lifetime of one pair of device allocations, synchronizing between launches. Each round reports the median of the last five device tasks for the allocation experiment and of three tasks for the tile experiment. The resident measurement describes warmed, reused addresses. Each public output matched the golden, with an additional finite input check for case 13.
+
+| Case | Variant | Blocks | Round 1, µs | Round 2, µs | CANNBench, µs | CANNBench/variant (R1 / R2) |
+|---:|---|---:|---:|---:|---:|---:|
+| 11 | base | 35 | 2.660 | 2.744 | 2.021 | 0.7598× / 0.7365× |
+| 11 | s1 | 35 | 2.622 | 2.651 | 2.021 | 0.7708× / 0.7624× |
+| 11 | s2 | 35 | 2.841 | 2.959 | 2.021 | 0.7114× / 0.6830× |
+| 11 | s4 | 35 | 3.109 | 3.113 | 2.021 | 0.6500× / 0.6492× |
+| 11 | staged | 35 | 2.608 | 2.610 | 2.021 | 0.7749× / 0.7743× |
+| 11 | resident | 35 | 2.469 | 2.553 | 2.021 | 0.8186× / 0.7916× |
+| 13 | base | 36 | 2.181 | 2.213 | 1.500 | 0.6878× / 0.6778× |
+| 13 | s1 | 36 | 2.261 | 2.237 | 1.500 | 0.6634× / 0.6705× |
+| 13 | s2 | 36 | 2.303 | 2.589 | 1.500 | 0.6513× / 0.5794× |
+| 13 | s4 | 36 | 2.420 | 2.412 | 1.500 | 0.6198× / 0.6219× |
+| 13 | staged | 36 | 2.173 | 2.143 | 1.500 | 0.6903× / 0.7000× |
+| 13 | resident | 36 | 2.059 | 2.058 | 1.500 | 0.7285× / 0.7289× |
+
+Both striped variants took longer in both rounds than the full-width controls. Reusing device allocations reduced the measured vector task duration in both rounds, while both cases remained below the published target.
+
+To reproduce, place the W52 source and runtime helper in a fresh `base/` package, with the Season 2 SwiGLU contract at `generation/task`. Run `tile_aspect.py` to generate the three controls and use the repository's `profile_unary.py PACKAGE swi_glu CASE` on each. For the allocation experiment run `resident_replay.py base CASE MODE` in a new process per measurement. Returned bundle SHA-256 was `a83fb7ebd36f021c547c423a363e686e6939e23fd1b5ddf421ae2df44c457a8c`.

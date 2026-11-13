@@ -244,6 +244,14 @@ for 143 rows of half-width 536 and 2.753/2.725 µs for 273 rows of
 half-width 509. Default descriptors gave 2.497/2.468 and 2.805/2.878 µs.
 Bypassing only the output took 2.641/2.700 and 2.960/2.950 µs.
 
+When one wave covers the rows and a complete half-row fits UB, start with
+the full half-width for each 2D DMA. Splitting the width at the same grid
+shortens the contiguous burst and increases the rows per tile. Consider
+column stripes when a full-width tile exceeds UB or there are too few
+independent row tiles to use the available AIVs. When measuring that change,
+hold the grid fixed and check both input halves and the bounded output of
+every stripe, including the final partial row and column.
+
 For the ordinary single-wave launch with exactly `ceil(R/T)` blocks and R > 0,
 each starting row is valid. Compute `rows = min(T, R - r)`
 directly and use `real_shape=[rows,H]` for all three DMA operations.
