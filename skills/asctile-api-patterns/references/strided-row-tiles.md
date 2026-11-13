@@ -146,6 +146,15 @@ took 2.884/3.169 µs. At 273 rows by 509 the corresponding times were
 extents were fixed. Record the profiled grid and compiled loop body
 when validating a new generation.
 
+For a one-wave FP32 row kernel whose gate and value are read once,
+use `asctile.global_tensor(x, [R, 2*H], l2_cache=False)` for the input
+and the default L2 descriptor for the output. Scope this choice to the
+short, single-wave kernel. Check the final partial tile with finite inputs.
+On the 950PR, changing the input descriptor alone gave 2.215/2.451 µs
+for 143 rows of half-width 536 and 2.753/2.725 µs for 273 rows of
+half-width 509. Default descriptors gave 2.497/2.468 and 2.805/2.878 µs.
+Bypassing only the output took 2.641/2.700 and 2.960/2.950 µs.
+
 Exercise the selector with a smaller UB that fits only one iteration, a
 smaller UB that forces a shorter height, and short grids. Compare warmed
 task times and the full golden on the target.
@@ -193,6 +202,20 @@ def padded_fp16_two_stage_height(rows, half, dtype, aivs, usable_ub):
     waves = (rows + aivs * limit - 1) // (aivs * limit)
     return (rows + aivs * waves - 1) // (aivs * waves)
 ```
+
+For aligned FP16 rows, check for two full waves plus a small row tail
+before the ordinary DMA-height and unroll fallback. Let
+`T, tail = divmod(R, 2*A)` for the detected AIV count A. Select this
+two-stage schedule only for aligned H, T >= 2, a per-half payload
+`8192 <= 2*T*H <= 16384`, a fitting two-stage UB footprint
+`20*T*H <= U`, and `tail <= T//4`. Use A blocks, height T,
+width H and unroll two. The block-stride loop and its bounded
+final copy must still process all `ceil(R/T)` tiles. At R=1009,
+H=1008 and A=72 this gives 144 full seven-row tiles and one row
+in the final tile. At fixed grid, seven rows with two stages took
+5.590/5.610 µs, eight rows with two stages 5.998/6.021 µs, and
+eight rows with one stage 6.484/6.465 µs. Keep other layouts
+on their independently qualified paths.
 
 At R=3003, H=506, W=512 and N=72, B=12 gives four waves and T=11.
 Independent warmed medians were 6.530 and 6.359 µs, versus 6.781 and
