@@ -23,7 +23,7 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def run(task, case, direct_simt=False):
+def run(task, case, direct_simt=False, direct_vector=False):
     with (task / "cases.csv").open() as f:
         row, = (r for r in csv.DictReader(f) if int(r["case_id"]) == case)
     shape, = json.loads(row["input_shape"])
@@ -70,6 +70,11 @@ def run(task, case, direct_simt=False):
         op_name = records[0]["Op Name"].lower()
         expected_symbol = {11: "short_rowsilj273elj509elj8ee", 13: "short_rowsilj143elj536elj4ee"}[case]
         valid_name = expected_symbol in op_name if direct_simt else op_name == "swiglu"
+        if direct_vector:
+            valid_name = ("vector_rows" in op_name and
+                          {11: "ilj273elj509elj8ee", 13: "ilj143elj536elj4ee"}[case] in op_name)
+            if int(records[0][grid]) not in (0, {11: 35, 13: 36}[case]):
+                raise ValueError(f"unexpected vector grid: {records[0][grid]}")
         if direct_simt and int(records[0][grid]) not in (0, {11: 35, 13: 36}[case]):
             raise ValueError(f"unexpected SIMT grid: {records[0][grid]}")
         if not valid_name or records[0][task_type] != "AI_VECTOR_CORE":
@@ -80,7 +85,7 @@ def run(task, case, direct_simt=False):
         results.append(dict(fixture=name, case=case, shape=shape, dim=dim, correct=True,
                             task=records[0]["Op Name"], task_type=records[0][task_type],
                             block_dim=records[0][grid], samples_us=times,
-                            **({"requested_blocks": {11: 35, 13: 36}[case]} if direct_simt else {}),
+                            **({"requested_blocks": {11: 35, 13: 36}[case]} if direct_simt or direct_vector else {}),
                             median_us=statistics.median(times[5:]), cases_sha256=digest(task/"cases.csv"),
                             golden_sha256=digest(task/"golden.py"), summary_sha256=digest(summary)))
     return results
@@ -90,6 +95,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("task", type=Path)
     parser.add_argument("case", type=int, choices=(11, 13))
-    parser.add_argument("--direct-simt", action="store_true")
+    direct = parser.add_mutually_exclusive_group()
+    direct.add_argument("--direct-vector", action="store_true")
+    direct.add_argument("--direct-simt", action="store_true")
     args = parser.parse_args()
-    print(json.dumps(run(args.task, args.case, args.direct_simt)))
+    print(json.dumps(run(args.task, args.case, args.direct_simt, args.direct_vector)))

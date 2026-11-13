@@ -4,3 +4,7 @@ project(direct_swiglu LANGUAGES ASC CXX)
 add_executable(bench short_rows.asc)
 set(CMAKE_ASC_ARCHITECTURES "dav-3510" CACHE STRING "950PR device architecture")
 target_compile_options(bench PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=${CMAKE_ASC_ARCHITECTURES}> $<$<COMPILE_LANGUAGE:ASC>:--enable-simt>)
+
+add_executable(bench_vector short_rows.asc)
+target_compile_definitions(bench_vector PRIVATE DIRECT_VECTOR)
+target_compile_options(bench_vector PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=${CMAKE_ASC_ARCHITECTURES}>)
