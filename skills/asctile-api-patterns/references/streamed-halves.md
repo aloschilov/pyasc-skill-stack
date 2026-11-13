@@ -73,6 +73,18 @@ One clean module compared five chunks per row with 216 required for
 three waves, rejected the divisor, and took 532.008 µs with T4096/U2.
 The full-suite T6552/U3 measurement was 521.531 µs.
 
+For this exact-divisor FP32 branch, bypass input L2 when the physical
+input exceeds 64 MiB and each half is read once. Calculate bytes as
+`2*R*H*itemsize` on the host. Launch the qualified flat kernel with
+`cache_input=False` only in this regime; use its default True on all
+other flat paths. The output descriptor retains its default caching.
+At R=2039, H=32760, T6552/U3/N72 the only changed device argument was
+the input L2 policy. The two medians were 449.609/450.055 µs versus
+521.382/522.254 µs with both descriptors at default. Disabling only
+output L2 took 536.570/536.163 µs. The 64 MiB guard scopes this first
+qualified policy to large, single-pass streams; the benchmark does not
+measure a cache-size crossover.
+
 Trace the wide-chunk selector by calling the public dispatcher on an
 eligible wide FP32 row and an ineligible short FP32 row. Both calls
 must resolve the same host function name as its definition. A generated

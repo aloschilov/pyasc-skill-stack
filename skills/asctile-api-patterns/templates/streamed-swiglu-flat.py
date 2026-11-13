@@ -12,8 +12,10 @@ def swiglu_flat(
     H: asctile.ConstExpr[int],
     T: asctile.ConstExpr[int],
     U: asctile.ConstExpr[int],
+    cache_input: asctile.ConstExpr[bool] = True,
 ):
-    gx = asctile.global_tensor(x, [2 * R * H])
+    # Large exact-divisor FP32 streams visit every input lane once.
+    gx = asctile.global_tensor(x, [2 * R * H], l2_cache=cache_input)
     gy = asctile.global_tensor(y, [R * H])
     whole = H // T
     nfull = R * whole

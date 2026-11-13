@@ -122,7 +122,7 @@ def prompt(task, skills):
             "Use the general selector for arbitrary inputs. Include the branch itself "
             "in the executable entry point. For wide aligned FP32 half-rows with a nearly "
             "full remainder, apply the UB-bounded exact-divisor search from the flat skill "
-            "before its ordinary width/unroll fallback. Call wide_fp32_chunk and count all R*(H//T) tiles for the three-wave test. Trace R2039/H32760 to T6552/U3 on 72 AIVs. For the flat route call launch_moderate_flat "
+            "before its ordinary width/unroll fallback. Call wide_fp32_chunk and count all R*(H//T) tiles for the three-wave test. Trace R2039/H32760 to T6552/U3 on 72 AIVs. For a positive wide_fp32_chunk and input above 64 MiB, pass False for cache_input in the actual swiglu_flat launch; all other flat paths use True. Preserve the output descriptor default. For the flat route call launch_moderate_flat "
             "before launching the generic chunk kernel. Return the allocated output when this helper "
             "launches. For a single moderate BF16 stream, call four_wave_bf16_chunk "
             "before the generic flat fallback. On success launch swiglu_flat with its "
