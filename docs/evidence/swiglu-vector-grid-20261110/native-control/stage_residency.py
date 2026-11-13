@@ -21,7 +21,11 @@ def qualify(profiles):
         pkg = f"c{c}w1r0"
         cache = profiles / pkg / "cache"
         image, = cache.glob("*/staged_rows.o")
-        digest = hashlib.sha256(image.read_bytes()).hexdigest()
+        container = image.read_bytes()
+        elf = (profiles / pkg / "dump/binary.o").read_bytes()
+        if not elf.startswith(b"\x7fELF") or container.count(elf) != 1:
+            raise ValueError(f"cache entry does not contain the exact device ELF for {c}")
+        digest = hashlib.sha256(elf).hexdigest()
         expected = {11: "d3458bbf1036399401b675c9198e5b4fef4439753fe752c76632010d8023f42b",
                     13: "bf3fa34312f61d30d31a195e1202bf59bb13faa73cc5a9e6def1b7d3211c0890"}
         if digest != expected[c]:
@@ -32,7 +36,7 @@ def qualify(profiles):
         with stem.with_suffix(stem.suffix + ".json").open("w") as out, stem.with_suffix(stem.suffix + ".log").open("w") as log:
             proc = subprocess.run([sys.executable, str(Path(__file__).with_name("resident_replay.py")),
                                    pkg, str(c), mode], stdout=out, stderr=log, env=env)
-        if list(cache.glob("*/staged_rows.o")) != [image] or hashlib.sha256(image.read_bytes()).hexdigest() != digest:
+        if list(cache.glob("*/staged_rows.o")) != [image] or image.read_bytes() != container:
             raise ValueError(f"measured code changed for {c}")
         with Path("residency/status").open("a") as status:
             print(r, c, mode, proc.returncode, digest, file=status)
