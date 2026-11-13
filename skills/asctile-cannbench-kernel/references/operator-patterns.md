@@ -70,6 +70,12 @@ caps submitted measurements at three times the hardware model. When investigatin
 a shortfall, record the profiler's clock warmup, L2 cleaning, timed calls and
 actual grid. Compare like-for-like traces before changing a generation rule.
 
+For special-value bounds, inspect the tensor produced by the pinned
+`DataGenerator`. With two NaN endpoints, the Season 2 generator masks
+roughly half the entries of a finite random tensor. Record input NaN counts
+and finite golden-output counts when interpreting a timing or correctness
+result. Use a second entirely finite input to exercise every output position.
+
 When validating a shared dispatch or tiling rule across L1, keep one complete
 generated module per operator. Run every public case and record both numerical
 coverage and the geometric mean of `baseline_perf_us / measured_us`. Use the

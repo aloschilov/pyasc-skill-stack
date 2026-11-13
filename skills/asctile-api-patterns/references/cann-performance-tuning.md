@@ -76,6 +76,16 @@ the allocation policy, the warm-up count and each process median. Score the
 generated operator via its normal evaluator entry point. Reused-buffer
 timings diagnose execution conditions.
 
+When replaying a compiled image from a Torch NPU process, check how long
+the runtime keeps its binary registration alive. A fresh output tensor does
+not require a fresh registration. Hold the registered module, entry symbol
+and backing ELF bytes alive until the measured stream has synchronized.
+Compare register-once and register-per-call at fixed ELF, input, output
+allocation and grid. On two short FP32 shapes under the Season 2 cache-clean
+schedule, registration per call added 1.75–1.88 µs to the recorded device-task
+medians across two rounds. This difference is measured inside the device
+interval; host registration latency needs its own measurement.
+
 On a 950PR, the same 35-block FP32 packed-row ELF took 1.978–2.016 µs with
 resident buffers and 2.921–3.028 µs with input/output transfers around every
 launch. This held with either normal or huge pages at fixed device addresses.

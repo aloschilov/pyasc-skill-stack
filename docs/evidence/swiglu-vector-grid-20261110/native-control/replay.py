@@ -41,7 +41,7 @@ def run(task, case, direct_simt=False, direct_vector=False, entry=None):
     spec = importlib.util.spec_from_file_location("native_reference", task / "golden.py")
     golden = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(golden)
-    # A second dense finite oracle exercises every row on the all-NaN fixture.
+    # A second dense finite oracle exercises every row for the mixed special-value fixture.
     fixtures = [("public", bounds)]
     if any(isinstance(v, str) for v in bounds):
         fixtures.append(("finite", [-1, 1]))
