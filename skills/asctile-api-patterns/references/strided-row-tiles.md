@@ -253,6 +253,17 @@ in pairs took 4.100/3.754 µs. At R143/H536 the paired variant gave
 2.524/2.203 µs against 2.206/2.247 µs. Both comparisons kept the
 original tile, grid and exact output extent.
 
+For the single-wave FP32 body, use the compile-time relationship between W
+and H to choose when to read the value. With W > H, read the gate with
+the bounded 2D copy, compute `denom = 1.0 + asctile.exp(-gate)`, then
+issue the bounded 2D value read and compute `(gate / denom) * value`.
+Use the same true extents on both reads and the store. For W == H, issue
+both reads before the arithmetic. On the 950PR with T8/H509/W512, the
+denominator-first order took 2.559 and 2.642 µs versus 2.693 and 2.662
+µs for both reads first. With T4/H536/W536 the same change gave 2.241
+and 2.514 µs versus 2.260 and 2.188 µs. Check the generated JIT body
+as well as its grid when repeating these timings.
+
 Exercise the selector with a smaller UB that fits only one iteration, a
 smaller UB that forces a shorter height, and short grids. Compare warmed
 task times and the full golden on the target.

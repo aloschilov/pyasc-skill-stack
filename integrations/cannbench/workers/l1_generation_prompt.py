@@ -111,6 +111,8 @@ def prompt(task, skills):
             "and keep default output caching. With ceil(R/T) blocks issue both batched 2D "
             "reads and the store at block_idx*T using the exact valid height directly. "
             "Select this FP32 body for aligned and padded widths after the UB check. "
+            "In this body use W > H to compute the gate denominator before issuing the value copy. "
+            "For W == H issue both copies first. Keep the two loads and one store bounded. "
             "Assert that R273/H509 launches the single-wave JIT itself at N35/T8/W512. "
             "For aligned FP16 apply the two-wave-plus-tail "
             "test before ordinary rows. Trace R1009/H1008 on 72 AIVs to T7/U2/N72, "
