@@ -1,11 +1,11 @@
 """Keep both strided GM reads and use the exact two planar UB extents in one VF."""
 import argparse
 import ast
+import hashlib
 from pathlib import Path
 
 from row_math_cost import W62
 from wave_rotation import prepare, run
-import hashlib
 
 
 def vector_code(count, pairs):
@@ -13,7 +13,7 @@ def vector_code(count, pairs):
     # reuses lanes from the preceding vector, entirely inside this UB tile.
     if count < 64 or count % 8:
         raise ValueError("expected an aligned FP32 tile of at least one register")
-    n = count // 64
+    n = count // 64 - int(count % 64 != 0)
     funcs = []
     def batch(offsets):
         lines = []
@@ -32,7 +32,7 @@ def vector_code(count, pairs):
     if n % step:
         funcs += ["{", batch([str(64*(n-1))]), "}"]
     if count % 64:
-        funcs += ["{", batch([str(count-64)]), "}"]
+        funcs += ["{", batch([str(n*64), str(count-64)]), "}"]
     return """using namespace AscendC::Reg;
 auto* g = reinterpret_cast<__ubuf__ float*>($1.GetPhyAddr());
 auto* v = reinterpret_cast<__ubuf__ float*>($2.GetPhyAddr());
@@ -53,7 +53,11 @@ def render(source, mode, count):
     start = next(n.lineno - 1 for n in node.body if isinstance(n, ast.Assign)
                  and getattr(n.targets[0], "id", "") == "gate_f")
     code = vector_code(count, mode == "pair")
-    lines[start:node.end_lineno-1] = [f"    out = asctile.inline_vf({code!r}, [T, W], asctile.float32, [gate, value])\n"]
+    end = node.end_lineno - 1
+    fallback = lines[start:end]
+    lines[start:end] = [f"    if T * W == {count}:\n",
+                        f"        out = asctile.inline_vf({code!r}, [T, W], asctile.float32, [gate, value])\n",
+                        "    else:\n"] + ["    " + line for line in fallback]
     return "".join(lines)
 
 
