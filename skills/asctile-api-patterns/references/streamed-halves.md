@@ -70,6 +70,15 @@ The public 950PR threshold is 241.490 µs. The grid effect was larger than
 the difference between the two unrolls. Verify the public dispatcher and
 repeat the standalone suite after generating a new source.
 
+Keep consecutive chunks together on each block for this long, single-row
+FP16 path. In two shuffled rounds at fixed T8192, unroll 4 and 64 blocks,
+consecutive chunks took 241.814/240.386 µs. Assigning successive chunks
+to successive blocks took 247.742/246.959 µs. Cycling between blocks
+after groups of four took 255.900/254.606 µs. The same ordering held
+at unroll 3. A clean generation using consecutive chunks took 241.518 µs
+in its complete 20-case suite, so the measured margin at the public
+241.490 µs threshold changes sign across runs.
+
 ### Moderate FP32 and BF16 streams
 
 For moderate streams consult the [two shape-dependent schedules](../templates/moderate-swiglu-stream.py).
