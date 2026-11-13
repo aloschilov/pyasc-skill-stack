@@ -48,6 +48,25 @@ __aicore__ inline void stage_compute_store(AscendC::GlobalTensor<float> output,
     DataCopyExtParams wr{valid, Half * sizeof(float), 0, 0, 0};
     DataCopyPad<float>(output[row * Half], out, wr);
 }
+#ifdef STAGE_BUFID
+template<unsigned Half, unsigned Pitch, unsigned Count, unsigned InId, unsigned OutId>
+__aicore__ inline void stage_buf_store(AscendC::GlobalTensor<float> output,
+                                       AscendC::LocalTensor<float> xy,
+                                       AscendC::LocalTensor<float> out,
+                                       unsigned row, uint16_t valid) {
+    using namespace AscendC;
+    get_buf(PIPE_V, OutId, 0);
+    get_buf(PIPE_V, InId, 0);
+    asc_vf_call<eval_rows<Count, Pitch>>((__ubuf__ float*)xy.GetPhyAddr(),
+                                         (__ubuf__ float*)out.GetPhyAddr());
+    rls_buf(PIPE_V, InId, 0);
+    rls_buf(PIPE_V, OutId, 0);
+    DataCopyExtParams wr{valid, Half * sizeof(float), 0, 0, 0};
+    get_buf(PIPE_MTE3, OutId, 0);
+    DataCopyPad<float>(output[row * Half], out, wr);
+    rls_buf(PIPE_MTE3, OutId, 0);
+}
+#endif
 #endif
 
 template<unsigned Rows, unsigned Half, unsigned Height>
@@ -55,7 +74,11 @@ __global__ __vector__ void vector_rows(__gm__ float* x, __gm__ float* y) {
     using namespace AscendC;
     constexpr unsigned pitch = (Half + 7) / 8 * 8;
     constexpr unsigned lanes = Height * pitch;
+#ifdef STAGE_TPIPE
+    TPipe stage_pipe;
+#else
     InitSocState();
+#endif
     const unsigned row = GetBlockIdx() * Height;
     const uint16_t valid = Rows - row < Height ? Rows - row : Height;
     GlobalTensor<float> input, output;
@@ -70,6 +93,21 @@ __global__ __vector__ void vector_rows(__gm__ float* x, __gm__ float* y) {
         const uint16_t second = valid - first;
         auto xy1 = xy[2 * part * pitch];
         auto out1 = out[part * pitch];
+#ifdef STAGE_BUFID
+        // All four handles describe distinct slices. Acquire the same buffer
+        // at its producer and consumer on their respective hardware pipes.
+        get_buf(PIPE_MTE2, 0, 0);
+        stage_read<Half, pitch>(input, xy, row, first);
+        rls_buf(PIPE_MTE2, 0, 0);
+        if (second) {
+            get_buf(PIPE_MTE2, 1, 0);
+            stage_read<Half, pitch>(input, xy1, row + part, second);
+            rls_buf(PIPE_MTE2, 1, 0);
+        }
+        stage_buf_store<Half, pitch, part, 0, 2>(output, xy, out, row, first);
+        if (second)
+            stage_buf_store<Half, pitch, part, 1, 3>(output, xy1, out1, row + part, second);
+#else
         stage_read<Half, pitch>(input, xy, row, first);
         SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
 #ifndef PACKED_SERIAL
@@ -89,6 +127,7 @@ __global__ __vector__ void vector_rows(__gm__ float* x, __gm__ float* y) {
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID1);
             stage_compute_store<Half, pitch, part>(output, xy1, out1, row + part, second);
         }
+#endif
         PipeBarrier<PIPE_ALL>();
         return;
     }

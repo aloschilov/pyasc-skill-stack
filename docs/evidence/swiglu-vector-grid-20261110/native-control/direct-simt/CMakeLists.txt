@@ -30,3 +30,17 @@ foreach(order IN ITEMS serial overlap)
     endif()
     target_compile_options(bench_vector_${order} PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=${CMAKE_ASC_ARCHITECTURES}>)
 endforeach()
+
+# Match the generated buffer-ID protocol against native hard events. The
+# overlap target supplies the InitSocState + hard-event control.
+foreach(mode IN ITEMS events_pipe bufid_init bufid_pipe)
+    add_executable(bench_vector_${mode} EXCLUDE_FROM_ALL short_rows.asc)
+    target_compile_definitions(bench_vector_${mode} PRIVATE DIRECT_VECTOR PACKED_STAGES)
+    if(mode MATCHES "^bufid")
+        target_compile_definitions(bench_vector_${mode} PRIVATE STAGE_BUFID)
+    endif()
+    if(mode MATCHES "pipe$")
+        target_compile_definitions(bench_vector_${mode} PRIVATE STAGE_TPIPE)
+    endif()
+    target_compile_options(bench_vector_${mode} PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=${CMAKE_ASC_ARCHITECTURES}>)
+endforeach()
