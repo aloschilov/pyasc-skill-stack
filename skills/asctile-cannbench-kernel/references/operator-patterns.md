@@ -121,6 +121,33 @@ uses the reported AIV count before choosing a launch grid.
 An independent clean generator sent both calls down its generic stride
 path with unroll 1 and took 5.587 and 4.959 µs on the public cases.
 
+Use the same affine flag for ownership and DMA alignment. One clean
+generator correctly reduced the BF16 base-only grid to 64 yet kept a
+32-byte quantum because it tested only scale and shift. Its actual tile
+was 5456. Keep the dtype test on the grid reduction as well. The selector
+below returns a candidate geometry for the short path. Its caller checks
+the compiled UB footprint before launching; an ineligible input falls
+through to ordinary streaming or the one-wave path.
+
+```python
+def short_exp_geometry(n, dtype, aivs, apply_scale, apply_shift, apply_log):
+    if n <= 0 or aivs <= 0 or dtype not in (torch.float16, torch.bfloat16):
+        return None
+    if not 24576 * aivs <= 2 * n <= 32768 * aivs:
+        return None
+    affine = apply_scale or apply_shift or apply_log
+    grid = aivs
+    if dtype == torch.bfloat16 and apply_log and not (apply_scale or apply_shift):
+        reduced = (aivs // 16) * 16
+        if reduced > 0 and 8 * reduced >= 7 * aivs:
+            grid = reduced
+    quantum = 128 if affine else 16  # elements of two bytes
+    group = 3 * grid * quantum
+    tile = ((n + group - 1) // group) * quantum
+    blocks = min(grid, (n + tile - 1) // tile)
+    return tile, blocks, affine
+```
+
 For contiguous ownership set `M = ceil_div(N,T)` and
 `C = ceil_div(M,actual_blocks)`. Block `b` handles the `C` tiles from
 `b*C` in `asctile.range(C, unroll_factor=3)`. Clamp the offset of any
