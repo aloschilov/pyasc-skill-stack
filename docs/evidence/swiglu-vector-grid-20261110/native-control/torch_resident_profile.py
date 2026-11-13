@@ -51,6 +51,8 @@ def main():
     parser.add_argument("output", type=Path)
     parser.add_argument("--symbol", choices=("row_single_wave_fp32", "staged_rows"),
                         default="row_single_wave_fp32", help="compiled two-pointer kernel entry")
+    parser.add_argument("--metrics", choices=("AiCoreNone", "PipeUtilization", "Memory"),
+                        default="AiCoreNone", help="torch_npu device-counter group")
     args = parser.parse_args()
     args.output.mkdir(exist_ok=False)
     sys.path[:0] = [str(args.task.resolve()), str(args.host.resolve())]
@@ -97,7 +99,7 @@ def main():
         prof = torch_npu.profiler
         config = prof._ExperimentalConfig(export_type=[prof.ExportType.Text],
                                           profiler_level=prof.ProfilerLevel.Level1,
-                                          aic_metrics=prof.AiCMetrics.AiCoreNone)
+                                          aic_metrics=getattr(prof.AiCMetrics, args.metrics))
         trace = args.output / "trace"
         with prof.profile(activities=[prof.ProfilerActivity.NPU],
                           schedule=prof.schedule(wait=0, warmup=3, active=5, repeat=1),
@@ -125,7 +127,7 @@ def main():
     times = [float(r["Duration(us)"]) for r in selected]
     if any(t <= 0 for t in times):
         raise ValueError(times)
-    summary = dict(case=args.case, operator=args.operator, mode=args.mode, symbol=symbol, golden=True,
+    summary = dict(case=args.case, operator=args.operator, mode=args.mode, symbol=symbol, metrics=args.metrics, golden=True,
                    input_nan=int(cpu.isnan().sum()), finite_output=int(oracle.isfinite().sum()),
                    input_sha256=hashlib.sha256(args.raw.read_bytes()).hexdigest(),
                    elf_sha256=hashlib.sha256(code).hexdigest(), device=x.get_device(),
