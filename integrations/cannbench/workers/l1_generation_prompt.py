@@ -33,6 +33,8 @@ def prompt(task, skills):
         include(api / "references/strided-row-tiles.md", "# Height and unroll", "Exercise the selector")
         include(api / "references/strided-row-tiles.md", "### Padded FP16 rows", "At R=3003")
         include(api / "references/streamed-halves.md", "# Flat SwiGLU", "Compare consecutive chunks")
+        include(api / "references/streamed-halves.md", "For this four-wave FP32 stream", "For moderate single-row BF16")
+        include(api / "references/reduction-tiling.md", "On the public CANN 9.2 950PR build", "## Work distribution")
         include(api / "templates/streamed-swiglu-flat.py")
         include(api / "templates/two-wave-swiglu-slab.py")
         include(api / "templates/paired-fp16-rows.py")
