@@ -37,6 +37,12 @@ __global__ __vector__ void vector_rows(__gm__ float* x, __gm__ float* y) {
     LocalTensor<float> xy(TPosition::VECCALC, 0, 2 * lanes);
     LocalTensor<float> out(TPosition::VECCALC, 2 * lanes * sizeof(float), lanes);
     DataCopyExtParams read{static_cast<uint16_t>(2 * valid), Half * sizeof(float), 0, 0, 0};
+#ifdef PACKED_FLAT_READ
+    if constexpr (pitch == Half) {
+        read.blockCount = 1;
+        read.blockLen = 2 * valid * Half * sizeof(float);
+    }
+#endif
     DataCopyPadExtParams<float> pad{true, 0, static_cast<uint8_t>(pitch - Half), 0};
     DataCopyPad<float>(xy, input[2 * row * Half], read, pad);
     SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
@@ -45,6 +51,12 @@ __global__ __vector__ void vector_rows(__gm__ float* x, __gm__ float* y) {
     SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
     WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
     DataCopyExtParams write{valid, Half * sizeof(float), 0, 0, 0};
+#ifdef PACKED_FLAT_WRITE
+    if constexpr (pitch == Half) {
+        write.blockCount = 1;
+        write.blockLen = valid * Half * sizeof(float);
+    }
+#endif
     DataCopyPad<float>(output[row * Half], out, write);
     PipeBarrier<PIPE_ALL>();
 }

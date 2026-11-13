@@ -8,3 +8,16 @@ target_compile_options(bench PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=${CMAK
 add_executable(bench_vector short_rows.asc)
 target_compile_definitions(bench_vector PRIVATE DIRECT_VECTOR)
 target_compile_options(bench_vector PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=${CMAKE_ASC_ARCHITECTURES}>)
+
+# Hold register math and ownership fixed while varying DMA descriptor geometry.
+foreach(layout IN ITEMS read write both)
+    add_executable(bench_vector_${layout} EXCLUDE_FROM_ALL short_rows.asc)
+    target_compile_definitions(bench_vector_${layout} PRIVATE DIRECT_VECTOR)
+    if(layout STREQUAL "read" OR layout STREQUAL "both")
+        target_compile_definitions(bench_vector_${layout} PRIVATE PACKED_FLAT_READ)
+    endif()
+    if(layout STREQUAL "write" OR layout STREQUAL "both")
+        target_compile_definitions(bench_vector_${layout} PRIVATE PACKED_FLAT_WRITE)
+    endif()
+    target_compile_options(bench_vector_${layout} PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=${CMAKE_ASC_ARCHITECTURES}>)
+endforeach()
