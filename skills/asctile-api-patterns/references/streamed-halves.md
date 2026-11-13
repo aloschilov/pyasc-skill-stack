@@ -243,6 +243,17 @@ handles the final element in an eight-lane tile. The full-case median
 was 7.909 µs on Ascend950PR_9599. Benchmark other wave counts or the
 ordinary bounded loop when the residual needs more than N quanta.
 
+For this four-wave FP32 stream, keep the tile ordinal `step * A + block`
+for the full waves. It beat assigning each block four consecutive chunks
+in all three public and all three neighboring trials on 950PR. Both used
+the same 4,104-lane chunk, unroll two, and separately bounded tail. Rounding
+only the first three wave widths down to 4,096 and enlarging the fourth to
+4,128 won one of three rounds on each input. Keep the uniform width as
+the default for this regime. If profiling unequal widths, use distinct
+JIT tensor names for the last full wave and the tail to preserve the two
+static types at a control-flow join.
+[Matched stream timings and shape checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6862107842).
+
 
 For moderate single-row BF16 streams spanning one to two grids of the base tile, qualify both aligned roundings before switching away from grid-stride scheduling. With H = 1,046,017 and 72 AIVs, the 8,192-lane grid-stride kernel took 5.428 and 5.097 µs. Rounding down to 7,264 lanes with the one-element tail in the main launch took 5.356 and 5.923 µs. Rounding up to 7,280 lanes and assigning consecutive chunks took 5.162 and 5.780 µs. Retain the base tile on this target for that range.
 
