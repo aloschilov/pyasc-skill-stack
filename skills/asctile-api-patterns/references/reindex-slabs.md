@@ -191,6 +191,16 @@ and per-group offsets increased the device median for the tested
 
 ## Two-wave BF16 half-rows
 
+Use the default cached descriptor for a gate-index table shared by all
+blocks. Each AIV reads the same small table; streaming input descriptors
+and index-table descriptors have different reuse. At 928 rows per tile,
+seven BF16 values per half and 72 AIVs, the default descriptors took
+5.967, 6.560 and 6.016 µs in three randomized rounds on 950PR. Bypassing
+only the index table took 15.983, 15.957 and 16.151 µs. Bypassing only
+the streamed input took 7.103, 6.653 and 7.197 µs. All twelve runs,
+including the both-bypass control, used the same addresses within each
+tile, arithmetic, grid and full golden check.
+
 In the generated host wrapper call the
 [two-wave selector and kernel](../templates/two-wave-swiglu-slab.py)
 before the generic DMA-limited slab. When the selector returns a positive

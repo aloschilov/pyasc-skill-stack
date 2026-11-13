@@ -43,6 +43,7 @@ if __name__ == "__main__":
         code = render(source, policy)
         compile(code, str(dest), "exec")
         dest.mkdir()
+        (dest / "__init__.py").touch()
         (dest / "swi_glu.py").write_text(code)
         copyfile("base/_pyasc_runtime.py", dest / "_pyasc_runtime.py")
     task = Path("generation/task")
