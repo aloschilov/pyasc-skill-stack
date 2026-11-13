@@ -119,6 +119,23 @@ two-stage medians were 23.670/24.096 µs and the three-stage medians were
 on 72 blocks and 23.553/23.216 µs on 64. The published 950PR baseline
 is 23.650 µs. Keep the natural grid unless its change qualifies separately.
 
+In the three-stage FP32 branch, whole physical tiles permit a separate
+full-copy specialization when `rows % height == 0` and `W == H`. Use
+`@asctile.jit(reuse_alloc=2, opt_level=3)`, the same strided tile-index
+loop, two `copy_in(gx, [r, col], [T, H])` calls for col 0 and H, and
+`copy_out(out, gy, [r, 0])`. The final wave may have fewer active
+blocks. The loop bound is the number of tiles, so every issued DMA has
+a full extent even with a partial wave. Route a partial **tile** to the
+bounded body. Keep ordinary L2 caching for both three-stage descriptors.
+
+At 72 blocks and T2/U3, the fixed-copy level-3 specialization on the
+950PR took 23.173/23.367 µs at 2048 rows and 22.436/22.506 µs at 2046
+rows. Bounded default-level controls took 23.578/23.071 and
+22.804/22.564 µs. The measurements support trying this specialization
+and checking the complete suite. In a separate two-round control,
+bypassing L2 on the output alone increased the original kernel times
+to 34.555/34.703 and 34.582/33.738 µs respectively.
+
 Check this branch before applying the default 8 KiB row-height selector.
 The returned positive height is the JIT height in rows. The physical width
 equals the logical half-width because this branch requires aligned FP32.
@@ -178,6 +195,17 @@ On the 950PR, changing the input descriptor alone gave 2.215/2.451 µs
 for 143 rows of half-width 536 and 2.753/2.725 µs for 273 rows of
 half-width 509. Default descriptors gave 2.497/2.468 and 2.805/2.878 µs.
 Bypassing only the output took 2.641/2.700 and 2.960/2.950 µs.
+
+When the single-wave launch has exactly `ceil(R/T)` blocks for R > 0,
+each starting row is valid. Compute `rows = min(T, R - block_idx*T)`
+directly and use `real_shape=[rows,H]` for all three DMA operations.
+The arithmetic is lane-wise and the output store excludes all padding.
+Keep the two half-row reads batched across T rows through one source
+descriptor. At R273/H509, per-row reads with a final concat took
+6.191/6.183 µs, against 2.621/2.636 µs for batched 2D reads. Concat
+in pairs took 4.100/3.754 µs. At R143/H536 the paired variant gave
+2.524/2.203 µs against 2.206/2.247 µs. Both comparisons kept the
+original tile, grid and exact output extent.
 
 Exercise the selector with a smaller UB that fits only one iteration, a
 smaller UB that forces a shorter height, and short grids. Compare warmed
