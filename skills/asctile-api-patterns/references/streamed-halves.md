@@ -29,9 +29,21 @@ The 20/24-byte coefficients already include both stages. The preliminary
 32-byte width bound also provides headroom and is used only for selecting
 T. Multiplying that bound by two again rejected a 4096-lane tile on a
 253952-byte device despite an observed two-stage allocation of 81920
-bytes. For BF16, trace a single row outside the four-wave branch with H=2080641
-through the public fallback to T4096/U2 on 72 AIVs.
+bytes. Test this fallback independently with H=2080641 at T4096/U2 when
+the more specific four-wave BF16 geometry cannot fit UB.
 For a short row or a different emitter, recheck live chunks and UB.
+
+For a single BF16 row whose four-wave tile exceeds 8 KiB per half, use
+`medium_bf16_two_stage_chunk` from the flat template before the generic
+fallback. For a positive tile launch `swiglu_flat` on the queried AIV
+count with U2 and default L2. Allocate consecutive full chunks to each
+block and bound the final chunk on one block. At H2080641/A72, rounding
+down to 16 lanes gives T7216, exactly 288 full chunks and a 2433-lane
+remainder. This geometry took 8.192/8.432 and 8.266/8.054 µs in two
+separate pairs of golden-checked runs against 8.790 µs. Spreading the
+remainder across 51 blocks at this tile gave 8.184/8.351 µs in the second
+comparison. The generic T4096/U2 took 8.595/7.736 µs in the first
+comparison. Check the new geometry in the next independent full suite.
 
 For a single FP16 row use `eight_wave_fp16_chunk` before generic chunk
 selection. It rounds H/(8*A) up to a 16-lane transfer quantum and limits

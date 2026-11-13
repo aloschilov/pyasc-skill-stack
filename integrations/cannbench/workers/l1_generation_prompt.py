@@ -145,7 +145,7 @@ def prompt(task, skills):
             "with those exact three results. At cap=7936 the floor power of two is 4096. "
             "Use the measured complete two-stage "
             "allocation once, with enough full chunks for both stages. Trace single-row "
-            "BF16 H2080641 to actual T4096/U2 on 72 AIVs / 253952 B. For single-row FP16 call eight_wave_fp16_chunk before generic_flat_geometry. A positive width launches swiglu_flat at that width, U2 and the queried AIV count. Trace H2095104 to T3648/U2/N72. "
+            "BF16 H2080641 through medium_bf16_two_stage_chunk before falling back. A positive tile launches the consecutive flat kernel at T7216/U2 on 72 AIVs / 253952 B, with one bounded remainder. At smaller UB keep the generic path if the four-wave tile cannot fit. For single-row FP16 call eight_wave_fp16_chunk before generic_flat_geometry. A positive width launches swiglu_flat at that width, U2 and the queried AIV count. Trace H2095104 to T3648/U2/N72. "
             "Use the selected values in the actual public entry point. Preserve host helper "
             "names from definitions through every caller: wide_fp32_chunk is distinct from "
             "whole_fp32_grid. Verify every global function called by the public dispatcher "
