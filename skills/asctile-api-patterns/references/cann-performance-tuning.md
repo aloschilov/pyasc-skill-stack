@@ -92,9 +92,21 @@ launch. This held with either normal or huge pages at fixed device addresses.
 A second two-round experiment toggled the input upload, output upload and
 output readback independently. Across the eight paired comparisons, enabling
 the input upload added 0.739–0.931 µs to the device task. Enabling the output
-upload added 0.012–0.176 µs. Output readback had mixed effects. When tuning
+upload added 0.012–0.176 µs. Across those same pairs, uploading the input
+increased MTE2 time by 0.824–0.994 µs, while uploading the output increased
+MTE3 time by 0.214–0.271 µs. Output readback had mixed effects. When tuning
 this access pattern, compare input DMA strategies after refreshing the input
 as the evaluator does. Time the transfers separately to measure their own cost.
+
+For competing DMA layouts, compare per-kernel `PipeUtilization` counters
+at the same grid and under the same cache conditioning. Match each row by
+kernel name and block count. Check MTE2, vector and MTE3 together. Packing
+two half-rows into one transfer can move work into register unpacking or
+output stores. On a 36-block FP32 shape, packed and separate loads spent
+0.761 and 0.790 µs in MTE2, while the packed variant increased vector time
+from 0.197 to 0.577 µs and MTE3 time from 0.316 to 0.573 µs. Pipeline
+activity can overlap. Use the separate task duration to compare end-to-end
+device performance and the ordinary evaluation run for qualification.
 
 To estimate the headroom for arithmetic tuning, keep the shape, launch grid,
 DMA extents and actual evaluator traffic fixed. Use a diagnostic operation

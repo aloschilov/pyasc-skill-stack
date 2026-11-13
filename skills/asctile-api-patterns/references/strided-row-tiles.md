@@ -31,6 +31,16 @@ changing dispatch. In three rounds on each of two short FP32 geometries,
 the exact terminal extent gave no consistent speedup.
 [Generated C++ comparison and matched hardware controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6859782820).
 
+A partial output can also read a full input tile when its first row leaves
+at least T rows in the tensor. Place the short output interval at the
+front, then assign the remaining full tiles after it. Compare bounded and
+full reads at those same row offsets, with each output row owned once.
+On 950PR this removed both conditional fills in the two-input FP32
+kernel. A one-row tail at T8/H509 reads seven extra input rows, and a
+three-row tail at T4/H536 reads one extra. Neither shape gave a repeatable
+benefit across public and finite controls. Keep the ordinary bounded
+reads for these geometries.
+
 For a single-wave FP32 tile split across two DMA stages, test the unsplit
 tile and both serial and prefetched stages at the same grid. When each
 stage owns a contiguous range of whole rows, the GM descriptor can start
