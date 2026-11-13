@@ -35,6 +35,7 @@ def prompt(task, skills):
         include(api / "references/streamed-halves.md", "# Flat SwiGLU", "Compare consecutive chunks")
         include(api / "templates/streamed-swiglu-flat.py")
         include(api / "templates/two-wave-swiglu-slab.py")
+        include(api / "templates/paired-fp16-rows.py")
         include(api / "templates/moderate-swiglu-stream.py")
     elif op == "exp":
         include(api / "SKILL.md", "## Elementwise pattern", "### Choose a memory layout")
@@ -136,9 +137,9 @@ def prompt(task, skills):
             "R52224/H50 FP32 at N72/T64/W56/U2 through the actual kernel call. "
             "Trace FP32 R=273/H=509: four rows yield only 8144 useful "
             "bytes, so use the ordinary T=8, W=512 and N=35 on 72 AIVs. "
-            "Use the strided 2D tile-index loop from the skill in every multi-wave row JIT. "
+            "Use the strided 2D tile-index loop from the skill for ordinary multi-wave row loops. "
             "Check actual write intervals: R52224/T64/N72 gives 816 disjoint writes, "
-            "R1009/T7/N72 gives 145. Each output row has one owner. "
+            "the merged FP16 path at R1009/T7/N72 gives 144. Each output row has one owner. "
             "For the single-wave FP32 row JIT only, disable L2 on its input descriptor "
             "and keep default output caching. Issue both batched 2D "
             "reads and the store at the same logical tile start. For W == H rotate the tile ordinal by half the launched grid as in the row skill; for padded FP32 keep the natural grid and block_idx*T. Use the true row count for every DMA. "
@@ -148,9 +149,9 @@ def prompt(task, skills):
             "Assert that R273/H509 on 72 AIVs launches the single-wave JIT at N35/T8/W512. Audit both inputs and the store on the final one-row block. Keep batched half reads on rank-two [R,2*H]. "
             "For aligned FP16 apply the two-wave-plus-tail "
             "test before ordinary rows. Trace R1009/H1008 on 72 AIVs to T7/U2/N72, "
-            "using bounded reads and store on the final single row. "
-            "At every call to a full-copy 2D body prove R % T == 0 and W == H. "
-            "Trace the final DMA extents on R1009/T7 and R2047/T2: exactly one row each. "
+            "calling paired_rows when the positive tail and the enlarged tile fit. On this shape the last block reads both halves and stores eight rows starting at 1001. "
+            "At every call to a uniform-height full-copy 2D body prove R % T == 0 and W == H. "
+            "Trace the bounded FP32 fallback on R2047/T2: its final DMA spans one row. "
             "For the ordinary and single-wave row paths, call fit_row_height with "
             "the physical width and the one-stage live bytes per lane. When even "
             "one row exceeds usable UB, return zero and use column chunks. A positive "

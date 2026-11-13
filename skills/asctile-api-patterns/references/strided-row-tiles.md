@@ -146,7 +146,7 @@ loop, two `copy_in(gx, [r, col], [T, H])` calls for col 0 and H, and
 blocks. The loop bound is the number of tiles, so every issued DMA has
 a full extent even with a partial wave. Route a partial **tile** to the
 bounded body. Apply this legality check to every caller of any fixed-copy
-row JIT, including FP16 two-wave and FP32 three-stage fallbacks:
+row JIT, that uses one uniform height, including the FP32 three-stage fallback:
 
 ```python
 lanes_per_dma = 32 // x.element_size()
@@ -162,9 +162,8 @@ Compute the alignment in a single unit. At H2048 in FP32 this gives
 fixed-copy JIT; R2047 has one row left for the bounded JIT. At H509
 in FP32 the physical width is 512 and all DMA extents use H509.
 
-On the two-waves-plus-tail FP16 route a positive tail always selects
-bounded copies. At R1009/T7, the tile at row 1008 must read and write
-exactly one row. For generated code, replay the effective sizes of both
+The aligned FP16 two-wave specialization below uses two explicit extents.
+At R1009/T7 its final read and write start at row 1001 and span eight rows. For generated code, replay the effective sizes of both
 reads and the store. A copy that omits `real_shape` uses its full physical
 shape. Golden checks of the logical output can pass after an out-of-range
 write. For R2047/T2 verify that the last three-stage tile has one row too.
@@ -214,7 +213,9 @@ on a deterministic input can hide this error. Check ownership by tracing
 the emitted body across all blocks: the sum of valid extents must be R
 and the sorted output intervals must partition [0,R). For R=52224,
 T=64 and N=72 this is exactly 816 disjoint writes. For R=1009, T=7
-and N=72 it is 144 seven-row writes and one one-row write.
+and N=72 the bounded fallback issues 144 seven-row writes and one one-row
+write. The merged-tail specialization issues 143 seven-row writes and one
+eight-row write.
 
 Define both ranked descriptors in the row JIT. A two-component offset
 requires a rank-two descriptor even when its backing storage is contiguous.
@@ -386,13 +387,19 @@ before the ordinary DMA-height and unroll fallback. Let
 two-stage schedule only for aligned H, T >= 2, a per-half payload
 `8192 <= 2*T*H <= 16384`, a fitting two-stage UB footprint
 `20*T*H <= U`, and `tail <= T//4`. Use A blocks, height T,
-width H and unroll two. The block-stride loop and its bounded
-final copy must still process all `ceil(R/T)` tiles. At R=1009,
-H=1008 and A=72 this gives 144 full seven-row tiles and one row
-in the final tile. At fixed grid, seven rows with two stages took
-5.590/5.610 µs, eight rows with two stages 5.998/6.021 µs, and
-eight rows with one stage 6.484/6.465 µs. Keep other layouts
-on their independently qualified paths.
+width H and two stages. When the tail is positive and the enlarged tile fits
+(`20*(T+tail)*H <= U`), use the strided assignment in
+`templates/paired-fp16-rows.py`. Block b starts its first tile at b*T
+and its second at (A+b)*T. Only the last block enlarges its second copy
+to T+tail. Both reads and the store have that same static extent. Use
+distinct JIT tensor variables in branches with different static shapes.
+Otherwise use the bounded tile-index loop, retaining its ordinary height.
+
+At R=1009, H=1008, A=72 this gives T=7 and a final eight-row tile.
+Three interleaved rounds on 950PR took 5.911/5.267/5.682 µs versus
+5.940/5.489/6.083 µs for the bounded loop. Two additional rounds at
+R=577, H=1536 and R=1154, H=768 favored the same assignment. Keep the
+height and the last block's extent derived from the actual shape and UB.
 
 At R=3003, H=506, W=512 and N=72, B=12 gives four waves and T=11.
 Independent warmed medians were 6.530 and 6.359 µs, versus 6.781 and
