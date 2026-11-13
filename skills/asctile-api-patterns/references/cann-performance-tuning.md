@@ -79,10 +79,22 @@ timings diagnose execution conditions.
 On a 950PR, the same 35-block FP32 packed-row ELF took 1.978–2.016 µs with
 resident buffers and 2.921–3.028 µs with input/output transfers around every
 launch. This held with either normal or huge pages at fixed device addresses.
-These are profiler **kernel durations**. Timing the transfers separately or
-changing one transfer direction at a time answers different questions.
-Measure input and output cache hints separately on the ordinary call path
-before applying a cache policy to a second layout.
+A second two-round experiment toggled the input upload, output upload and
+output readback independently. Across the eight paired comparisons, enabling
+the input upload added 0.739–0.931 µs to the device task. Enabling the output
+upload added 0.012–0.176 µs. Output readback had mixed effects. When tuning
+this access pattern, compare input DMA strategies after refreshing the input
+as the evaluator does. Time the transfers separately to measure their own cost.
+
+To estimate the headroom for arithmetic tuning, keep the shape, launch grid,
+DMA extents and actual evaluator traffic fixed. Use a diagnostic operation
+that consumes both operands, such as elementwise multiplication, and check
+its numerical output with a separate oracle. Inspect the compiled DMA calls:
+returning just one operand can eliminate the other read. Compare paired
+process medians. Replacing SwiGLU with multiplication on one 36-block FP32
+layout changed task duration by −0.007 to +0.087 µs (full minus multiply)
+while leaving a gap of more than 0.5 µs to the target in all three rounds.
+Only the full operator qualifies for the benchmark.
 
 ## Simulator timing protocol
 
