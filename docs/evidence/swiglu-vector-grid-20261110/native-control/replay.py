@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import json
 import math
+import os
 from pathlib import Path
 import statistics
 import subprocess
@@ -30,6 +31,13 @@ def run(task, case, direct_simt=False, direct_vector=False):
     dtype, = json.loads(row["dtype"])
     dim = json.loads(row["attrs"])["dim"]
     bounds = json.loads(row["value_range"])
+    requested = {11: 35, 13: 36}[case]
+    if direct_vector:
+        rows, half = {11: (273,509), 13: (143,536)}[case]
+        height = int(os.getenv("VECTOR_HEIGHT", {11: 8, 13: 4}[case]))
+        if height not in ({4,6,8,10} if case == 11 else {2,3,4,5}):
+            raise ValueError(f"unsupported native diagnostic height {height}")
+        requested = (rows + height - 1) // height
     spec = importlib.util.spec_from_file_location("native_reference", task / "golden.py")
     golden = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(golden)
@@ -72,10 +80,10 @@ def run(task, case, direct_simt=False, direct_vector=False):
         valid_name = expected_symbol in op_name if direct_simt else op_name == "swiglu"
         if direct_vector:
             valid_name = ("vector_rows" in op_name and
-                          {11: "ilj273elj509elj8ee", 13: "ilj143elj536elj4ee"}[case] in op_name)
-            if int(records[0][grid]) not in (0, {11: 35, 13: 36}[case]):
+                          f"ilj{rows}elj{half}elj{height}ee" in op_name)
+            if int(records[0][grid]) not in (0, requested):
                 raise ValueError(f"unexpected vector grid: {records[0][grid]}")
-        if direct_simt and int(records[0][grid]) not in (0, {11: 35, 13: 36}[case]):
+        if direct_simt and int(records[0][grid]) not in (0, requested):
             raise ValueError(f"unexpected SIMT grid: {records[0][grid]}")
         if not valid_name or records[0][task_type] != "AI_VECTOR_CORE":
             raise ValueError(f"unexpected native task: {records[0]}")
@@ -85,7 +93,7 @@ def run(task, case, direct_simt=False, direct_vector=False):
         results.append(dict(fixture=name, case=case, shape=shape, dim=dim, correct=True,
                             task=records[0]["Op Name"], task_type=records[0][task_type],
                             block_dim=records[0][grid], samples_us=times,
-                            **({"requested_blocks": {11: 35, 13: 36}[case]} if direct_simt or direct_vector else {}),
+                            **({"requested_blocks": requested} if direct_simt or direct_vector else {}),
                             median_us=statistics.median(times[5:]), cases_sha256=digest(task/"cases.csv"),
                             golden_sha256=digest(task/"golden.py"), summary_sha256=digest(summary)))
     return results
