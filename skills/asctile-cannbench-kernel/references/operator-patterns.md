@@ -148,6 +148,18 @@ def short_exp_geometry(n, dtype, aivs, apply_scale, apply_shift, apply_log):
     return tile, blocks, affine
 ```
 
+On the archive-bundled 950PR build, use a separate
+`@asctile.jit(reuse_alloc=2, opt_level=3)` entry for short, contiguous
+scale/shift streams. The default JIT entry can share the same source loop
+shape and arithmetic for log-only BF16. At fixed U3, grid and tile, two
+shuffled hardware rounds with opt_level=3 took 3.265/3.595 µs on scaled
+base-2 FP16 (default 3.417/3.780), 3.384/3.429 µs on shifted FP16
+(default 3.709/3.429), and 3.337/3.407 µs on scaled and shifted BF16
+(default 3.446/3.582). For log-only BF16 its effect changed sign across
+rounds. Scope the attribute to the calibrated kernel. Keep the FP32
+promotion, public scalar order, DMA geometry, and grid fixed when testing
+another compiler version.
+
 For contiguous ownership set `M = ceil_div(N,T)` and
 `C = ceil_div(M,actual_blocks)`. Block `b` handles the `C` tiles from
 `b*C` in `asctile.range(C, unroll_factor=3)`. Clamp the offset of any
