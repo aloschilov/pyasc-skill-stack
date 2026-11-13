@@ -1,7 +1,7 @@
 # Row geometry for public reindex gathers
 
 For a contiguous `[R, 2H]` split, one input DMA brings `2*T*H*s` bytes
-into UB, where `T` counts rows and `s` is the input element size. The general path uses two cached int32 vectors of length `T*H`. Dense BF16
+into UB, where `T` counts rows and `s` is the input element size. The general BF16 gather uses a cached int32 gate vector of length `T*H` and derives the value indices in UB. Dense BF16
 pairs can use one signed-int16 vector as described below. Include live indices,
 casts, arithmetic temporaries and software-pipeline buffers in the allocation.
 Read the effective UB capacity and available AIVs after platform selection.
@@ -13,16 +13,12 @@ It also covers contiguous BF16 pairs (`H=1`, normalized final axis of length
 two). On this public build, let dense pairs reach
 the same gather selector as other short BF16 halves. An early return for
 the legacy transpose specialization would hide the eligible gather. For a new module, define a public slab kernel and call it from the
-host selector. View input and output as rank-one descriptors. For the general path build reusable
-integer lane metadata on the host with `k = torch.arange(T*H, dtype=torch.int32,
-device=input.device)`, `gate_idx = 2*H*(k//H) + k%H` and
-`value_idx = gate_idx + H`. Cache by device, H and T. This metadata
-is independent of input values. Pass the index tensors as kernel arguments
-and load them before the tile loop. Like data pointers, index arguments are
-`GlobalAddress` and cannot be passed straight to `copy_in`. For each
-metadata pointer use a ranked descriptor first; for example
-`ig = asctile.global_tensor(gate_idx_ptr, [T*H])` and
-`gate_idx_ub = asctile.copy_in(ig, [0], [T*H])`. For a slab starting at row r, copy
+host selector. View input and output as rank-one descriptors. Cache the
+input-independent gate table by dtype of the indices, device, H and T.
+Pass its pointer as the third tensor argument and load it once per block
+before the tile loop. Use `ig = asctile.global_tensor(gate_idx_ptr, [T*H])`,
+`gate_idx_ub = asctile.copy_in(ig, [0], [T*H])`, and
+`value_idx_ub = gate_idx_ub + H`. For a slab starting at row r, copy
 `2*T*H` input lanes at offset `2*r*H`, with true extent
 `2*min(T,R-r)*H` and zero padding. Use `asctile.reindex(slab, gate_idx_ub)`
 and `asctile.reindex(slab, value_idx_ub)` before widening each gathered
@@ -46,9 +42,11 @@ allocation when changing tile geometry or compiler. At T4096/U2/N72,
 two matched runs took 6.301 and 6.273 µs with this kernel. Loading both
 int32 tables at the same geometry took 6.789 and 6.851 µs.
 
-Use this host helper before building the general int32 metadata. A returned
-tensor supplies the third argument to the ordinary pair JIT. A None result
-continues to the general path. The cache holds input-independent indices.
+Once the ordinary selector has admitted a positive tile, build one table
+with the appropriate index dtype. Dispatch both dtypes to the ordinary
+slab JIT. On the 72-AIV fixture `R=2048, H=2`, the ordinary selector
+returns T16 and the launch takes an int32 gate vector on 72 blocks. The
+first four indices are [0, 1, 4, 5] and their value indices are [2, 3, 6, 7].
 
 ```python
 def dense_pair_gate_index(half, tile, device, cache):
@@ -59,8 +57,18 @@ def dense_pair_gate_index(half, tile, device, cache):
         k = torch.arange(tile, device=device, dtype=torch.int32)
         cache[key] = (2 * k).to(torch.int16)
     return cache[key]
-```
 
+
+def ordinary_gate_index(half, tile, device, cache):
+    gate_index = dense_pair_gate_index(half, tile, device, cache)
+    if gate_index is not None:
+        return gate_index
+    key = ("general_i32", device, half, tile)
+    if key not in cache:
+        k = torch.arange(tile * half, dtype=torch.int32, device=device)
+        cache[key] = 2 * half * (k // half) + k % half
+    return cache[key]
+```
 
 Declare the device function itself with `@asctile.jit(reuse_alloc=2)`. The
 selector below is paired with this allocation policy. Merely writing
