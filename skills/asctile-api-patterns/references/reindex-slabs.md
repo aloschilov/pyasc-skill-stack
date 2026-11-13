@@ -112,6 +112,10 @@ bytes the ordinary path reads 16,384 bytes at T4096/U2. Dividing by
 the number of halves a second time gave T2048 and an 8,192-byte read.
 
 Return the caller's existing public gather route tag for either unroll.
+Carry the returned unroll across the JIT boundary as a
+`unroll: asctile.ConstExpr[int]` argument. In the row-slab loop set
+`unroll_factor=unroll`. Verify this on the emitted loop and on its launch:
+a fixed `unroll_factor=1` silently discarded the host's two-stage decision.
 Test dispatch at a smaller UB that fits only one iteration and at another
 that forces a shorter tile. A single full-capacity test can hide a unit error.
 
