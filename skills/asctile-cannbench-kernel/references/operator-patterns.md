@@ -17,6 +17,25 @@ using a qualified active-device resource query. Stable forms must
 preserve NaN and Inf behavior from `golden.py`. GELU has both `none` and `tanh`
 attributes and requires distinct kernels or tile widths.
 
+On the archive wheel, preserve the loaded local tile's dtype before
+widening: `lane_dtype = x.dtype`, `xf = x.to(asctile.float32)`.
+Evaluate floating activation math in FP32, including reciprocal and exp,
+then use `result.to(lane_dtype)` in the bounded store. FP16 arithmetic
+throughout sigmoid produced 2,170 out-of-tolerance values on a 1M-element
+input. For a bounded load or store compute `valid = min(size-offset, T)`
+once; assigning the Python int T to a loop-local PyASC scalar in a runtime
+branch fails type checking. Use typed dtype objects such as
+`asctile.float32` for `full`, `zeros` and casts. Multiply a local tensor
+by a scalar directly. When the equation needs a tile filled with a constant
+use `asctile.full(shape, constant, dtype=asctile.float32)`.
+
+Check every generated `asctile.<name>` against the installed wheel before
+profiling. This wheel exports `maximum`, `minimum`, `exp`, `log`,
+`abs`, `tanh` and `erf`. Use the operand's `.dtype` in the JIT.
+For Mish, compute a stable softplus (including the positive large-input
+limit) before tanh. Verify finite inputs and the public exceptional-value
+cases for each activation after the cast back.
+
 When validating a shared dispatch or tiling rule across L1, keep one complete
 generated module per operator. Run every public case and record both numerical
 coverage and the geometric mean of `baseline_perf_us / measured_us`. Use the
