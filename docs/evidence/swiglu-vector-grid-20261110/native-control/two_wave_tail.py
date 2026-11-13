@@ -6,13 +6,13 @@ from shutil import copyfile
 from textwrap import indent
 
 
-def transfer(start, height):
-    return f"""r = {start}
-gate = asctile.copy_in(gx, [r, 0], [{height}, H])
-value = asctile.copy_in(gx, [r, H], [{height}, H])
-gate_f = gate.to(asctile.float32)
-out = (gate_f / (1.0 + asctile.exp(-gate_f))) * value.to(asctile.float32)
-asctile.copy_out(out.to(gate.dtype), gy, [r, 0])"""
+def transfer(start, height, suffix=""):
+    return f"""r{suffix} = {start}
+gate{suffix} = asctile.copy_in(gx, [r{suffix}, 0], [{height}, H])
+value{suffix} = asctile.copy_in(gx, [r{suffix}, H], [{height}, H])
+gate_f{suffix} = gate{suffix}.to(asctile.float32)
+out{suffix} = (gate_f{suffix} / (1.0 + asctile.exp(-gate_f{suffix}))) * value{suffix}.to(asctile.float32)
+asctile.copy_out(out{suffix}.to(gate{suffix}.dtype), gy, [r{suffix}, 0])"""
 
 
 def build(mode):
@@ -34,8 +34,8 @@ def paired_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
     # Adjacent and strided variants both fold the edge into the final DMA.
     first, second = ('2*b*T', '(2*b + 1)*T') if mode == 'adjacent' else ('b*T', '(N+b)*T')
     return (common + indent(transfer(first, 'T'), '    ') + '\n    if b == N - 1:\n'
-            + indent(transfer(second, 'T + tail'), '        ') + '\n    else:\n'
-            + indent(transfer(second, 'T'), '        '))
+            + indent(transfer(second, 'T + tail', '_last'), '        ') + '\n    else:\n'
+            + indent(transfer(second, 'T', '_other'), '        '))
 
 
 def main():
