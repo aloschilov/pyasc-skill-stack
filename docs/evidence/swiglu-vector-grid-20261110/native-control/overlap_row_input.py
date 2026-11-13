@@ -54,11 +54,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     for key in ("base", "task", "worker"):
         parser.add_argument(key, type=Path)
+    parser.add_argument("--case", type=int, choices=(11, 13), default=13)
     args = parser.parse_args()
     modes = ("base", "bounded", "overlap")
-    shapes = {"public": None, "finite": [143, 1, 16, 67]}
+    # Keep row count and half-width fixed while changing values and rank factorization.
+    neighbor = [273, 1, 1, 1018] if args.case == 11 else [143, 1, 16, 67]
+    shapes = {"public": None, "finite": neighbor}
     # Reuse the fixture staging and seeded, fresh-process experiment runner.
     for rows in (139, 140, 143, 144):
         audit(rows, 4, True)
-    prepare(args.base.resolve(), args.task.resolve(), shapes, modes, renderer=render)
-    raise SystemExit(run(args.worker.resolve(), shapes, modes))
+    for rows in (272, 273, 274, 279):
+        audit(rows, 8, False)
+    prepare(args.base.resolve(), args.task.resolve(), shapes, modes, renderer=render, case=args.case)
+    raise SystemExit(run(args.worker.resolve(), shapes, modes, case=args.case))

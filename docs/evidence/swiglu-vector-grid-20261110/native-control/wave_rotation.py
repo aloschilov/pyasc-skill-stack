@@ -33,7 +33,7 @@ def render(base, mode):
     return base[:start] + part + base[stop:]
 
 
-def prepare(base, task, shapes, modes, renderer=render):
+def prepare(base, task, shapes, modes, renderer=render, case=13):
     source = (base / "swi_glu.py").read_text()
     for key, shape in shapes.items():
         dest = Path(key)
@@ -46,8 +46,9 @@ def prepare(base, task, shapes, modes, renderer=render):
         else:
             with (task/"cases.csv").open(newline="") as f:
                 reader = csv.DictReader(f)
-                row, = (r for r in reader if r["case_id"] == "13")
-            if json.loads(row["input_shape"]) != [[11, 13, 16, 67]]:
+                row, = (r for r in reader if r["case_id"] == str(case))
+            expected = {11: [[3, 7, 13, 1018]], 13: [[11, 13, 16, 67]]}
+            if json.loads(row["input_shape"]) != expected[case]:
                 raise ValueError(row["input_shape"])
             row["input_shape"] = json.dumps([shape])
             row["value_range"] = "[-2, 2]"
@@ -63,7 +64,7 @@ def prepare(base, task, shapes, modes, renderer=render):
             shutil.copyfile(base/"_pyasc_runtime.py", pkg/"_pyasc_runtime.py")
 
 
-def run(worker, shapes, modes):
+def run(worker, shapes, modes, case=13):
     plan = []
     for r in range(1, 4):
         order = [(r,key,mode) for key in shapes for mode in modes]
@@ -75,7 +76,7 @@ def run(worker, shapes, modes):
         env = {**os.environ, "PYASC_CACHE_DIR": str((root/"cache").resolve()),
                "PYASC_DUMP_PATH": str((root/"dump").resolve())}
         with (root/f"{r}.json").open("w") as out, (root/f"{r}.log").open("w") as log:
-            proc = subprocess.run([sys.executable, str(worker), mode, "swi_glu", "13"],
+            proc = subprocess.run([sys.executable, str(worker), mode, "swi_glu", str(case)],
                                   cwd=key, env=env, stdout=out, stderr=log)
         with Path("status").open("a") as f:
             print(r, key, mode, proc.returncode, file=f)
