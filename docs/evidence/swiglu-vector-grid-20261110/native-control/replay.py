@@ -23,7 +23,7 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def run(task, case):
+def run(task, case, direct_simt=False):
     with (task / "cases.csv").open() as f:
         row, = (r for r in csv.DictReader(f) if int(r["case_id"]) == case)
     shape, = json.loads(row["input_shape"])
@@ -67,7 +67,11 @@ def run(task, case):
         for key in (grid, task_type, "Op Name"):
             if len({r[key] for r in records}) != 1:
                 raise ValueError(f"task selection changed across calls: {key}")
-        if records[0]["Op Name"].lower() != "swiglu" or records[0][task_type] != "AI_VECTOR_CORE":
+        name = records[0]["Op Name"].lower()
+        valid_name = "short_rows" in name if direct_simt else name == "swiglu"
+        if direct_simt and int(records[0][grid]) != {11: 35, 13: 36}[case]:
+            raise ValueError(f"unexpected SIMT grid: {records[0][grid]}")
+        if not valid_name or records[0][task_type] != "AI_VECTOR_CORE":
             raise ValueError(f"unexpected native task: {records[0]}")
         times = [float(r[duration]) for r in records]
         if not all(math.isfinite(t) and t > 0 for t in times):
@@ -84,5 +88,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("task", type=Path)
     parser.add_argument("case", type=int, choices=(11, 13))
+    parser.add_argument("--direct-simt", action="store_true")
     args = parser.parse_args()
-    print(json.dumps(run(args.task, args.case)))
+    print(json.dumps(run(args.task, args.case, args.direct_simt)))
