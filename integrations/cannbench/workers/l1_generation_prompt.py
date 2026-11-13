@@ -127,7 +127,11 @@ def prompt(task, skills):
             "launches. In the generic flat fallback, use the measured complete two-stage "
             "allocation once, with enough full chunks for both stages. Trace single-row "
             "BF16 H1046017 and FP16 H2095104 to actual T4096/U2 on 72 AIVs / 253952 B. "
-            "Use the selected values in the actual public entry point."
+            "Use the selected values in the actual public entry point. Preserve host helper "
+            "names from definitions through every caller: wide_fp32_chunk is distinct from "
+            "whole_fp32_grid. Verify every global function called by the public dispatcher "
+            "exists in the returned module or its imports. Walk the public FP32 short "
+            "and wide branches as well as the BF16 branches."
         )
     elif op == "exp":
         sections.append(

@@ -53,6 +53,13 @@ One clean module compared five chunks per row with 216 required for
 three waves, rejected the divisor, and took 532.008 µs with T4096/U2.
 The full-suite T6552/U3 measurement was 521.531 µs.
 
+Trace the wide-chunk selector by calling the public dispatcher on an
+eligible wide FP32 row and an ineligible short FP32 row. Both calls
+must resolve the same host function name as its definition. A generated
+module renamed the definition but retained the original call and failed
+before launching either FP32 geometry. A successful BF16 slab pilot and
+a syntax check both miss this error.
+
 ### Complete aligned BF16 half-rows
 
 With at least eight waves of aligned BF16 rows, test a four-stage pipeline
