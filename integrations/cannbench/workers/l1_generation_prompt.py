@@ -123,7 +123,10 @@ def prompt(task, skills):
             "full remainder, apply the UB-bounded exact-divisor search from the flat skill "
             "before its ordinary width/unroll fallback. Call wide_fp32_chunk and count all R*(H//T) tiles for the three-wave test. Trace R2039/H32760 to T6552/U3 on 72 AIVs. For the flat route call launch_moderate_flat "
             "before launching the generic chunk kernel. Return the allocated output when this helper "
-            "launches. Use the selected values in the actual public entry point."
+            "launches. In the generic flat fallback, use the measured complete two-stage "
+            "allocation once, with enough full chunks for both stages. Trace single-row "
+            "BF16 H1046017 and FP16 H2095104 to actual T4096/U2 on 72 AIVs / 253952 B. "
+            "Use the selected values in the actual public entry point."
         )
     elif op == "exp":
         sections.append(

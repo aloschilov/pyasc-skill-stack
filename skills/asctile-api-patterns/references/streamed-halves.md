@@ -15,6 +15,18 @@ misses simultaneously live UB temporaries.
 
 Derive the number of chunks from the logical half-row width and the UB-qualified tile. Specialize the address calculation when a half-row fits in one chunk or when the whole input is one row. For full aligned chunks use full-width copies. Use the true extent on a final partial chunk. Distribute only live chunks across the available vector blocks.
 
+For the generic remainder-capable flat emitter, choose the number of stages
+after choosing T. Count the full chunks in all rows. At two or more full
+chunks per active block, pass U=2 if the two-stage allocation fits:
+`T*(20 if itemsize == 2 else 24) <= usable_ub`. Otherwise pass U=1.
+The 20/24-byte coefficients already include both stages. The preliminary
+32-byte width bound also provides headroom and is used only for selecting
+T. Multiplying that bound by two again rejected a 4096-lane tile on a
+253952-byte device despite an observed two-stage allocation of 81920
+bytes. For FP16/BF16, trace a single row with H=1046017, H=2080641,
+or H=2095104 through the public fallback to T4096/U2 on 72 AIVs.
+For a short row or a different emitter, recheck live chunks and UB.
+
 ### Wide aligned FP32 half-rows with a nearly full remainder
 
 For the qualified direct-division kernel, when many wide FP32 half-rows
