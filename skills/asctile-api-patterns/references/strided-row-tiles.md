@@ -31,6 +31,19 @@ changing dispatch. In three rounds on each of two short FP32 geometries,
 the exact terminal extent gave no consistent speedup.
 [Generated C++ comparison and matched hardware controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6859782820).
 
+For a single-wave FP32 tile split across two DMA stages, test the unsplit
+tile and both serial and prefetched stages at the same grid. When each
+stage owns a contiguous range of whole rows, the GM descriptor can start
+at its first row, with shape `[count, 2*H]` and input offsets `[0,0]` and
+`[0,H]`. Derive the output descriptor from the same first row and its true
+count, including the partial last block. Inspect the emitted full-block
+path. On 950PR the fixed GM window removed conditional missing-row fills,
+and `vf_fusion=True` emitted one register math scope per stage. Even with
+both changes, two prefetched stages took 2.554/2.679 µs against
+2.592/2.625 µs for the unsplit control at H=509. They also lost both
+rounds at H=536. Retain the unsplit schedule for these qualified shapes.
+[Measured stage orders, compiled code and exact-binary replay](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6861262761).
+
 - Start with the smallest power-of-two height T giving at least 8 KiB of
   useful half-tile payload. For positive R and H, compute
   `needed = (8192 + H*s - 1) // (H*s)`, then
