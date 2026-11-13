@@ -76,7 +76,7 @@ def prompt(task, skills):
             "and available UB, call two_wave_tile before the ordinary slab selector. "
             "Place the ordinary BF16 slab immediately after the two-wave branch and before "
             "every generic row selector. Call ordinary_bf16_slab_tile and divide 16384 "
-            "by the physical input bytes per row once. When it fits, launch and return. Trace the actual "
+            "by the physical input bytes per row once. For a positive tile, call ordinary_slab_launch to get blocks and unroll from the number of row slabs ceil(R/T). Pass both results to the actual launch and return. Trace the actual "
             "public BF16 (1000003,2) call: reindex with T4096/U2 and 72 blocks, taking only input, output and one signed-int16 gate index as tensors. Derive value indices in UB. "
             "Call whole_bf16_grid for aligned BF16 whole rows before the generic 2D route. A positive "
             "grid launches swiglu_flat with that many blocks, tile H and unroll 4. "

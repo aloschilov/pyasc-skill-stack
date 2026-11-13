@@ -72,11 +72,22 @@ def ordinary_bf16_slab_tile(rows, half, aivs, usable_ub):
     tile = 1 << (bound.bit_length() - 1)
     lanes = tile * half
     return tile if (2 * lanes) % 32 == 0 else 0
+
+def ordinary_slab_launch(rows, half, tile, aivs, usable_ub):
+    """Size a gather launch after selecting a positive tile in rows."""
+    tiles = (rows + tile - 1) // tile
+    blocks = min(aivs, tiles)
+    two_stage_bytes = 28 * tile * half
+    unroll = 2 if tiles >= 2 * blocks and two_stage_bytes <= usable_ub else 1
+    return blocks, unroll
 ```
 
 For BF16, alignment of `2*lanes` output bytes implies alignment of
 the input and int32 table. At the selected height, two stages require
 `28*lanes <= usable_ub` and at least two tiles per active block.
+Here each tile owns up to T whole rows, including H=1. Count work with
+`ceil(R/T)`. The flat column-stream count `R*(H//T)` gives zero for a
+4096-row pair slab. Use `ordinary_slab_launch` at the actual gather call.
 Trace both bytes and rows: for 1,000,003 pairs, 72 AIVs and 253,952
 bytes the ordinary path reads 16,384 bytes at T4096/U2. Dividing by
 the number of halves a second time gave T2048 and an 8,192-byte read.
