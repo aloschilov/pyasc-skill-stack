@@ -54,6 +54,16 @@ def prompt(task, skills):
         }
         if op in specializations:
             include(patterns, *specializations[op])
+        if op in {"sigmoid", "mish", "gelu"}:
+            sections.append(
+                "Trace the actual public launch for both a short input and a multi-wave "
+                "input. When two DMA stages fit and there are at least two tiles per AIV, "
+                "pass U=2 to the actual loop unroll_factor. Use U=1 on the short path. "
+                "Allocate query_ub_bytes() per AIV and account for both stages once. "
+                "Bound the final partial copy and keep fixed extents for complete tiles."
+            )
+        if op == "foreach_norm":
+            include(api / "SKILL.md", "For a sum reduction", "## Tails and padding")
         sections.append(
             "Use the public oracle to identify the operation, input promotion, scalar attributes "
             "and output structure. Implement all tensor arithmetic in the device kernels. "

@@ -32,6 +32,9 @@ use `asctile.full(shape, constant, dtype=asctile.float32)`.
 For contiguous unary activations distinguish a single wave from many tiles
 per available AIV. On long streams compare an aligned two-stage tile
 against the single-stage control, using the same FP32 formula and dtype.
+The returned usable UB is already per AIV.
+Use the AIV count for grid and work distribution. Dividing UB by that count
+again shrinks a 950PR mask tile to 128 lanes regardless of stream length.
 Choose the largest aligned T that fits the simultaneous input, intermediate
 and output tiles for both stages and leaves at least two useful tiles per
 active block. Pass U as a ConstExpr and use it as the actual loop's
