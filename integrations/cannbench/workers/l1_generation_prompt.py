@@ -109,7 +109,7 @@ def prompt(task, skills):
             "schedule if any of apply_scale, apply_shift or apply_log is active, including "
             "the base-only case. For FP16 identity use grid-stride with the same unroll. "
             "Trace both public launches at 72 AIVs: BF16 1023x1023, base 2, unit scale and "
-            "zero shift must select contiguous T4848 U3; FP16 1024x1024, base -1, unit "
+            "zero shift must select contiguous T5504 U3 on 64 blocks. Use the 256-byte DMA quantum for short affine streams and the qualified near-capacity grid rule for BF16 log-only. For FP16 shift-only 2049x513 trace N72/T4992/U3. FP16 1024x1024, base -1, unit "
             "scale and zero shift must select stride T4864 U3. Use the general input-byte, "
             "alignment and UB rules from the skill for arbitrary inputs. Compute contiguous "
             "tiles per block inside the JIT from runtime size, tile and block_num(), retaining "

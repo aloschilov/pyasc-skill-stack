@@ -77,9 +77,9 @@ a larger live footprint if the emitted specialization requires them.
 Send a rejected tile to the existing UB-qualified streaming path before
 launch. Tile size and actual JIT unroll must match the estimate.
 
-For short 16-bit streams, also evaluate three tiles per AIV. On the
+For short 16-bit streams, evaluate three tiles per AIV. On the
 public 950PR, start with this path for about 24–32 KiB of useful input
-per AIV when unroll 3 fits. With `q = 32 // itemsize`, compute
+per AIV when unroll 3 fits. For the initial 32-byte DMA control, with `q = 32 // itemsize`, compute
 `T = ceil_div(N, 3*A*q)*q` elements and launch `min(A, ceil_div(N,T))`
 blocks. Check the compiled allocation against UB. In two matched runs
 with the same hardware, arithmetic, grid and tile, contiguous per-block
@@ -97,7 +97,27 @@ FP16 identity. Here `apply_log` means that the emitted logarithm
 multiplier differs from one. A positive base of two, scale one and zero
 shift still multiplies by log(2) on device. At 72 AIVs the BF16 shape
 1023 by 1023 gives T=4848; the FP16 shape 1024 by 1024 gives T=4864.
-Trace the real public launch with these attributes after generation.
+These are the 32-byte control geometries. For the measured 950PR affine
+paths, use the following refinement. The short-stream eligibility window
+uses the reported AIV count before choosing a launch grid.
+
+* Keep FP16 identity grid-stride with 32-byte alignment. For a contiguous
+  affine path, round T up to 256 input bytes (`q = 256 // itemsize`).
+  For BF16 with only the log multiplier active, compare the full grid to
+  the largest lower multiple of 16 AIVs within seven eighths of capacity.
+  Compute `g = (A // 16) * 16`; use g if positive and `8*g >= 7*A`,
+  otherwise use A. Other affine paths retain A. Compute
+  `T = ceil_div(N, 3*g*q)*q` using the selected grid and recheck UB.
+  Keep the runtime-count contiguous JIT loop with compile-time unroll 3.
+* On 950PR, 1023² BF16 values and base 2 with no scale or shift give N64,
+  T5504. In two shuffled rounds this took 3.277/3.628 µs, versus
+  3.988/3.518 µs at N72 and 256-byte alignment. The reduced grid beat
+  the 3.806 µs baseline on both runs; the two grids exchanged order.
+  On shifted FP16 (2049 by 513), N72/T4992 took 3.270/3.328 µs.
+  On scaled and shifted BF16 (1000007 values), N72/T4736 took
+  3.374/3.496 µs versus 3.893/3.523 µs at 32-byte alignment on N72.
+  Trace the public entry and qualify the complete generated module.
+
 An independent clean generator sent both calls down its generic stride
 path with unroll 1 and took 5.587 and 4.959 µs on the public cases.
 
