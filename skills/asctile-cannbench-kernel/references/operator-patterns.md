@@ -81,7 +81,9 @@ are ordinary CPU-backed Torch tensors. Select the NPU with the runtime
 helper, then launch with those tensors unchanged. A host check such as
 `if x.device.type != "npu": raise ...` rejects valid hardware work.
 
-For Exp the public contract covers FP16, BF16 and FP32. Read the input
+### Exp host dispatch
+
+The public Exp contract covers FP16, BF16 and FP32. Read the input
 element width from `x.element_size()` and allocate `out = x.new_empty(x.shape)`.
 Pass `x` and `out` directly to the selected JIT. If a host dtype table
 needs to reject another dtype, raise a TypeError before allocation. Keep

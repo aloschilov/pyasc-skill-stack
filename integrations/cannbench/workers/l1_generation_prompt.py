@@ -44,7 +44,7 @@ def prompt(task, skills):
     elif op in {"sigmoid", "mish", "gelu", "masked_scale", "foreach_addcdiv_scalar", "foreach_norm"}:
         patterns = skills / "asctile-cannbench-kernel/references/operator-patterns.md"
         include(task / "golden.py")
-        include(patterns, "## Common elementwise path", "For Exp, declare")
+        include(patterns, "## Common elementwise path", "### Exp host dispatch")
         include(patterns, "### Shared tile constraints", "## StridedSlice")
         include(api / "SKILL.md", "## Tails and padding", "## Host/JIT boundary")
         specializations = {
