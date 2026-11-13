@@ -5,7 +5,7 @@
 template<unsigned Height, unsigned Pitch>
 __simd_vf__ inline void eval_rows(__ubuf__ float* x, __ubuf__ float* y) {
     using namespace AscendC::Reg;
-    const auto mask = CreateMask<uint8_t>();
+    auto mask = CreateMask<uint8_t>();
     for (uint16_t row = 0; row < Height; ++row) {
         for (uint16_t part = 0; part < (Pitch + 63) / 64; ++part) {
             // Overlap the last vector to keep its address aligned and in the row.
