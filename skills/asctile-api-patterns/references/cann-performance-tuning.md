@@ -59,6 +59,31 @@ reproduced implementations. Read their specific contracts before using them.
    control. Then hardware validates the candidate; model ticks are not NPU us.
    Do not run new hardware jobs or restart schedules without task authorization.
 
+## When identical kernels time differently on hardware
+
+Compare the linked device `.text` bytes and the decoded instructions at the
+entry point. The host executable, serialized wheel cache and raw device ELF
+have different envelopes. Use the compiler dump to identify the device image
+in the cache. Verify its hash for each run. Two different source expressions
+that compile to the same instruction bytes at the same grid provide one
+code-generation result.
+
+For a short kernel, keep the ELF, inputs, grid and profiler fixed and compare
+ordinary evaluator calls with repeated launches on the same device buffers.
+If their device-task intervals differ, retain the addresses and change the
+transfers between launches. Record which tensors move, in which direction,
+the allocation policy, the warm-up count and each process median. Score the
+generated operator via its normal evaluator entry point. Reused-buffer
+timings diagnose execution conditions.
+
+On a 950PR, the same 35-block FP32 packed-row ELF took 1.978–2.016 µs with
+resident buffers and 2.921–3.028 µs with input/output transfers around every
+launch. This held with either normal or huge pages at fixed device addresses.
+These are profiler **kernel durations**. Timing the transfers separately or
+changing one transfer direction at a time answers different questions.
+Measure input and output cache hints separately on the ordinary call path
+before applying a cache policy to a second layout.
+
 ## Simulator timing protocol
 
 - Keep simulator ticks, simulator host wall time and measured NPU microseconds
