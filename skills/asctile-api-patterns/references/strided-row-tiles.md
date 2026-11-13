@@ -57,6 +57,26 @@ padding. The copy's real shape still uses H.
   For example on 72 AIVs, 143 rows of 536 FP32 values **per half**
   select T=4 and 36 blocks; 273 rows of 509 select T=8 and 35 blocks.
 
+Choose the ordinary bounded row kernel's unroll independently of whether
+a copy needs `real_shape`. A ragged final tile and a padded local row both
+support a two-stage grid-stride loop. After fitting the one-stage tile,
+use the two-stage live bytes per physical lane from the qualified emitter.
+
+```python
+def bounded_row_unroll(rows, height, width, blocks, two_stage_bytes_per_lane, usable_ub):
+    tiles = (rows + height - 1) // height
+    fits = height * width * two_stage_bytes_per_lane <= usable_ub
+    return 2 if tiles >= 2 * blocks and fits else 1
+```
+
+Use positive dimensions and the actual number of launched blocks. For
+FP16 with 2049 rows and H512, T8 on 72 blocks gives 257 tiles and one
+valid row in the last tile. With a 253952-byte UB, 20 bytes per lane
+select U2. For FP32 R52224/H50, use T64/W56 and 28 bytes per lane for
+the conservative U2 fit, then launch the bounded body at U2. The
+corresponding W30 emitter allocated 81920 and 86016 bytes. Trace both
+public entries including the final kernel argument.
+
 Use the padded width and the one-stage coefficient of the actual row
 emitter for the final fit test, including height one. For example:
 
