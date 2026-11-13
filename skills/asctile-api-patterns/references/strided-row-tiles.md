@@ -146,7 +146,23 @@ loop, two `copy_in(gx, [r, col], [T, H])` calls for col 0 and H, and
 `copy_out(out, gy, [r, 0])`. The final wave may have fewer active
 blocks. The loop bound is the number of tiles, so every issued DMA has
 a full extent even with a partial wave. Route a partial **tile** to the
-bounded body. Keep ordinary L2 caching for both three-stage descriptors.
+bounded body. Apply this legality check to every caller of any fixed-copy
+row JIT, including FP16 two-wave and FP32 three-stage fallbacks:
+
+```python
+if rows % height == 0 and width == half:
+    full_rows[blocks](x, out, rows, half, height, width, unroll)
+else:
+    bounded_rows[blocks](x, out, rows, half, height, width, unroll)
+```
+
+On the two-waves-plus-tail FP16 route a positive tail always selects
+bounded copies. At R1009/T7, the tile at row 1008 must read and write
+exactly one row. For generated code, replay the effective sizes of both
+reads and the store. A copy that omits `real_shape` uses its full physical
+shape. Golden checks of the logical output can pass after an out-of-range
+write. For R2047/T2 verify that the last three-stage tile has one row too.
+Keep ordinary L2 caching for both three-stage descriptors.
 
 At 72 blocks and T2/U3, the fixed-copy level-3 specialization on the
 950PR took 23.173/23.367 µs at 2048 rows and 22.436/22.506 µs at 2046
