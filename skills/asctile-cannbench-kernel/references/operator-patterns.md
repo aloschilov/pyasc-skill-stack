@@ -17,6 +17,15 @@ using a qualified active-device resource query. Stable forms must
 preserve NaN and Inf behavior from `golden.py`. GELU has both `none` and `tanh`
 attributes and requires distinct kernels or tile widths.
 
+When validating a shared dispatch or tiling rule across L1, keep one complete
+generated module per operator. Run every public case and record both numerical
+coverage and the geometric mean of `baseline_perf_us / measured_us`. Use the
+950PR metadata from the same benchmark season as the cases. A failed or
+missing case leaves the operator GM unqualified. Once a complete operator
+exceeds 1×, exercise the rule on the other operator families before tuning
+individual cases further. For tensor-list operators compare every returned
+member and sum the durations of all device launches belonging to each call.
+
 On the archive-bundled evaluator import `from asc.experimental import asctile`.
 Generate the kernel with `@asctile.jit(reuse_alloc=2)`; allocate with
 `out = x.new_empty(x.shape)` on the caller's device and invoke

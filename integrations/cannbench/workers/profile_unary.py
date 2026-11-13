@@ -1,4 +1,4 @@
-"""Profile one generated unary operator against the supplied public task on a real NPU.
+"""Profile one generated Level 1 operator against the supplied public task on a real NPU.
 
 Call in a fresh process for each case. Expected cwd: generation/task/{cases.csv,
 golden.py} and a Python package containing the candidate and runtime helper.
@@ -49,36 +49,57 @@ def measure(candidate, case, operator=None):
     with (task / "cases.csv").open() as f:
         row, = (r for r in csv.DictReader(f) if int(r["case_id"]) == case)
     if operator is None:
-        operator = {"Exp": "exp", "SwiGlu": "swi_glu"}[row["operator"]]
+        operator = {
+            "Exp": "exp", "SwiGlu": "swi_glu", "Sigmoid": "sigmoid", "Mish": "mish",
+            "Gelu": "gelu", "MaskedScale": "masked_scale", "ForeachNorm": "foreach_norm",
+            "ForeachAddcdivScalar": "foreach_addcdiv_scalar",
+        }[row["operator"]]
     if operator == "exp":
         check_exp_host_casts((Path(*candidate.split(".")) / "exp.py").read_text())
     op = getattr(importlib.import_module(f"{candidate}.{operator}"), operator)
     golden = getattr(importlib.import_module("generation.task.golden"), operator)
-    shape, = json.loads(row["input_shape"])
-    dtype, = json.loads(row["dtype"])
+    shapes = json.loads(row["input_shape"])
+    dtypes = json.loads(row["dtype"])
     attrs = json.loads(row["attrs"])
     value_range = json.loads(row["value_range"])
-    make = DataGenerator(seed=case).generate_input_tensor
+    ranges = value_range if isinstance(value_range[0], list) else [value_range] * len(shapes)
+    if len(dtypes) == 1:
+        dtypes *= len(shapes)
+    if len(ranges) != len(shapes) or len(dtypes) != len(shapes):
+        raise ValueError("case input shapes, dtypes and ranges disagree")
 
-    def check(x):
-        output = op(x, **attrs)
-        expected = golden(x, **attrs)
-        if output.shape != expected.shape or output.dtype != expected.dtype:
-            raise ValueError("candidate changed shape or dtype")
-        for actual, ref in zip(output.flatten().split(1048576), expected.flatten().split(1048576)):
-            torch.testing.assert_close(actual, ref, equal_nan=True)
-
-    def ordinary(bounds):
-        return (len(bounds) == 2 and all(isinstance(x, (int, float)) and math.isfinite(x)
-                                         for x in bounds) and bounds[0] != bounds[1])
-
-    if not ordinary(value_range):
-        # At identical geometry, also reject implementations that only fit a
-        # constant, infinity or NaN fixture. Keep this call outside the profiler.
-        check(make(shape, dtype, [-1, 1]))
+    def inputs(bounds):
         make = DataGenerator(seed=case).generate_input_tensor
+        args = []
+        for shape, dtype, limits in zip(shapes, dtypes, bounds):
+            if shape and isinstance(shape[0], list):
+                args.append([make(member, dtype, limits) for member in shape])
+            else:
+                args.append(make(shape, dtype, limits))
+        return args
 
-    x = make(shape, dtype, value_range)
+    def check(args):
+        expected = golden(*args, **attrs)
+        output = op(*args, **attrs)
+        if isinstance(expected, (tuple, list)):
+            if type(output) is not type(expected) or len(output) != len(expected):
+                raise ValueError("candidate changed output sequence type or length")
+        else:
+            expected, output = [expected], [output]
+        for tensor, reference in zip(output, expected):
+            if tensor.shape != reference.shape or tensor.dtype != reference.dtype:
+                raise ValueError("candidate changed output shape or dtype")
+            for actual, ref in zip(tensor.flatten().split(1048576), reference.flatten().split(1048576)):
+                torch.testing.assert_close(actual, ref, equal_nan=True)
+
+    finite_control = any(
+        len(bounds) != 2 or bounds[0] == bounds[1]
+        or not all(isinstance(x, (int, float)) and math.isfinite(x) for x in bounds)
+        for bounds in ranges
+    )
+    if finite_control:
+        check(inputs([[0, 1] if dtype in ("uint8", "bool") else [-1, 1] for dtype in dtypes]))
+    args = inputs(ranges)
     launch = runtime.launch_kernel
     grids = []
 
@@ -88,14 +109,14 @@ def measure(candidate, case, operator=None):
         return result
 
     with patch.object(runtime, "launch_kernel", record):
-        check(x)
+        check(args)
         grid = grids.copy()
         if not grid:
             raise ValueError("no device launch")
         profiler = Profiler()
         with profiler.profile():
             for _ in range(3):
-                op(x, **attrs)
+                op(*args, **attrs)
 
     tasks = [(t.name, t.type, t.duration) for t in profiler.last_result.tasks]
     kernels = [(n, t, d) for n, t, d in tasks if t.upper() == "AI_VECTOR_CORE"]
@@ -109,8 +130,9 @@ def measure(candidate, case, operator=None):
     if not all(math.isfinite(s) and s > 0 for s in samples):
         raise ValueError(f"invalid device timings: {samples}")
     digest = lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
-    return dict(case=case, operator=operator, shape=shape, dtype=dtype, attrs=attrs,
-                correct=True, finite_control=not ordinary(value_range), launches=count,
+    return dict(case=case, operator=operator, shape=shapes[0] if len(shapes) == 1 else shapes,
+                dtype=dtypes[0] if len(shapes) == 1 else dtypes, attrs=attrs,
+                correct=True, finite_control=finite_control, launches=count,
                 launch_grid=grids, tasks=tasks, samples_us=samples,
                 median_us=statistics.median(samples), cases_sha256=digest(task / "cases.csv"),
                 golden_sha256=digest(task / "golden.py"), candidate_sha256=digest(op.__code__.co_filename))

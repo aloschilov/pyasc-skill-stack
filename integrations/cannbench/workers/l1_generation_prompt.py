@@ -41,6 +41,26 @@ def prompt(task, skills):
         include(skills / "asctile-cannbench-kernel/references/operator-patterns.md",
                 "## Common elementwise path", "### High-level GeLU")
         include(api / "SKILL.md", "## Tails and padding", "## Host/JIT boundary")
+    elif op in {"sigmoid", "mish", "gelu", "masked_scale", "foreach_addcdiv_scalar", "foreach_norm"}:
+        patterns = skills / "asctile-cannbench-kernel/references/operator-patterns.md"
+        include(task / "golden.py")
+        include(patterns, "## Common elementwise path", "For Exp, declare")
+        include(patterns, "### Shared tile constraints", "## StridedSlice")
+        include(api / "SKILL.md", "## Tails and padding", "## Host/JIT boundary")
+        specializations = {
+            "masked_scale": ("## MaskedScale", "## SwiGLU"),
+            "foreach_addcdiv_scalar": ("## ForeachAddcdivScalar", "## ForeachNorm"),
+            "foreach_norm": ("## ForeachNorm", "## RMSNorm"),
+        }
+        if op in specializations:
+            include(patterns, *specializations[op])
+        sections.append(
+            "Use the public oracle to identify the operation, input promotion, scalar attributes "
+            "and output structure. Implement all tensor arithmetic in the device kernels. "
+            "For tensor lists preserve the member order, shapes and individual dtypes. "
+            "Choose a tile using the live input, output and temporary bytes per lane, and "
+            "use the detected AIV count. Include all phases of a reduction in the public call."
+        )
     else:
         raise ValueError(f"no prompt defined for {op!r}")
     sections.append(
@@ -50,7 +70,7 @@ def prompt(task, skills):
         "grid automatically from layout, dtype and detected resources. Your sibling "
         "runtime is packaged beside the generated module. Import it with the literal package-relative "
         "statement 'from ._pyasc_runtime import ensure_npu_platform, query_ub_bytes, query_aivs, vector_blocks'. "
-        "Evaluation imports candidate.exp or candidate.swi_glu from the package parent. It supplies ensure_npu_platform(), query_ub_bytes(), query_aivs(), "
+        f"Evaluation imports candidate.{op} from the package parent. The runtime supplies ensure_npu_platform(), query_ub_bytes(), query_aivs(), "
         "vector_blocks(work_items). Set the platform before querying. Pass caller tensors "
         "directly to the AscTile JIT and allocate with input.new_empty. The evaluator supplies "
         "CPU-backed Torch tensors even when the AscTile kernel runs on a physical NPU. "
