@@ -33,7 +33,7 @@ def render(base, mode):
     return base[:start] + part + base[stop:]
 
 
-def prepare(base, task, shapes, modes):
+def prepare(base, task, shapes, modes, renderer=render):
     source = (base / "swi_glu.py").read_text()
     for key, shape in shapes.items():
         dest = Path(key)
@@ -59,7 +59,7 @@ def prepare(base, task, shapes, modes):
             pkg = dest / mode
             pkg.mkdir()
             (pkg/"__init__.py").touch()
-            (pkg/"swi_glu.py").write_text(render(source, mode))
+            (pkg/"swi_glu.py").write_text(renderer(source, mode))
             shutil.copyfile(base/"_pyasc_runtime.py", pkg/"_pyasc_runtime.py")
 
 
