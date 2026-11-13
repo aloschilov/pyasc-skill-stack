@@ -1,8 +1,8 @@
 # Row geometry for public reindex gathers
 
 For a contiguous `[R, 2H]` split, one input DMA brings `2*T*H*s` bytes
-into UB, where `T` counts rows and `s` is the input element size. Two cached
-int32 index vectors of length `T*H` select the halves. Include both vectors,
+into UB, where `T` counts rows and `s` is the input element size. The general path uses two cached int32 vectors of length `T*H`. Dense BF16
+pairs can use one signed-int16 vector as described below. Include live indices,
 casts, arithmetic temporaries and software-pipeline buffers in the allocation.
 Read the effective UB capacity and available AIVs after platform selection.
 
@@ -10,10 +10,10 @@ Read the effective UB capacity and available AIVs after platform selection.
 
 Use this geometry inside the short-half gather branch (`H*s <= 32` bytes).
 It also covers contiguous BF16 pairs (`H=1`, normalized final axis of length
-two). On this public build with cached int32 indices, let dense pairs reach
+two). On this public build, let dense pairs reach
 the same gather selector as other short BF16 halves. An early return for
 the legacy transpose specialization would hide the eligible gather. For a new module, define a public slab kernel and call it from the
-host selector. View input and output as rank-one descriptors. Build reusable
+host selector. View input and output as rank-one descriptors. For the general path build reusable
 integer lane metadata on the host with `k = torch.arange(T*H, dtype=torch.int32,
 device=input.device)`, `gate_idx = 2*H*(k//H) + k%H` and
 `value_idx = gate_idx + H`. Cache by device, H and T. This metadata
@@ -28,6 +28,20 @@ metadata pointer use a ranked descriptor first; for example
 and `asctile.reindex(slab, value_idx_ub)` before widening each gathered
 half. Store the resulting contiguous output at `r*H`, with true extent
 `min(T,R-r)*H`. The final partial tile belongs to the same launch.
+
+For ordinary dense pairs (`H == 1`) on the 950PR wheel, select a single
+signed-int16 gate table when `2*T-1 <= 32767` and `2*T` index bytes
+are DMA-aligned. Construct `2*k` in int32 before converting to int16 on
+the caller's device. Cache only that table. Pass input, output and the
+gate table as the three tensor arguments. Load the entire gate table once
+per block before the tile loop and compute `value_idx = gate_idx + 1` in UB.
+Pass the int16 indices directly to public reindex. Gather and widen the gate,
+compute its activation, then gather and widen the value and multiply. Keep
+the grid, bounded DMA extents and existing UB admission bounds. If the
+index bound or alignment fails, use the general int32 path. Check emitted
+allocation when changing tile geometry or compiler. At T4096/U2/N72,
+two matched runs took 6.301 and 6.273 µs with this kernel. Loading both
+int32 tables at the same geometry took 6.789 and 6.851 µs.
 
 Declare the device function itself with `@asctile.jit(reuse_alloc=2)`. The
 selector below is paired with this allocation policy. Merely writing
