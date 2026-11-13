@@ -7,7 +7,7 @@ from fp32_stream_remainder import SOURCE_SHA
 
 
 def render(source, mode):
-    if sha256(source.encode()).hexdigest() != SOURCE_SHA or mode not in ("sum", "product", "sum_outer", "product_outer"):
+    if sha256(source.encode()).hexdigest() != SOURCE_SHA or mode not in ("sum", "product", "sum_outer", "product_outer", "sum_planar", "product_planar"):
         raise ValueError("expected the qualified W59 module and a packed-axis mode")
     start = source.index("@asctile.jit", source.index("def single_wave_rows("))
     kernel = '''@asctile.jit(reuse_alloc=2, vf_fusion=True)
@@ -44,7 +44,7 @@ def packed_axis_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
 
 
 '''
-    if mode.endswith("_outer"):
+    if mode.endswith(("_outer", "_planar")):
         # The public 950PR Reduce{Sum,Prod} accepts a leading reduction.
         axis_start = kernel.index("    slab = ")
         end = kernel.index("    mask = ", axis_start)
@@ -56,6 +56,15 @@ def packed_axis_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
 """ + kernel[end:])
         kernel = kernel.replace("), 1)", "), 0)").replace("reduce_prod(factors, 1)", "reduce_prod(factors, 0)")
         kernel = kernel.replace("copy_out(out, gy", "copy_out(asctile.reshape(out, T, W), gy")
+    if mode.endswith("_planar"):
+        # Transpose a 2D tile with aligned extents. Flattening its columns
+        # puts the gate/value axis first. Restore row-major order on output.
+        kernel = kernel.replace("    packed = ", "    P = (T + 7) // 8 * 8\n    packed = ")
+        kernel = kernel.replace("[2 * T, W]", "[2 * P, W]")
+        kernel = kernel.replace("asctile.reshape(packed, T, 2, W)", "asctile.reshape(packed, P, 2 * W)")
+        kernel = kernel.replace("asctile.transpose(rows, 1, 0, 2)", "asctile.transpose(rows, 1, 0)")
+        kernel = kernel.replace("T * W", "P * W")
+        kernel = kernel.replace("asctile.reshape(out, T, W)", "asctile.transpose(asctile.reshape(out, W, P), 1, 0)")
     launch = "single_wave_rows[blocks](input, out, rows, half, h, width, rotate)"
     if source.count(launch) != 1:
         raise ValueError("single-wave launch missing or ambiguous")
@@ -64,7 +73,7 @@ def packed_axis_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
 
 if __name__ == "__main__":
     source = Path("base/swi_glu.py").read_text()
-    for mode in ("sum", "product", "sum_outer", "product_outer"):
+    for mode in ("sum", "product", "sum_outer", "product_outer", "sum_planar", "product_planar"):
         dest = Path(mode)
         s = render(source, mode)
         compile(s, str(dest), "exec")
