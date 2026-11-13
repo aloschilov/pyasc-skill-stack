@@ -29,6 +29,19 @@ branch fails type checking. Use typed dtype objects such as
 by a scalar directly. When the equation needs a tile filled with a constant
 use `asctile.full(shape, constant, dtype=asctile.float32)`.
 
+For contiguous unary activations distinguish a single wave from many tiles
+per available AIV. On long streams compare an aligned two-stage tile
+against the single-stage control, using the same FP32 formula and dtype.
+Choose the largest aligned T that fits the simultaneous input, intermediate
+and output tiles for both stages and leaves at least two useful tiles per
+active block. Pass U as a ConstExpr and use it as the actual loop's
+`unroll_factor`. For full tiles, use fixed-size copies. Bound both transfers
+on the final partial tile and give it one owner. For short streams where
+two stages would leave cores idle, keep one stage and distribute the tiles
+across the available AIVs. Compute the live-byte budget once; account for
+physical buffer reuse from compiler evidence when available. Compare both
+short and long fixtures before applying the rule to another activation.
+
 Check every generated `asctile.<name>` against the installed wheel before
 profiling. This wheel exports `maximum`, `minimum`, `exp`, `log`,
 `abs`, `tanh` and `erf`. Use the operand's `.dtype` in the JIT.
@@ -556,8 +569,9 @@ buffer; perform dtype conversion in the final JIT kernel.
 
 On the archive wheel the atomic signature is
 `asctile.atomic_add(src_local, dst_global, offsets)`. The source is a
-LocalTensor. Preserve the tensor rank when reducing (use a singleton axis
-with `keep_dims=True`), and check the returned kind on the pinned wheel.
+LocalTensor. Load a rank-two tile [1,T] with a ranked GM descriptor [1,n], then use
+`asctile.reduce_sum(tile, 1)` to leave a length-one LocalTensor.
+A reduction over every axis of a rank-one tile has a different result kind.
 Indexing a LocalTensor as `acc[0]` fails in the JIT. For a two-pass reduction,
 write each block's partial into a distinct slot, then reduce those partials
 in a separate launch. Use the neutral element for padded lanes in each norm
