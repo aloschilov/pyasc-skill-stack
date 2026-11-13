@@ -150,11 +150,18 @@ bounded body. Apply this legality check to every caller of any fixed-copy
 row JIT, including FP16 two-wave and FP32 three-stage fallbacks:
 
 ```python
+lanes_per_dma = 32 // x.element_size()
+width = ((half + lanes_per_dma - 1) // lanes_per_dma) * lanes_per_dma
 if rows % height == 0 and width == half:
     full_rows[blocks](x, out, rows, half, height, width, unroll)
 else:
     bounded_rows[blocks](x, out, rows, half, height, width, unroll)
 ```
+
+Compute the alignment in a single unit. At H2048 in FP32 this gives
+256 DMA units and W2048. Trace both R2048 and R2046 with T2 to the
+fixed-copy JIT; R2047 has one row left for the bounded JIT. At H509
+in FP32 the physical width is 512 and all DMA extents use H509.
 
 On the two-waves-plus-tail FP16 route a positive tail always selects
 bounded copies. At R1009/T7, the tile at row 1008 must read and write

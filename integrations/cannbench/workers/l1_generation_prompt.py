@@ -89,7 +89,7 @@ def prompt(task, skills):
             "with that height, width H, unroll 3 and the natural grid, then returns the output. "
             "When R is divisible by that height and W equals H, launch a dedicated "
             "opt_level=3 full-tile 2D JIT with default L2 descriptors and fixed-size copies. "
-            "Otherwise use bounded transfers. Check R=2047 as a partial-tile counterexample. "
+            "Align H in elements with lanes_per_dma = 32 // itemsize. Check actual launches for FP32 H2048/T2: both R2048 and R2046 take the fixed-copy JIT, and R2047 takes the bounded JIT. "
             "Trace R=2048, H=2048, FP32, 72 AIVs and 253952 UB bytes through the public entry "
             "point: it must pass height 2 and unroll 3 to the actual JIT launch. "
             "Before the ordinary row fallback, call padded_fp16_two_stage_height. "
