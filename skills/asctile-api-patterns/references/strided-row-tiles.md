@@ -20,6 +20,17 @@ width W to H rounded up to a multiple of 32/s elements. Size the tile
 from the useful payload and check local allocation using W including
 padding. The copy's real shape still uses H.
 
+When investigating a partial final tile, compare the emitted C++ with
+separate fresh `PYASC_CACHE_DIR` and `PYASC_DUMP_PATH` directories per
+variant. On the public 950PR build, a bounded 2D `copy_in` produced the
+same conditional `Duplicate` of missing rows with implicit padding and
+with `pad_value=0.0`. A final-block branch using the true compile-time
+extent removed that fill and shortened its register calculation. Keep
+the output bounded and time both versions at the same grid before
+changing dispatch. In three rounds on each of two short FP32 geometries,
+the exact terminal extent gave no consistent speedup.
+[Generated C++ comparison and matched hardware controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6859782820).
+
 - Start with the smallest power-of-two height T giving at least 8 KiB of
   useful half-tile payload. For positive R and H, compute
   `needed = (8192 + H*s - 1) // (H*s)`, then
