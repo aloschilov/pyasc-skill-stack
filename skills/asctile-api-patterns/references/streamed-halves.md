@@ -29,9 +29,20 @@ The 20/24-byte coefficients already include both stages. The preliminary
 32-byte width bound also provides headroom and is used only for selecting
 T. Multiplying that bound by two again rejected a 4096-lane tile on a
 253952-byte device despite an observed two-stage allocation of 81920
-bytes. For FP16/BF16, trace single rows outside the short four-wave branch
-with H=2080641 or H=2095104 through the public fallback to T4096/U2 on 72 AIVs.
+bytes. For BF16, trace a single row outside the four-wave branch with H=2080641
+through the public fallback to T4096/U2 on 72 AIVs.
 For a short row or a different emitter, recheck live chunks and UB.
+
+For a single FP16 row use `eight_wave_fp16_chunk` before generic chunk
+selection. It rounds H/(8*A) up to a 16-lane transfer quantum and limits
+the tile to 4–8 KiB per half. On a positive result, use the consecutive
+flat kernel, detected AIV count, unroll two, default L2 and the true final
+chunk extent. At H2095104 and A72 this gives T3648 and 575 chunks.
+Two fresh-process comparisons took 7.928 and 7.967 µs, versus 8.480 and
+8.313 µs for T4096/U2. Rounding down to T3632 took 8.417 and 8.732 µs.
+The corresponding single BF16 stream gave mixed results in the same
+experiment. Keep its qualified layout and grid.
+
 
 For a single BF16 row with about four moderate chunks per AIV, use
 `four_wave_bf16_chunk` from the flat template before the generic

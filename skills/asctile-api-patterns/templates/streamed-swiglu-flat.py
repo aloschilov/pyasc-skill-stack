@@ -99,6 +99,18 @@ def generic_flat_geometry(rows, half, itemsize, aivs, usable_ub):
     return tile, unroll, blocks
 
 
+def eight_wave_fp16_chunk(rows, half, dtype, aivs, usable_ub):
+    """Align a moderate FP16 stream to at most eight waves of two-stage tiles."""
+    if rows != 1 or dtype != torch.float16 or min(half, aivs, usable_ub) < 1:
+        return 0
+    wave_lanes = 8 * aivs * 16
+    tile = (half + wave_lanes - 1) // wave_lanes * 16
+    if not 2048 <= tile <= 4096 or 20 * tile > usable_ub:
+        return 0
+    chunks = (half + tile - 1) // tile
+    return tile if 7 * aivs < chunks <= 8 * aivs else 0
+
+
 def four_wave_bf16_chunk(rows, half, dtype, aivs, usable_ub):
     """Cover nearly four waves with consecutive chunks on a short BF16 stream."""
     if rows != 1 or dtype != torch.bfloat16 or min(half, aivs, usable_ub) <= 0:

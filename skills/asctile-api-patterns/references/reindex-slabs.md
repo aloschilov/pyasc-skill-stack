@@ -35,6 +35,9 @@ are DMA-aligned. Construct `2*k` in int32 before converting to int16 on
 the caller's device. Cache only that table. Pass input, output and the
 gate table as the three tensor arguments. Load the entire gate table once
 per block before the tile loop and compute `value_idx = gate_idx + 1` in UB.
+In a JIT shared with other half-widths write `value_idx = gate_idx + H`.
+Adding one is valid inside a dedicated H=1 specialization. Exercise the ordinary
+H=2 route with 2048 rows of [1, 2, 4, 8], whose value lanes are [4, 8].
 Pass the int16 indices directly to public reindex. Gather and widen the gate,
 compute its activation, then gather and widen the value and multiply. Keep
 the grid, bounded DMA extents and existing UB admission bounds. If the
