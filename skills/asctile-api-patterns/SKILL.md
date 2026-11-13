@@ -218,6 +218,16 @@ different tile sizes pads every short row and misses the dense-slab path.
 | Several moderate half-rows fit in UB with useful work across the grid | Two strided rank-two input copies and a bounded rank-two store. Use padded physical width for allocation and logical H for DMA. | Choose rows and unroll from [row geometry](references/strided-row-tiles.md). On this build 3 KiB per half-row is a measured starting cutover to streaming. |
 | Wide contiguous halves, a single long row, or too few rows to fill the grid with row tiles | Two rank-one contiguous chunk reads with source offsets H apart and a rank-one store. | T counts **elements**. There are `R * ceil(H/T)` live chunks. Keep each chunk inside its half-row and bound its tail as in the [flat template](templates/streamed-swiglu-flat.py). |
 
+In the public launcher, keep the two short BF16 branches adjacent:
+first try the two-wave selector, then try the ordinary slab if
+`H * itemsize <= 32`. On a positive ordinary slab tile, launch the
+reindex kernel and return before considering whole-row or generic 2D
+geometry. A generic row selector can return a legal positive padded
+height even for dense pairs. Trace the public call for BF16 shape
+(1000003, 2) on 72 AIVs and 253952 UB bytes: the executed kernel
+must receive two signed-int16 index vectors, T=4096 rows and unroll 2.
+Exercise H=7 as a separate two-wave launch.
+
 For short FP32 row grids, round the rows needed for 8 KiB **up** to a
 power of two, then check UB. If the resulting tile count fits the reported
 AIVs, emit a direct one-tile-per-block body with a bounded final copy.
