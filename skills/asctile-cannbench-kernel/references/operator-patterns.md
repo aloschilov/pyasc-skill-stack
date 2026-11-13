@@ -160,6 +160,13 @@ rounds. Scope the attribute to the calibrated kernel. Keep the FP32
 promotion, public scalar order, DMA geometry, and grid fixed when testing
 another compiler version.
 
+Follow the FP16 identity launch into its own loop body. Two clean
+modules selected T4864 on 72 blocks but hardcoded unroll 1 in the JIT.
+They took 4.655 and 4.663 µs for 1024² inputs. Set
+`unroll_factor=3` in the grid-stride loop used by the short selector,
+or pass a compile-time unroll parameter equal to 3 at this call. Keep
+the one-wave and general streaming paths on their own selected stages.
+
 For contiguous ownership set `M = ceil_div(N,T)` and
 `C = ceil_div(M,actual_blocks)`. Block `b` handles the `C` tiles from
 `b*C` in `asctile.range(C, unroll_factor=3)`. Clamp the offset of any
