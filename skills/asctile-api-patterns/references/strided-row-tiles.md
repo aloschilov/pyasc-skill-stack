@@ -55,7 +55,7 @@ padding. The copy's real shape still uses H.
   Bound the real height on both loads and the store. With fewer available
   blocks than tiles, the grid-stride loop must cover all remaining tiles.
   For example on 72 AIVs, 143 rows of 536 FP32 values **per half**
-  select T=4 and 36 blocks. With a padded FP32 half-row, apply the balanced-grid check below after fitting the ordinary height.
+  select T=4 and 36 blocks. For 273 rows of 509 use eight rows and 35 blocks. Keep the balanced-grid helper below for controlled comparisons.
 
 Choose the ordinary bounded row kernel's unroll independently of whether
 a copy needs `real_shape`. A ragged final tile and a padded local row both
@@ -108,7 +108,7 @@ def ordinary_dma_height(rows, half, itemsize, bytes_per_lane, usable_ub):
 ```
 
 A trace of the public FP32 selector on 273 rows must see half=509,
-then width=512 only in the UB check. The ordinary eight-row fit gives 35 natural tiles on 72 AIVs before balancing. Passing 512 to both steps cut the tile to four
+then width=512 only in the UB check. The ordinary eight-row fit gives 35 blocks on 72 AIVs. Passing 512 to both steps cut the tile to four
 rows, launched 69 blocks and took 3.114 µs in a full hardware suite.
 
 Run this guard before *both* ordinary row launch sites, including the
@@ -250,7 +250,7 @@ directly and use `real_shape=[rows,H]` for all three DMA operations.
 This one-wave body accepts any W >= H that fits UB, including padded
 FP32 rows. Route on dtype and tile count after the fit check. The
 `W == H` guard belongs to the separate fixed-size three-stage body.
-Trace R273/H509 through the ordinary fit and the balanced selection to the launched JIT.
+Trace R273/H509 through the ordinary fit to T8/W512/N35 in the launched JIT.
 The arithmetic is lane-wise and the output store excludes all padding.
 Keep the two half-row reads batched across T rows through one source
 descriptor. At R273/H509, per-row reads with a final concat took
@@ -259,7 +259,7 @@ in pairs took 4.100/3.754 µs. At R143/H536 the paired variant gave
 2.524/2.203 µs against 2.206/2.247 µs. Both comparisons kept the
 original tile, grid and exact output extent.
 
-For padded single-wave FP32 on 950PR, distribute rows across up to
+To benchmark an alternative padded single-wave FP32 grid on 950PR, distribute rows across up to
 two-thirds of the available AIVs when the extra blocks shorten the
 ordinary tile and each half still moves at least 8 KiB per full block.
 Apply this after the ordinary positive UB fit and only to a single wave.
@@ -285,13 +285,19 @@ where b is the physical block index. Both reads use `[T,W]` in UB and
 with dimensions `[R,2*H]` and column offsets 0 and H. On the tested
 wheel, changing it to `[R,2,H]` and reading a singleton middle
 dimension for each half failed the finite numerical check for 57,342 of
-76,648 outputs at R143/H536.
+76,648 outputs at R143/H536. On an input labelled by physical
+half-row, each source read advanced one half-row per local row inside
+a tile. The intended stride was two half-rows. Only the first row per
+tile had the intended labels at R143/H536 and R273/H509.
 
 At R273/H509/W512 and 72 AIVs the ordinary height is eight. The balanced
 path uses T6/N48. Blocks 0 through 32 own six rows each and the remaining
 15 own five. In two shuffled rounds this geometry took 2.576 and 2.574 µs.
-The eight-row N35 control took 2.621 µs in both. Keep the ordinary
-padded path when the guard falls through. For aligned FP32 retain the
+The eight-row N35 control took 2.621 µs in both. A fresh full-suite
+generation at N48 took 3.646 µs. In a subsequent shuffled control, N48
+took 3.301/2.800 µs and N35 took 2.713/3.337 µs. Use the ordinary
+padded grid in generated modules until a paired comparison reproduces
+the balanced advantage. For aligned FP32 retain the
 ordinary T and grid, rotating the tile ordinal by half the grid:
 
 ```python
@@ -308,16 +314,15 @@ three-row tail moved from physical block 35 to block 17. At
 T8/H509/W512/N35, rotating took 2.605/2.640 µs versus 2.597/2.639 µs.
 Verify ownership on the actual JIT and compare medians in the full suite.
 
-For the single-wave FP32 body, use the compile-time relationship between W
-and H to choose when to read the value. With W > H, read the gate with
-the bounded 2D copy, compute `denom = 1.0 + asctile.exp(-gate)`, then
-issue the bounded 2D value read and compute `(gate / denom) * value`.
-Use the same true extents on both reads and the store. For W == H, issue
-both reads before the arithmetic. On the 950PR with T8/H509/W512, the
-denominator-first order took 2.559 and 2.642 µs versus 2.693 and 2.662
-µs for both reads first. With T4/H536/W536 the same change gave 2.241
-and 2.514 µs versus 2.260 and 2.188 µs. Check the generated JIT body
-as well as its grid when repeating these timings.
+For the ordinary padded FP32 single-wave body, issue the bounded value
+read first, then the bounded gate read, then compute
+`(gate / (1.0 + exp(-gate))) * value`. Keep both DMA bounds identical
+and keep gate as the argument of exp. At N35/T8/H509/W512 this order
+took 2.544/2.594 µs versus 2.607/2.654 µs with gate read first.
+Another shuffle gave 2.649/2.589 versus 3.158/3.333 µs. The earlier
+denominator-before-value schedule gave 2.559/2.642 µs in its own run.
+For aligned FP32 keep the gate read first and both reads ahead of math.
+Verify the order at the actual JIT call and compare warmed medians.
 
 Exercise the selector with a smaller UB that fits only one iteration, a
 smaller UB that forces a shorter height, and short grids. Compare warmed
