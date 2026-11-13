@@ -1,4 +1,5 @@
 """Compare chunk ownership and vector alignment for a four-wave FP32 stream."""
+import re
 from hashlib import sha256
 from pathlib import Path
 from shutil import copyfile
@@ -24,6 +25,7 @@ def render(source, mode):
         loop, body = fn[a:b].split(offset + "\n")
         regular = body.replace("[tile]", "[bulk]")
         last = body.replace("[tile]", "[edge]")
+        last = re.sub(r"\b(gate|value|g|out)\b", r"edge_\1", last)
         fn = (fn[:a] + "    bulk = tile // 64 * 64\n"
               "    edge = waves * tile - (waves - 1) * bulk\n"
               + loop.replace("range(waves, unroll_factor=2)", "range(waves - 1, unroll_factor=2)")
