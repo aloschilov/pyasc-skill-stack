@@ -1,4 +1,6 @@
 """Compare two-wave BF16 slab height rounding and active grid independently."""
+import csv
+import json
 from hashlib import sha256
 from pathlib import Path
 from shutil import copyfile
@@ -55,3 +57,20 @@ if __name__ == '__main__':
         (package / 'swi_glu.py').write_text(code)
         (package / '__init__.py').touch()
         copyfile(base.with_name('_pyasc_runtime.py'), package / '_pyasc_runtime.py')
+
+    public = Path('generation/task')
+    with (public / 'cases.csv').open() as f:
+        proto, = (row for row in csv.DictReader(f) if row['case_id'] == '9')
+    for half, rows in ((5, 133171), (6, 135411)):
+        root = Path(f'half{half}')
+        task = root / 'generation/task'
+        task.mkdir(parents=True)
+        row = dict(proto, input_shape=json.dumps([[rows, 2 * half]]),
+                   note='Synthetic two-wave BF16 row geometry')
+        with (task / 'cases.csv').open('w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=row.keys())
+            writer.writeheader()
+            writer.writerow(row)
+        copyfile(public / 'golden.py', task / 'golden.py')
+        for mode in ('base', 'power', 'compact'):
+            (root / mode).symlink_to(Path(mode).resolve(), target_is_directory=True)
