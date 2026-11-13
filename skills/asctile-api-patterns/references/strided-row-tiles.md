@@ -71,6 +71,27 @@ def fit_row_height(height, rows, width, bytes_per_lane, usable_ub):
     return 0
 ```
 
+Keep the logical and padded widths as separate arguments throughout
+the public dispatch. With H=509 in FP32, exactly four rows carry
+8144 useful bytes even though their padded allocation is 8192 bytes.
+Compute the requested height using H before calling the UB guard with W:
+
+```python
+def ordinary_dma_height(rows, half, itemsize, bytes_per_lane, usable_ub):
+    if min(rows, half, itemsize) <= 0:
+        return 0
+    row_bytes = half * itemsize
+    required = (8192 + row_bytes - 1) // row_bytes
+    height = 1 << (required - 1).bit_length()
+    width = ((row_bytes + 31) // 32) * (32 // itemsize)
+    return fit_row_height(height, rows, width, bytes_per_lane, usable_ub)
+```
+
+A trace of the public FP32 selector on 273 rows must see half=509,
+then width=512 only in the UB check. The resulting eight-row tile uses
+35 blocks on 72 AIVs. Passing 512 to both steps cut the tile to four
+rows, launched 69 blocks and took 3.114 µs in a full hardware suite.
+
 Run this guard before *both* ordinary row launch sites, including the
 single-wave body. Zero falls through to streamed column chunks.
 With 253952 bytes of UB, an FP32 half-row of width 32760 already needs
