@@ -57,6 +57,14 @@ For Mish, compute a stable softplus (including the positive large-input
 limit) before tanh. Verify finite inputs and the public exceptional-value
 cases for each activation after the cast back.
 
+For a versioned CANNBench request, read `tasks/suite_manifest.json` first.
+Select operators by `level`, verify their public fixture digests, and pair
+them with the same suite's device metadata. For task version 2.0.0 the L1
+entries are Exp and SwiGLU. The archived Season 1 entries have distinct
+coverage and baselines. On a local replay of a native operator, preserve
+the published scoring denominator and record the native grid, toolchain
+and timing separately.
+
 When validating a shared dispatch or tiling rule across L1, keep one complete
 generated module per operator. Run every public case and record both numerical
 coverage and the geometric mean of `baseline_perf_us / measured_us`. Use the
