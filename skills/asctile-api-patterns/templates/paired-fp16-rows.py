@@ -1,7 +1,9 @@
 """Two aligned FP16 row tiles per block with a small tail in the second wave.
 
 Use after the shape, alignment, payload and enlarged-tile UB checks in
-references/strided-row-tiles.md. N is the actual launch grid.
+references/strided-row-tiles.md. In the host dispatcher, evaluate this
+specialization before the ordinary bounded-row branch can return. N is the
+actual launch grid.
 """
 import torch
 from asc.experimental import asctile
