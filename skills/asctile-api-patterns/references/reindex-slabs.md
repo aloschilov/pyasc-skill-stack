@@ -43,6 +43,22 @@ allocation when changing tile geometry or compiler. At T4096/U2/N72,
 two matched runs took 6.301 and 6.273 µs with this kernel. Loading both
 int32 tables at the same geometry took 6.789 and 6.851 µs.
 
+Use this host helper before building the general int32 metadata. A returned
+tensor supplies the third argument to the ordinary pair JIT. A None result
+continues to the general path. The cache holds input-independent indices.
+
+```python
+def dense_pair_gate_index(half, tile, device, cache):
+    if half != 1 or tile < 1 or 2 * tile - 1 > 32767 or (2 * tile) % 32:
+        return None
+    key = ("dense_pair_i16", device, tile)
+    if key not in cache:
+        k = torch.arange(tile, device=device, dtype=torch.int32)
+        cache[key] = (2 * k).to(torch.int16)
+    return cache[key]
+```
+
+
 Declare the device function itself with `@asctile.jit(reuse_alloc=2)`. The
 selector below is paired with this allocation policy. Merely writing
 `@asctile.jit(always_compile=False)` does not select allocation reuse.

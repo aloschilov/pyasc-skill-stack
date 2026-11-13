@@ -225,7 +225,8 @@ reindex kernel and return before considering whole-row or generic 2D
 geometry. A generic row selector can return a legal positive padded
 height even for dense pairs. Trace the public call for BF16 shape
 (1000003, 2) on 72 AIVs and 253952 UB bytes: the executed kernel
-must receive two signed-int16 index vectors, T=4096 rows and unroll 2.
+receives input, output and one signed-int16 gate vector at T=4096 rows
+and unroll 2. Derive the value indices from the gate vector in UB.
 Exercise H=7 as a separate two-wave launch.
 
 For short FP32 row grids, round the rows needed for 8 KiB **up** to a
