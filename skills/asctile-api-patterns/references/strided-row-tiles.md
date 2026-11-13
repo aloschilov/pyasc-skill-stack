@@ -199,6 +199,10 @@ Bypassing only the output took 2.641/2.700 and 2.960/2.950 µs.
 When the single-wave launch has exactly `ceil(R/T)` blocks for R > 0,
 each starting row is valid. Compute `rows = min(T, R - block_idx*T)`
 directly and use `real_shape=[rows,H]` for all three DMA operations.
+This one-wave body accepts any W >= H that fits UB, including padded
+FP32 rows. Route on dtype and tile count after the fit check. The
+`W == H` guard belongs to the separate fixed-size three-stage body.
+Trace R273/H509 to the single-wave JIT itself with N35/T8/W512.
 The arithmetic is lane-wise and the output store excludes all padding.
 Keep the two half-row reads batched across T rows through one source
 descriptor. At R273/H509, per-row reads with a final concat took
