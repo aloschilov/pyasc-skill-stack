@@ -382,6 +382,17 @@ three-row tail moved from physical block 35 to block 17. At
 T8/H509/W512/N35, rotating took 2.605/2.640 µs versus 2.597/2.639 µs.
 Verify ownership on the actual JIT and compare medians in the full suite.
 
+When testing the cost of this rotation, keep the mapping of block to tile
+identical. If one wave owns every tile and the launch has exactly
+`ceil(R/T)` blocks, that count is available from the compile-time shape.
+For `0 <= b < n`, `shifted = b + n//2` wraps at most once. Subtracting
+`n` when `shifted >= n` preserves the mapping for both odd and even grids.
+Check the lowered kernel for a runtime divide or remainder, then time the
+same layout on a finite input. On 950PR the subtraction improved all three
+public R143/H536 rounds, but only one of three finite rounds at the same
+R/H/T and grid. At R144 it improved all three finite rounds, while R139
+and R140 were mixed. Keep the ordinary rotation above as the default.
+
 For the ordinary padded FP32 single-wave body, issue the bounded value
 read first, then the bounded gate read, then compute
 `(gate / (1.0 + exp(-gate))) * value`. Keep both DMA bounds identical
