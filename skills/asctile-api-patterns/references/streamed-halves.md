@@ -34,7 +34,12 @@ For 2039 rows of 32760 FP32 lanes per half, 72 AIVs and 253952 available
 UB bytes this gives five chunks of 6552 with no tail pass. The two
 shuffled controls took 521.929/521.204 µs, versus 529.821/529.377 µs
 at 4096 and unroll 3, or 524.550/524.646 µs at 8192 and unroll 2.
-The public baseline is 522.100 µs; retain independent full-suite checks.
+The public baseline is 522.100 µs. Use `wide_fp32_chunk` from the
+flat template and pass its positive result to the full-copy launch
+with unroll 3. Count live chunks across every row: 2039 × 5 = 10195.
+One clean module compared five chunks per row with 216 required for
+three waves, rejected the divisor, and took 532.008 µs with T4096/U2.
+The full-suite T6552/U3 measurement was 521.531 µs.
 
 ### Complete aligned BF16 half-rows
 

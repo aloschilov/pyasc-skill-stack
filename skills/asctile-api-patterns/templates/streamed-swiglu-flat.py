@@ -82,6 +82,23 @@ def whole_fp32_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
         asctile.copy_out(out, dst, [row * half])
 
 
+def wide_fp32_chunk(rows, half, dtype, aivs, usable_ub):
+    """Choose a full divisor when all rows together sustain three stages."""
+    if dtype != torch.float32 or min(half, aivs, usable_ub) <= 0 or rows < aivs or half % 8:
+        return 0
+    ordinary_cap = min(half, 4096, usable_ub // 32)
+    if ordinary_cap < 8:
+        return 0
+    base = 1 << (ordinary_cap.bit_length() - 1)
+    if 4 * (half % base) < 3 * base:
+        return 0
+    capacity = min(half, usable_ub // 36)
+    for width in range(capacity - capacity % 8, base, -8):
+        if half % width == 0 and rows * (half // width) >= 3 * aivs:
+            return width
+    return 0
+
+
 def whole_fp32_grid(rows, half, dtype, aivs, usable_ub):
     """Select four-stage block-stride ownership of moderate aligned FP32 rows."""
     if dtype != torch.float32 or aivs < 1 or not 4 * aivs <= rows <= 8 * aivs:
