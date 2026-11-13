@@ -189,6 +189,7 @@ def prompt(task, skills):
         sections.append(
             "Use x.element_size() for the host item size. Trace each branch including any default: "
             "pass the caller's x unchanged into the JIT. For an unsupported dtype raise TypeError. "
+            "Derive log_base with the positive-base predicate from the Exp skill. For a NaN base and finite x, the golden uses ordinary exp. "
             "In the public Exp entry point, select the qualified short 16-bit regime before "
             "generic streaming. Keep all host tiles, grids and unrolls as native Python ints. "
             "Use ConstExpr only as a kernel parameter annotation, passing native ints or bools at launch. "

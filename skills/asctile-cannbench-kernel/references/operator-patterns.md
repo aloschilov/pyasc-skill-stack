@@ -113,7 +113,10 @@ The archive wheel resolves JIT dependencies before execution and has no
 `asctile.cast_scalar`. A Python `float` launch argument with this annotation
 already has the required scalar ABI. Pass the decisions to omit identities as separate
 `asctile.ConstExpr` flags: `scale != 1`, `shift != 0`, `log_base != 1`.
-Use `log_base = 1.0` for a nonpositive base. A nested kernel factory
+Use the public positive-base predicate exactly:
+`log_base = math.log(base) if base > 0.0 else 1.0`. An unordered NaN
+base takes the natural-exponential branch. Check it with finite inputs so
+a mismatch is visible. A nested kernel factory
 capturing Python values can compile the first values for a dtype into a
 binary that subsequent invocations reuse. An input with the same shape and
 dtype must produce different correct values as the public attributes change.
