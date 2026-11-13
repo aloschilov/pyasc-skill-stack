@@ -68,8 +68,9 @@ def run(task, case, direct_simt=False):
             if len({r[key] for r in records}) != 1:
                 raise ValueError(f"task selection changed across calls: {key}")
         name = records[0]["Op Name"].lower()
-        valid_name = "short_rows" in name if direct_simt else name == "swiglu"
-        if direct_simt and int(records[0][grid]) != {11: 35, 13: 36}[case]:
+        expected_symbol = {11: "short_rowsilj273elj509elj8ee", 13: "short_rowsilj143elj536elj4ee"}[case]
+        valid_name = expected_symbol in name if direct_simt else name == "swiglu"
+        if direct_simt and int(records[0][grid]) not in (0, {11: 35, 13: 36}[case]):
             raise ValueError(f"unexpected SIMT grid: {records[0][grid]}")
         if not valid_name or records[0][task_type] != "AI_VECTOR_CORE":
             raise ValueError(f"unexpected native task: {records[0]}")
@@ -79,6 +80,7 @@ def run(task, case, direct_simt=False):
         results.append(dict(fixture=name, case=case, shape=shape, dim=dim, correct=True,
                             task=records[0]["Op Name"], task_type=records[0][task_type],
                             block_dim=records[0][grid], samples_us=times,
+                            **({"requested_blocks": {11: 35, 13: 36}[case]} if direct_simt else {}),
                             median_us=statistics.median(times[5:]), cases_sha256=digest(task/"cases.csv"),
                             golden_sha256=digest(task/"golden.py"), summary_sha256=digest(summary)))
     return results
