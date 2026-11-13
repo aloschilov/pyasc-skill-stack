@@ -288,6 +288,17 @@ addresses across every row. With FP32, an aligned column offset in row
 zero stays 32-byte aligned in later rows only when H is a multiple of
 eight. Verify that separate writers own disjoint DMA bursts.
 
+To test eliminating the last partial row tile, compare the DMA-derived
+height with a divisor of the row count. Changing height also changes the
+number of active blocks. At the exact height, test column bands separately:
+round the regular band up to a 32-byte burst and give the final band its
+actual width. Check the last band's starting address and extent on every
+row. Measure the full-width control in each round before changing the
+dispatcher. On the 950PR a 143×536 FP32 output took 2.216 and 2.304 µs with
+four rows per tile and 36 blocks. Eleven exact rows with two column bands
+took 2.304 and 2.334 µs on 26 blocks. One and four bands took longer in
+both rounds. Keep the DMA-derived height for this layout.
+
 For the ordinary single-wave launch with exactly `ceil(R/T)` blocks and R > 0,
 each starting row is valid. Compute `rows = min(T, R - r)`
 directly and use `real_shape=[rows,H]` for all three DMA operations.
