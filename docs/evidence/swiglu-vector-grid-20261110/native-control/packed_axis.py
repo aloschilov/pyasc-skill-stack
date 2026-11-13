@@ -46,9 +46,9 @@ def packed_axis_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
 '''
     if mode.endswith("_outer"):
         # The public 950PR Reduce{Sum,Prod} accepts a leading reduction.
-        start = kernel.index("    slab = ")
-        end = kernel.index("    mask = ", start)
-        kernel = (kernel[:start] + """    rows = asctile.reshape(packed, T, 2, W)
+        axis_start = kernel.index("    slab = ")
+        end = kernel.index("    mask = ", axis_start)
+        kernel = (kernel[:axis_start] + """    rows = asctile.reshape(packed, T, 2, W)
     slab = asctile.reshape(asctile.transpose(rows, 1, 0, 2), 2, T * W)
     yes = asctile.full([1, T * W], 1, asctile.float32)
     no = asctile.zeros([1, T * W], asctile.float32)
