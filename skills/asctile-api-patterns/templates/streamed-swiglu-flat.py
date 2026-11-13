@@ -82,6 +82,19 @@ def whole_fp32_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
         asctile.copy_out(out, dst, [row * half])
 
 
+def four_wave_bf16_chunk(rows, half, dtype, aivs, usable_ub):
+    """Cover nearly four waves with consecutive chunks on a short BF16 stream."""
+    if rows != 1 or dtype != torch.bfloat16 or min(half, aivs, usable_ub) <= 0:
+        return 0
+    tile = (half // (4 * aivs)) // 16 * 16
+    if not 2048 <= tile <= 4096 or 36 * tile > usable_ub:
+        return 0
+    remainder = half - 4 * aivs * tile
+    if remainder > min(tile - 1, 16 * aivs):
+        return 0
+    return tile
+
+
 def wide_fp32_chunk(rows, half, dtype, aivs, usable_ub):
     """Choose a full divisor when all rows together sustain three stages."""
     if dtype != torch.float32 or min(half, aivs, usable_ub) <= 0 or rows < aivs or half % 8:

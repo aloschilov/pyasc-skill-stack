@@ -23,9 +23,23 @@ The 20/24-byte coefficients already include both stages. The preliminary
 32-byte width bound also provides headroom and is used only for selecting
 T. Multiplying that bound by two again rejected a 4096-lane tile on a
 253952-byte device despite an observed two-stage allocation of 81920
-bytes. For FP16/BF16, trace a single row with H=1046017, H=2080641,
-or H=2095104 through the public fallback to T4096/U2 on 72 AIVs.
+bytes. For FP16/BF16, trace single rows outside the short four-wave branch
+with H=2080641 or H=2095104 through the public fallback to T4096/U2 on 72 AIVs.
 For a short row or a different emitter, recheck live chunks and UB.
+
+For a single BF16 row with about four moderate chunks per AIV, use
+`four_wave_bf16_chunk` from the flat template before the generic
+two-stage fallback. Its positive width launches the same consecutive
+full-chunk kernel at the detected AIV count, with unroll four.
+Keep the separate bounded same-launch remainder. The short-stream
+selector rounds H/(4*A) down to the 16-lane DMA quantum, limits the
+payload to 4–8 KiB per input half and reserves 36 bytes per output
+lane for the four-stage direct-division emitter. Check the compiled
+allocation on each new build. Require the remainder to fit one additional chunk and at most one
+DMA quantum per available AIV. At H=1046017 there are 288 full
+3,632-lane tiles and one output lane in the final bounded tile. On 72 AIVs the measured
+T3632/U4 times were 5.025/5.089 µs; the same kernel with T4096/U2
+took 5.535/5.630 µs. Other widths keep their generic selection.
 
 ### Wide aligned FP32 half-rows with a nearly full remainder
 
