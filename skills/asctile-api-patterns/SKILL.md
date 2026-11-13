@@ -43,6 +43,13 @@ select grids, prepare index descriptors and launch kernels. A launch spy
 can confirm the grid and arguments without compiling this device body;
 compile the selected kernel and check its output before timing.
 
+Compute tile sizes, loop unroll and grids in the host dispatcher using
+Python integers. Declare specialized kernel parameters with
+`asctile.ConstExpr[int]` in the JIT signature and pass the computed integer
+at launch. Calling `asctile.ConstExpr(tile)` in the dispatcher creates a
+wrapper that fails integer arithmetic such as `numel // tile` on the
+archive wheel. Apply the same distinction to boolean specialization flags.
+
 The exact memory signatures are:
 
 - `global_tensor(base, shape)` creates a ranked GM descriptor.

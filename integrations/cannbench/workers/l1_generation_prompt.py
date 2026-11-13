@@ -104,7 +104,9 @@ def prompt(task, skills):
     elif op == "exp":
         sections.append(
             "In the public Exp entry point, select the qualified short 16-bit regime before "
-            "generic streaming. For 24–32 KiB of input per available AIV and a UB-qualified "
+            "generic streaming. Keep all host tiles, grids and unrolls as native Python ints. "
+            "Use ConstExpr only as a kernel parameter annotation, passing native ints or bools at launch. "
+            "For 24–32 KiB of input per available AIV and a UB-qualified "
             "aligned three-tile schedule, pass unroll 3 in both paths. Use the contiguous "
             "schedule if any of apply_scale, apply_shift or apply_log is active, including "
             "the base-only case. For FP16 identity use grid-stride with the same unroll. "
