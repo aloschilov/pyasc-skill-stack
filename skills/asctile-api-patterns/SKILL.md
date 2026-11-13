@@ -96,6 +96,11 @@ and logical reduction axis.
 
 ## Tails and padding
 
+For scalar address arithmetic inside a JIT use the Python builtins:
+`valid = min(tile_size, size - offset)`. The archive-bundled 950PR
+AscTile has no module-level `asctile.min` for this operation. Check every
+kernel in the module against the installed surface, including fallbacks.
+
 For a partial tile, allocate an aligned physical `shape` and pass the logical
 extent through `real_shape`. The final physical dimension of a 2-D-or-higher
 UB transfer must be 32-byte aligned. Padded lanes still participate in vector
