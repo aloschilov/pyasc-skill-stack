@@ -276,6 +276,21 @@ full-wave loop and bounded tail measured 6.830 and 6.863 µs. The kernels also
 differ in how they bound full tiles. Benchmark the entire kernel when
 choosing the schedule for another shape.
 
+When tuning a multi-lane BF16 slab near two waves, vary the launch count
+at a fixed tile height before attributing a gain to rounding the tile.
+For a proposed larger tile with M tiles and A available AIVs, when
+A < M <= 2*A, also measure the even grid N = min(A, 2*ceil(M/4)).
+Verify the compiled UB footprint, the signed index bound, and complete
+output ownership by the existing contiguous-interval loop. On 950PR,
+131 tiles of 1,024 rows and seven values per half took
+6.282/6.103/6.783 µs at 66 blocks and 7.068/6.988/6.895 µs at 72,
+with byte-identical emitted C++. The ordinary 928-row tile at 72 blocks
+took 6.684/6.532/6.729 µs. At half-widths five and six the compact
+1,024-row candidate beat the ordinary tile in three of four paired
+rounds. Treat it as an alternative to qualify on the target. Use the
+ordinary two-wave selector as the default until a full independent
+generation confirms a replacement.
+
 ## Dense FP32 slabs
 
 For dense FP32 slabs with no partial row tile, time an alternate first
