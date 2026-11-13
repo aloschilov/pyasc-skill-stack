@@ -14,7 +14,7 @@ def swiglu_flat(
     U: asctile.ConstExpr[int],
     cache_input: asctile.ConstExpr[bool] = True,
 ):
-    # Large exact-divisor FP32 streams visit every input lane once.
+    # The host chooses input caching for large single-pass FP32 and FP16 streams.
     gx = asctile.global_tensor(x, [2 * R * H], l2_cache=cache_input)
     gy = asctile.global_tensor(y, [R * H])
     whole = H // T

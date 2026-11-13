@@ -76,8 +76,7 @@ The full-suite T6552/U3 measurement was 521.531 µs.
 For this exact-divisor FP32 branch, bypass input L2 when the physical
 input exceeds 64 MiB and each half is read once. Calculate bytes as
 `2*R*H*itemsize` on the host. Launch the qualified flat kernel with
-`cache_input=False` only in this regime; use its default True on all
-other flat paths. The output descriptor retains its default caching.
+`cache_input=False` for this regime and for the long FP16 stream below. The output descriptor retains its default caching.
 At R=2039, H=32760, T6552/U3/N72 the only changed device argument was
 the input L2 policy. The two medians were 449.609/450.055 µs versus
 521.382/522.254 µs with both descriptors at default. Disabling only
@@ -117,6 +116,14 @@ fit. Use `long_fp16_grid` from the flat template before the generic
 capacity-based chunk rule. It restricts this tuning to a single row, at
 least 64 waves of full chunks, a fitting UB footprint, and a grid near
 the available AIV count that gives every block complete groups of four.
+
+For a positive `long_fp16_grid` and a physical input above 64 MiB, pass
+`False` as the input cache argument of the flat JIT. Keep the default
+output descriptor. At 256 MiB of FP16 input, N64/T8192/U4 took 169.517
+and 170.157 µs with input bypass, versus 240.871 and 241.618 µs with
+default caching. Bypassing both descriptors took 268.307 and 268.858 µs.
+At N72, the input-only bypass took 169.884 and 169.588 µs. These controls
+cover the long single-pass shape. Use default caching for other FP16 paths.
 
 For a half of 67108864 FP16 elements, 8192 chunks on 64 blocks give
 128 per block. The same 8192-lane, four-stage kernel took 241.468 and
