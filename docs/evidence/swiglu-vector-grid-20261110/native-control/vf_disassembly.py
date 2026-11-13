@@ -27,7 +27,7 @@ def sections(data):
 
 
 def device_elf(executable):
-    payload = sections(executable)["__aicore_reloc_binary"]
+    payload = sections(executable)[".aicore_binary"]
     if payload.count(b"\x7fELF") != 1:
         raise ValueError("expected one packaged device image")
     image = payload[payload.index(b"\x7fELF"):]
