@@ -45,7 +45,13 @@ int main(int argc, char** argv) {
     if (policy != "huge" && policy != "normal") return 2;
     const auto allocation = policy == "huge" ? ACL_MEM_MALLOC_HUGE_ONLY : ACL_MEM_MALLOC_NORMAL_ONLY;
     const std::string staging = std::getenv("REPLAY_COPIES") ? std::getenv("REPLAY_COPIES") : "once";
-    if (staging != "once" && staging != "each") return 2;
+    // Bits select the transfers between calls while retaining both addresses.
+    // Keep historical names for the original two schedules.
+    unsigned transfers = 0;
+    if (staging == "each") transfers = 7;
+    else if (staging.size() == 1 && staging[0] >= '0' && staging[0] <= '7')
+        transfers = static_cast<unsigned>(staging[0] - '0');
+    else if (staging != "once") return 2;
     std::vector<float> output(lanes);
     check(aclrtMalloc(&src, 2 * bytes, allocation), "allocate input");
     check(aclrtMalloc(&dst, bytes, allocation), "allocate output");
@@ -60,13 +66,13 @@ int main(int argc, char** argv) {
     check(rtFunctionRegister(binary, name, name, name, 0), "register function");
     uintptr_t args[] = {reinterpret_cast<uintptr_t>(src), reinterpret_cast<uintptr_t>(dst)};
     for (int i = 0; i < 17; ++i) {
-        if (staging == "each") {
+        if (transfers & 1U)
             check(aclrtMemcpy(src, 2 * bytes, host.data(), 2 * bytes, ACL_MEMCPY_HOST_TO_DEVICE), "stage input");
+        if (transfers & 2U)
             check(aclrtMemcpy(dst, bytes, output.data(), bytes, ACL_MEMCPY_HOST_TO_DEVICE), "stage output");
-        }
         check(rtKernelLaunch(name, grid, args, sizeof(args), nullptr, stream), "launch");
         check(aclrtSynchronizeStream(stream), "synchronize");
-        if (staging == "each")
+        if (transfers & 4U)
             check(aclrtMemcpy(output.data(), bytes, dst, bytes, ACL_MEMCPY_DEVICE_TO_HOST), "read output");
     }
     check(aclrtMemcpy(host.data(), bytes, dst, bytes, ACL_MEMCPY_DEVICE_TO_HOST), "copy output");
