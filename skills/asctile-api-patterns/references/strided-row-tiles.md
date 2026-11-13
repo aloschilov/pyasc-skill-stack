@@ -51,11 +51,11 @@ padding. The copy's real shape still uses H.
   supplies at least two tiles per active AIV on average. Otherwise keep
   the height at unroll 1. Launch min(available AIVs, ceil(rows/T)) blocks.
   For FP32 when `ceil(rows/T) <= available AIVs`, specialize a single-wave
-  kernel: one tile directly at `block_idx*T`, no grid-stride loop, unroll 1.
+  kernel with a single bounded row interval per block and unroll 1.
   Bound the real height on both loads and the store. With fewer available
   blocks than tiles, the grid-stride loop must cover all remaining tiles.
   For example on 72 AIVs, 143 rows of 536 FP32 values **per half**
-  select T=4 and 36 blocks; 273 rows of 509 select T=8 and 35 blocks.
+  select T=4 and 36 blocks. With a padded FP32 half-row, apply the balanced-grid check below after fitting the ordinary height.
 
 Choose the ordinary bounded row kernel's unroll independently of whether
 a copy needs `real_shape`. A ragged final tile and a padded local row both
@@ -108,8 +108,7 @@ def ordinary_dma_height(rows, half, itemsize, bytes_per_lane, usable_ub):
 ```
 
 A trace of the public FP32 selector on 273 rows must see half=509,
-then width=512 only in the UB check. The resulting eight-row tile uses
-35 blocks on 72 AIVs. Passing 512 to both steps cut the tile to four
+then width=512 only in the UB check. The ordinary eight-row fit gives 35 natural tiles on 72 AIVs before balancing. Passing 512 to both steps cut the tile to four
 rows, launched 69 blocks and took 3.114 µs in a full hardware suite.
 
 Run this guard before *both* ordinary row launch sites, including the
@@ -118,7 +117,7 @@ With 253952 bytes of UB, an FP32 half-row of width 32760 already needs
 524160 bytes at 16 bytes per lane. A BF16 half-row of padded width 1046032
 also exceeds UB at height one. Trace the actual public launches for
 these widths and check that each uses a bounded column tile. For
-short FP32 rows keep the qualified height and natural grid. In two
+short FP32 rows retain the ordinary geometry outside the single-wave specializations. In two
 rounds with full arithmetic, increasing height from 4 to 8 at half-width
 536 reduced the grid from 36 to 18 and increased latency from
 2.411/2.442 to 2.655/2.461 µs. At half-width 509, increasing height from
@@ -245,13 +244,13 @@ for 143 rows of half-width 536 and 2.753/2.725 µs for 273 rows of
 half-width 509. Default descriptors gave 2.497/2.468 and 2.805/2.878 µs.
 Bypassing only the output took 2.641/2.700 and 2.960/2.950 µs.
 
-When the single-wave launch has exactly `ceil(R/T)` blocks for R > 0,
+For the ordinary single-wave launch with exactly `ceil(R/T)` blocks and R > 0,
 each starting row is valid. Compute `rows = min(T, R - r)`
 directly and use `real_shape=[rows,H]` for all three DMA operations.
 This one-wave body accepts any W >= H that fits UB, including padded
 FP32 rows. Route on dtype and tile count after the fit check. The
 `W == H` guard belongs to the separate fixed-size three-stage body.
-Trace R273/H509 to the single-wave JIT itself with N35/T8/W512.
+Trace R273/H509 through the ordinary fit and the balanced selection to the launched JIT.
 The arithmetic is lane-wise and the output store excludes all padding.
 Keep the two half-row reads batched across T rows through one source
 descriptor. At R273/H509, per-row reads with a final concat took
@@ -260,17 +259,45 @@ in pairs took 4.100/3.754 µs. At R143/H536 the paired variant gave
 2.524/2.203 µs against 2.206/2.247 µs. Both comparisons kept the
 original tile, grid and exact output extent.
 
-In the single-wave FP32 kernel with one tile per block, use the logical
-tile ordinal for both input offsets, the output offset and the valid
-height. For W == H rotate the assignment by half the grid. For a padded
-half keep direct tile ownership. The block count is unchanged:
+For padded single-wave FP32 on 950PR, distribute rows across up to
+two-thirds of the available AIVs when the extra blocks shorten the
+ordinary tile and each half still moves at least 8 KiB per full block.
+Apply this after the ordinary positive UB fit and only to a single wave.
+Use the balanced grid only when every block receives a row.
+
+```python
+def padded_row_grid(rows, half, width, height, aivs):
+    natural = (rows + height - 1) // height
+    target = min(rows, 2 * aivs // 3)
+    if width <= half or target <= natural:
+        return natural, height
+    shorter = (rows + target - 1) // target
+    if shorter < height and (rows // target) * half * 4 >= 8192:
+        return target, shorter
+    return natural, height
+```
+
+Pass `balanced = blocks > natural` and the actual block count as compile-time arguments.
+For the balanced path use `q, rem = R // N, R % N`,
+`r = b*q + min(b, rem)` and `valid = q + min(1, max(0, rem-b))`,
+where b is the physical block index. Both reads use `[T,W]` in UB and
+`[valid,H]` in GM, as does the store. Keep the input descriptor rank two
+with dimensions `[R,2*H]` and column offsets 0 and H. On the tested
+wheel, changing it to `[R,2,H]` and reading a singleton middle
+dimension for each half failed the finite numerical check for 57,342 of
+76,648 outputs at R143/H536.
+
+At R273/H509/W512 and 72 AIVs the ordinary height is eight. The balanced
+path uses T6/N48. Blocks 0 through 32 own six rows each and the remaining
+15 own five. In two shuffled rounds this geometry took 2.576 and 2.574 µs.
+The eight-row N35 control took 2.621 µs in both. Keep the ordinary
+padded path when the guard falls through. For aligned FP32 retain the
+ordinary T and grid, rotating the tile ordinal by half the grid:
 
 ```python
 b = asctile.block_idx()
 n = asctile.block_num()
-tile_index = b
-if W == H:
-    tile_index = (b + n // 2) % n
+tile_index = (b + n // 2) % n if W == H else b
 r = tile_index * T
 valid = min(T, R - r)
 ```
