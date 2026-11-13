@@ -57,6 +57,33 @@ padding. The copy's real shape still uses H.
   For example on 72 AIVs, 143 rows of 536 FP32 values **per half**
   select T=4 and 36 blocks; 273 rows of 509 select T=8 and 35 blocks.
 
+Use the padded width and the one-stage coefficient of the actual row
+emitter for the final fit test, including height one. For example:
+
+```python
+def fit_row_height(height, rows, width, bytes_per_lane, usable_ub):
+    if min(height, rows, width, bytes_per_lane) <= 0:
+        return 0
+    while height > 0:
+        if height <= rows and height * width * bytes_per_lane <= usable_ub:
+            return height
+        height //= 2
+    return 0
+```
+
+Run this guard before *both* ordinary row launch sites, including the
+single-wave body. Zero falls through to streamed column chunks.
+With 253952 bytes of UB, an FP32 half-row of width 32760 already needs
+524160 bytes at 16 bytes per lane. A BF16 half-row of padded width 1046032
+also exceeds UB at height one. Trace the actual public launches for
+these widths and check that each uses a bounded column tile. For
+short FP32 rows keep the qualified height and natural grid. In two
+rounds with full arithmetic, increasing height from 4 to 8 at half-width
+536 reduced the grid from 36 to 18 and increased latency from
+2.411/2.442 to 2.655/2.461 µs. At half-width 509, increasing height from
+8 to 12 reduced the grid from 35 to 23 and increased latency from
+2.833/2.846 to 3.108/2.976 µs.
+
 For long FP32 grids with DMA-aligned half-rows, size one 2D copy towards
 16 KiB and try three pipeline stages before the ordinary row fallback.
 Use the greatest power-of-two height at or below `16384 // (4*H)`.
