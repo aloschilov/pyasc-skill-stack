@@ -42,6 +42,31 @@ Each row has `H` output lanes. For `T` rows the two footprints in bytes are
 
 For a positive row count and active vector count `A`, compute the candidate
 row bound as `min(16384 // (2*H*s), available_ub // (24*H), ceil(R/A))`.
+Use a single division of bytes by bytes per row. For H=1 and s=2,
+one physical input row is four bytes; 16,384 bytes contain 4,096
+complete pairs. In the ordinary int32-index slab selector use:
+
+```python
+def ordinary_bf16_slab_tile(rows, half, aivs, usable_ub):
+    if min(rows, half, aivs, usable_ub) <= 0 or 2 * half > 32:
+        return 0
+    bytes_per_input_row = 2 * half * 2
+    by_dma = 16384 // bytes_per_input_row
+    bound = min(by_dma, usable_ub // (24 * half), (rows + aivs - 1) // aivs)
+    if bound < 1:
+        return 0
+    tile = 1 << (bound.bit_length() - 1)
+    lanes = tile * half
+    return tile if (2 * lanes) % 32 == 0 else 0
+```
+
+For BF16, alignment of `2*lanes` output bytes implies alignment of
+the input and int32 table. At the selected height, two stages require
+`28*lanes <= usable_ub` and at least two tiles per active block.
+Trace both bytes and rows: for 1,000,003 pairs, 72 AIVs and 253,952
+bytes the ordinary path reads 16,384 bytes at T4096/U2. Dividing by
+the number of halves a second time gave T2048 and an 8,192-byte read.
+
 Return the caller's existing public gather route tag for either unroll.
 Test dispatch at a smaller UB that fits only one iteration and at another
 that forces a shorter tile. A single full-capacity test can hide a unit error.
