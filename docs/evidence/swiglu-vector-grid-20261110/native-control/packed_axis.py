@@ -31,14 +31,14 @@ def packed_axis_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
     mask = selector > 0.0
 '''
     if mode == "sum":
-        kernel += '''    gate = asctile.reduce_sum(asctile.where(mask, slab, 0.0), [1])
-    value = asctile.reduce_sum(asctile.where(mask, 0.0, slab), [1])
+        kernel += '''    gate = asctile.reduce_sum(asctile.where(mask, slab, 0.0), 1)
+    value = asctile.reduce_sum(asctile.where(mask, 0.0, slab), 1)
     out = (gate / (1.0 + asctile.exp(-gate))) * value
 '''
     else:
         kernel += '''    gated = slab / (1.0 + asctile.exp(-slab))
     factors = asctile.where(mask, gated, slab)
-    out = asctile.reduce_prod(factors, [1])
+    out = asctile.reduce_prod(factors, 1)
 '''
     kernel += '''    asctile.copy_out(out, gy, [r, 0], real_shape=[valid, H])
 
