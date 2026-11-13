@@ -81,7 +81,16 @@ are ordinary CPU-backed Torch tensors. Select the NPU with the runtime
 helper, then launch with those tensors unchanged. A host check such as
 `if x.device.type != "npu": raise ...` rejects valid hardware work.
 
-For Exp, declare a module-level JIT function and bind scalar attributes at
+For Exp the public contract covers FP16, BF16 and FP32. Read the input
+element width from `x.element_size()` and allocate `out = x.new_empty(x.shape)`.
+Pass `x` and `out` directly to the selected JIT. If a host dtype table
+needs to reject another dtype, raise a TypeError before allocation. Keep
+the same input object on every dispatcher branch, including the default.
+A clean generation that assigned `x = x.to(torch.float32)` in the default
+branch failed the source qualification even though the three public dtypes
+had separate entries.
+
+Declare a module-level JIT function and bind scalar attributes at
 each launch. Pass `scale: float`, `shift: float` and `log_base: float` as
 runtime FP32 scalars. Multiply and add those arguments directly to the
 FP32 tile, for example `acc = acc * scale` and `acc = acc + shift`.

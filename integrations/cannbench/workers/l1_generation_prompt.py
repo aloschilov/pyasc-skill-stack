@@ -186,6 +186,8 @@ def prompt(task, skills):
         )
     elif op == "exp":
         sections.append(
+            "Use x.element_size() for the host item size. Trace each branch including any default: "
+            "pass the caller's x unchanged into the JIT. For an unsupported dtype raise TypeError. "
             "In the public Exp entry point, select the qualified short 16-bit regime before "
             "generic streaming. Keep all host tiles, grids and unrolls as native Python ints. "
             "Use ConstExpr only as a kernel parameter annotation, passing native ints or bools at launch. "
