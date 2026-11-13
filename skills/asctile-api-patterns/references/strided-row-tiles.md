@@ -44,6 +44,19 @@ both changes, two prefetched stages took 2.554/2.679 µs against
 rounds at H=536. Retain the unsplit schedule for these qualified shapes.
 [Measured stage orders, compiled code and exact-binary replay](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6861262761).
 
+For a packed two-stage prefetch, inspect both `copy_in` operations in the
+emitted full-block branch. Independent input readiness is visible when
+the two MTE2 transfers use different buffer IDs and the first vector scope
+acquires only its own input and output. Check separately whether the
+second result aliases the first input, and whether either input still has
+a conditional missing-row fill. On the 950PR build, exact stage-local GM
+descriptors removed both fill sites and `reuse_alloc=0` gave all four tiles
+distinct buffers. Case 11 still took 2.950 and 2.989 µs. Keep the simpler
+single-wave dispatch when the staged public kernel loses its paired
+qualification. A native event schedule alone cannot qualify a generated
+AscTile launch.
+[Generated buffer IDs, stage ordering and matched native measurements](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6864335996).
+
 - Start with the smallest power-of-two height T giving at least 8 KiB of
   useful half-tile payload. For positive R and H, compute
   `needed = (8192 + H*s - 1) // (H*s)`, then
