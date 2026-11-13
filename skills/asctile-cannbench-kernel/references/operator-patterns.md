@@ -32,6 +32,11 @@ use `asctile.full(shape, constant, dtype=asctile.float32)`.
 Check every generated `asctile.<name>` against the installed wheel before
 profiling. This wheel exports `maximum`, `minimum`, `exp`, `log`,
 `abs`, `tanh` and `erf`. Use the operand's `.dtype` in the JIT.
+Resolve Python math constants on the host. Pass a numeric ConstExpr or use
+a literal inside the JIT. The wheel's dependency finder rejects
+`math.sqrt` inside a JIT even when the argument is constant. For GeLU use
+`0.7071067811865476` for 1/sqrt(2) and `0.7978845608028654` for
+sqrt(2/pi), and dispatch the exact and tanh modes from the public attribute.
 For Mish, compute a stable softplus (including the positive large-input
 limit) before tanh. Verify finite inputs and the public exceptional-value
 cases for each activation after the cast back.
@@ -384,7 +389,10 @@ runtime costs must be recorded separately.
 Cover every cross-product present in `cases.yaml`: x is f16/bf16/f32; mask is
 int8/uint8/f16/bf16/f32. Direct vector arithmetic on int8 is unsupported in the
 observed runtime; cast int8 to f16 and then f32. Torch uint8 can be reinterpreted
-as int8 without copying, but values 128..255 then require an in-kernel f32 +256
+as int8 without copying. Trace the **actual load** of an int8 mask through
+`mask.to(asctile.float16).to(asctile.float32)` before the multiply.
+Direct int8-to-FP32 lowering fails even when the final FP32 multiply is
+supported. With unsigned storage reinterpreted as signed, values 128..255 then require an in-kernel f32 +256
 correction. Avoid f16 and bf16 temporaries coexisting in one specialization;
 use a two-kernel f32 bridge for cross-half combinations.
 
@@ -545,6 +553,15 @@ both operands are PlainValue. Keep the maximum in a LocalTensor-compatible
 accumulator or use a reduction form that the pinned scalar algebra supports.
 Return the final typed scalar as a 0-D metadata view of an aligned output
 buffer; perform dtype conversion in the final JIT kernel.
+
+On the archive wheel the atomic signature is
+`asctile.atomic_add(src_local, dst_global, offsets)`. The source is a
+LocalTensor. Preserve the tensor rank when reducing (use a singleton axis
+with `keep_dims=True`), and check the returned kind on the pinned wheel.
+Indexing a LocalTensor as `acc[0]` fails in the JIT. For a two-pass reduction,
+write each block's partial into a distinct slot, then reduce those partials
+in a separate launch. Use the neutral element for padded lanes in each norm
+order and include the final launch in the measured time.
 
 ## RMSNorm
 

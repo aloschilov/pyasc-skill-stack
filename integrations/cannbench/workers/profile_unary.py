@@ -39,8 +39,25 @@ def check_exp_host_casts(source):
     HostCalls().visit(ast.parse(source))
 
 
+def check_tile_symbols(source, surface):
+    """Resolve direct module attributes from the candidate against the loaded wheel."""
+    tree = ast.parse(source)
+    aliases = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "asc.experimental":
+            aliases.update(a.asname or a.name for a in node.names if a.name == "asctile")
+        if isinstance(node, ast.Import):
+            aliases.update(a.asname for a in node.names
+                           if a.name == "asc.experimental.asctile" and a.asname)
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
+                and node.value.id in aliases and not hasattr(surface, node.attr)):
+            raise ValueError(f"installed AscTile has no {node.attr!r} at line {node.lineno}")
+
+
 def measure(candidate, case, operator=None):
     import torch
+    from asc.experimental import asctile
     from asc.lib import runtime
     from asc.lib.profiling import Profiler
     from kernel_eval.data.data_generator import DataGenerator
@@ -54,8 +71,10 @@ def measure(candidate, case, operator=None):
             "Gelu": "gelu", "MaskedScale": "masked_scale", "ForeachNorm": "foreach_norm",
             "ForeachAddcdivScalar": "foreach_addcdiv_scalar",
         }[row["operator"]]
+    source = (Path(*candidate.split(".")) / f"{operator}.py").read_text()
+    check_tile_symbols(source, asctile)
     if operator == "exp":
-        check_exp_host_casts((Path(*candidate.split(".")) / "exp.py").read_text())
+        check_exp_host_casts(source)
     op = getattr(importlib.import_module(f"{candidate}.{operator}"), operator)
     golden = getattr(importlib.import_module("generation.task.golden"), operator)
     shapes = json.loads(row["input_shape"])
