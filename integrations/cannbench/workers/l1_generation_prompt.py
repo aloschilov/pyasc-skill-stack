@@ -127,7 +127,7 @@ def prompt(task, skills):
             "Align H in elements with lanes_per_dma = 32 // itemsize. Check actual launches for FP32 H2048/T2: both R2048 and R2046 take the fixed-copy JIT, and R2047 takes the bounded JIT. "
             "Trace R=2048, H=2048, FP32, 72 AIVs and 253952 UB bytes through the public entry "
             "point: it must pass height 2 and unroll 3 to the actual JIT launch. "
-            "Before the ordinary row fallback, call padded_fp16_two_stage_height. "
+            "Use the padded FP16 launch from the row reference before the ordinary row fallback. Bind its recorded two tensors and all five scalar arguments to the bounded row JIT signature. "
             "A positive result launches the two-dimensional row JIT at that height, the "
             "padded width, natural grid and unroll 2. The measured 20 bytes per lane "
             "already cover both stages. With R=3003 and H=506 in FP16 on 72 AIVs "
