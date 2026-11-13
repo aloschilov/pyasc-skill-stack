@@ -49,6 +49,8 @@ def main():
     parser.add_argument("operator", choices=("emitted", "cached", "native"))
     parser.add_argument("mode", choices=("plain", "conditioned"))
     parser.add_argument("output", type=Path)
+    parser.add_argument("--symbol", choices=("row_single_wave_fp32", "staged_rows"),
+                        default="row_single_wave_fp32", help="compiled two-pointer kernel entry")
     args = parser.parse_args()
     args.output.mkdir(exist_ok=False)
     sys.path[:0] = [str(args.task.resolve()), str(args.host.resolve())]
@@ -62,7 +64,7 @@ def main():
     oracle = swi_glu(cpu, dim)
     x = cpu.npu(0)
     code = args.elf.read_bytes()
-    symbol = "row_single_wave_fp32"
+    symbol = args.symbol
     stream = stream_ptr(x)
 
     def reload_and_launch(packed):
@@ -123,7 +125,7 @@ def main():
     times = [float(r["Duration(us)"]) for r in selected]
     if any(t <= 0 for t in times):
         raise ValueError(times)
-    summary = dict(case=args.case, operator=args.operator, mode=args.mode, golden=True,
+    summary = dict(case=args.case, operator=args.operator, mode=args.mode, symbol=symbol, golden=True,
                    input_nan=int(cpu.isnan().sum()), finite_output=int(oracle.isfinite().sum()),
                    input_sha256=hashlib.sha256(args.raw.read_bytes()).hexdigest(),
                    elf_sha256=hashlib.sha256(code).hexdigest(), device=x.get_device(),
