@@ -1,0 +1,71 @@
+"""Keep both strided GM reads and use the exact two planar UB extents in one VF."""
+import argparse
+import ast
+from pathlib import Path
+
+from row_math_cost import W62
+from wave_rotation import prepare, run
+import hashlib
+
+
+def vector_code(count, pairs):
+    # All loads/stores start on 32-byte boundaries. A short final vector
+    # reuses lanes from the preceding vector, entirely inside this UB tile.
+    if count < 64 or count % 8:
+        raise ValueError("expected an aligned FP32 tile of at least one register")
+    n = count // 64
+    funcs = []
+    def batch(offsets):
+        lines = []
+        for i, off in enumerate(offsets):
+            lines += [f"RegTensor<float> g{i}, v{i}, t{i};",
+                      f"LoadAlign(g{i}, g + {off});", f"LoadAlign(v{i}, v + {off});"]
+        for op in ("Muls(t{i}, g{i}, -1.0f, m);", "Exp(t{i}, t{i}, m);",
+                   "Adds(t{i}, t{i}, 1.0f, m);", "Div(t{i}, g{i}, t{i}, m);",
+                   "Mul(t{i}, t{i}, v{i}, m);"):
+            lines += [op.format(i=i) for i in range(len(offsets))]
+        lines += [f"StoreAlign(y + {off}, t{i}, m);" for i, off in enumerate(offsets)]
+        return "\n".join(lines)
+    step = 2 if pairs else 1
+    funcs += [f"for(uint16_t i=0; i<{n//step}; ++i) {{",
+              batch([f"{step*64}*i + {64*j}" for j in range(step)]), "}"]
+    if n % step:
+        funcs += ["{", batch([str(64*(n-1))]), "}"]
+    if count % 64:
+        funcs += ["{", batch([str(count-64)]), "}"]
+    return """using namespace AscendC::Reg;
+auto* g = reinterpret_cast<__ubuf__ float*>($1.GetPhyAddr());
+auto* v = reinterpret_cast<__ubuf__ float*>($2.GetPhyAddr());
+auto* y = reinterpret_cast<__ubuf__ float*>($0.GetPhyAddr());
+auto m = CreateMask<uint8_t>();
+""" + "\n".join(funcs)
+
+
+def render(source, mode, count):
+    if hashlib.sha256(source.encode()).hexdigest() != W62:
+        raise ValueError("expected W62")
+    if mode == "base":
+        return source
+    if mode not in ("single", "pair"):
+        raise ValueError(mode)
+    node = next(n for n in ast.parse(source).body if getattr(n, "name", "") == "row_single_wave_fp32")
+    lines = source.splitlines(keepends=True)
+    start = next(n.lineno - 1 for n in node.body if isinstance(n, ast.Assign)
+                 and getattr(n.targets[0], "id", "") == "gate_f")
+    code = vector_code(count, mode == "pair")
+    lines[start:node.end_lineno-1] = [f"    out = asctile.inline_vf({code!r}, [T, W], asctile.float32, [gate, value])\n"]
+    return "".join(lines)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    for name in ("base", "task", "worker"):
+        parser.add_argument(name, type=Path)
+    parser.add_argument("--case", type=int, choices=(11, 13), required=True)
+    args = parser.parse_args()
+    shape, count = {11: ([273, 1, 1, 1018], 4096), 13: ([143, 1, 16, 67], 2144)}[args.case]
+    fixtures = {"public": None, "finite": shape}
+    modes = ("base", "single", "pair")
+    prepare(args.base.resolve(), args.task.resolve(), fixtures, modes,
+            renderer=lambda src, mode: render(src, mode, count), case=args.case)
+    raise SystemExit(run(args.worker.resolve(), fixtures, modes, case=args.case))
