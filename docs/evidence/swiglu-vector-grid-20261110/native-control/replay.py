@@ -62,11 +62,13 @@ def run(task, case):
         duration = find_column("Task Duration")
         if "(us)" not in duration.replace(" ", "").lower():
             raise ValueError(duration)
-        grid = find_column("Block Dim")
+        grid, = (k for k in records[0] if k.strip() in {"Block Num", "Block Dim"})
         task_type = find_column("Task Type")
         for key in (grid, task_type, "Op Name"):
             if len({r[key] for r in records}) != 1:
                 raise ValueError(f"task selection changed across calls: {key}")
+        if records[0]["Op Name"].lower() != "swiglu" or records[0][task_type] != "AI_VECTOR_CORE":
+            raise ValueError(f"unexpected native task: {records[0]}")
         times = [float(r[duration]) for r in records]
         if not all(math.isfinite(t) and t > 0 for t in times):
             raise ValueError(times)
