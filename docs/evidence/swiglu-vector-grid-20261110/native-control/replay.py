@@ -67,9 +67,9 @@ def run(task, case, direct_simt=False):
         for key in (grid, task_type, "Op Name"):
             if len({r[key] for r in records}) != 1:
                 raise ValueError(f"task selection changed across calls: {key}")
-        name = records[0]["Op Name"].lower()
+        op_name = records[0]["Op Name"].lower()
         expected_symbol = {11: "short_rowsilj273elj509elj8ee", 13: "short_rowsilj143elj536elj4ee"}[case]
-        valid_name = expected_symbol in name if direct_simt else name == "swiglu"
+        valid_name = expected_symbol in op_name if direct_simt else op_name == "swiglu"
         if direct_simt and int(records[0][grid]) not in (0, {11: 35, 13: 36}[case]):
             raise ValueError(f"unexpected SIMT grid: {records[0][grid]}")
         if not valid_name or records[0][task_type] != "AI_VECTOR_CORE":
