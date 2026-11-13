@@ -61,6 +61,10 @@ def prompt(task, skills):
     if op == "swi_glu":
         sections.append(
             "Integrate the supplied kernel templates into the returned module. "
+            "Inline the widened gate division and value multiplication directly in each JIT "
+            "body, including full tiles and remainders. A call from a JIT to an ordinary "
+            "Python swiglu element helper fails dependency resolution on this wheel. "
+
             "In the public swi_glu function, after deriving R, H, actual dtype, AIVs "
             "and available UB, call two_wave_tile before the ordinary slab selector. "
             "Call whole_bf16_grid for aligned BF16 whole rows before the generic 2D route. A positive "

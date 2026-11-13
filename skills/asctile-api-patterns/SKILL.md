@@ -33,6 +33,16 @@ def kernel(x_ptr: asctile.GlobalAddress, out_ptr: asctile.GlobalAddress,
         asctile.copy_out(out, out_gm, [offset], real_shape=[valid])
 ```
 
+On the CANNBench archive wheel, write tile arithmetic directly inside the
+device JIT body. The dependency finder raises
+`Unsupported function referenced` if a JIT calls an ordinary Python
+function defined elsewhere in the module. For SwiGLU, compute
+`out_f = (gate_f / (1.0 + asctile.exp(-gate_f))) * value_f` in each
+device path that consumes the loaded halves. Host functions may still
+select grids, prepare index descriptors and launch kernels. A launch spy
+can confirm the grid and arguments without compiling this device body;
+compile the selected kernel and check its output before timing.
+
 The exact memory signatures are:
 
 - `global_tensor(base, shape)` creates a ranked GM descriptor.
