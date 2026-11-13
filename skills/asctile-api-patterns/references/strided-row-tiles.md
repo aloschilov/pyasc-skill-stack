@@ -146,6 +146,30 @@ took 2.884/3.169 µs. At 273 rows by 509 the corresponding times were
 extents were fixed. Record the profiled grid and compiled loop body
 when validating a new generation.
 
+Assign strided 2D work in **tile indices**. For R rows and height T,
+there are `ceil(R/T)` iterations across the entire grid. The starting row
+is `tile_index*T`. Use the same row for both input copies and the output.
+An emitter that issues a T-row write at every row computes overlapping
+values and introduces cross-block writes. A matching numerical golden
+on a deterministic input can hide this error. Check ownership by tracing
+the emitted body across all blocks: the sum of valid extents must be R
+and the sorted output intervals must partition [0,R). For R=52224,
+T=64 and N=72 this is exactly 816 disjoint writes. For R=1009, T=7
+and N=72 it is 144 seven-row writes and one one-row write.
+
+```python
+count = (R + T - 1) // T
+for tile_index in asctile.range(asctile.block_idx(), count,
+                                asctile.block_num(), unroll_factor=U):
+    r = tile_index * T
+    valid = min(T, R - r)
+    gate = asctile.copy_in(gx, [r, 0], [T, W], real_shape=[valid, H], pad_value=0.0)
+    value = asctile.copy_in(gx, [r, H], [T, W], real_shape=[valid, H], pad_value=0.0)
+    gate_f = gate.to(asctile.float32)
+    out = (gate_f / (1.0 + asctile.exp(-gate_f))) * value.to(asctile.float32)
+    asctile.copy_out(out.to(gate.dtype), gy, [r, 0], real_shape=[valid, H])
+```
+
 For a one-wave FP32 row kernel whose gate and value are read once,
 use `asctile.global_tensor(x, [R, 2*H], l2_cache=False)` for the input
 and the default L2 descriptor for the output. Scope this choice to the
