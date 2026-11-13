@@ -82,6 +82,21 @@ def whole_fp32_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
         asctile.copy_out(out, dst, [row * half])
 
 
+def generic_flat_geometry(rows, half, itemsize, aivs, usable_ub):
+    """Size the ordinary flat full-copy kernel and its same-launch remainder."""
+    if min(rows, half, aivs, usable_ub) <= 0 or itemsize not in (2, 4):
+        return 0, 0, 0
+    cap = min(half, 16384 // itemsize, usable_ub // 32)
+    if cap < 1:
+        return 0, 0, 0
+    tile = 1 << (cap.bit_length() - 1)
+    full = rows * (half // tile)
+    blocks = min(aivs, rows * ((half + tile - 1) // tile))
+    two_stage_bytes = tile * (20 if itemsize == 2 else 24)
+    unroll = 2 if full >= 2 * blocks and two_stage_bytes <= usable_ub else 1
+    return tile, unroll, blocks
+
+
 def four_wave_bf16_chunk(rows, half, dtype, aivs, usable_ub):
     """Cover nearly four waves with consecutive chunks on a short BF16 stream."""
     if rows != 1 or dtype != torch.bfloat16 or min(half, aivs, usable_ub) <= 0:

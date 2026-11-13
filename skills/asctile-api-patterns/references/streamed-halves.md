@@ -8,6 +8,12 @@ The bound and the kernel must describe the same allocation. On the archive-bundl
 81,920 bytes for FP16/BF16 and 98,304 for FP32, including the remainder branch.
 As a first compile choose the power of two at or below
 `min(H, 16384 // itemsize, usable_UB // 32)`; count T in output lanes.
+Use `generic_flat_geometry` from the template for this final fallback,
+then pass its returned width, unroll and grid to `swiglu_flat`. For a
+capacity of 7936 lanes the floor power of two is 4096. Rounding up
+produced an 8192-lane bounded column kernel on the single BF16 row
+H=2080641, which took 9.829 µs against 8.790 µs. The full-copy
+kernel at T4096/U2 took 8.550/8.576 µs in two independent full suites.
 Validate full and partial chunks at the actual geometry before expanding it.
 Do not reuse these coefficients for an unqualified emitter, an additional
 pipeline stage or a different allocation policy. Counting only GM buffers
