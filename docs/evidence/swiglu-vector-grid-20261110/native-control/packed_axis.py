@@ -7,7 +7,7 @@ from fp32_stream_remainder import SOURCE_SHA
 
 
 def render(source, mode):
-    if sha256(source.encode()).hexdigest() != SOURCE_SHA or mode not in ("sum", "product"):
+    if sha256(source.encode()).hexdigest() != SOURCE_SHA or mode not in ("sum", "product", "sum_outer", "product_outer"):
         raise ValueError("expected the qualified W59 module and a packed-axis mode")
     start = source.index("@asctile.jit", source.index("def single_wave_rows("))
     kernel = '''@asctile.jit(reuse_alloc=2, vf_fusion=True)
@@ -30,7 +30,7 @@ def packed_axis_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
     selector = asctile.broadcast_to(asctile.reshape(asctile.concat(yes, no), 1, 2, W), T, 2, W)
     mask = selector > 0.0
 '''
-    if mode == "sum":
+    if mode.startswith("sum"):
         kernel += '''    gate = asctile.reduce_sum(asctile.where(mask, slab, 0.0), 1)
     value = asctile.reduce_sum(asctile.where(mask, 0.0, slab), 1)
     out = (gate / (1.0 + asctile.exp(-gate))) * value
@@ -44,6 +44,18 @@ def packed_axis_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
 
 
 '''
+    if mode.endswith("_outer"):
+        # The public 950PR Reduce{Sum,Prod} accepts a leading reduction.
+        start = kernel.index("    slab = ")
+        end = kernel.index("    mask = ", start)
+        kernel = (kernel[:start] + """    rows = asctile.reshape(packed, T, 2, W)
+    slab = asctile.reshape(asctile.transpose(rows, 1, 0, 2), 2, T * W)
+    yes = asctile.full([1, T * W], 1, asctile.float32)
+    no = asctile.zeros([1, T * W], asctile.float32)
+    selector = asctile.concat(yes, no)
+""" + kernel[end:])
+        kernel = kernel.replace("), 1)", "), 0)").replace("reduce_prod(factors, 1)", "reduce_prod(factors, 0)")
+        kernel = kernel.replace("copy_out(out, gy", "copy_out(asctile.reshape(out, T, W), gy")
     launch = "single_wave_rows[blocks](input, out, rows, half, h, width, rotate)"
     if source.count(launch) != 1:
         raise ValueError("single-wave launch missing or ambiguous")
@@ -52,7 +64,7 @@ def packed_axis_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
 
 if __name__ == "__main__":
     source = Path("base/swi_glu.py").read_text()
-    for mode in ("sum", "product"):
+    for mode in ("sum", "product", "sum_outer", "product_outer"):
         dest = Path(mode)
         s = render(source, mode)
         compile(s, str(dest), "exec")
