@@ -123,7 +123,20 @@ Trace both bytes and rows: for 1,000,003 pairs, 72 AIVs and 253,952
 bytes the ordinary path reads 16,384 bytes at T4096/U2. For two-stage dense
 pairs with more than three and at most four waves at the detected grid,
 choose the smallest even grid covering the work in four waves. Use identity
-block order and the existing strided tile loop. For 245 tiles this yields
+block order and a block-stride loop. Block zero owns tile ordinals
+`0, blocks, 2*blocks, ...`, block one starts at one. Write this in
+the ordinary slab JIT itself:
+
+```python
+for t in asctile.range(asctile.block_idx(), count, asctile.block_num(),
+                       unroll_factor=unroll):
+    first = t * tile
+    valid = min(tile, rows - first) * half
+    # Read the packed input and write only the valid outputs.
+```
+
+The two-wave multi-lane JIT has a separate consecutive interval rule.
+For 245 tiles the ordinary dense-pair rule yields
 62 blocks. In three paired rounds the 62-block medians were 6.448, 6.462
 and 6.800 µs, against 7.142, 6.867 and 6.817 µs on 72 blocks. On a
 separate finite input of 911117 pairs, the same formula gave 56 blocks
