@@ -106,6 +106,10 @@ def ordinary_slab_launch(rows, half, tile, aivs, usable_ub):
     blocks = min(aivs, tiles)
     two_stage_bytes = 28 * tile * half
     unroll = 2 if tiles >= 2 * blocks and two_stage_bytes <= usable_ub else 1
+    if half == 1 and unroll == 2 and 3 * blocks < tiles <= 4 * blocks:
+        compact = 2 * ((tiles + 7) // 8)
+        if compact <= blocks:
+            blocks = compact
     return blocks, unroll
 ```
 
@@ -116,7 +120,15 @@ Here each tile owns up to T whole rows, including H=1. Count work with
 `ceil(R/T)`. The flat column-stream count `R*(H//T)` gives zero for a
 4096-row pair slab. Use `ordinary_slab_launch` at the actual gather call.
 Trace both bytes and rows: for 1,000,003 pairs, 72 AIVs and 253,952
-bytes the ordinary path reads 16,384 bytes at T4096/U2. Dividing by
+bytes the ordinary path reads 16,384 bytes at T4096/U2. For two-stage dense
+pairs with more than three and at most four waves at the detected grid,
+choose the smallest even grid covering the work in four waves. Use identity
+block order and the existing strided tile loop. For 245 tiles this yields
+62 blocks. In three paired rounds the 62-block medians were 6.448, 6.462
+and 6.800 µs, against 7.142, 6.867 and 6.817 µs on 72 blocks. On a
+separate finite input of 911117 pairs, the same formula gave 56 blocks
+for 223 tiles and won in all three rounds. A two-group permutation at
+either grid did not improve the median across rounds on either shape. Dividing by
 the number of halves a second time gave T2048 and an 8,192-byte read.
 
 Return the caller's existing public gather route tag for either unroll.
@@ -269,9 +281,9 @@ this comparison. Compute its row count from the input bytes, the
 compiled UB footprint and useful work per AIV. When it yields just over
 three and at most four waves on the largest power-of-two grid within the
 device limit, time that grid with identity and even/odd block order.
-On the qualified Ascend950PR_9599 public build, select the compact grid
-and the even/odd order in that range for two-stage dense BF16 pairs with
-a bounded signed-int16 index. Use identity order on a single block.
+The earlier 64-block control used even/odd ordering for two-stage dense
+BF16 pairs with a bounded signed-int16 index. Follow the ordinary selector
+above when its four-wave window fits the queried AIV count. Use identity order on a single block.
 Keep the true input and output extents on the final tile. At 1,000,003
 pairs, 4,096 rows per tile give 245 tiles. A 64-block launch has 53
 blocks with four tiles and 11 with three. The interleaved order took
@@ -280,7 +292,7 @@ blocks with four tiles and 11 with three. The interleaved order took
 device exposes 72 AIVs. The measured 64 is a launch choice specific to
 this occupancy range.
 
-For dense BF16 pairs in this four-wave regime, time a four-group order if the compact grid is divisible by four. Map physical block `b` to first tile `(b % 4) * (N // 4) + b // 4` and advance by `N`. The quotient selects the offset within a group and the remainder selects the group, so every tile has one owner. Retain the bounded input and output copies on the final tile. At 4,096 rows, two stages and 64 blocks, the four-group order took 6.066 and 6.197 µs in matched fresh processes, compared with 6.570 and 6.299 µs for the two-group order. Using consecutive tiles per block for this same single-lane geometry took 7.673 and 7.666 µs. Across three independent full suites, the four-group kernel took 6.735, 6.193 and 7.026 µs. The earlier two-group build took 6.567, 6.935 and 5.915 µs. Keep two groups as the default on this build and require independent suite-level evidence before selecting four. The multi-lane, two-wave rule above has a different work distribution.
+For dense BF16 pairs in this four-wave regime, time a four-group order if the compact grid is divisible by four. Map physical block `b` to first tile `(b % 4) * (N // 4) + b // 4` and advance by `N`. The quotient selects the offset within a group and the remainder selects the group, so every tile has one owner. Retain the bounded input and output copies on the final tile. At 4,096 rows, two stages and 64 blocks, the four-group order took 6.066 and 6.197 µs in matched fresh processes, compared with 6.570 and 6.299 µs for the two-group order. Using consecutive tiles per block for this same single-lane geometry took 7.673 and 7.666 µs. Across three independent full suites, the four-group kernel took 6.735, 6.193 and 7.026 µs. The earlier two-group build took 6.567, 6.935 and 5.915 µs. At that fixed 64-block grid use two groups as the control for testing four groups. The multi-lane, two-wave rule above has a different work distribution.
 
 For a complete FP32 slab of `T` rows and `H` lanes per half, try reading half the cached signed-int16 gate indices from GM. Require even `T`, a DMA-aligned seed of `S = T * H // 2` indices, and `2 * T * H <= 32768`. An index in row `r + T // 2` is exactly `T * H` elements past the corresponding index in row `r`. Build `gate = asctile.concat(seed, seed + 2 * S)` in UB and derive `value = gate + H`. Time both full kernels. At T = 64 and H = 50 on 950PR, halving the index read reduced the two control medians from 16.358 and 16.174 µs to 15.661 and 15.928 µs at the same 102,400-byte compiled allocation. In subsequent independent full suites the half-seed kernel took 15.821, 16.362 and 15.885 µs. The preceding full-seed build took 15.634, 15.801 and 15.689 µs. Keep this as a calibration option. For dense BF16 pairs, splitting the index into two or four segments won only one of two controls. Keep the full-table load for that layout pending evidence on the target.
 
