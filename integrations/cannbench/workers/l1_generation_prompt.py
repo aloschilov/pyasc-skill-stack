@@ -64,6 +64,8 @@ def prompt(task, skills):
             )
         if op == "foreach_norm":
             include(api / "SKILL.md", "For a sum reduction", "## Tails and padding")
+            include(skills.parent / "reference/asctile/target/test_reduce_sum.py",
+                    "@asctile.jit(reuse_alloc=2)", "@asctile.jit(reuse_alloc=2)\ndef reduce_sum_cols")
         sections.append(
             "Use the public oracle to identify the operation, input promotion, scalar attributes "
             "and output structure. Implement all tensor arithmetic in the device kernels. "

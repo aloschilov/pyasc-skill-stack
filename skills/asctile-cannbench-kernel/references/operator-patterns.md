@@ -575,6 +575,12 @@ On the archive wheel the atomic signature is
 LocalTensor. Load a rank-two tile [1,T] with a ranked GM descriptor [1,n], then use
 `asctile.reduce_sum(tile, 1)` to leave a length-one LocalTensor.
 A reduction over every axis of a rank-one tile has a different result kind.
+Express a tile walk as `for i in asctile.range(block_idx, ntiles, nblocks)`
+with `block_idx = asctile.block_idx()` and `nblocks = asctile.block_num()`.
+Python `while` in a JIT is rejected before lowering. The public row reduction
+example in `reference/asctile/target/test_reduce_sum.py` shows the ranked
+descriptor, tile accumulator and write-back. Adapt both passes with bounded
+input/output extents and FP32 accumulation.
 Indexing a LocalTensor as `acc[0]` fails in the JIT. For a two-pass reduction,
 write each block's partial into a distinct slot, then reduce those partials
 in a separate launch. Use the neutral element for padded lanes in each norm
