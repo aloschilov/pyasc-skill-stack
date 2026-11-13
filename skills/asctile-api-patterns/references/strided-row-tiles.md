@@ -277,6 +277,17 @@ independent row tiles to use the available AIVs. When measuring that change,
 hold the grid fixed and check both input halves and the bounded output of
 every stripe, including the final partial row and column.
 
+Keep the remaining columns in the same full-width 2D copy when a single
+FP32 tile fits UB and spans several 64-lane vectors. On 950PR, splitting a
+536-lane half into 512+24 and giving the last 24 lanes to extra blocks
+took 2.371–2.405 µs across two fringe heights and two rounds. Whole rows
+on 36 blocks took 2.164–2.199 µs. Splitting a 509-lane half into 448+61
+on the original blocks also increased both round medians. If testing
+independent column owners on another layout, check the physical output
+addresses across every row. With FP32, an aligned column offset in row
+zero stays 32-byte aligned in later rows only when H is a multiple of
+eight. Verify that separate writers own disjoint DMA bursts.
+
 For the ordinary single-wave launch with exactly `ceil(R/T)` blocks and R > 0,
 each starting row is valid. Compute `rows = min(T, R - r)`
 directly and use `real_shape=[rows,H]` for all three DMA operations.
