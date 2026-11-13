@@ -70,6 +70,22 @@ def swiglu_flat(
 
 
 @asctile.jit(reuse_alloc=2)
+def four_chunk_stream(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
+                      H: asctile.ConstExpr[int], T: asctile.ConstExpr[int]):
+    gx = asctile.global_tensor(x, [2 * H])
+    gy = asctile.global_tensor(y, [H])
+    first = 4 * asctile.block_idx()
+    for i in asctile.range(4, unroll_factor=2):
+        offset = (first + i) * T
+        valid = min(T, H - offset)
+        gate = asctile.copy_in(gx, [offset], [T], real_shape=[valid], pad_value=0.0)
+        value = asctile.copy_in(gx, [H + offset], [T], real_shape=[valid], pad_value=0.0)
+        g = gate.to(asctile.float32)
+        out = (g / (1.0 + asctile.exp(-g))) * value.to(asctile.float32)
+        asctile.copy_out(out.to(gate.dtype), gy, [offset], real_shape=[valid])
+
+
+@asctile.jit(reuse_alloc=2)
 def whole_fp32_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
                     rows: asctile.ConstExpr[int], half: asctile.ConstExpr[int],
                     grid: asctile.ConstExpr[int]):
@@ -133,6 +149,19 @@ def medium_bf16_two_stage_chunk(rows, half, dtype, aivs, usable_ub):
         return 0
     remainder = half - 4 * aivs * tile
     return tile if remainder <= tile // 2 else 0
+
+
+def launch_medium_bf16_stream(x, out, rows, half, aivs, usable_ub):
+    tile = medium_bf16_two_stage_chunk(rows, half, x.dtype, aivs, usable_ub)
+    if not tile:
+        return False
+    chunks = 4 * aivs
+    rounded = ((half + chunks * 16 - 1) // (chunks * 16)) * 16
+    if rounded <= 8192 and 20 * rounded <= usable_ub and (chunks - 1) * rounded < half:
+        four_chunk_stream[aivs](x, out, half, rounded)
+    else:
+        swiglu_flat[aivs](x, out, rows, half, tile, 2, True)
+    return True
 
 
 def wide_fp32_chunk(rows, half, dtype, aivs, usable_ub):

@@ -33,17 +33,23 @@ bytes. Test this fallback independently with H=2080641 at T4096/U2 when
 the more specific four-wave BF16 geometry cannot fit UB.
 For a short row or a different emitter, recheck live chunks and UB.
 
-For a single BF16 row whose four-wave tile exceeds 8 KiB per half, use
-`medium_bf16_two_stage_chunk` from the flat template before the generic
-fallback. For a positive tile launch `swiglu_flat` on the queried AIV
-count with U2 and default L2. Allocate consecutive full chunks to each
-block and bound the final chunk on one block. At H2080641/A72, rounding
-down to 16 lanes gives T7216, exactly 288 full chunks and a 2433-lane
-remainder. This geometry took 8.192/8.432 and 8.266/8.054 µs in two
-separate pairs of golden-checked runs against 8.790 µs. Spreading the
-remainder across 51 blocks at this tile gave 8.184/8.351 µs in the second
-comparison. The generic T4096/U2 took 8.595/7.736 µs in the first
-comparison. Check the new geometry in the next independent full suite.
+For a single BF16 row in the 8–16 KiB per-half DMA range, call
+`launch_medium_bf16_stream` before the generic fallback. Its host guard
+first checks that four waves of aligned floor tiles leave at most half a
+tile of extra work. Round the tile **up** to a 16-lane quantum if the
+result fits the measured two-stage UB bound (20 bytes/lane) and all
+`4 * aivs` chunks still contain work. Block `b` owns four consecutive
+chunks beginning at `4*b`, with unroll two. Bound both input reads and
+the output write by the remaining lanes. Keep the floor-tile flat launch
+when rounding exceeds the payload or UB limit or would leave an empty chunk.
+
+At H=2080641 and 72 AIVs the floor tile of 7216 leaves an extra transfer
+of 2433 lanes. The rounded tile of 7232 covers the row in 288 transfers,
+including 5057 lanes in the last transfer. In three matched David rounds
+the floor tile took 8.315, 8.358 and 8.696 µs. At the rounded width the
+ordinary flat kernel took 8.039, 8.417 and 8.045 µs, and four consecutive
+chunks per block took 7.514, 7.726 and 7.780 µs. CANNBench 2.1.0 specifies
+8.790 µs. Use dimensions, available AIVs and usable UB in the guard.
 
 For a single FP16 row use `eight_wave_fp16_chunk` before generic chunk
 selection. It rounds H/(8*A) up to a 16-lane transfer quantum and limits
