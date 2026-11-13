@@ -109,7 +109,7 @@ def prompt(task, skills):
             "R1009/T7/N72 gives 145. Each output row has one owner. "
             "For the single-wave FP32 row JIT only, disable L2 on its input descriptor "
             "and keep default output caching. With ceil(R/T) blocks issue both batched 2D "
-            "reads and the store at block_idx*T using the exact valid height directly. "
+            "reads and the store at the same logical tile start. For W == H rotate the tile ordinal by half the launched grid as in the row skill; for W > H keep block_idx. Compute the true height from that logical start. "
             "Select this FP32 body for aligned and padded widths after the UB check. "
             "In this body use W > H to compute the gate denominator before issuing the value copy. "
             "For W == H issue both copies first. Keep the two loads and one store bounded. "

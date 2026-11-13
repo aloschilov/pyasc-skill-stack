@@ -246,7 +246,7 @@ half-width 509. Default descriptors gave 2.497/2.468 and 2.805/2.878 µs.
 Bypassing only the output took 2.641/2.700 and 2.960/2.950 µs.
 
 When the single-wave launch has exactly `ceil(R/T)` blocks for R > 0,
-each starting row is valid. Compute `rows = min(T, R - block_idx*T)`
+each starting row is valid. Compute `rows = min(T, R - r)`
 directly and use `real_shape=[rows,H]` for all three DMA operations.
 This one-wave body accepts any W >= H that fits UB, including padded
 FP32 rows. Route on dtype and tile count after the fit check. The
@@ -259,6 +259,27 @@ descriptor. At R273/H509, per-row reads with a final concat took
 in pairs took 4.100/3.754 µs. At R143/H536 the paired variant gave
 2.524/2.203 µs against 2.206/2.247 µs. Both comparisons kept the
 original tile, grid and exact output extent.
+
+In the single-wave FP32 kernel with one tile per block, use the logical
+tile ordinal for both input offsets, the output offset and the valid
+height. For W == H rotate the assignment by half the grid. For a padded
+half keep direct tile ownership. The block count is unchanged:
+
+```python
+b = asctile.block_idx()
+n = asctile.block_num()
+tile_index = b
+if W == H:
+    tile_index = (b + n // 2) % n
+r = tile_index * T
+valid = min(T, R - r)
+```
+
+On the 950PR with T4/H536/W536/N36, this rotation took 2.152 and 2.185
+µs in paired runs versus 2.217 and 2.314 µs for direct ownership. The
+three-row tail moved from physical block 35 to block 17. At
+T8/H509/W512/N35, rotating took 2.605/2.640 µs versus 2.597/2.639 µs.
+Verify ownership on the actual JIT and compare medians in the full suite.
 
 For the single-wave FP32 body, use the compile-time relationship between W
 and H to choose when to read the value. With W > H, read the gate with
