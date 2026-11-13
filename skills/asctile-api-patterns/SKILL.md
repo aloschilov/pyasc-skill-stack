@@ -87,8 +87,10 @@ math, so select an operation-neutral `pad_value`:
 - add/sub/sum: `0`
 - mul/prod: `1`
 - divisor: `1`
-- max: `-inf`
-- min: `+inf`
+- max/min reduction over floating lanes: `-inf` / `+inf` (use representable
+  dtype extrema for integers)
+- elementwise maximum: zero is safe when padded lanes are independent and
+  the logical store excludes them
 - softmax: a sufficiently negative finite value when the builtin cannot
   accept `-inf` on the route being tested
 
@@ -176,9 +178,10 @@ Flatten contiguous inputs to one logical dimension, grid-stride over tiles,
 promote sensitive f16/bf16 arithmetic to f32, and cast once before storing.
 Compare tile sizes using measured compiled UB, useful work per available block,
 DMA size, overlap, and scalar overhead. The largest fitting tile is not always
-fastest; UB fill is not the objective. Read
-[top-down tuning from CANN samples](references/cann-performance-tuning.md)
-before a performance iteration.
+fastest. For a tile decision, identify the last tile’s owner and valid extent,
+then estimate simultaneously live buffers. Separate estimates from compiler
+measurements. Follow the [worked Maximum comparison](references/cann-performance-tuning.md#worked-example-maximum-on-three-vector-cores)
+for a controlled change and a two-seed check.
 
 ### Choose a memory layout for split-half SwiGLU
 

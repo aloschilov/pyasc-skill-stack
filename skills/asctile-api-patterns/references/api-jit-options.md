@@ -6,6 +6,34 @@ reproductions below were recorded at historical `0a631f70968c3cb7c33ce45330a8576
 and GeLU `adadd7d66ed0ee16d33d79487bf584899a26ef1e` pins. Preserve those
 attributions; reproduce on the selected runtime before applying a diagnosis.
 
+## Controls used in the Maximum example
+
+| Public control | What to vary and observe |
+|---|---|
+| `kernel[blocks](...)` | Start with one, then request an explicit positive core count. Recalculate tile ownership and idle blocks. The Maximum specialization had identical UB at one and three cores. |
+| `asctile.range(start, stop, step, unroll_factor=k)` | Default 1. Higher positive factors can reduce loop overhead while increasing simultaneously live tiles. Inspect emitted copies, offsets and compiler UB for each specialization. |
+| `@asctile.jit(reuse_alloc=0/1/2)` | Default 0. Mode 1 runs UB allocation reuse; mode 2 runs tensor allocation reuse. Compare emitted offsets and check numerics at fixed geometry. Retile when measured savings cover the revised live buffers. |
+| `@asctile.jit(kernel_type=...)` | For a mixed kernel, `asctile.KernelType.MIX_AIC_1_1` selects one cube and one vector core per group; `MIX_AIC_1_2` selects one cube and two vectors. With default `None` and `matmul_cube_only=False`, mixed inference chooses 1:2. The compiler emits cube/vector code for both and defines `__MIX_CORE_AIC_RATION__=1` for 1:1. Check L1/L0 blocking on the cube side and work, tails and UB per vector worker after changing the ratio. |
+
+The mixed-mode entries have **compiler-source evidence** for enumerated C220
+(910B/910_93) and C310 (950PR) targets; the worked example executes only a
+vector kernel on the C310 Model. Numerical and performance effects of mixed
+ratios require a matched mixed workload on the target of interest.
+[Pilot compiler](https://github.com/compiler-team-ru/pyasc/blob/d0f64a63c432761aa57648e67be7582780a17561/python/asc/runtime/compiler.py)
+
+**Cache and dry-run.** On `030e9b2`, a single process ran FP32 add-one over
+2,048 elements with (tile,blocks) = (128,1), (128,8), (256,8), (128,8).
+The probe observed two compilations, two in-memory hits, zero registrations
+and zero launches. UB was 1,024 and 2,048 bytes for the two tile sizes.
+The same four calls on the pilot pin reproduced those counts and UB sizes.
+Changing launch count alone reused this specialization; changing its constexpr
+tile required compilation. On the old pin even the string `0` selected
+dry-run; the pilot pin parses `0`, `false`, `no` and `off` as false.
+Use `1` for compile-only and unset the variable for numerical checks and
+timing. Keep cache directories separate across toolchains and targets.
+[Original probe](https://github.com/aloschilov/pyasc-skill-stack/issues/52) ·
+[Pilot launcher](https://github.com/compiler-team-ru/pyasc/blob/d0f64a63c432761aa57648e67be7582780a17561/python/asc/runtime/launcher.py)
+
 ## Decorator syntax
 
 <!-- skill-code: fragment -->
@@ -41,9 +69,10 @@ from older snapshots.
 
 ## Explicit JIT experiment matrix
 
-Plan all 18 combinations of `reuse_alloc=(0, 1, 2)`,
+For a full JIT coverage campaign, record the 18 combinations of `reuse_alloc=(0, 1, 2)`,
 `static_alloc=(None, False, True)`, and `vf_fusion=(False, True)`, always with
-`insert_sync=True`. Begin with bare defaults and `reuse_alloc=1`, leaving the
+`insert_sync=True`. For a single kernel, choose the option tied to the observed
+bottleneck. To test allocation reuse, begin with defaults and `reuse_alloc=1`, leaving the
 other options at defaults, on identical source, tile size, unroll, and inputs.
 The source calls `reuse_alloc=1` a recommended "legacy implementation": that
 describes its internal pass, not the public API. `reuse_alloc=2` is experimental.

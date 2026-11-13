@@ -8,6 +8,114 @@ Samples carry the CANN Open Software License Agreement v2.0; the guidance here
 is a synthesis, not copied kernel implementation. Preserve licensing if later
 vendoring source. No sample was built or timed for this review.
 
+## Worked example: Maximum on three vector cores
+
+Start with the retained FP16 Maximum 01 candidate (source SHA256 begins
+`a517bbb8`). It launches 32 blocks, walks tiles of 1,024 elements in a
+grid stride, pads input loads and stores only the valid extent. Its original
+CaModel qualification is in the [breadth pilot](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-cannbench-breadth-49).
+For this experiment set the launch count to one, then three. Keep the
+math, FP16 storage, tile and comparator fixed. The compiler target is
+`Ascend950PR_9599`, PyASC `d0f64a63`, CANN 9.2.0. The Model loads dav_3510;
+its driver stub reports `Ascend950PR_9589`.
+
+**Distribute the work.** With `T = ceil(numel/tile)`, tile `q` belongs to
+block `q % blocks`. Its valid extent is `min(tile, numel - q*tile)`.
+For case 01 (1,024 × 1,024), one block executes all 1,024 tiles. Three
+blocks execute 342, 341 and 341. The last tile is full and belongs to block 0.
+For case 07 (1,023 × 1,023), the same tile gives 341 tiles to each block.
+Block 2 owns the last tile with **one valid element**. A full-tile store
+there exceeds the logical output.
+
+**Inspect the compiled specialization.** Set `PYASC_DRY_RUN=1` and use a
+fresh private cache per compiler comparison. Read `kernel.meta.memory_consumed["UB"]`
+and the byte offsets of `LocalTensor<half>` in dumped `ascendc.cpp`. For
+this pure-vector kernel the compiler emitted the following layouts.
+
+| Blocks | Tile elements | Reuse | Unroll | UB bytes | Emitted starting byte offsets |
+|---:|---:|---:|---:|---:|---|
+| 1 | 1,024 | 0 | 1 | 6,144 | 0, 2,048, 4,096 |
+| 3 | 1,024 | 0 | 1 | 6,144 | 0, 2,048, 4,096 |
+| 3 | 1,024 | 1 | 1 | 4,096 | 0, 2,048 |
+| 3 | 1,024 | 2 | 1 | 4,096 | 0, 2,048 |
+| 3 | 1,024 | 0 | 2 | 18,432 | Nine slots, 2,048 bytes apart |
+| 3 | 1,536 | 1 | 1 | 6,144 | 0, 3,072 |
+
+Reusing a dead input slot saved 2,048 bytes. Try spending those bytes on
+two 1,536-element buffers: the compiled specialization fits in the original
+6,144 bytes. At that tile case 01 has 683 tiles and its last 1,024 elements
+belong to block 1. Case 07 has 682 tiles and its last 513 elements belong
+to block 0. Unrolling by two tripled reported UB at reuse 0; inspect live
+buffers before combining unrolling with a larger tile. Reuse 1 places the second input and result at offset 0; reuse 2 places them
+at offset 2,048. Their equal peak UB hides a different assignment.
+
+The allocation trade-off shows up in execution too. At tile 1,024 on three
+blocks, seed 23 took 142,295 ticks (case 01) and 141,996 (07) with reuse 0
+and unroll 2. Reuse 2 with unroll 1 took 403,904 and 402,789, respectively.
+These are single synchronized observations after seed 19; the two variants
+change different controls relative to reuse 0/unroll 1. Use repeated
+measurements at fixed geometry to choose between close alternatives.
+
+**Check the decision.** Unset `PYASC_DRY_RUN`. Check seeds 19 and 23
+against the official comparator, then suppress launch in a separate process
+and require both comparisons to fail. For timing use the unchanged candidate, a checked warm-up and repeated
+synchronized Model tick deltas.
+Compare 1,024 and 1,536 with three blocks, reuse 1 and unroll 1. Changing
+reuse simultaneously would confound the tile comparison.
+
+All six variants passed both official seeds on both shapes. Each suppressed
+launch control rejected both seeds. For the matched retile comparison, seed
+19 warmed the specialization and also passed the official comparator. Seed
+23 ran twice on the same inputs; the outputs agreed and passed the comparator.
+Both tiles for a given shape used the same host and pinned Model image.
+
+| Case | Tile | Warmed ticks, seed 23, repeat 1 | Repeat 2 |
+|---|---:|---:|---:|
+| 01 | 1,024 | 403,905 | 403,834 |
+| 01 | 1,536 | 274,860 | 274,521 |
+| 07 | 1,024 | 402,790 | 402,419 |
+| 07 | 1,536 | 274,682 | 274,317 |
+
+The 1,536-element tile used fewer ticks in every matched observation at
+reuse 1. Prefer it for this reuse-1 specialization.
+At tile 1,024 the reuse-0 baseline also used fewer ticks on seed 23
+than the larger reuse-1 tile. The compiler’s allocation saving alone
+therefore gives no reason to switch away from the baseline.
+
+One-core repeated timing reached its 5,400-second wall limit on cases 01 and 07.
+The independent two-seed numerical runs completed. For seed 23, the warmed
+single-core launches took 659,400 ticks (01) and 658,226 (07).
+With three cores, tile 1,024, reuse 0 and unroll 1, the seed-23 medians
+were 221,759 and 221,437 ticks, respectively.
+Each one-core figure is a single observation. The archive preserves the
+interrupted repeats.
+At reuse 1 the initial eight-launch timing run also exceeded the limit
+for tile 1,024 on both shapes. The shorter matched comparison above covers all four cells.
+These tick counts describe this simulator. Device latency remains unmeasured.
+
+**Reproduce.** In the [qualification archive](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-cannbench-transfer-52)
+use the worked-example directory. Pull the ARM64 image pinned in the manifest
+before going offline. Run `python3 restore-catalog.py /path/to/cann-bench`
+to export catalog revision `08d519c5`, then run `python3 variants.py`. Compile
+with `python3 probe-host.py dry maximum/1 variants/c3-r1-u1-t1536.py my-dry`.
+The dry probe uses the 1,024 × 1,024 input. Both shapes share this compiled
+specialization because the element count is a runtime argument.
+Use `python3 decision-probe/probe-host.py timing maximum/7 variants/c3-r1-u1-t1536.py my-time-1536`
+for the matched timing. Repeat at tile 1,024 and for case 01 in distinct directories.
+Run `probe-host.py suppressed` for each variant in a new output directory.
+The probe records source hashes, compiler layout, launch counts and both seed
+verdicts. For other operators, first identify which property changes the
+tile budget: dtype conversion, spatial footprint, accumulated outputs or
+indexing may dominate. The Maximum tile size applies only to this example.
+[Control details and runtime pins](api-jit-options.md#controls-used-in-the-maximum-example)
+
+The GeLU geometry experiment on PyASC `9069108`, Ascend950PR_957c, CANN 9.1,
+and the legacy `asc2.range(parallel=True, unroll_factor=2)` wide-reduction
+regression on Ascend910B1 motivate checking block counts and unroll separately.
+Their timings belong to their original operators and targets.
+[GeLU measurements](https://github.com/aloschilov/pyasc-skill-stack/issues/13) ·
+[Legacy reduction measurements](https://github.com/aloschilov/pyasc-skill-stack/issues/1)
+
 ## Scope and portability
 
 The index covers vector, reduction, layout, matmul, attention, and SIMT stories.
@@ -24,7 +132,7 @@ reproduced implementations. Read their specific contracts before using them.
 - GeLU and softmax examples specify CANN >=9.1 and dav-3510. Softmax reported
   hardware data uses CANN9.2; RMSNormQuant labels a 64-vector-core simulation;
   data-transform/SIMD stories report CANNsim traces. Neither those times nor
-  their fixed 32/64-block launches describe our pinned CANN9.0 runtime/runner.
+  their fixed 32/64-block launches qualify the historical CANN 9.0 run or this CANN 9.2 Model.
 - Keep public AscTile math/copy/types/JIT. `Reg::*`, manual mutexes, pragmas,
   `asc_vf_call`, direct VF calls and UnitFlag are **lowering comparison targets**,
   not permission to embed those APIs in kernels. An explicitly authorized
@@ -67,7 +175,7 @@ reproduced implementations. Read their specific contracts before using them.
 - For a per-launch comparison, run one kernel/shape per fresh process, or use
   per-launch trace boundaries. A process-wide cumulative counter cannot identify
   individual launch costs without those boundaries.
-- Hold runtime/image digest, platform, inputs, dtype, geometry and counter scope
+- Hold runtime/image digest, platform, inputs, dtype, all geometry except the control under test, and counter scope
   fixed across baseline and candidate. Record warm-up/cache policy and repeated
   samples; retain failures and report dispersion rather than selecting the best.
 - Keep numerical verification separate from the timed interval. Compare complete

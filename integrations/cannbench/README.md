@@ -25,9 +25,12 @@ the same pinned commit in your CANNBench clone.
 | `exp/1` | `level1/exp` | `597a915ec49735ee7d53057554bde426ef8c1d96` |
 | `softmax/1` | `level2/softmax` | `597a915ec49735ee7d53057554bde426ef8c1d96` |
 | `transpose/2` | `level3/transpose` | `597a915ec49735ee7d53057554bde426ef8c1d96` |
-| `maximum/1` | `level2/maximum` | `08d519c503843bce5fd4672ffa2259abeb22fb00` |
+| `maximum/1`, `maximum/7` | `level2/maximum` | `08d519c503843bce5fd4672ffa2259abeb22fb00` |
 | `strided_slice/1` | `level3/strided_slice` | `08d519c503843bce5fd4672ffa2259abeb22fb00` |
 | `gather/1` | `level2/gather` | `08d519c503843bce5fd4672ffa2259abeb22fb00` |
+| `masked_scale/8` | `level1/masked_scale` | `08d519c503843bce5fd4672ffa2259abeb22fb00` |
+| `resize_bilinear/1` | `level2/resize_bilinear` | `08d519c503843bce5fd4672ffa2259abeb22fb00` |
+| `unsorted_segment_sum/1` | `level2/unsorted_segment_sum` | `08d519c503843bce5fd4672ffa2259abeb22fb00` |
 
 Gather receives the declared int32 indices. At `08d519c5` the official
 reference converts them to int64 internally for the CPU comparison.
