@@ -162,7 +162,7 @@ def prompt(task, skills):
             "and unroll 4. Pass cache_input=False when the physical FP16 input exceeds 64 MiB. Return the output. The test input R=1, H=67108864 has 8192 "
             "full chunks and selects 64 of 72 AIVs; derive this from the general selector. "
             "For the narrow two-wave selector, a positive height launches two_wave_swiglu on that AIV count with one cached "
-            "signed-int16 gate-index tensor and returns the output. Zero falls through "
+            "signed-int16 gate-index tensor. Obtain it by calling two_wave_gate_index(half, tile, device, cache) from the two-wave template. The ordinary index helper produces int32 for H>1 and belongs to the ordinary branch. Trace the actual two-wave argument for H7: 6496 int16 values occupying 12992 bytes. Return the output. Zero falls through "
             "to the generic slab, rows or flat kernels. Trace this exact branch before "
             "returning the module: at 72 AIVs and 253952 UB bytes, R=133221 and H=7 "
             "give height 928 and two tiles per block; H=1 reaches the ordinary slab. "
