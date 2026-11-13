@@ -80,6 +80,12 @@ def measure(candidate, case, operator=None):
     shapes = json.loads(row["input_shape"])
     dtypes = json.loads(row["dtype"])
     attrs = json.loads(row["attrs"])
+    # The CSV uses JSON strings for nonfinite scalar attributes. Public YAML
+    # and the baseline loader pass the corresponding floating-point values.
+    call_attrs = {
+        key: float(v) if isinstance(v, str) and v.lower() in {"nan", "inf", "+inf", "-inf"} else v
+        for key, v in attrs.items()
+    }
     value_range = json.loads(row["value_range"])
     ranges = value_range if isinstance(value_range[0], list) else [value_range] * len(shapes)
     if len(dtypes) == 1:
@@ -97,9 +103,9 @@ def measure(candidate, case, operator=None):
                 args.append(make(shape, dtype, limits))
         return args
 
-    def check(args):
-        expected = golden(*args, **attrs)
-        output = op(*args, **attrs)
+    def check(args, kwargs):
+        expected = golden(*args, **kwargs)
+        output = op(*args, **kwargs)
         if isinstance(expected, (tuple, list)):
             if type(output) is not type(expected) or len(output) != len(expected):
                 raise ValueError("candidate changed output sequence type or length")
@@ -117,7 +123,9 @@ def measure(candidate, case, operator=None):
         for bounds in ranges
     )
     if finite_control:
-        check(inputs([[0, 1] if dtype in ("uint8", "bool") else [-1, 1] for dtype in dtypes]))
+        finite_attrs = {k: 1.0 if isinstance(v, float) and not math.isfinite(v) else v
+                        for k, v in call_attrs.items()}
+        check(inputs([[0, 1] if dtype in ("uint8", "bool") else [-1, 1] for dtype in dtypes]), finite_attrs)
     args = inputs(ranges)
     launch = runtime.launch_kernel
     grids = []
@@ -128,14 +136,14 @@ def measure(candidate, case, operator=None):
         return result
 
     with patch.object(runtime, "launch_kernel", record):
-        check(args)
+        check(args, call_attrs)
         grid = grids.copy()
         if not grid:
             raise ValueError("no device launch")
         profiler = Profiler()
         with profiler.profile():
             for _ in range(3):
-                op(*args, **attrs)
+                op(*args, **call_attrs)
 
     tasks = [(t.name, t.type, t.duration) for t in profiler.last_result.tasks]
     kernels = [(n, t, d) for n, t, d in tasks if t.upper() == "AI_VECTOR_CORE"]
