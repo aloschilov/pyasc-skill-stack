@@ -24,7 +24,7 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def run(task, case, direct_simt=False, direct_vector=False):
+def run(task, case, direct_simt=False, direct_vector=False, entry=None):
     with (task / "cases.csv").open() as f:
         row, = (r for r in csv.DictReader(f) if int(r["case_id"]) == case)
     shape, = json.loads(row["input_shape"])
@@ -78,6 +78,10 @@ def run(task, case, direct_simt=False, direct_vector=False):
         op_name = records[0]["Op Name"].lower()
         expected_symbol = {11: "short_rowsilj273elj509elj8ee", 13: "short_rowsilj143elj536elj4ee"}[case]
         valid_name = expected_symbol in op_name if direct_simt else op_name == "swiglu"
+        if entry:
+            if entry not in {"single_wave_rows", "tile_stages", "local_windows", "staged_rows"}:
+                raise ValueError(f"unexpected diagnostic symbol {entry}")
+            valid_name = op_name == entry and int(records[0][grid]) == requested
         if direct_vector:
             valid_name = ("vector_rows" in op_name and
                           f"ilj{rows}elj{half}elj{height}ee" in op_name)
@@ -93,7 +97,7 @@ def run(task, case, direct_simt=False, direct_vector=False):
         results.append(dict(fixture=name, case=case, shape=shape, dim=dim, correct=True,
                             task=records[0]["Op Name"], task_type=records[0][task_type],
                             block_dim=records[0][grid], samples_us=times,
-                            **({"requested_blocks": requested} if direct_simt or direct_vector else {}),
+                            **({"requested_blocks": requested} if direct_simt or direct_vector or entry else {}),
                             median_us=statistics.median(times[5:]), cases_sha256=digest(task/"cases.csv"),
                             golden_sha256=digest(task/"golden.py"), summary_sha256=digest(summary)))
     return results
@@ -106,5 +110,8 @@ if __name__ == "__main__":
     direct = parser.add_mutually_exclusive_group()
     direct.add_argument("--direct-vector", action="store_true")
     direct.add_argument("--direct-simt", action="store_true")
+    direct.add_argument("--compiled-entry", choices=("single_wave_rows", "tile_stages", "local_windows", "staged_rows"))
     args = parser.parse_args()
-    print(json.dumps(run(args.task, args.case, args.direct_simt, args.direct_vector)))
+    if args.compiled_entry:
+        os.environ["REPLAY_ENTRY"] = args.compiled_entry
+    print(json.dumps(run(args.task, args.case, args.direct_simt, args.direct_vector, args.compiled_entry)))
