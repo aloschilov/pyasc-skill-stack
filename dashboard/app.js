@@ -487,7 +487,7 @@ function validate(data) {
       const sources = r.kernel_sources;
       require(sources && ['available','partial','unavailable','not-applicable'].includes(sources.status) && Array.isArray(sources.files) && sources.files.length <= 2000 && Array.isArray(sources.missing));
       require(!['unavailable','not-applicable'].includes(sources.status) || sources.files.length === 0);
-      for (const file of sources.files) require(typeof file.id === 'string' && ['qualified','failed'].includes(file.outcome) && typeof file.member === 'string' && typeof file.sha256 === 'string' && /^[0-9a-f]{64}$/.test(file.sha256) && typeof file.text === 'string' && file.text.length > 0 && file.text.length <= 131072);
+      for (const file of sources.files) require(typeof file.id === 'string' && ['qualified','failed','incomplete'].includes(file.outcome) && typeof file.member === 'string' && typeof file.sha256 === 'string' && /^[0-9a-f]{64}$/.test(file.sha256) && typeof file.text === 'string' && file.text.length > 0 && file.text.length <= 131072);
       for (const item of sources.missing) require(typeof item.id === 'string' && typeof item.reason === 'string');
     }
     require(Object.hasOwn(levels, r.level) && ['fresh-generated','upstream-fixture'].includes(r.category) && ['complete','partial','incomplete'].includes(r.status) && ['recent','stale'].includes(r.freshness));

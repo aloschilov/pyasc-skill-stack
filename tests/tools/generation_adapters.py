@@ -97,7 +97,14 @@ def static_check(source, contract):
     n = len(contract['arguments'])
     if [ast.unparse(a) for a in call.args[:n]] != contract['arguments']:
         raise ValueError('Input/output tensors must be passed unchanged')
-    for a in call.args[n:]: ast.literal_eval(a)
+    for arg in call.args[n:]:
+        try:
+            ast.literal_eval(arg)
+        except (ValueError, TypeError, SyntaxError):
+            raise ValueError(
+                f'Host launch argument {ast.unparse(arg)!r} must be a literal. '
+                'Use the fixed task extent for host scalar arguments.'
+            ) from None
     # Disallow runtime reconfiguration, introspection, host writes and imports
     # inside functions as well as import-time calls hidden in defaults.
     allowed_names = {'min', 'max', 'range', 'len', 'int', 'float', 'bool', 'abs'}

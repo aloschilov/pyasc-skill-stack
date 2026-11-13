@@ -438,6 +438,26 @@ class PairedReceipts(unittest.TestCase):
             with self.assertRaisesRegex(Blocked, 'Directory search is disabled'): audit()
             events.pop()
 
+    def test_unavailable_bash_requires_undispatched_native_error_and_wire_schema(self):
+        t = next(t for t in self.plan['trials'] if t['protocol']=='P6')
+        root=self.root/t['id']; attempt=root/t['cell']/'attempt-1'
+        paths=pairs.read(attempt/'isolation.json')
+        events=[json.loads(s) for s in (attempt/'generation.stdout').read_text().splitlines()]
+        names=['edit','read','skill','write']
+        failure={'status':'error', 'error':"Model tried to call unavailable tool 'invalid'. Available tools: edit, read, skill, write."}
+        events.append({'sessionID':'session-'+t['id'],'part':{'tool':'bash','state':failure}})
+        def audit():
+            return protocols.audit_trace('\n'.join(map(json.dumps,events)),Path(paths['project']),Path(paths['context']),
+                pairs.trial_plan(self.plan,t),source_context=root/'context',
+                usage={'requests':[{'audit':{'tool_names':names}}]})
+        self.assertEqual(audit()['denied_accesses'][-1],{'tool':'bash','reason':'unavailable-before-dispatch'})
+        names.append('bash')
+        with self.assertRaisesRegex(Blocked,'Undeclared tool'):audit()
+        names.pop();failure['status']='completed'
+        with self.assertRaisesRegex(Blocked,'Undeclared tool'):audit()
+        failure.update(status='error',output='shell output')
+        with self.assertRaisesRegex(Blocked,'Undeclared tool'):audit()
+
     def test_status_and_nonfinite_metrics_are_not_valid_pair_observations(self):
         t = self.plan['trials'][0]
         s = pairs.read(self.root/'state.json');s['trials'][0]['status'] = 'failed'

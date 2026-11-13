@@ -131,6 +131,17 @@ class Dashboard(unittest.TestCase):
         files={'run/plan.json':plan,'run/report.json':{},'run/trial/plan.json':child,'run/trial/state.json':state,
             'run/trial/add/attempt-1/candidate.py':raw,'run/trial/add/attempt-1/project/candidate.py':raw}
         def project():return dash.kernel_sources(dash.Archive(archive({'result/generation.tar.gz':archive(files)})),{'kind':'models'})
+        missing_attempt=state['cells'][0]['attempts'][1]
+        missing_attempt['source_availability']={'status':'unavailable','reason':'no-file'}
+        self.assertEqual(project()['missing'][0]['reason'],'No candidate file was retained')
+        partial=b'def unfinished('
+        missing_attempt['source_availability']={'status':'incomplete','reason':'generation-incomplete','sha256':dash.digest(partial)}
+        key='run/trial/add/attempt-2/'
+        files[key+'partial-candidate.py']=files[key+'project/candidate.py']=partial
+        self.assertEqual(project()['files'][1]['outcome'], 'incomplete')
+        files[key+'project/candidate.py']=b'different'
+        self.assertEqual(project()['status'],'unavailable')
+        del missing_attempt['source_availability']
         result=project();self.assertEqual(result['status'],'partial')
         self.assertEqual(result['files'][0]['outcome'],'failed');self.assertEqual(result['missing'][0]['id'],'trial/attempt-2')
         state['plan_sha256']='a'*64

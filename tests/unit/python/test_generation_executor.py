@@ -31,6 +31,22 @@ class ExecutorContracts(unittest.TestCase):
         self.plan['checkout_revision'] = 'offline-fixture'
         self.plan['plan_sha256'] = planner.digest(planner.canonical(self.plan))
 
+    def test_source_availability_keeps_partial_bytes_outside_the_candidate_contract(self):
+        project=self.path/'project'
+        project.mkdir()
+        source=project/'candidate.py'
+        def snapshot():return executor.retain_attempt_source(self.path, {'status':'failed'})
+        self.assertEqual(snapshot(), {'status':'unavailable','reason':'no-file'})
+        source.write_bytes(b'def kernel(\n')
+        partial=snapshot()
+        self.assertEqual(partial, {'status':'incomplete','reason':'generation-incomplete',
+                                  'sha256':planner.digest(source.read_bytes())})
+        self.assertEqual((self.path/'partial-candidate.py').read_bytes(), source.read_bytes())
+        self.assertFalse((self.path/'candidate.py').exists())
+        source.write_bytes(b'\xff'); self.assertEqual(snapshot()['reason'],'invalid-text')
+        source.unlink();source.symlink_to(self.path/'partial-candidate.py')
+        self.assertEqual(snapshot()['reason'],'invalid-file')
+
     def test_plan_validation_is_offline_and_rejects_rehashed_changes(self):
         path = self.path/'plan.json'; executor.save(path, self.plan)
         with patch.object(executor.subprocess, 'Popen', side_effect=AssertionError('Must remain offline')):
@@ -55,6 +71,11 @@ class ExecutorContracts(unittest.TestCase):
                 adapters.static_check(source.replace('    '+('add_kernel[1](x, y, out)' if name=='add.py' else
                     'sum_kernel[1](x, out)' if name=='reduce.py' else 'broadcast_kernel[4](x, out)'),
                     '    out.copy_(x)'), contract)
+        cell = next(c for c in self.plan['cells'] if c['id']=='add-f32-tail')
+        source = (ROOT/'tests/generation/fixtures/add.py').read_text().replace(
+            'add_kernel[1](x, y, out)', 'add_kernel[1](x, y, out, len(x), 256)')
+        with self.assertRaisesRegex(ValueError, r"Host launch argument 'len\(x\)' must be a literal"):
+            adapters.static_check(source, adapters.task_contract(ROOT, cell))
         bad = dict(self.plan['cells'][0], cases=['vadd_test_1'])
         with self.assertRaisesRegex(ValueError, 'Unsupported'): adapters.task_contract(ROOT, bad)
 

@@ -221,7 +221,7 @@ def inspect_trial(root, expected, status):
     require(bundle.plan == expected, 'Trial plan/provenance mismatch')
     require(bundle.state['checkout_revision'] == expected['checkout_revision'], 'Trial revision mismatch')
     require(bundle.state['status'] == status and status in ('passed', 'failed'), 'Unresolved/inconsistent trial status')
-    cell = bundle.state['cells'][0]; rows = []; schemas = set(); sessions = set(); settings = {}; candidates = []
+    cell = bundle.state['cells'][0]; rows = []; schemas = set(); sessions = set(); settings = {}; candidates = []; sources = []
     for attempt in cell['attempts']:
         prefix = cell['id']+f'/attempt-{attempt["number"]}/'
         isolation = bundle.json(prefix+'isolation.json')
@@ -319,6 +319,20 @@ def inspect_trial(root, expected, status):
         for value in (attempt['duration_seconds'], usage['provider_cost']):
             require(value is None or type(value) in (int, float) and math.isfinite(value) and value >= 0, 'Invalid duration/cost')
         require(attempt['duration_seconds'] is not None, 'Missing duration')
+        if 'source_availability' in attempt:
+            availability = attempt['source_availability']
+            if attempt.get('candidate_sha256'):
+                require(availability == {'status': 'retained', 'sha256': attempt['candidate_sha256']},
+                        'Retained source binding differs')
+            elif availability.get('status') == 'incomplete':
+                partial = bundle.read(prefix+'partial-candidate.py')
+                require(partial == bundle.read(prefix+'project/candidate.py') and availability ==
+                        {'status':'incomplete','reason':'generation-incomplete','sha256':digest(partial)},
+                        'Incomplete source binding differs')
+            else:
+                require(availability in [{'status':'unavailable','reason':reason} for reason in
+                                         ('no-file','invalid-file','invalid-text')], 'Invalid source availability')
+            sources.append(availability)
         candidates.append(attempt.get('candidate_sha256'))
         rows.append({'attempts': 1, 'seconds': attempt['duration_seconds'], 'budget_exhausted': bool(budget_failure),
             'output_tokens': usage['observed_output_tokens'],
@@ -331,6 +345,7 @@ def inspect_trial(root, expected, status):
         **({'model': dict(expected['model'], observed=expected['model']['expected_response']),
             'request_settings': next(iter(settings.values())), 'candidate_sha256': candidates}
            if expected['intervention'].get('model_comparison') else {}),
+        **({'source_availability': sources} if sources else {}),
         'opencode_version': bundle.version,
         'outcome': 'qualified' if cell['status'] == 'passed' else 'budget-exhausted' if rows[-1]['budget_exhausted'] else 'candidate-failed',
         'tool_schema_sha256': schemas.pop(), 'attempts': len(rows), 'repair_attempts': 0,

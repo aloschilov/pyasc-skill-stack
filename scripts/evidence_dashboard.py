@@ -401,7 +401,19 @@ def kernel_sources(archive, entry):
                         require(type(number) is int and 1 <= number <= 10, 'Invalid attempt number')
                         label = identity+'/attempt-'+str(number)
                         if not attempt.get('candidate_sha256'):
-                            missing.append({'id': label, 'reason': 'No hash-bound candidate retained for this attempt'})
+                            record = attempt.get('source_availability', {})
+                            if record.get('status') == 'incomplete':
+                                require(attempt['status'] in ('failed', 'blocked') and
+                                        record.get('reason') == 'generation-incomplete', 'Invalid partial source')
+                                base = prefix+cell+'/attempt-'+str(number)+'/'
+                                source(bundle, base+'partial-candidate.py', record['sha256'], label,
+                                       'incomplete', base+'project/candidate.py')
+                            else:
+                                reasons = {'no-file': 'No candidate file was retained',
+                                           'invalid-file': 'Output was not a regular file within the size limit',
+                                           'invalid-text': 'Output was not a readable source file'}
+                                missing.append({'id': label, 'reason': reasons.get(record.get('reason'),
+                                    'No hash-bound candidate retained for this attempt')})
                             continue
                         require(attempt['status'] in ('passed', 'failed'), 'Unfinished candidate source')
                         member = prefix+cell+'/attempt-'+str(number)+'/candidate.py'
