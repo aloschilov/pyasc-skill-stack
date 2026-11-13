@@ -65,6 +65,11 @@ def prompt(task, skills):
             "body, including full tiles and remainders. A call from a JIT to an ordinary "
             "Python swiglu element helper fails dependency resolution on this wheel. "
 
+            "Normalize dim to d. Use shape[d]//2 for the output shape at that axis, "
+            "and H=(shape[d]//2)*prod(shape[d+1:]) for every tile selector, global "
+            "descriptor and JIT width. R=prod(shape[:d]). Verify 2*R*H equals the input "
+            "numel. Trace (8192,16384),dim=0: output (4096,16384), R=1, H=67108864. "
+            "Trace (11,13,16,67),dim=2: output (11,13,8,67), R=143, H=536. "
             "In the public swi_glu function, after deriving R, H, actual dtype, AIVs "
             "and available UB, call two_wave_tile before the ordinary slab selector. "
             "Call whole_bf16_grid for aligned BF16 whole rows before the generic 2D route. A positive "

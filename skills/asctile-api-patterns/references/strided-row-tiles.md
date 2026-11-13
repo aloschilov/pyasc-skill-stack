@@ -4,6 +4,16 @@ Use this geometry for the existing public 950PR SwiGLU 2D kernel. It reads
 two half-rows with strided copies and writes one half-row. The short-half
 gather and long flat-chunk routes have different DMA and UB costs.
 
+For a contiguous input split along normalized axis `d`, the output shape
+halves only `shape[d]`. The physical half-row width is
+`H = (shape[d] // 2) * prod(shape[d+1:])` and the row count is
+`R = prod(shape[:d])`. Use H consistently in the dispatch heuristics,
+kernel descriptors, bounds and offsets. Trace a non-final split axis
+through the actual launch and verify `2*R*H == input.numel()`.
+On input (8192, 16384) with dim=0, the output axis is 4096 but the JIT
+half-row contains 67108864 elements. Passing 4096 as the JIT width leaves
+most of the output unwritten.
+
 For a logical half of H contiguous elements of s bytes, use H*s for the
 useful payload of each row in one input descriptor. Set the physical
 width W to H rounded up to a multiple of 32/s elements. Size the tile
