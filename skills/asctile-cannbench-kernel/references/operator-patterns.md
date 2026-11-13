@@ -62,8 +62,11 @@ Select operators by `level`, verify their public fixture digests, and pair
 them with the same suite's device metadata. For task version 2.0.0 the L1
 entries are Exp and SwiGLU. The archived Season 1 entries have distinct
 coverage and baselines. On a local replay of a native operator, preserve
-the published scoring denominator and record the native grid, toolchain
-and timing separately.
+the published `baseline_perf_us` as the numerator of the speed ratio.
+Read the metadata's baseline formula and release status. Season 2 on 950PR
+caps submitted measurements at three times the hardware model. When investigating
+a shortfall, record the profiler's clock warmup, L2 cleaning, timed calls and
+actual grid. Compare like-for-like traces before changing a generation rule.
 
 When validating a shared dispatch or tiling rule across L1, keep one complete
 generated module per operator. Run every public case and record both numerical

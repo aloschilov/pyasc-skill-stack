@@ -10,7 +10,7 @@ On David, direct `aclnnSwiGlu` in CANN 9.2 produced the following FP32 vector-co
 | 13 | 11×13×16×67, dim 2 | Public | 18 | 3.1935 | 1.500 | 0.4697× |
 | 13 | 11×13×16×67, dim 2 | Finite control | 18 | 3.2305 | — | — |
 
-These measured native durations exceed the published targets on this device/software combination. The finite control validates the nondegenerate arithmetic. Retain the published denominator for generated kernels. The captured bundle of CSV and JSON records had SHA-256 `40b7b66ea008ed54e0baf101e66b6c33689f6919c519db5d6807db4d715b1da7`.
+These measured native durations exceed the published targets on this device/software combination. The finite control validates the nondegenerate arithmetic. Score generated kernels using the published baseline as the numerator. The captured bundle of CSV and JSON records had SHA-256 `40b7b66ea008ed54e0baf101e66b6c33689f6919c519db5d6807db4d715b1da7`.
 
 To replay in the target CANN environment, build the driver and run from a new directory with the public evaluator on the Python path. Set `TASK` to the Season 2 SwiGLU task directory. Each fixture needs its own fresh output directory.
 
@@ -20,3 +20,16 @@ g++ -O2 "$SOURCE/swiglu.cpp" -I"$ASCEND_HOME_PATH/include" \
 python "$SOURCE/replay.py" "$TASK" 11
 python "$SOURCE/replay.py" "$TASK" 13
 ```
+
+## Frequency boost and L2 clean
+
+A separate run on David used `torch_npu.npu_swiglu` from torch_npu 2.10.0 with the public input buffers from the ACLNN replay. Each row used a fresh process. The first call checked the public golden. Three warm-up calls preceded the five timed calls. The conditioned run used the installed CANNBench provider to warm up once and clean L2 before each timed call, as in the Season 2 profiling schedule. The trace confirmed a cache-clean kernel immediately before each of the five measured SwiGLU tasks. The method isolates the combined effect of the two settings with msprof and resident inputs.
+
+| Case | Blocks | Mode | Native median, µs | CANNBench, µs | CANNBench/native |
+|---:|---:|---|---:|---:|---:|
+| 11 | 24 | Plain | 3.188 | 2.021 | 0.6339× |
+| 11 | 24 | Boost and L2 clean | 3.965 | 2.021 | 0.5097× |
+| 13 | 18 | Plain | 2.971 | 1.500 | 0.5049× |
+| 13 | 18 | Boost and L2 clean | 3.607 | 1.500 | 0.4159× |
+
+Both modes passed the public golden. The published 950PR metadata caps submitted durations at `3 * t_hw_us`, rounded to three decimal places. Cases 11 and 13 are at that cap and the metadata marks NPU revalidation as pending. The original uncapped timings are unavailable in this release. Projected CSVs, correctness and process statuses had bundle SHA-256 `7bcadbf784fa964eeacc4cabbd0fb1bcdfaa7971cc62b6161f1a040a30a7069b`. The results above refer to native SwiGLU. The OpenCode measurements in the MR use the three-call PyAsc profiler.
