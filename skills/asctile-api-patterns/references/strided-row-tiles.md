@@ -210,7 +210,13 @@ and the sorted output intervals must partition [0,R). For R=52224,
 T=64 and N=72 this is exactly 816 disjoint writes. For R=1009, T=7
 and N=72 it is 144 seven-row writes and one one-row write.
 
+Define both ranked descriptors in the row JIT. A two-component offset
+requires a rank-two descriptor even when its backing storage is contiguous.
+Use the logical row width in GM and reserve the padded width for UB.
+
 ```python
+gx = asctile.global_tensor(x, [R, 2 * H])
+gy = asctile.global_tensor(y, [R, H])
 count = (R + T - 1) // T
 for tile_index in asctile.range(asctile.block_idx(), count,
                                 asctile.block_num(), unroll_factor=U):
