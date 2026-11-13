@@ -1,6 +1,8 @@
 """Compare an emitted two-pointer SwiGLU ELF and native SwiGLU on resident torch_npu inputs."""
 import argparse
+from contextlib import contextmanager, nullcontext
 import csv
+import ctypes as C
 import hashlib
 import json
 from pathlib import Path
@@ -12,6 +14,31 @@ import torch
 import torch_npu
 
 
+@contextmanager
+def registered_launch(code, name, blocks, stream):
+    """Retain the loaded module across calls as a cached JIT launcher can."""
+    from device_host import DeviceBinary, checked, runtime
+
+    lib = runtime()
+    data = C.create_string_buffer(code)
+    symbol = C.create_string_buffer(name.encode("ascii"))
+    stub = C.cast(symbol, C.c_void_p)
+    binary = DeviceBinary(0x41415246, 0, C.addressof(data), len(code))
+    handle = C.c_void_p()
+    checked(lib.rtDevBinaryRegister, C.byref(binary), C.byref(handle))
+    try:
+        checked(lib.rtFunctionRegister, handle, stub, C.cast(stub, C.c_char_p), stub, 0)
+
+        def invoke(packed):
+            args = C.create_string_buffer(packed)
+            checked(lib.rtKernelLaunch, stub, blocks, C.addressof(args), len(packed), None, stream)
+            checked(lib.rtStreamSynchronize, stream)
+
+        yield invoke
+    finally:
+        checked(lib.rtDevBinaryUnRegister, handle)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("elf", type=Path)
@@ -19,7 +46,7 @@ def main():
     parser.add_argument("task", type=Path)
     parser.add_argument("host", type=Path, help="directory containing device_host.py")
     parser.add_argument("case", type=int, choices=(11, 13))
-    parser.add_argument("operator", choices=("emitted", "native"))
+    parser.add_argument("operator", choices=("emitted", "cached", "native"))
     parser.add_argument("mode", choices=("plain", "conditioned"))
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
@@ -38,51 +65,57 @@ def main():
     symbol = "row_single_wave_fp32"
     stream = stream_ptr(x)
 
-    def invoke():
-        if args.operator == "native":
-            return torch_npu.npu_swiglu(x, dim=dim)
-        y = torch.empty(oracle.shape, dtype=x.dtype, device=x.device)
-        launch(code, symbol, blocks, struct.pack("<QQ", x.data_ptr(), y.data_ptr()), stream)
-        return y
+    def reload_and_launch(packed):
+        launch(code, symbol, blocks, packed, stream)
 
-    def check(result):
-        actual = result.cpu()
-        torch.testing.assert_close(actual, oracle, equal_nan=True)
+    lifetime = (registered_launch(code, symbol, blocks, stream)
+                if args.operator == "cached" else nullcontext(reload_and_launch))
+    with lifetime as send:
+        def invoke():
+            if args.operator == "native":
+                return torch_npu.npu_swiglu(x, dim=dim)
+            y = torch.empty(oracle.shape, dtype=x.dtype, device=x.device)
+            send(struct.pack("<QQ", x.data_ptr(), y.data_ptr()))
+            return y
 
-    check(invoke())
-    if args.mode == "conditioned":
-        from cann_bench_utils import cann_bench_cache_clean, cann_bench_warmup
-        a, b, scratch = [torch.rand(s, dtype=torch.float16).to(x.device)
-                         for s in [(10240, 10240), (10240, 10240), (96, 1024, 1024)]]
-        cann_bench_warmup(a, b)
-        torch.npu.synchronize(x.device)
-        cann_bench_cache_clean(scratch)
-        torch.npu.synchronize(x.device)
+        def check(result):
+            actual = result.cpu()
+            torch.testing.assert_close(actual, oracle, equal_nan=True)
 
-    prof = torch_npu.profiler
-    config = prof._ExperimentalConfig(export_type=[prof.ExportType.Text],
-                                      profiler_level=prof.ProfilerLevel.Level1,
-                                      aic_metrics=prof.AiCMetrics.AiCoreNone)
-    trace = args.output / "trace"
-    with prof.profile(activities=[prof.ProfilerActivity.NPU],
-                      schedule=prof.schedule(wait=0, warmup=3, active=5, repeat=1),
-                      on_trace_ready=prof.tensorboard_trace_handler(str(trace)),
-                      experimental_config=config, record_shapes=False,
-                      profile_memory=False, with_stack=False) as session:
-        for step in range(8):
-            if args.mode == "conditioned" and step >= 3:
-                cann_bench_cache_clean(scratch)
-                torch.npu.synchronize(x.device)
-            result = invoke()
+        check(invoke())
+        if args.mode == "conditioned":
+            from cann_bench_utils import cann_bench_cache_clean, cann_bench_warmup
+            a, b, scratch = [torch.rand(s, dtype=torch.float16).to(x.device)
+                             for s in [(10240, 10240), (10240, 10240), (96, 1024, 1024)]]
+            cann_bench_warmup(a, b)
             torch.npu.synchronize(x.device)
-            session.step()
-    check(result)
+            cann_bench_cache_clean(scratch)
+            torch.npu.synchronize(x.device)
+
+        prof = torch_npu.profiler
+        config = prof._ExperimentalConfig(export_type=[prof.ExportType.Text],
+                                          profiler_level=prof.ProfilerLevel.Level1,
+                                          aic_metrics=prof.AiCMetrics.AiCoreNone)
+        trace = args.output / "trace"
+        with prof.profile(activities=[prof.ProfilerActivity.NPU],
+                          schedule=prof.schedule(wait=0, warmup=3, active=5, repeat=1),
+                          on_trace_ready=prof.tensorboard_trace_handler(str(trace)),
+                          experimental_config=config, record_shapes=False,
+                          profile_memory=False, with_stack=False) as session:
+            for step in range(8):
+                if args.mode == "conditioned" and step >= 3:
+                    cann_bench_cache_clean(scratch)
+                    torch.npu.synchronize(x.device)
+                result = invoke()
+                torch.npu.synchronize(x.device)
+                session.step()
+        check(result)
     files = list(trace.rglob("kernel_details.csv"))
     if len(files) != 1:
         raise ValueError(f"expected one kernel_details.csv, got {files}")
     with files[0].open(encoding="utf-8-sig", newline="") as f:
         rows = list(csv.DictReader(f))
-    target = symbol if args.operator == "emitted" else "SwiGlu"
+    target = "SwiGlu" if args.operator == "native" else symbol
     selected = [r for r in rows if target.lower() in r["Name"].lower()]
     clean = [r for r in rows if "cannbenchcacheclean" in r["Name"].lower()]
     if len(selected) != 5 or len(clean) != (5 if args.mode == "conditioned" else 0):
