@@ -108,6 +108,16 @@ from 0.197 to 0.577 µs and MTE3 time from 0.316 to 0.573 µs. Pipeline
 activity can overlap. Use the separate task duration to compare end-to-end
 device performance and the ordinary evaluation run for qualification.
 
+To test whether UB placement limits a short planar kernel, keep its GM
+descriptors, compute and grid fixed. Verify that a zero-shift rebuild has
+the wheel's device instruction bytes. Independently shift aligned buffer
+bases within available UB and check for overlap. On 950PR, inserting 32
+bytes after scratch reduced the 36-block public FP32 case from 1.873 to
+1.842 µs across two process medians. The finite control rose from 1.852
+to 1.872 µs and the 35-block public case was effectively unchanged. These
+measurements support keeping the ordinary placement for this layout. A
+bank-conflict attribution requires a counter that measures those conflicts.
+
 To estimate the headroom for arithmetic tuning, keep the shape, launch grid,
 DMA extents and actual evaluator traffic fixed. Use a diagnostic operation
 that consumes both operands, such as elementwise multiplication, and check

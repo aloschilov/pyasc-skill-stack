@@ -41,6 +41,21 @@ three-row tail at T4/H536 reads one extra. Neither shape gave a repeatable
 benefit across public and finite controls. Keep the ordinary bounded
 reads for these geometries.
 
+For pointwise register math on planar UB tiles, flatten the physical extent
+`T*W` only when gate, value and output have the same row pitch and the GM
+store uses the logical bounds. For an FP32 span of at least 64 lanes with a
+32-byte-aligned end, a final full vector may start at `T*W - 64`. If it
+overlaps the preceding vector and output can alias either input, load both
+input windows for both vectors before writing either result. At T=4 and
+W=536 the last windows start at lanes 2048 and 2080 and overlap by 32.
+This schedule works for an elementwise calculation that writes the same
+value to each repeated lane. For a reduction, count each logical lane once.
+Inspect the compiled allocation and compare a single register chain with
+two interleaved chains at the same DMA bounds and grid. On 950PR the
+paired version took 2.137 µs at T4/W536 and 2.598 µs at T8/W512. It
+beat the high-level body in two of three rounds on each public and finite
+fixture. Use a paired control before specializing another shape.
+
 For a single-wave FP32 tile split across two DMA stages, test the unsplit
 tile and both serial and prefetched stages at the same grid. When each
 stage owns a contiguous range of whole rows, the GM descriptor can start
