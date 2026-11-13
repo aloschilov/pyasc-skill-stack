@@ -24,6 +24,7 @@ def main():
     parser.add_argument("case", choices=(11, 13), type=int)
     parser.add_argument("placement", choices=("host", "device"))
     parser.add_argument("output", type=Path)
+    parser.add_argument("--conditioned", action="store_true", help="use CANNBench frequency warmup and L2 clean")
     args = parser.parse_args()
     args.output.mkdir(exist_ok=False)
     sys.path.insert(0, str(args.candidate.resolve().parent))
@@ -52,6 +53,14 @@ def main():
 
     torch.npu.synchronize()
     check(invoke())
+    if args.conditioned:
+        from cann_bench_utils import cann_bench_cache_clean, cann_bench_warmup
+        a, b, scratch = [torch.rand(shape, dtype=torch.float16).to(device)
+                         for shape in ((10240, 10240), (10240, 10240), (96, 1024, 1024))]
+        cann_bench_warmup(a, b)
+        torch.npu.synchronize()
+        cann_bench_cache_clean(scratch)
+        torch.npu.synchronize()
     profiler = torch_npu.profiler
     trace = args.output / "trace"
     with profiler.profile(activities=[profiler.ProfilerActivity.NPU],
@@ -61,7 +70,10 @@ def main():
                               export_type=[profiler.ExportType.Text],
                               profiler_level=profiler.ProfilerLevel.Level1),
                           record_shapes=False, profile_memory=False, with_stack=False) as session:
-        for _ in range(8):
+        for step in range(8):
+            if args.conditioned and step >= 3:
+                cann_bench_cache_clean(scratch)
+                torch.npu.synchronize()
             y = invoke()
             torch.npu.synchronize()
             session.step()
@@ -71,7 +83,12 @@ def main():
         records = list(csv.DictReader(f))
     # Include every vector-core task. A changed kernel or extra device arithmetic
     # is an unexpected invocation path for these two one-wave specializations.
-    selected = [r for r in records if r["Accelerator Core"].upper() == "AI_VECTOR_CORE"]
+    vector = [r for r in records if r["Accelerator Core"].upper() == "AI_VECTOR_CORE"]
+    sequence = ["clean" if "cannbenchcacheclean" in r["Name"].lower() else r["Name"] for r in vector]
+    target = "row_single_wave_fp32"
+    if sequence != (["clean", target] if args.conditioned else [target]) * 5:
+        raise ValueError(f"unexpected measured vector tasks: {sequence}")
+    selected = [r for r in vector if r["Name"] == target]
     expected_grid = {11: 35, 13: 36}[args.case]
     if len(selected) != 5 or any(r["Name"] != "row_single_wave_fp32" or
                                 int(r["Block Num"]) != expected_grid for r in selected):
@@ -80,7 +97,7 @@ def main():
     if any(t <= 0 for t in times):
         raise ValueError(times)
     result = dict(case=args.case, device=str(x.device), output_device=str(y.device), correct=True,
-                  times_us=times, median_us=statistics.median(times), grid=expected_grid,
+                  times_us=times, median_us=statistics.median(times), grid=expected_grid, conditioned=args.conditioned,
                   input_sha256=digest(args.raw), golden_sha256=digest(args.task / "golden.py"),
                   source_sha256=digest(Path(wrapper.__file__)), csv_sha256=digest(file),
                   torch=torch.__version__, torch_npu=torch_npu.__version__,
