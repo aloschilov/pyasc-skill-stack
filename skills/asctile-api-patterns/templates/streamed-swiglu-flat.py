@@ -67,6 +67,35 @@ def swiglu_flat(
 
 
 
+@asctile.jit(reuse_alloc=2)
+def whole_fp32_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
+                    rows: asctile.ConstExpr[int], half: asctile.ConstExpr[int],
+                    grid: asctile.ConstExpr[int]):
+    src = asctile.global_tensor(x, [2 * rows * half])
+    dst = asctile.global_tensor(y, [rows * half])
+    block = asctile.block_idx()
+    for step in asctile.range(rows // grid, unroll_factor=4):
+        row = block + step * grid
+        gate = asctile.copy_in(src, [2 * row * half], [half])
+        value = asctile.copy_in(src, [(2 * row + 1) * half], [half])
+        out = (gate / (1.0 + asctile.exp(-gate))) * value
+        asctile.copy_out(out, dst, [row * half])
+
+
+def whole_fp32_grid(rows, half, dtype, aivs, usable_ub):
+    """Select four-stage block-stride ownership of moderate aligned FP32 rows."""
+    if dtype != torch.float32 or aivs < 1 or not 4 * aivs <= rows <= 8 * aivs:
+        return 0
+    if half % 8 or not 8192 <= 4 * half <= 16384 or 48 * half > usable_ub:
+        return 0
+    if 8 * rows * half > 64 * 1024**2:
+        return 0
+    for grid in range(aivs - aivs % 2, (7 * aivs + 7) // 8 - 1, -2):
+        if rows % (4 * grid) == 0:
+            return grid
+    return 0
+
+
 def whole_bf16_grid(rows, half, dtype, aivs, usable_ub):
     """Select complete four-stage groups for a grid of aligned BF16 rows."""
     if dtype != torch.bfloat16 or aivs < 1 or rows < 8 * aivs:
