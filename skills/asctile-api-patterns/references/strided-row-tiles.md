@@ -315,6 +315,12 @@ short, single-wave kernel. Check the final partial tile with finite inputs.
 On the 950PR, changing the input descriptor alone gave 2.215/2.451 µs
 for 143 rows of half-width 536 and 2.753/2.725 µs for 273 rows of
 half-width 509. Default descriptors gave 2.497/2.468 and 2.805/2.878 µs.
+The release-default restored-input evaluator reproduced the direction with a
+fresh OpenCode module. At H536 (36 blocks), bypass took 1.87/1.78 µs and
+default caching took 2.18/2.14 µs. At H509 (35 blocks) the corresponding
+pairs were 2.35/2.38 and 2.54/2.54 µs. The two rounds reversed the order of
+the variants. Both reads used the same descriptor and the output kept its
+default cache setting.
 Bypassing only the output took 2.641/2.700 and 2.960/2.950 µs.
 
 When one wave covers the rows and a complete half-row fits UB, start with
