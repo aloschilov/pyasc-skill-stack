@@ -321,6 +321,13 @@ default caching took 2.18/2.14 µs. At H509 (35 blocks) the corresponding
 pairs were 2.35/2.38 and 2.54/2.54 µs. The two rounds reversed the order of
 the variants. Both reads used the same descriptor and the output kept its
 default cache setting.
+Use the same bypass descriptor for both disjoint, one-pass reads in this path.
+In a matched test crossing both read orders with the gate's cache hint, giving
+only the gate the default hint increased seven of eight paired process
+medians and tied the eighth. The grid, output hint and arithmetic stayed fixed.
+For an operand that is read again, measure its reuse separately before applying
+this observation. [Paired read-order and cache measurements](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6873662947).
+
 Bypassing only the output took 2.641/2.700 and 2.960/2.950 µs.
 
 When one wave covers the rows and a complete half-row fits UB, start with
