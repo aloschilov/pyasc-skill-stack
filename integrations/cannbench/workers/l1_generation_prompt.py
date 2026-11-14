@@ -208,7 +208,7 @@ def prompt(task, skills):
             "Trace the JIT selected for short scale/shift streams: use opt_level=3 on "
             "a separate contiguous kernel with the same arithmetic and runtime loop. "
             "Keep the default contiguous JIT on BF16 log-only. "
-            "For a resident BF16 input on either short contiguous path, launch the chosen "
+            "For resident FP16 and BF16 on either short contiguous affine path, launch the chosen "
             "JIT with (blocks, ctypes.c_void_p(torch.npu.current_stream(x.device).npu_stream)). "
             "Read the stream inside each call. CPU-staged tensors use the integer grid. "
             "Trace both public launches at 72 AIVs: BF16 1023x1023, base 2, unit scale and "
