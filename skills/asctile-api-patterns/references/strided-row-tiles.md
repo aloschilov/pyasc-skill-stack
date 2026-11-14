@@ -205,6 +205,16 @@ AscTile launch.
   For example on 72 AIVs, 143 rows of 536 FP32 values **per half**
   select T=4 and 36 blocks. At 273 rows of 509, the ordinary fit gives T8. Apply the padded single-wave refinement below before launch.
 
+For a one-wave row kernel, distinguish the number of launched blocks
+from the number that actually own rows. Launch the active count directly
+when each owner already handles one tile. On 950PR, 36 owners processed
+143 aligned FP32 rows of half-width 536 in 1.81/1.85 µs. Launching 72
+blocks and giving work only to the lower half, upper half, even IDs or
+odd IDs took 2.00–2.63 µs with the same three DMA transfers per active
+block. All four assignments were slower in both orders. Compare grids
+with additional productive work separately.
+[Serialized launches and exact byte counts](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6877618536).
+
 For FP32 padded rows on 950PR, an intermediate fixed height can use more
 of a single wave while preserving useful DMA size. Start from a positive
 UB-fitted T and use this refinement only in the single-wave FP32 path.
