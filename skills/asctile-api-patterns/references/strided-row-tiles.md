@@ -378,6 +378,15 @@ else:
     bounded_rows[blocks](x, out, rows, half, height, width, unroll)
 ```
 
+For the fixed-copy three-stage FP32 path on the 950PR, set
+`gx = asctile.global_tensor(x, [R, 2 * H], l2_cache=False)` and
+`gy = asctile.global_tensor(y, [R, H])`. Each input element is read
+once. Both 2D reads use the input descriptor. Keep the ordinary output
+descriptor. On two adjacent multi-wave shapes, input bypass improved
+both orders while output bypass added over 10 µs in every comparison.
+Audit the emitted cache hints in the unrolled loop and the remainder.
+[Input and output descriptor cross on two shapes](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6880895812).
+
 On the resident 950PR FP32 three-stage path, bind the fixed-copy launch
 to the input device's current Torch stream at each call. With R2046,
 H2048 and the same 72 blocks, two release-default rounds took 22.96 and
@@ -486,8 +495,8 @@ for tile_index in asctile.range(asctile.block_idx(), count,
 
 For a one-wave FP32 row kernel whose gate and value are read once,
 use `asctile.global_tensor(x, [R, 2*H], l2_cache=False)` for the input
-and the default L2 descriptor for the output. Scope this choice to the
-short, single-wave kernel. Check the final partial tile with finite inputs.
+and the default L2 descriptor for the output. Check the final partial
+tile with finite inputs.
 On the 950PR, changing the input descriptor alone gave 2.215/2.451 µs
 for 143 rows of half-width 536 and 2.753/2.725 µs for 273 rows of
 half-width 509. Default descriptors gave 2.497/2.468 and 2.805/2.878 µs.
