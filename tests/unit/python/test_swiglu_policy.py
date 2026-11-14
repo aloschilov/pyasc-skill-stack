@@ -6,6 +6,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]/'integrations/cannbench/ci/swiglu_performance'))
 from geometry import DTYPES, all_specs, full_row_probes, layout, validate
+from generate import pre_submission_overflow
 
 
 def band(end,route,tile):
@@ -57,3 +58,14 @@ class Policy(unittest.TestCase):
             policy['float16'][index].update(changes)
             with self.assertRaises(ValueError):
                 validate(policy)
+
+    def test_policy_repair_requires_failed_camodel_and_skipped_upload(self):
+        job = {'name':'swiglu-performance / evaluate', 'id':15, 'conclusion':'failure',
+               'steps':[{'name':'Run numerical CaModel controls and lower the same bytes to AscendC',
+                         'conclusion':'failure'},
+                        {'name':'Submit once and collect service timings','conclusion':'skipped'}]}
+        self.assertEqual(pre_submission_overflow([job]),15)
+        for steps in (job['steps'][:1], [job['steps'][0],dict(job['steps'][1],conclusion='failure')],
+                      [dict(job['steps'][0],conclusion='success'),job['steps'][1]]):
+            with self.assertRaises(ValueError):
+                pre_submission_overflow([dict(job,steps=steps)])

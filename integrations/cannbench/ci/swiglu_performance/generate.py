@@ -28,8 +28,20 @@ def ended_at_limit(events):
     return bool(reasons) and reasons[-1]=='length'
 
 
+def pre_submission_overflow(jobs):
+    evaluations = [j for j in jobs if j['name'] == 'swiglu-performance / evaluate']
+    if len(evaluations) != 1 or evaluations[0]['conclusion'] != 'failure':
+        raise ValueError('Expected a failed evaluation')
+    job, = evaluations
+    steps = {s['name']:s['conclusion'] for s in job['steps']}
+    if (steps.get('Run numerical CaModel controls and lower the same bytes to AscendC') != 'failure'
+            or steps.get('Submit once and collect service timings') != 'skipped'):
+        raise ValueError('Policy recovery requires failure during CaModel before submission')
+    return job['id']
+
+
 def recover_kernel(root, origin, context, prompt, kernel_profile):
-    """Recover the original CI write only when the policy stage confirmed a length stop."""
+    """Recover unchanged compute after a policy length stop or a confirmed pre-submit UB overflow."""
     if not re.fullmatch(r'[1-9][0-9]*',origin):
         raise ValueError('Invalid kernel origin')
     repo=os.environ['GITHUB_REPOSITORY']
@@ -44,12 +56,32 @@ def recover_kernel(root, origin, context, prompt, kernel_profile):
     prior_skills=Path(profile['skills']['paths'][0])
     ci.trace((prior/'events.log').read_text(),prior_skills)
     prior_prompt=(prior/'prompt.txt').read_text().replace(str(prior_skills.parent/'task'),str(context/'task'))
-    if ((prior/'project/policy.json').exists() or not ended_at_limit((prior/'policy-continuation.log').read_text())
-            or prior_prompt!=prompt
-            or ci.hashes(prior/'context')!=ci.hashes(context)):
-        raise ValueError('Prior kernel context, prompt or terminal policy state differs')
-    if profile['model']!=kernel_profile['model'] or profile['provider']!=kernel_profile['provider']:
+    if prior_prompt!=prompt or ci.hashes(prior/'context')!=ci.hashes(context):
+        raise ValueError('Prior kernel context or prompt differs')
+    original_profile_path = prior/'kernel-profile.json'
+    if not original_profile_path.exists():
+        original_profile_path = prior/'project/opencode.json'
+    original_profile = ci.load(original_profile_path)
+    if original_profile['model']!=kernel_profile['model'] or original_profile['provider']!=kernel_profile['provider']:
         raise ValueError('Prior kernel model profile differs')
+    origin_details = {}
+    if (prior/'project/policy.json').exists():
+        jobs = json.loads(subprocess.check_output(
+            ['gh','api',f"repos/{repo}/actions/runs/{origin}/attempts/{run['run_attempt']}/jobs"]))['jobs']
+        job_id = pre_submission_overflow(jobs)
+        log = subprocess.check_output(['gh','run','view',origin,'--repo',repo,'--job',str(job_id),
+                                       '--log-failed']).decode(errors='replace')
+        match = re.search(r'UB overflow: (\d+) bytes are available, (\d+) bytes are used\.', log)
+        if not match:
+            raise ValueError('The CaModel log does not confirm a UB overflow')
+        receipt = ci.load(prior/'generation.json')
+        if (str(receipt['run_id'])!=origin or receipt['revision']!=run['head_sha']
+                or receipt['policy_sha256']!=ci.smoke.sha(prior/'project/policy.json')
+                or receipt['candidate_sha256']!=ci.smoke.sha(prior/'project/candidate.py')):
+            raise ValueError('Previous generation receipt differs')
+        origin_details = {'failed_policy_sha256':receipt['policy_sha256'],'camodel_error':match.group()}
+    elif not ended_at_limit((prior/'policy-continuation.log').read_text()):
+        raise ValueError('Missing confirmed policy length stop')
     # Bind the bytes in the retained file to OpenCode's completed write in the native session.
     trace=ci.load(prior/'session.json')
     authored=[]
@@ -65,7 +97,7 @@ def recover_kernel(root, origin, context, prompt, kernel_profile):
     (root/'project/candidate.py').write_bytes(candidate)
     return {'run':origin,'attempt':run['run_attempt'],'revision':run['head_sha'],
             'candidate_sha256':ci.smoke.sha(root/'project/candidate.py'),
-            'artifact':artifact,'profile_sha256':ci.smoke.sha(prior/'project/opencode.json')}
+            'artifact':artifact,'profile_sha256':ci.smoke.sha(original_profile_path),**origin_details}
 
 
 def main(root):
@@ -132,6 +164,10 @@ def main(root):
     policy_prompt=(HERE/'policy-prompt.txt').read_text()
     if origin:
         policy_prompt='Load the four native skills '+', '.join(ci.SKILLS)+'. Read candidate.py. '+policy_prompt
+        if 'camodel_error' in lineage['kernel_origin']:
+            old_policy = (root/'original-kernel/project/policy.json').read_text()
+            policy_prompt += ('\nRepair the previous policy. Its first CaModel compiler error was '
+                              + lineage['kernel_origin']['camodel_error'] + '\nPrevious table:\n' + old_policy)
     (root/'policy-prompt.txt').write_text(policy_prompt)
     policy_profile=json.loads(json.dumps(profile))
     low=ci.load(ci.ROOT/'integrations/opencode/profiles/cloud-glm-5.3-low.json')
