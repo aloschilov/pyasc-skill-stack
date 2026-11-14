@@ -235,6 +235,20 @@ for `k = torch.arange(tile*half, device=x.device, dtype=torch.int32)`,
 store `(k + half*(k//half)).to(torch.int16)`. Pass that tensor as the
 third kernel argument. A zero return falls through to ordinary selection.
 
+For resident Torch NPU input, the framework constructs the index on the
+caller's current stream. Launch this two-wave gather on that stream using
+the public wheel's pointer-width handle and the same block count. Scope
+the device index cache to its producing stream or establish an event
+dependency before reusing it across streams. CPU-staged inputs retain
+the grid-only launch. Query the stream on every invocation.
+
+On the 950PR, at T928/H7/N72, a matched restored-input comparison took
+6.63 and 5.95 µs on the caller's stream, versus 7.82 and 7.62 µs with
+a grid-only launch. Kernel source, grid, index and bounded tail were
+identical. The analogous FP16 identity Exp comparison was mixed (3.70
+and 4.05 µs on the caller's stream). Qualify other launch families
+independently before predicting a timing gain.
+
 On the qualified 950PR, compare the DMA-sized slab with two adjacent
 tiles per AIV for BF16 half-rows wider than one element. The latter is
 a separate candidate with a larger DMA. Compute
