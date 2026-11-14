@@ -37,11 +37,31 @@ the Torch, torch_npu and AscTile wheel versions. Use a compatible Python ABI
 to call the unedited generated operator on ordinary NPU tensors. Check its
 output against the task golden. A matched CPU-input call through the same
 wheel can expose the effect of tensor placement on device-task time. Keep
-both calls on the same profiler and repeat them in reverse order. Under the
-CANNBench warmup and L2-clean protocol, verify one cache-clean task before
-each measured invocation and count every target task. Record a source hash
+both calls on the same profiler and repeat them in reverse order. For a continuous diagnostic trace with L2 conditioning, verify one
+cache-clean task before each measured invocation and count every target task. Record a source hash
 and the observed launch sequence for each run. Separate this comparison
 from the full-suite GM, whose rows share the same input and timing protocol.
+
+### Match the benchmark revision and timing protocol
+
+Read the task version from `tasks/suite_manifest.json` and check the evaluator
+defaults at the same Git revision. On tasks 2.1.0 at `53ea611`, the default
+`restored_io_v2` path in `OpRunner.run_ai_op` prepares fresh input storage,
+clears L2 before each capture, and retires the previous invocation's I/O.
+The evaluator uses one preflight, three warmups and five separate measured
+sessions. It sums all candidate kernel durations within each session and
+rounds the median of the five sums to two decimal places. Use that returned
+time when dividing the device JSON baseline by the candidate time.
+
+For a local unary qualification, run
+`integrations/cannbench/workers/profile_restored_l1.py PACKAGE TASK CASE OUTPUT`
+in the matched CANNBench, PyAsc and torch_npu environment. Set the provider's
+`NPU_ARCH` from the actual device when building `cann_bench_utils`. Its
+CMake default in this revision is `ascend910b`; 950PR uses `ascend950`.
+Verify the warmup, cache-clean, clone and zero operators with the matched
+provider. Keep the five captures with their validated outputs and the
+evaluator, source, case and golden hashes. Compare a full set measured under
+one protocol when reporting a GM.
 
 ## Numerical checks
 
