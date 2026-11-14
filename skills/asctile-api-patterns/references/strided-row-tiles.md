@@ -20,6 +20,14 @@ width W to H rounded up to a multiple of 32/s elements. Size the tile
 from the useful payload and check local allocation using W including
 padding. The copy's real shape still uses H.
 
+Keep the logical input width when rounding a local FP32 half-row up to a
+DMA sector. If testing an extended read, check the backing tensor at both
+halves and the final tile. At H=509, W=512, T=6, extending just the gate
+into its own value took 2.18 and 2.51 µs in opposite run orders against
+2.23 µs both times at exact width. Extending just the interior value into
+the following row also lost twice. The final value read used H throughout.
+[Matched widths and compiled address checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6877764177).
+
 When investigating a partial final tile, compare the emitted C++ with
 separate fresh `PYASC_CACHE_DIR` and `PYASC_DUMP_PATH` directories per
 variant. On the public 950PR build, a bounded 2D `copy_in` produced the
