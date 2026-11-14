@@ -136,6 +136,13 @@ layout changed task duration by −0.007 to +0.087 µs (full minus multiply)
 while leaving a gap of more than 0.5 µs to the target in all three rounds.
 Only the full operator qualifies for the benchmark.
 
+Check the lowering before substituting `exp2(x * log2(e))` for a natural
+exponential. On the tested 950PR release, AscTile emitted a tile-sized ln(2)
+broadcast, a second multiplication and the same `AscendC::Exp`. The short
+FP32 SwiGLU kernels required four UB tiles instead of three. Direct `exp`
+was equal or faster in all four paired device comparisons.
+[Generated instructions and measured timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879318912).
+
 ## Simulator timing protocol
 
 - Keep simulator ticks, simulator host wall time and measured NPU microseconds
