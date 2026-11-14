@@ -41,6 +41,19 @@ row are excluded by the logical output store. Clearing the flag cost
 instructions when evaluating a different public copy primitive.
 [Matched pad controls, emitted instructions and finite check](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6876372047).
 
+When both half-rows feed the same lane-wise operation, a single-use
+rank-three copy followed by transpose can load directly into two UB
+planes. View contiguous GM as `[R,2,H]`, copy the valid rows, and
+transpose the local `[T,2,W]` tile with axes `(1,0,2)`. Check that the
+compiler emits a single multidimensional DMA, that each field lands at
+the expected UB offset, and that the store excludes padded rows and
+columns. On 950PR the explicit zero-pad form cleared the entire 32 KiB
+tile on every block at H509. The inferred-bounds form removed the clear.
+Both single-read forms still took longer than two batched 2D reads at
+H509/T8 and H536/T4 with identical register math. Use two 2D reads for
+these layouts.
+[Descriptor replay, finite checks and paired timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6876663571).
+
 For a nonaligned row width, compare compact and padded UB outputs with
 the same input DMA and register math. A padded multirow copy already
 uses one strided DMA descriptor. A dense tile uses one contiguous DMA
@@ -190,7 +203,36 @@ AscTile launch.
   Bound the real height on both loads and the store. With fewer available
   blocks than tiles, the grid-stride loop must cover all remaining tiles.
   For example on 72 AIVs, 143 rows of 536 FP32 values **per half**
-  select T=4 and 36 blocks. For 273 rows of 509 use eight rows and 35 blocks. Keep the balanced-grid helper below for controlled comparisons.
+  select T=4 and 36 blocks. At 273 rows of 509, the ordinary fit gives T8. Apply the padded single-wave refinement below before launch.
+
+For FP32 padded rows on 950PR, an intermediate fixed height can use more
+of a single wave while preserving useful DMA size. Start from a positive
+UB-fitted T and use this refinement only in the single-wave FP32 path.
+Keep the shorter physical extent a whole number of 64-lane FP32 vectors.
+The tested region used about half a wave at the original height. Give
+every full block the same number of rows and bound the final block.
+
+```python
+def padded_single_wave_height(rows, half, width, height, aivs):
+    natural = (rows + height - 1) // height
+    shorter = 3 * height // 4
+    if width == half or shorter == 0 or shorter * half * 4 < 8192:
+        return height
+    if shorter * width % 64:
+        return height
+    trial = (rows + shorter - 1) // shorter
+    if 3 * natural >= aivs and natural < trial <= 2 * aivs // 3:
+        return shorter
+    return height
+```
+
+Recompute the natural grid from the returned height. The smaller tile
+inherits the original UB fit. At R273/H509 on 72 AIVs this yields
+T6/W512/N46, with three valid rows starting at 270. Aligned R143/H536
+retains T4/N36. At R279/H511/W512 the same change saved 0.05 µs
+in both orders. At R267/H501/W504, six rows span 3,024 lanes with
+a 16-lane remainder. Timings changed by −0.02/+0.01 µs, so keep T8
+there. The balanced-grid helper below is a separate control.
 
 Choose the ordinary bounded row kernel's unroll independently of whether
 a copy needs `real_shape`. A ragged final tile and a padded local row both
@@ -439,7 +481,7 @@ directly and use `real_shape=[rows,H]` for all three DMA operations.
 This one-wave body accepts any W >= H that fits UB, including padded
 FP32 rows. Route on dtype and tile count after the fit check. The
 `W == H` guard belongs to the separate fixed-size three-stage body.
-Trace R273/H509 through the ordinary fit to T8/W512/N35 in the launched JIT.
+Trace R273/H509 from the ordinary T8 fit through the padded refinement to T6/W512/N46 in the launched JIT.
 The arithmetic is lane-wise and the output store excludes all padding.
 Keep the two half-row reads batched across T rows through one source
 descriptor. At R273/H509, per-row reads with a final concat took
@@ -484,9 +526,7 @@ path uses T6/N48. Blocks 0 through 32 own six rows each and the remaining
 15 own five. In two shuffled rounds this geometry took 2.576 and 2.574 µs.
 The eight-row N35 control took 2.621 µs in both. A fresh full-suite
 generation at N48 took 3.646 µs. In a subsequent shuffled control, N48
-took 3.301/2.800 µs and N35 took 2.713/3.337 µs. Use the ordinary
-padded grid in generated modules until a paired comparison reproduces
-the balanced advantage. For aligned FP32 retain the
+took 3.301/2.800 µs and N35 took 2.713/3.337 µs. Use fixed-height tiles and their natural grid for padded rows in generated modules. For aligned FP32 retain the
 ordinary T and grid, rotating the tile ordinal by half the grid:
 
 ```python
