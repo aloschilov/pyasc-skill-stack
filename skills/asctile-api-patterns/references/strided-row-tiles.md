@@ -274,6 +274,12 @@ five rows increased latency in both measurement orders on both shapes
 despite the additional productive blocks.
 [Five and six rows with actual DMA bounds](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6880178952).
 
+For the ordinary multiwave aligned FP16 path, start with the natural grid
+and explicit bounds on the two reads and the write, even when T divides R.
+Exact waves and removal of padding can change different instructions.
+Calibrate each change separately using the restored-input protocol. The
+[FP16 controls](#exact-waves-for-aligned-fp16-rows) show both effects.
+
 Choose the ordinary bounded row kernel's unroll independently of whether
 a copy needs `real_shape`. A ragged final tile and a padded local row both
 support a two-stage grid-stride loop. After fitting the one-stage tile,
@@ -832,6 +838,8 @@ Independent warmed medians were 6.530 and 6.359 µs, versus 6.781 and
 7.080 µs with the original height of eight. For the aligned 512-wide
 control, T=10 took 5.016 and 5.043 µs while T=8 took 5.011 and 4.569 µs.
 Retain the aligned selector for that regime.
+
+### Exact waves for aligned FP16 rows
 
 For aligned multiwave FP16 rows, keep the ordinary bounded 2D emitter as
 the starting point. Measure the grid and the copy bounds independently. If
