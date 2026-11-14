@@ -136,6 +136,15 @@ layout changed task duration by −0.007 to +0.087 µs (full minus multiply)
 while leaving a gap of more than 0.5 µs to the target in all three rounds.
 Only the full operator qualifies for the benchmark.
 
+When a short complete operator remains slow, vary the logical width at
+fixed row count, tile height, grid and alignment class. Keep the input
+distribution finite and compare the full-width executable to the qualified
+one. On 950PR, reducing 509 FP32 lanes to 29 saved 0.23 and 0.29 µs at
+46 blocks. Reducing 536 lanes to 32 saved 0.36 and 0.41 µs at 36 blocks.
+Both the vector work and logical bytes vary with width. To isolate grid
+size, keep the tile widths and transfer extents fixed in a separate run.
+[Finite width sweep, both orders](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879841913).
+
 Check the lowering before substituting `exp2(x * log2(e))` for a natural
 exponential. On the tested 950PR release, AscTile emitted a tile-sized ln(2)
 broadcast, a second multiplication and the same `AscendC::Exp`. The short

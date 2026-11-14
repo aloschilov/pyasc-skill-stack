@@ -1,5 +1,13 @@
 # Row geometry for public reindex gathers
 
+On the 950PR release, `asctile.copy` requires a supported pair of memory
+locations. For a packed tile already in UB, reshaping to `[T, 2*W]` and
+copying the two `[T, W]` submatrices within UB fails the compiler's memory
+location check. Use separate GM reads or a qualified local extraction such
+as reindex. Verify logical tail extents in the resulting kernel.
+[Packed FP32 compilation probe](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879841913).
+
+
 For a contiguous `[R, 2H]` split, one input DMA brings `2*T*H*s` bytes
 into UB, where `T` counts rows and `s` is the input element size. The general BF16 gather uses a cached int32 gate vector of length `T*H` and derives the value indices in UB. Dense BF16
 pairs can use one signed-int16 vector as described below. Include live indices,
