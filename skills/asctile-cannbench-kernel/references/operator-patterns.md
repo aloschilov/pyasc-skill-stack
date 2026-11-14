@@ -159,6 +159,14 @@ a larger live footprint if the emitted specialization requires them.
 Send a rejected tile to the existing UB-qualified streaming path before
 launch. Tile size and actual JIT unroll must match the estimate.
 
+In the public dispatcher, evaluate short 16-bit eligibility first. A
+positive UB-qualified short geometry selects its JIT and returns. Then
+try the one-wave candidate on the remaining inputs, followed by general
+streaming. Both selectors can accept the same shape. At 1,048,576 FP16
+elements on 72 AIVs with 253,952 UB bytes, the one-wave allocation
+fits too. Trace the actual public call to the three-stage kernel (T4864)
+to check the branch order.
+
 For short 16-bit streams, evaluate three tiles per AIV. On the
 public 950PR, start with this path for about 24–32 KiB of useful input
 per AIV when unroll 3 fits. For the initial 32-byte DMA control, with `q = 32 // itemsize`, compute
