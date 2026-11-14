@@ -13,6 +13,12 @@ def prepare(task, output, family="aligned-order"):
     elif family == "padded-height":
         case, expected, dim = 11, [3, 7, 13, 1018], -1
         shapes = (("lower", [267, 1, 1, 1002]), ("upper", [279, 1, 1, 1022]))
+    elif family == "padded-width":
+        case, expected, dim = 11, [3, 7, 13, 1018], -1
+        shapes = [(f"h{half}", [3, 7, 13, 2 * half]) for half in (29, 125, 253, 509)]
+    elif family == "aligned-width":
+        case, expected, dim = 13, [11, 13, 16, 67], 2
+        shapes = [(f"h{half}", [11, 13, 16, half // 8]) for half in (32, 128, 264, 536)]
     else:
         raise ValueError(f"unknown finite geometry family {family!r}")
     with (task / "cases.csv").open(newline="") as f:
@@ -39,6 +45,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("task", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--family", choices=("aligned-order", "padded-height"), default="aligned-order")
+    parser.add_argument("--family", choices=("aligned-order", "padded-height", "padded-width", "aligned-width"), default="aligned-order")
     args = parser.parse_args()
     prepare(args.task, args.output, args.family)
