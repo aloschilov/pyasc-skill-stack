@@ -504,6 +504,14 @@ their storage is reused and the final stores honor the active lanes.
 At constant reuse, fusion reduced both process medians on each shape.
 [Allocation, fusion, hardware timings and finite controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6881145027).
 
+Keep the 950PR platform default for static allocation in this fused body.
+For a six-row tile padded from 509 to 512 FP32 lanes, static level-2 reuse
+beat both the level-1 pass and explicit TPipe allocation in both rounds.
+At four rows of 536 lanes, TPipe with level-2 reuse saved 0.10 µs once and
+tied in reverse order. Both allocators used two equal UB tiles. Audit which
+input the result overwrites and that both loads precede the aliased store.
+[Static and TPipe hardware comparison](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6882949124).
+
 For a one-wave FP32 row kernel whose gate and value are read once,
 use `asctile.global_tensor(x, [R, 2*H], l2_cache=False)` for the input
 and the default L2 descriptor for the output. Check the final partial
