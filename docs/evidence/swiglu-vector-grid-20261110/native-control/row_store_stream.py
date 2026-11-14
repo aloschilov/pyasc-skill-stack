@@ -39,7 +39,7 @@ for (uint16_t r = 0; r < {height}; ++r) {{
 {flush if mode == "tile" else ""}"""
 
 
-def render(source, height, half, mode):
+def render(source, height, half, mode, single_tail=False):
     if hashlib.sha256(source.encode()).hexdigest() != "1f0e5562b4a41228792ea34b61e8feaa7e295508d78986b670810d19958a0ff6":
         raise ValueError("expected the qualified W65 source")
     pitch = (half + 7) // 8 * 8
@@ -55,7 +55,7 @@ def render(source, height, half, mode):
     tile = "[T * W]" if dense else "[T, W]"
     offset = "[r * H]" if dense else "[r, 0]"
     real = "[valid * H]" if dense else "[valid, H]"
-    lines.insert(func.decorator_list[0].lineno-1, head + f"""    gx = asctile.global_tensor(x, [2 * R, H], l2_cache=False)
+    kernel = head + f"""    gx = asctile.global_tensor(x, [2 * R, H], l2_cache=False)
     gy = asctile.global_tensor(y, {out_shape})
     r = asctile.block_idx() * T
     valid = min(T, R - r)
@@ -64,7 +64,22 @@ def render(source, height, half, mode):
     asctile.copy_out(out, gy, {offset}, real_shape={real})
 
 
-""")
+"""
+    if single_tail:
+        marker = "    packed = asctile.copy_in("
+        prefix, main = kernel.split(marker)
+        # A nonempty one-row remainder is statically known from R and T.
+        # Other remainders and full blocks keep the original bounded path.
+        tail_body = vector_body(1, half, pitch, mode)
+        kernel = prefix + f"""    if R % T == 1 and r == R - 1:
+        tx = asctile.global_tensor(x + 2 * (R - 1) * H, [2, H], l2_cache=False)
+        ty = asctile.global_tensor(y + (R - 1) * H, [H])
+        last = asctile.copy_in(tx, [0, 0], [2, W], real_shape=[2, H], pad_value=0.0)
+        result = asctile.inline_vf({tail_body!r}, [W], asctile.float32, [last])
+        asctile.copy_out(result, ty, [0], real_shape=[H])
+    else:
+""" + "\n".join("    " + line for line in (marker + main).strip("\n").splitlines()) + "\n\n\n"
+    lines.insert(func.decorator_list[0].lineno-1, kernel)
     source = "".join(lines)
     marker = "            row_single_wave_fp32[launch_grid](input, out, R, H, height, width)"
     if source.count(marker) != 1:
@@ -81,8 +96,9 @@ if __name__ == "__main__":
     parser.add_argument("height", type=int)
     parser.add_argument("half", type=int)
     parser.add_argument("mode", choices=("padded", "row", "tile"))
+    parser.add_argument("--single-tail", action="store_true")
     args = parser.parse_args()
-    code = render((args.package / "swi_glu.py").read_text(), args.height, args.half, args.mode)
+    code = render((args.package / "swi_glu.py").read_text(), args.height, args.half, args.mode, args.single_tail)
     compile(code, "swi_glu.py", "exec")
     args.dest.mkdir()
     (args.dest / "swi_glu.py").write_text(code)
