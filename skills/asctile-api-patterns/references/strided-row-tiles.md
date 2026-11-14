@@ -541,6 +541,14 @@ took longer in both orders at the same row height and grid. Include
 table traffic and index arithmetic when comparing the two layouts.
 [Direct FP32 halves and indexed slab](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6880538210).
 
+For two disjoint contiguous FP32 half-rows in a one-wave tile, keep the
+two bounded strided reads on 950PR. Encoding each rectangle as a rank-three
+N-D copy with a singleton axis preserved every address at H509 and H536.
+Both N-D forms increased latency in both run orders, including the form
+where the descriptor bound eliminated the explicit fills. Check the emitted
+DMA instructions when comparing equivalent source-level layouts.
+[Two N-D descriptors at fixed grid and tile](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6882346166).
+
 Use one productive block per independent row tile when the tiles fit in
 one wave. To evaluate a smaller grid at the same tile height, use a
 grid-stride loop and verify that changing the launch count preserves the
