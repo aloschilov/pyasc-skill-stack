@@ -19,6 +19,52 @@ def intervals(rows, half, owners):
     return [(0, middle), (middle, length)] if 0 < middle < length else [(0, length)]
 
 
+def emit_trimmed_interval(half, begin, end):
+    """Read complete rows and the live portion of the shared row separately."""
+    first, last = begin // half, (end - 1) // half
+    segments = []
+    for row in range(first, last + 1):
+        lo, hi = max(0, begin - row * half), min(half, end - row * half)
+        segments.append((row, lo, hi))
+
+    reads, streams, loops, operands = [], [], [], []
+    for index, ((lo, hi), entries) in enumerate(groupby(segments, key=lambda entry: entry[1:])):
+        group = list(entries)
+        row, count = group[0][0], len(group)
+        width = hi - lo
+        # One full vector must be accessible even on the four-lane prefix.
+        pitch = (width + 63) // 64 * 64
+        reads.extend([
+            f"src{index} = asctile.global_tensor(x + (r + {row}) * 2 * H, [{2*count}, H], l2_cache=False)",
+            f"part{index} = asctile.copy_in(src{index}, [0, {lo}], [{2*count}, {pitch}], real_shape=[{2*count}, {width}], pad_value=0.0)",
+        ])
+        operands.append(f"part{index}")
+        streams.append(f"auto* p{index} = reinterpret_cast<__ubuf__ float*>(${index + 1}.GetPhyAddr());")
+        loops.append(f"""for (uint16_t row = 0; row < {count}; ++row) {{
+    for (uint16_t col = 0; col < {width}; col += 64) {{
+        uint16_t n = {width} - col < 64 ? {width} - col : 64;
+        uint32_t active = n;
+        auto mask = UpdateMask<float>(active);
+        RegTensor<float> gate, value, result;
+        LoadAlign(gate, p{index} + 2 * row * {pitch} + col);
+        LoadAlign(value, p{index} + (2 * row + 1) * {pitch} + col);
+        Muls(result, gate, -1.0f, mask);
+        Exp(result, result, mask);
+        Adds(result, result, 1.0f, mask);
+        Div(result, gate, result, mask);
+        Mul(result, result, value, mask);
+        StoreUnAlign(out, result, stream, n);
+    }}
+}}""")
+    size = end - begin
+    vf = "\n".join(["using namespace AscendC::Reg;", *streams,
+                    "auto* out = reinterpret_cast<__ubuf__ float*>($0.GetPhyAddr());",
+                    "UnalignRegForStore stream;", *loops, "StoreUnAlignPost(out, stream, 0);"])
+    return "\n".join([*reads, f"dst = asctile.global_tensor(y + r * H + {begin}, [{size}])",
+                      f"res = asctile.inline_vf({vf!r}, [{(size+7)//8*8}], asctile.float32, [{', '.join(operands)}])",
+                      f"asctile.copy_out(res, dst, [0], real_shape=[{size}])", ""])
+
+
 def emit_interval(half, begin, end):
     # Load only rows intersecting this owner's interval. Input reads can overlap.
     first, last = begin // half, (end - 1) // half
@@ -82,9 +128,11 @@ asctile.copy_out(res, dst, [0], real_shape=[{size}])
 """
 
 
-def render(source, rows, half, height, owners):
+def render(source, rows, half, height, owners, trim="none"):
     if hashlib.sha256(source.encode()).hexdigest() != W65 or min(rows, half, height) < 1 or owners not in (1, 2):
         raise ValueError("expected W65 and one or two owners per row group")
+    if trim not in ("none", "prefix", "both"):
+        raise ValueError("unknown shared-row policy")
     if height*half % 8:
         raise ValueError("full row group must end on a burst boundary")
     groups, tail = divmod(rows, height)
@@ -100,7 +148,10 @@ def render(source, rows, half, height, owners):
     if tail:
         branches.append((f"b == {groups * len(full)}", emit_interval(half, 0, tail * half)))
     for idx, (begin, end) in enumerate(full):
-        branches.append((f"b % {len(full)} == {idx}", emit_interval(half, begin, end)))
+        trim_end = bool(end % half) and trim in ("prefix", "both")
+        trim_start = bool(begin % half) and trim == "both"
+        emit = emit_trimmed_interval if trim_end or trim_start else emit_interval
+        branches.append((f"b % {len(full)} == {idx}", emit(half, begin, end)))
     for i, (condition, body) in enumerate(branches):
         if len(branches) == 1:
             kernel += indent(body, "    ")
@@ -128,9 +179,10 @@ if __name__ == "__main__":
     parser.add_argument("output", type=Path)
     for field in ("rows", "half", "height", "owners"):
         parser.add_argument(field, type=int)
+    parser.add_argument("--trim", choices=("none", "prefix", "both"), default="none")
     arg = parser.parse_args()
     source = (arg.package / "swi_glu.py").read_text()
-    code = render(source, arg.rows, arg.half, arg.height, arg.owners)
+    code = render(source, arg.rows, arg.half, arg.height, arg.owners, arg.trim)
     compile(code, "swi_glu.py", "exec")
     arg.output.mkdir()
     (arg.output / "swi_glu.py").write_text(code)
