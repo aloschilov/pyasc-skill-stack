@@ -237,8 +237,11 @@ On 950PR a two-wave T928/H7/U2 gather compiled with modern UB reuse.
 Adding `vf_fusion=True` to the same JIT required 259,840 bytes for
 6,496 output lanes, exceeding the available 253,952 bytes. For a dense
 T4096/H1/U2 gather the same switch compiled. Its explicit UB regions grew
-from 90,112 to 163,840 bytes. Qualify each specialization before reusing
-a fusion setting from pointwise FP32 rows.
+from 90,112 to 163,840 bytes. On David the dense gather took 6.70 and
+6.36 µs in opposite process orders with the standard policy. Fusion took
+7.39 and 7.25 µs. Keep the standard compiler policy for these BF16
+gathers. Recheck the live buffers and release timings on a new build.
+[Compiler listings and matched hardware controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6882117892).
 
 Use the default cached descriptor for a gate-index table shared by all
 blocks. Each AIV reads the same small table; streaming input descriptors
