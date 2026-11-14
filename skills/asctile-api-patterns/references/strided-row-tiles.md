@@ -60,6 +60,15 @@ Use an exact read as a control when considering more blocks, and retain
 the ordinary layout until the extra parallelism wins on the target.
 [Matched shared-row reads](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6875658127).
 
+For a row-pitch experiment, hold the logical copy extents and the owner
+of each row fixed. Check both the UB stride in the emitted DMA parameters
+and the lane count of the vector instructions. On the 950PR FP32 one-wave
+kernel, adding one 32-byte sector per UB row increased `Exp` from 4,096
+to 4,160 lanes at T8/H509 and from 2,144 to 2,176 at T4/H536. GM payload
+bytes stayed constant. H509 slowed in both orders; H536 gave mixed
+timings. Use the minimum DMA-aligned pitch for these layouts.
+[Pitch comparison and emitted lane counts](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6875811106).
+
 When a flat input tile has extra UB capacity for unaligned register
 loads, inspect the full-block `copy_in` lowering. On 950PR a 32,576-byte
 1D transfer into a 33,024-byte UB allocation cleared the entire allocation
