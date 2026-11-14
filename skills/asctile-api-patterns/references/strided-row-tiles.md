@@ -98,6 +98,23 @@ ordinary cache policy on the bounded fallback. Bind the launch to the
 current stream. These controls used restored inputs on an Ascend 950PR.
 [Paired cache controls and compile evidence](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6880895812).
 
+For an ahead-of-time width band, budget the widest emitted physical tile.
+If the table declares a height of four and a padded half-width of 4,096,
+the three-stage FP32 body consumed 589,824 bytes on the CI compiler. Two
+rows at width 2,048 consumed 147,456 bytes. The 950PR budget was 253,952
+bytes. Express the smaller tile and width step in the table itself; the
+service launcher uses the declared dimensions without a runtime UB clamp.
+
+For the separate single-wave FP32 body, compare
+`@asctile.jit(reuse_alloc=2, vf_fusion=True)` with fusion off at the same
+tile, launch grid and cache settings. The fused bounded loads, pointwise
+math and store emitted one register loop and used two physical UB tiles.
+Fusion reduced both process medians on each of two shapes; case 11 went
+from 2.82/2.86 µs to 2.26/2.29 µs on local 950PR. Check finite outputs
+and padded tails. Apply the decorator to a dedicated single-wave JIT so
+other shapes keep their qualified compiler options.
+[Matched fusion controls and emitted code](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6881145027).
+
 ### Exact waves for aligned FP32 rows
 
 For an aligned FP32 2D tile, compare the ordinary grid with a nearby even grid that divides the number of tiles. Keep the tile, unroll, compiler flags and loop body identical in the comparison. Let `A = min(number_of_tiles, reported_AIVs)`. After at least four waves of useful work, test even divisors from `A - A % 2` down to `ceil(7*A/8)`, inclusive. Take the largest qualifying divisor. Keep `A` if the interval contains none. Handle zero work before dividing. The seven-eighths bound limits the reduction in parallelism during calibration.
