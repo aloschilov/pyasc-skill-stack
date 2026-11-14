@@ -395,6 +395,17 @@ Check neighboring shapes before extending this schedule to the whole
 three-stage branch.
 [Full address replay and reversed device comparisons](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6878672746).
 
+When manually grouping three full, cyclic FP32 tiles, issue their six
+independent reads before computing the first result. Keep the original
+block stride for a cleanup loop over the last zero to two tiles. Check the
+actual UB allocation and the order of all loads in the generated C++.
+On the two 16-KiB tile shapes above, grouping reads used seven UB tiles and
+saved 0.35–0.78 µs against explicitly processing the three tiles in series
+(three UB tiles). The original compiler-unrolled kernel used nine UB tiles.
+It beat grouped reads in one of two rounds at 1,023 tiles. Keep compiler
+unrolling as the default when choosing between the two implementations.
+[Ordered DMA replay and all twelve timed runs](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879478224).
+
 The aligned FP16 two-wave specialization below uses two explicit extents.
 At R1009/T7 its final read and write start at row 1001 and span eight rows. For generated code, replay the effective sizes of both
 reads and the store. A copy that omits `real_shape` uses its full physical
