@@ -1,4 +1,4 @@
-"""Factor GM descriptor origin independently on the two reads and one store."""
+"""Compare tile origins and ownership of the terminal row bound in FP32 DMA."""
 import argparse
 import ast
 from hashlib import sha256
@@ -9,7 +9,7 @@ from bf16_slab_fusion import W72
 from lower_planar_nddma import lower_fp32
 
 
-def render(source, mode):
+def render(source, mode, *, descriptor_rows=False):
     if sha256(source.encode()).hexdigest() != W72:
         raise ValueError("expected the unchanged W72 module")
     node, = (f for f in ast.parse(source).body if getattr(f, "name", "") == "row_single_wave_fp32")
@@ -25,7 +25,17 @@ def render(source, mode):
         body = body.replace("    gy = asctile.global_tensor(y, [R, H])\n", "")
         descriptors.append("    gy = asctile.global_tensor(y + r * H, [valid, H])\n")
         body = body.replace("gy, [r, 0]", "gy, [0, 0]")
-    lines[node.lineno - 1:node.end_lineno] = [body.replace(anchor, anchor + "".join(descriptors))]
+    if descriptor_rows:
+        # Both whole-tensor and tile-origin descriptors end at the final
+        # input/output row. Keep H explicit so a padded gate cannot read
+        # adjacent value lanes inside the same GM row.
+        if body.count("real_shape=[valid, H]") != 5:
+            raise ValueError("unexpected row copy bounds")
+        body = body.replace("real_shape=[valid, H]", "real_shape=[T, H]")
+    replacement = anchor + "".join(descriptors)
+    if descriptor_rows and not descriptors:
+        replacement = ""
+    lines[node.lineno - 1:node.end_lineno] = [body.replace(anchor, replacement)]
     return "".join(lines)
 
 
@@ -33,10 +43,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("package", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("mode", choices=("input", "output", "both"))
+    parser.add_argument("mode", choices=("tensor", "input", "output", "both"))
     parser.add_argument("--lower", metavar="WORKERS", type=Path)
+    parser.add_argument("--descriptor-rows", action="store_true",
+                        help="clip the terminal row in the GM descriptor; retain the explicit half-width")
     args = parser.parse_args()
-    src = render((args.package / "swi_glu.py").read_text(), args.mode)
+    src = render((args.package / "swi_glu.py").read_text(), args.mode,
+                 descriptor_rows=args.descriptor_rows)
     compile(src, "swi_glu.py", "exec")
     args.output.mkdir()
     (args.output / "swi_glu.py").write_text(src)
