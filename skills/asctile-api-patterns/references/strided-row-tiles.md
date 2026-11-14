@@ -530,6 +530,15 @@ valid = min(T, R-r), choose the origin from the physical width:
 - In both branches use `asctile.global_tensor(y, [R,H])` with default caching
   and write [valid,H] at [r,0]. Apply the block-to-tile rotation once.
 
+Keep both reads bounded by the valid rows and logical half-width. When
+testing implicit bounds on a partial tile, check each half separately.
+The remaining columns in the GM descriptor depend on the starting column.
+At H509/W512 an implicit gate read includes three lanes from value, while
+the value read ends at column 1018. Both outputs must write only 509 lanes.
+Removing both missing-row clears saved 0.05/0.01 µs there and gave identical
+medians at H536. The number of clear instructions alone is a poor predictor
+of the speedup. [Aligned rows](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6884130260) · [Padded rows](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6884223740).
+
 Tile-relative input reads won both process orders on public H536 and on
 finite aligned H528/H544 with four-row tiles. At padded H509, tensor-relative
 reads won both orders. These controls used unchanged layouts, math and grids.
@@ -856,6 +865,12 @@ six conditional fill sites in the generated code. An earlier four-wave
 loop took 4.479/4.422 µs under a different control protocol. Qualify
 changes to the loop and to copy extents separately on the target evaluator.
 [Fixed extents and grid size on restored inputs](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6883826427).
+
+With the same four-row FP16 tile and explicit copy bounds, 65 blocks
+improved both rounds for 1040 rows. At 1088 rows the ranking of 68 and
+72 blocks reversed. Qualify a divisor grid on a second geometry before
+applying it across aligned FP16 inputs.
+[Finite neighboring shapes](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6884093301).
 
 ### Exact waves for aligned FP32 rows
 
