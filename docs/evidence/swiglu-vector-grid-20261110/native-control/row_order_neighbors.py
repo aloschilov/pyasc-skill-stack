@@ -16,6 +16,9 @@ def prepare(task, output, family="aligned-order"):
     elif family == "padded-width":
         case, expected, dim = 11, [3, 7, 13, 1018], -1
         shapes = [(f"h{half}", [3, 7, 13, 2 * half]) for half in (29, 125, 253, 509)]
+    elif family == "fp16-waves":
+        case, expected, dim = 1, [1024, 2048], -1
+        shapes = (("lower", [1040, 2080]), ("upper", [1088, 2176]))
     elif family == "aligned-width":
         case, expected, dim = 13, [11, 13, 16, 67], 2
         shapes = [(f"h{half}", [11, 13, 16, half // 8]) for half in (32, 128, 264, 536)]
@@ -24,12 +27,13 @@ def prepare(task, output, family="aligned-order"):
     with (task / "cases.csv").open(newline="") as f:
         public, = (r for r in csv.DictReader(f) if int(r["case_id"]) == case)
     if json.loads(public["input_shape"]) != [expected] or json.loads(public["attrs"]) != {"dim": dim}:
-        raise ValueError("expected the public FP32 split-axis schema")
+        raise ValueError("expected the public split-axis schema")
     for name, shape in shapes:
         dest = output / name / "tasks/level1/swi_glu"
         dest.mkdir(parents=True)
         entry = dict(operator=public["operator"], case_id=case, input_shape=[shape],
-                     dtype=["float32"], attrs={"dim": dim}, value_range=[-2, 2],
+                     dtype=json.loads(public["dtype"]), attrs={"dim": dim},
+                     value_range=json.loads(public["value_range"]) if family == "fp16-waves" else [-2, 2],
                      note="Private finite short-row transfer control")
         # JSON is a YAML 1.2 subset. Serialize the same record to both inputs.
         (dest / "cases.yaml").write_text(json.dumps({"cases": [entry]}, indent=2) + "\n")
@@ -45,6 +49,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("task", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--family", choices=("aligned-order", "padded-height", "padded-width", "aligned-width"), default="aligned-order")
+    parser.add_argument("--family", choices=("aligned-order", "padded-height", "padded-width", "aligned-width", "fp16-waves"), default="aligned-order")
     args = parser.parse_args()
     prepare(args.task, args.output, args.family)
