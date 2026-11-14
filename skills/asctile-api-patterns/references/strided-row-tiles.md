@@ -48,15 +48,18 @@ changing dispatch. In three rounds on each of two short FP32 geometries,
 the exact terminal extent gave no consistent speedup.
 [Generated C++ comparison and matched hardware controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6859782820).
 
-In a compiled 2D FP32 read, distinguish the number of right-pad elements
-from the `isPad` flag. On 950PR even an aligned 536-element half-row
-with zero right pad programmed `PAD_VAL_OUTTOUB` before each of the two
-input reads. A native control clearing the flag removed both writes and
-saved 0.03/0.13 µs at T4. At H509/T8 the three padded FP32 positions per
-row are excluded by the logical output store. Clearing the flag cost
-0.04 µs once and tied once. Check the actual descriptor and device
-instructions when evaluating a different public copy primitive.
-[Matched pad controls, emitted instructions and finite check](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6876372047).
+When comparing aligned 2D copy primitives, convert burst lengths and strides
+to bytes and replay the valid rows of the final tile. Compare the device
+instruction sections at fixed addresses, grid and math. On 950PR a 536-float
+half-row occupies 67 sectors of 32 bytes. Switching its output descriptor
+from byte to sector units left the instructions byte-identical. Both input
+APIs emitted two `MOV_OUT_TO_UB_ALIGN_V2.b32` transfers. With zero right pad,
+the original still programmed `PAD_VAL_OUTTOUB` twice. Clearing only
+`isPad` gave 1.81/1.84 µs against 1.81/1.85 µs in two restored-input
+orders. Keep the bounded public copy on this path. For unaligned input,
+check which padded lanes the vector loop consumes and which the bounded
+store exposes before changing fill behavior.
+[Aligned DMA, finite checks and both process orders](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6885307210) · [H509 and H536 pad controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6876372047).
 
 When both half-rows feed the same lane-wise operation, a single-use
 rank-three copy followed by transpose can load directly into two UB
