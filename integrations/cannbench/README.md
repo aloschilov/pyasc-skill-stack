@@ -283,6 +283,8 @@ OpenCode writes the compute kernels and a finite shape-based `policy.json` from 
 
 [Case-by-case comparison of the first service evaluation and local measurements](../../docs/swiglu-ci-comparison.md).
 
+For FP32 row kernels the model can select three stages when full tiles cover both dimensions. The host dispatches bounded one-stage copies for incomplete tiles in that band. CaModel checks the full tile and its row and column boundaries with both seeds before packaging. See the [worked tuning example](../../skills/asctile-api-patterns/references/strided-row-tiles.md#full-tiles-on-long-fp32-grids).
+
 Three generated kernels implement 19 official cases. The packed BF16 template implements case 12. The published performance ratio is the geometric mean of each generated case's official baseline time divided by its measured time in the same submission. The service score includes all 20 cases. A single result establishes performance for one candidate.
 
 The compute turn uses GLM-5.3 high reasoning and freezes the written Python. The policy turn uses the GLM-5.3-low profile with the same native output limit. A confirmed length stop permits one bounded continuation for the missing file. If a CI generation retained a kernel write but exhausted both policy responses, pass its generation run ID as `origin_run` with `performance` to recover the verified kernel bytes and generate only the policy. The receipt identifies the original kernel run.
