@@ -50,6 +50,16 @@ input rows then fetches 4,072 extra bytes per group. On 950PR this cost
 0.15/0.20 µs against the matched one-owner compact kernel.
 [Output intervals and emitted DMA lengths](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6874918770).
 
+When a split falls inside a row, also count the input descriptors on each
+owner's critical path. Clipping the shared gate and value to the exact
+output interval can add a second DMA descriptor to both owners. At FP32
+H509/T8 this removed 138,448 bytes of repeated reads across 69 blocks.
+It saved 0.04 and 0.09 µs versus reading the whole shared row, while the
+ordinary batched 35-block kernel finished 0.38 and 0.21 µs earlier.
+Use an exact read as a control when considering more blocks, and retain
+the ordinary layout until the extra parallelism wins on the target.
+[Matched shared-row reads](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6875658127).
+
 When a flat input tile has extra UB capacity for unaligned register
 loads, inspect the full-block `copy_in` lowering. On 950PR a 32,576-byte
 1D transfer into a 33,024-byte UB allocation cleared the entire allocation
