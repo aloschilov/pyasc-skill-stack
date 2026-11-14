@@ -59,6 +59,99 @@ reproduced implementations. Read their specific contracts before using them.
    control. Then hardware validates the candidate; model ticks are not NPU us.
    Do not run new hardware jobs or restart schedules without task authorization.
 
+## When identical kernels time differently on hardware
+
+Compare the linked device `.text` bytes and the decoded instructions at the
+entry point. The host executable, serialized wheel cache and raw device ELF
+have different envelopes. Use the compiler dump to identify the device image
+in the cache. Verify its hash for each run. Two different source expressions
+that compile to the same instruction bytes at the same grid provide one
+code-generation result.
+
+For a short kernel, keep the ELF, inputs, grid and profiler fixed and compare
+ordinary evaluator calls with repeated launches on the same device buffers.
+If their device-task intervals differ, retain the addresses and change the
+transfers between launches. Record which tensors move, in which direction,
+the allocation policy, the warm-up count and each process median. Score the
+generated operator via its normal evaluator entry point. Reused-buffer
+timings diagnose execution conditions.
+
+For fresh-buffer comparisons, the restored-profile worker's
+`--record-alignment` option records input and output pointer residues modulo
+65,536 after profiling. Pair these with the measured invocation index before
+grouping timings. On two short FP32 shapes the two address pairs alternated
+exactly by invocation parity across four processes per shape. Separating an
+address effect from an order effect requires variation within the same index.
+[Matched restored-input measurements](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879127456).
+
+When replaying a compiled image from a Torch NPU process, check how long
+the runtime keeps its binary registration alive. A fresh output tensor does
+not require a fresh registration. Hold the registered module, entry symbol
+and backing ELF bytes alive until the measured stream has synchronized.
+Compare register-once and register-per-call at fixed ELF, input, output
+allocation and grid. On two short FP32 shapes under the Season 2 cache-clean
+schedule, registration per call added 1.75–1.88 µs to the recorded device-task
+medians across two rounds. This difference is measured inside the device
+interval; host registration latency needs its own measurement.
+
+On a 950PR, the same 35-block FP32 packed-row ELF took 1.978–2.016 µs with
+resident buffers and 2.921–3.028 µs with input/output transfers around every
+launch. This held with either normal or huge pages at fixed device addresses.
+A second two-round experiment toggled the input upload, output upload and
+output readback independently. Across the eight paired comparisons, enabling
+the input upload added 0.739–0.931 µs to the device task. Enabling the output
+upload added 0.012–0.176 µs. Across those same pairs, uploading the input
+increased MTE2 time by 0.824–0.994 µs, while uploading the output increased
+MTE3 time by 0.214–0.271 µs. Output readback had mixed effects. When tuning
+this access pattern, compare input DMA strategies after refreshing the input
+as the evaluator does. Time the transfers separately to measure their own cost.
+
+For competing DMA layouts, compare per-kernel `PipeUtilization` counters
+at the same grid and under the same cache conditioning. Match each row by
+kernel name and block count. Check MTE2, vector and MTE3 together. Packing
+two half-rows into one transfer can move work into register unpacking or
+output stores. On a 36-block FP32 shape, packed and separate loads spent
+0.761 and 0.790 µs in MTE2, while the packed variant increased vector time
+from 0.197 to 0.577 µs and MTE3 time from 0.316 to 0.573 µs. Pipeline
+activity can overlap. Use the separate task duration to compare end-to-end
+device performance and the ordinary evaluation run for qualification.
+
+To test whether UB placement limits a short planar kernel, keep its GM
+descriptors, compute and grid fixed. Verify that a zero-shift rebuild has
+the wheel's device instruction bytes. Independently shift aligned buffer
+bases within available UB and check for overlap. On 950PR, inserting 32
+bytes after scratch reduced the 36-block public FP32 case from 1.873 to
+1.842 µs across two process medians. The finite control rose from 1.852
+to 1.872 µs and the 35-block public case was effectively unchanged. These
+measurements support keeping the ordinary placement for this layout. A
+bank-conflict attribution requires a counter that measures those conflicts.
+
+To estimate the headroom for arithmetic tuning, keep the shape, launch grid,
+DMA extents and actual evaluator traffic fixed. Use a diagnostic operation
+that consumes both operands, such as elementwise multiplication, and check
+its numerical output with a separate oracle. Inspect the compiled DMA calls:
+returning just one operand can eliminate the other read. Compare paired
+process medians. Replacing SwiGLU with multiplication on one 36-block FP32
+layout changed task duration by −0.007 to +0.087 µs (full minus multiply)
+while leaving a gap of more than 0.5 µs to the target in all three rounds.
+Only the full operator qualifies for the benchmark.
+
+When a short complete operator remains slow, vary the logical width at
+fixed row count, tile height, grid and alignment class. Keep the input
+distribution finite and compare the full-width executable to the qualified
+one. On 950PR, reducing 509 FP32 lanes to 29 saved 0.23 and 0.29 µs at
+46 blocks. Reducing 536 lanes to 32 saved 0.36 and 0.41 µs at 36 blocks.
+Both the vector work and logical bytes vary with width. To isolate grid
+size, keep the tile widths and transfer extents fixed in a separate run.
+[Finite width sweep, both orders](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879841913).
+
+Check the lowering before substituting `exp2(x * log2(e))` for a natural
+exponential. On the tested 950PR release, AscTile emitted a tile-sized ln(2)
+broadcast, a second multiplication and the same `AscendC::Exp`. The short
+FP32 SwiGLU kernels required four UB tiles instead of three. Direct `exp`
+was equal or faster in all four paired device comparisons.
+[Generated instructions and measured timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879318912).
+
 ## Simulator timing protocol
 
 - Keep simulator ticks, simulator host wall time and measured NPU microseconds

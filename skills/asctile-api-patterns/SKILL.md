@@ -33,6 +33,23 @@ def kernel(x_ptr: asctile.GlobalAddress, out_ptr: asctile.GlobalAddress,
         asctile.copy_out(out, out_gm, [offset], real_shape=[valid])
 ```
 
+On the CANNBench archive wheel, write tile arithmetic directly inside the
+device JIT body. The dependency finder raises
+`Unsupported function referenced` if a JIT calls an ordinary Python
+function defined elsewhere in the module. For SwiGLU, compute
+`out_f = (gate_f / (1.0 + asctile.exp(-gate_f))) * value_f` in each
+device path that consumes the loaded halves. Host functions may still
+select grids, prepare index descriptors and launch kernels. A launch spy
+can confirm the grid and arguments without compiling this device body;
+compile the selected kernel and check its output before timing.
+
+Compute tile sizes, loop unroll and grids in the host dispatcher using
+Python integers. Declare specialized kernel parameters with
+`asctile.ConstExpr[int]` in the JIT signature and pass the computed integer
+at launch. Calling `asctile.ConstExpr(tile)` in the dispatcher creates a
+wrapper that fails integer arithmetic such as `numel // tile` on the
+archive wheel. Apply the same distinction to boolean specialization flags.
+
 The exact memory signatures are:
 
 - `global_tensor(base, shape)` creates a ranked GM descriptor.
@@ -77,7 +94,20 @@ fails to lower on this pin (`Reduction along all dimensions is not supported`).
 The leading singleton preserves one result per row. Preserve the output dtype
 and logical reduction axis.
 
+When a runtime condition changes the order of two loads, keep operations
+that use the branch-local tiles, including dtype lookup and the final
+store, inside the same arm on the public 950PR wheel. A tile created in
+both arms can still be out of scope after the conditional. A physical
+block parity check exposed this during device compilation. Verify the
+order of both loads in the emitted code and compare against uniform order.
+[Compiled branch example and measurements](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6874854669).
+
 ## Tails and padding
+
+For scalar address arithmetic inside a JIT use the Python builtins:
+`valid = min(tile_size, size - offset)`. The archive-bundled 950PR
+AscTile has no module-level `asctile.min` for this operation. Check every
+kernel in the module against the installed surface, including fallbacks.
 
 For a partial tile, allocate an aligned physical `shape` and pass the logical
 extent through `real_shape`. The final physical dimension of a 2-D-or-higher
@@ -192,9 +222,36 @@ different tile sizes pads every short row and misses the dense-slab path.
 
 | First applicable layout | Generated device operations | Tile and work units |
 |---|---|---|
+| BF16 short half with more than one lane and a positive [two-wave tile](templates/two-wave-swiglu-slab.py) | Use the bounded contiguous interval in `two_wave_swiglu` with the cached signed-int16 gate indices. | Call `two_wave_tile(R,H,input.dtype,aivs,usable_ub)` from the public dispatcher before imposing the ordinary slab's power-of-two or 16 KiB DMA bound. Launch on `aivs` blocks and return the result. |
 | BF16, `H * itemsize <= 32`, and an aligned multirow slab fits | One rank-one input copy of complete rows, two local `asctile.reindex` gathers, one rank-one output store. This includes H=1 and odd H. | Size T in **rows** using the [DMA and UB bounds](references/reindex-slabs.md). One work item owns up to T complete rows, including the final partial slab. |
+| Many aligned BF16 half-rows, each 8–32 KiB, and a positive `whole_bf16_grid(R,H,input.dtype,aivs,usable_ub)` | Launch the [flat kernel](templates/streamed-swiglu-flat.py) at this grid before selecting 2D copies. Both reads and the store cover complete half-rows. | Set `T=H` elements and `U=4`. The selector checks UB and requires complete groups of four rows per block. |
+| Single long aligned FP16 stream with a positive `long_fp16_grid(R,H,input.dtype,aivs,usable_ub)` | Launch the [flat kernel](templates/streamed-swiglu-flat.py) with 8192 lanes, unroll 4 and the returned grid. | Check the [measured UB footprint](references/streamed-halves.md) and distribute complete groups of four DMA chunks uniformly. |
+| Aligned FP32 half-rows of 8–16 KiB, four to eight natural waves, positive `whole_fp32_grid` | Launch `whole_fp32_rows` with the selected grid before ordinary 2D copies. | Use full-width copies and give block b rows b + step × grid in complete four-stage groups. |
+| Aligned FP32 long grid meeting the three-stage [row geometry](references/strided-row-tiles.md) | Use the strided row kernel at the 16 KiB half-tile target with unroll 3. | Check that two to four whole rows fit at 36 UB bytes per physical lane and that the row tiles supply at least eight waves. |
 | Several moderate half-rows fit in UB with useful work across the grid | Two strided rank-two input copies and a bounded rank-two store. Use padded physical width for allocation and logical H for DMA. | Choose rows and unroll from [row geometry](references/strided-row-tiles.md). On this build 3 KiB per half-row is a measured starting cutover to streaming. |
 | Wide contiguous halves, a single long row, or too few rows to fill the grid with row tiles | Two rank-one contiguous chunk reads with source offsets H apart and a rank-one store. | T counts **elements**. There are `R * ceil(H/T)` live chunks. Keep each chunk inside its half-row and bound its tail as in the [flat template](templates/streamed-swiglu-flat.py). |
+
+In the public launcher, keep the two short BF16 branches adjacent:
+first try the two-wave selector, then try the ordinary slab if
+`H * itemsize <= 32`. On a positive ordinary slab tile, launch the
+reindex kernel and return before considering whole-row or generic 2D
+geometry. A generic row selector can return a legal positive padded
+height even for dense pairs. Trace the public call for BF16 shape
+(1000003, 2) on 72 AIVs and 253952 UB bytes: the executed kernel
+receives input, output and one signed-int16 gate vector at T=4096 rows
+and unroll 2. Derive the value indices from the gate vector in UB.
+Exercise H=7 as a separate two-wave launch.
+
+For short FP32 row grids, round the rows needed for 8 KiB **up** to a
+power of two, then check UB. If the resulting tile count fits the reported
+AIVs, emit a direct one-tile-per-block body with a bounded final copy.
+Carry the unit through the host/JIT boundary: `tiles = (R+T-1)//T`,
+`blocks = vector_blocks(tiles)`, then `rows_single[blocks](...)`.
+If the selector already returned blocks, pass that integer unchanged. Never
+multiply it by tile height or width. A 36-tile workload on 72 AIVs must
+launch 36 blocks. In a direct body guard `if r < R` before computing
+`min(T,R-r)` or issuing DMA; an excess block would otherwise have a
+negative real shape. A grid-stride body is required if blocks < tiles.
 
 The archive-bundled CPython 3.12 evaluator uses CPU-backed Torch tensors
 and the PyASC launcher transfers them for device execution. Keep the input
@@ -206,6 +263,22 @@ containing copied input halves. Launch syntax is **one integer**:
 `kernel[vector_blocks(work_items)](input, out, ...)`. Compute work_items
 inside the selected branch. Even a single wide row can contain many chunks.
 
+Choose the GM descriptor rank **inside each kernel**. Both row kernels,
+including the single-wave specialization, use logical input strides via
+`gx = asctile.global_tensor(x, [R, 2*H])` and
+`gy = asctile.global_tensor(y, [R, H])`. For example:
+
+```python
+rows = min(T, R-r)
+gate = asctile.copy_in(gx, [r, 0], [T, W], real_shape=[rows, H], pad_value=0)
+value = asctile.copy_in(gx, [r, H], [T, W], real_shape=[rows, H], pad_value=0)
+# After pointwise math on the two tiles:
+asctile.copy_out(out_tile, gy, [r, 0], real_shape=[rows, H])
+```
+
+A flattened rank-one descriptor plus a two-dimensional physical tile does
+not introduce the row stride. Even when it compiles, it may read across
+half-row boundaries, store incorrect values or fault on the device.
 For the row branch, the selected height T belongs in the copy itself.
 Load one tile at `[r,0]` and one at `[r,H]`, each physical shape
 `[T,W]` and real shape `[min(T,R-r),H]`. Write one tile to the same

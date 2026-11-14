@@ -30,6 +30,19 @@ def last_axis_geometry(shape):
 For a general axis, normalize it before deriving [outer, axis_size, inner].
 Do not reinterpret a non-last-axis reduction as a contiguous last-axis one.
 
+On the public CANN 9.2 950PR build, `reduce_sum(tile, 1)` and
+`reduce_prod(tile, 1)` on FP32 tiles shaped `[T,2,W]` lower to the ARA
+pattern (retain, reduce, retain). The device headers accept AR and RA.
+For split-half elementwise work, keep the two strided input copies as the
+qualified path when the packed alternative depends on this reduction.
+A three-dimensional permutation in UB also failed to lower on this build.
+When using a rank-two FP32 transpose, check all 16 source row addresses
+emitted by `TransDataTo5HD` against the physical tile extent and verify a
+finite-input golden on hardware. An eight-row physical allocation was too
+short for those addresses. Padding to sixteen allowed execution, but the
+combined transpose/select/product path still returned incorrect values.
+[Compiler diagnostics, emitted offsets and numerical checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6862107842).
+
 ## Work distribution
 
 Query available vector resources for the active device, respecting applicable

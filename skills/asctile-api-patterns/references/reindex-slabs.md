@@ -1,8 +1,16 @@
 # Row geometry for public reindex gathers
 
+On the 950PR release, `asctile.copy` requires a supported pair of memory
+locations. For a packed tile already in UB, reshaping to `[T, 2*W]` and
+copying the two `[T, W]` submatrices within UB fails the compiler's memory
+location check. Use separate GM reads or a qualified local extraction such
+as reindex. Verify logical tail extents in the resulting kernel.
+[Packed FP32 compilation probe](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879841913).
+
+
 For a contiguous `[R, 2H]` split, one input DMA brings `2*T*H*s` bytes
-into UB, where `T` counts rows and `s` is the input element size. Two cached
-int32 index vectors of length `T*H` select the halves. Include both vectors,
+into UB, where `T` counts rows and `s` is the input element size. The general BF16 gather uses a cached int32 gate vector of length `T*H` and derives the value indices in UB. Dense BF16
+pairs can use one signed-int16 vector as described below. Include live indices,
 casts, arithmetic temporaries and software-pipeline buffers in the allocation.
 Read the effective UB capacity and available AIVs after platform selection.
 
@@ -10,21 +18,78 @@ Read the effective UB capacity and available AIVs after platform selection.
 
 Use this geometry inside the short-half gather branch (`H*s <= 32` bytes).
 It also covers contiguous BF16 pairs (`H=1`, normalized final axis of length
-two). On this public build with cached int32 indices, let dense pairs reach
+two). On this public build, let dense pairs reach
 the same gather selector as other short BF16 halves. An early return for
 the legacy transpose specialization would hide the eligible gather. For a new module, define a public slab kernel and call it from the
-host selector. View input and output as rank-one descriptors. Build reusable
-integer lane metadata on the host with `k = torch.arange(T*H, dtype=torch.int32,
-device=input.device)`, `gate_idx = 2*H*(k//H) + k%H` and
-`value_idx = gate_idx + H`. Cache by device, H and T. This metadata
-is independent of input values. Pass the index tensors as kernel arguments
-and load them before the tile loop. For a slab starting at row r, copy
+host selector. View input and output as rank-one descriptors. Cache the
+input-independent gate table in the generated module. Pass that same cache
+into the index helper on every call. Key by index representation, device
+and tile geometry. For asynchronous producers, include the producing
+stream in the key or synchronize its first use on a different stream.
+Exercise two calls on different input tensors of the same shape. On the
+second call the wrapper must reuse the exact index tensor and issue zero
+Torch kernels to build it. Repeat with a second geometry to check the key.
+Pass its pointer as the third tensor argument and load it once per block
+before the tile loop. Use `ig = asctile.global_tensor(gate_idx_ptr, [T*H])`,
+`gate_idx_ub = asctile.copy_in(ig, [0], [T*H])`, and
+`value_idx_ub = gate_idx_ub + H`. For a slab starting at row r, copy
 `2*T*H` input lanes at offset `2*r*H`, with true extent
 `2*min(T,R-r)*H` and zero padding. Use `asctile.reindex(slab, gate_idx_ub)`
 and `asctile.reindex(slab, value_idx_ub)` before widening each gathered
 half. Store the resulting contiguous output at `r*H`, with true extent
 `min(T,R-r)*H`. The final partial tile belongs to the same launch.
 
+For ordinary dense pairs (`H == 1`) on the 950PR wheel, select a single
+signed-int16 gate table when `2*T-1 <= 32767` and `2*T` index bytes
+are DMA-aligned. Construct `2*k` in int32 before converting to int16 on
+the caller's device. Cache only that table. Pass input, output and the
+gate table as the three tensor arguments. Load the entire gate table once
+per block before the tile loop and compute `value_idx = gate_idx + 1` in UB.
+In a JIT shared with other half-widths write `value_idx = gate_idx + H`.
+Adding one is valid inside a dedicated H=1 specialization. Exercise the ordinary
+H=2 route with 2048 rows of [1, 2, 4, 8], whose value lanes are [4, 8].
+Pass the int16 indices directly to public reindex. Gather and widen the gate,
+compute its activation, then gather and widen the value and multiply. Keep
+the grid, bounded DMA extents and existing UB admission bounds. If the
+index bound or alignment fails, use the general int32 path. Check emitted
+allocation when changing tile geometry or compiler. At T4096/U2/N72,
+two matched runs took 6.301 and 6.273 µs with this kernel. Loading both
+int32 tables at the same geometry took 6.789 and 6.851 µs.
+
+Once the ordinary selector has admitted a positive tile, build one table
+with the appropriate index dtype. Dispatch both dtypes to the ordinary
+slab JIT. On the 72-AIV fixture `R=2048, H=2`, the ordinary selector
+returns T16 and the launch takes an int32 gate vector on 72 blocks. The
+first four indices are [0, 1, 4, 5] and their value indices are [2, 3, 6, 7].
+
+```python
+def dense_pair_gate_index(half, tile, device, cache):
+    if half != 1 or tile < 1 or 2 * tile - 1 > 32767 or (2 * tile) % 32:
+        return None
+    stream = torch.npu.current_stream(device).npu_stream if device.type == "npu" else None
+    key = ("dense_pair_i16", device, stream, tile)
+    if key not in cache:
+        k = torch.arange(tile, device=device, dtype=torch.int32)
+        cache[key] = (2 * k).to(torch.int16)
+    return cache[key]
+
+
+def ordinary_gate_index(half, tile, device, cache):
+    gate_index = dense_pair_gate_index(half, tile, device, cache)
+    if gate_index is not None:
+        return gate_index
+    stream = torch.npu.current_stream(device).npu_stream if device.type == "npu" else None
+    key = ("general_i32", device, stream, half, tile)
+    if key not in cache:
+        k = torch.arange(tile * half, dtype=torch.int32, device=device)
+        cache[key] = 2 * half * (k // half) + k % half
+    return cache[key]
+```
+
+Declare the device function itself with `@asctile.jit(reuse_alloc=2)`. The
+selector below is paired with this allocation policy. Merely writing
+`@asctile.jit(always_compile=False)` does not select allocation reuse.
+Check the emitted decorator on the slab as well as the row kernel.
 With `reuse_alloc=2`, aligned BF16 half-rows of one and seven elements used
 24 bytes per output lane at unroll 1 and 28 at unroll 2. These are compiled live-buffer costs. Recheck allocations
 when applying this estimate to a different specialization or compiler.
@@ -34,7 +99,72 @@ Each row has `H` output lanes. For `T` rows the two footprints in bytes are
 
 For a positive row count and active vector count `A`, compute the candidate
 row bound as `min(16384 // (2*H*s), available_ub // (24*H), ceil(R/A))`.
+Use a single division of bytes by bytes per row. For H=1 and s=2,
+one physical input row is four bytes; 16,384 bytes contain 4,096
+complete pairs. In the ordinary int32-index slab selector use:
+
+```python
+def ordinary_bf16_slab_tile(rows, half, aivs, usable_ub):
+    if min(rows, half, aivs, usable_ub) <= 0 or 2 * half > 32:
+        return 0
+    bytes_per_input_row = 2 * half * 2
+    by_dma = 16384 // bytes_per_input_row
+    bound = min(by_dma, usable_ub // (24 * half), (rows + aivs - 1) // aivs)
+    if bound < 1:
+        return 0
+    tile = 1 << (bound.bit_length() - 1)
+    lanes = tile * half
+    return tile if (2 * lanes) % 32 == 0 else 0
+
+def ordinary_slab_launch(rows, half, tile, aivs, usable_ub):
+    """Size a gather launch after selecting a positive tile in rows."""
+    tiles = (rows + tile - 1) // tile
+    blocks = min(aivs, tiles)
+    two_stage_bytes = 28 * tile * half
+    unroll = 2 if tiles >= 2 * blocks and two_stage_bytes <= usable_ub else 1
+    if half == 1 and unroll == 2 and 3 * blocks < tiles <= 4 * blocks:
+        compact = 2 * ((tiles + 7) // 8)
+        if compact <= blocks:
+            blocks = compact
+    return blocks, unroll
+```
+
+For BF16, alignment of `2*lanes` output bytes implies alignment of
+the input and int32 table. At the selected height, two stages require
+`28*lanes <= usable_ub` and at least two tiles per active block.
+Here each tile owns up to T whole rows, including H=1. Count work with
+`ceil(R/T)`. The flat column-stream count `R*(H//T)` gives zero for a
+4096-row pair slab. Use `ordinary_slab_launch` at the actual gather call.
+Trace both bytes and rows: for 1,000,003 pairs, 72 AIVs and 253,952
+bytes the ordinary path reads 16,384 bytes at T4096/U2. For two-stage dense
+pairs with more than three and at most four waves at the detected grid,
+choose the smallest even grid covering the work in four waves. Use identity
+block order and a block-stride loop. Block zero owns tile ordinals
+`0, blocks, 2*blocks, ...`, block one starts at one. Write this in
+the ordinary slab JIT itself:
+
+```python
+for t in asctile.range(asctile.block_idx(), count, asctile.block_num(),
+                       unroll_factor=unroll):
+    first = t * tile
+    valid = min(tile, rows - first) * half
+    # Read the packed input and write only the valid outputs.
+```
+
+The two-wave multi-lane JIT has a separate consecutive interval rule.
+For 245 tiles the ordinary dense-pair rule yields
+62 blocks. In three paired rounds the 62-block medians were 6.448, 6.462
+and 6.800 µs, against 7.142, 6.867 and 6.817 µs on 72 blocks. On a
+separate finite input of 911117 pairs, the same formula gave 56 blocks
+for 223 tiles and won in all three rounds. A two-group permutation at
+either grid did not improve the median across rounds on either shape. Dividing by
+the number of halves a second time gave T2048 and an 8,192-byte read.
+
 Return the caller's existing public gather route tag for either unroll.
+Carry the returned unroll across the JIT boundary as a
+`unroll: asctile.ConstExpr[int]` argument. In the row-slab loop set
+`unroll_factor=unroll`. Verify this on the emitted loop and on its launch:
+a fixed `unroll_factor=1` silently discarded the host's two-stage decision.
 Test dispatch at a smaller UB that fits only one iteration and at another
 that forces a shorter tile. A single full-capacity test can hide a unit error.
 
@@ -100,6 +230,65 @@ applying this ordering to another short-row layout. Building full vectors by bro
 and per-group offsets increased the device median for the tested
 4,096-row BF16 pair tile.
 
+## Two-wave BF16 half-rows
+
+Check the compiler's UB report when enabling VF fusion on a BF16 gather.
+On 950PR a two-wave T928/H7/U2 gather compiled with modern UB reuse.
+Adding `vf_fusion=True` to the same JIT required 259,840 bytes for
+6,496 output lanes, exceeding the available 253,952 bytes. For a dense
+T4096/H1/U2 gather the same switch compiled. Its explicit UB regions grew
+from 90,112 to 163,840 bytes. On David the dense gather took 6.70 and
+6.36 µs in opposite process orders with the standard policy. Fusion took
+7.39 and 7.25 µs. Keep the standard compiler policy for these BF16
+gathers. Recheck the live buffers and release timings on a new build.
+[Compiler listings and matched hardware controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6882117892).
+
+Use the default cached descriptor for a gate-index table shared by all
+blocks. Each AIV reads the same small table; streaming input descriptors
+and index-table descriptors have different reuse. At 928 rows per tile,
+seven BF16 values per half and 72 AIVs, the default descriptors took
+5.967, 6.560 and 6.016 µs in three randomized rounds on 950PR. Bypassing
+only the index table took 15.983, 15.957 and 16.151 µs. Bypassing only
+the streamed input took 7.103, 6.653 and 7.197 µs. All twelve runs,
+including the both-bypass control, used the same addresses within each
+tile, arithmetic, grid and full golden check.
+
+In the generated host wrapper call the
+[two-wave selector and kernel](../templates/two-wave-swiglu-slab.py)
+before the generic DMA-limited slab. When the selector returns a positive
+height, launch this kernel with the queried AIV count. Cache one full gate
+index on the caller's device, keyed by device, producer stream, half-width and height:
+for `k = torch.arange(tile*half, device=x.device, dtype=torch.int32)`,
+store `(k + half*(k//half)).to(torch.int16)`. Pass that tensor as the
+third kernel argument. A zero return falls through to ordinary selection.
+
+For resident Torch NPU input, the framework constructs the index on the
+caller's current stream. Launch this two-wave gather on that stream using
+the public wheel's pointer-width handle and the same block count. Scope
+the device index cache to its producing stream or establish an event
+dependency before reusing it across streams. CPU-staged inputs retain
+the grid-only launch. Query the stream on every invocation.
+
+On the 950PR, at T928/H7/N72, a matched restored-input comparison took
+6.63 and 5.95 µs on the caller's stream, versus 7.82 and 7.62 µs with
+a grid-only launch. Kernel source, grid, index and bounded tail were
+identical. The analogous FP16 identity Exp comparison was mixed (3.70
+and 4.05 µs on the caller's stream). Qualify other launch families
+independently before predicting a timing gain.
+
+On the qualified 950PR, compare the DMA-sized slab with two adjacent
+tiles per AIV for BF16 half-rows wider than one element. The latter is
+a separate candidate with a larger DMA. Compute
+`T = align_up(ceil_div(R, 2*A), 16)` in rows. Select the two-wave
+schedule when the resulting tile count is exactly `2*A`, all index
+and DMA extents align and `2*T*H-1 <= 32767`. Use the cached full-length
+signed-int16 gate index, derive the value index in UB, and use the
+bounded contiguous interval per block described below, with unroll two.
+Check the UB for this emitted kernel. At 928 by 7 its compiled requirement
+was 142,912 bytes. Recheck the compiler allocation for other geometries
+or index lowerings. Fall back to the conservative slab when it cannot
+fit. Keep the single-lane pair selector separate.
+
 For short BF16 half-rows wider than one element, try mapping two complete
 waves onto the runtime AIV count. Round the proposed row height up to the
 32-byte DMA quantum and recheck the compiled UB footprint, the signed index
@@ -128,6 +317,23 @@ full-wave loop and bounded tail measured 6.830 and 6.863 µs. The kernels also
 differ in how they bound full tiles. Benchmark the entire kernel when
 choosing the schedule for another shape.
 
+When tuning a multi-lane BF16 slab near two waves, vary the launch count
+at a fixed tile height before attributing a gain to rounding the tile.
+For a proposed larger tile with M tiles and A available AIVs, when
+A < M <= 2*A, also measure the even grid N = min(A, 2*ceil(M/4)).
+Verify the compiled UB footprint, the signed index bound, and complete
+output ownership by the existing contiguous-interval loop. On 950PR,
+131 tiles of 1,024 rows and seven values per half took
+6.282/6.103/6.783 µs at 66 blocks and 7.068/6.988/6.895 µs at 72,
+with byte-identical emitted C++. The ordinary 928-row tile at 72 blocks
+took 6.684/6.532/6.729 µs. At half-widths five and six the compact
+1,024-row candidate beat the ordinary tile in three of four paired
+rounds. Treat it as an alternative to qualify on the target. Use the
+ordinary two-wave selector as the default until a full independent
+generation confirms a replacement.
+
+## Dense FP32 slabs
+
 For dense FP32 slabs with no partial row tile, time an alternate first
 tile per block while leaving the UB layout, block count and loop stride
 fixed. On an even grid of N blocks, physical block b can start at
@@ -144,9 +350,9 @@ this comparison. Compute its row count from the input bytes, the
 compiled UB footprint and useful work per AIV. When it yields just over
 three and at most four waves on the largest power-of-two grid within the
 device limit, time that grid with identity and even/odd block order.
-On the qualified Ascend950PR_9599 public build, select the compact grid
-and the even/odd order in that range for two-stage dense BF16 pairs with
-a bounded signed-int16 index. Use identity order on a single block.
+The earlier 64-block control used even/odd ordering for two-stage dense
+BF16 pairs with a bounded signed-int16 index. Follow the ordinary selector
+above when its four-wave window fits the queried AIV count. Use identity order on a single block.
 Keep the true input and output extents on the final tile. At 1,000,003
 pairs, 4,096 rows per tile give 245 tiles. A 64-block launch has 53
 blocks with four tiles and 11 with three. The interleaved order took
@@ -155,7 +361,7 @@ blocks with four tiles and 11 with three. The interleaved order took
 device exposes 72 AIVs. The measured 64 is a launch choice specific to
 this occupancy range.
 
-For dense BF16 pairs in this four-wave regime, time a four-group order if the compact grid is divisible by four. Map physical block `b` to first tile `(b % 4) * (N // 4) + b // 4` and advance by `N`. The quotient selects the offset within a group and the remainder selects the group, so every tile has one owner. Retain the bounded input and output copies on the final tile. At 4,096 rows, two stages and 64 blocks, the four-group order took 6.066 and 6.197 µs in matched fresh processes, compared with 6.570 and 6.299 µs for the two-group order. Using consecutive tiles per block for this same single-lane geometry took 7.673 and 7.666 µs. Across three independent full suites, the four-group kernel took 6.735, 6.193 and 7.026 µs. The earlier two-group build took 6.567, 6.935 and 5.915 µs. Keep two groups as the default on this build and require independent suite-level evidence before selecting four. The multi-lane, two-wave rule above has a different work distribution.
+For dense BF16 pairs in this four-wave regime, time a four-group order if the compact grid is divisible by four. Map physical block `b` to first tile `(b % 4) * (N // 4) + b // 4` and advance by `N`. The quotient selects the offset within a group and the remainder selects the group, so every tile has one owner. Retain the bounded input and output copies on the final tile. At 4,096 rows, two stages and 64 blocks, the four-group order took 6.066 and 6.197 µs in matched fresh processes, compared with 6.570 and 6.299 µs for the two-group order. Using consecutive tiles per block for this same single-lane geometry took 7.673 and 7.666 µs. Across three independent full suites, the four-group kernel took 6.735, 6.193 and 7.026 µs. The earlier two-group build took 6.567, 6.935 and 5.915 µs. At that fixed 64-block grid use two groups as the control for testing four groups. The multi-lane, two-wave rule above has a different work distribution.
 
 For a complete FP32 slab of `T` rows and `H` lanes per half, try reading half the cached signed-int16 gate indices from GM. Require even `T`, a DMA-aligned seed of `S = T * H // 2` indices, and `2 * T * H <= 32768`. An index in row `r + T // 2` is exactly `T * H` elements past the corresponding index in row `r`. Build `gate = asctile.concat(seed, seed + 2 * S)` in UB and derive `value = gate + H`. Time both full kernels. At T = 64 and H = 50 on 950PR, halving the index read reduced the two control medians from 16.358 and 16.174 µs to 15.661 and 15.928 µs at the same 102,400-byte compiled allocation. In subsequent independent full suites the half-seed kernel took 15.821, 16.362 and 15.885 µs. The preceding full-seed build took 15.634, 15.801 and 15.689 µs. Keep this as a calibration option. For dense BF16 pairs, splitting the index into two or four segments won only one of two controls. Keep the full-table load for that layout pending evidence on the target.
 

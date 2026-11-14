@@ -2,7 +2,188 @@
 
 Start from the [qualified flat kernel](../templates/streamed-swiglu-flat.py) on the public 950PR build. Preserve its loop bounds and per-row addresses when generating the host selector.
 
+Keep the allocation policy in the generated decorator: `@asctile.jit(reuse_alloc=2)`.
+The bound and the kernel must describe the same allocation. On the archive-bundled
+950PR, a direct-division flat kernel with that policy, T=4096 and U=2 used
+81,920 bytes for FP16/BF16 and 98,304 for FP32, including the remainder branch.
+As a first compile choose the power of two at or below
+`min(H, 16384 // itemsize, usable_UB // 32)`; count T in output lanes.
+Use `generic_flat_geometry` from the template for this final fallback,
+then pass its returned width, unroll and grid to `swiglu_flat`. For a
+capacity of 7936 lanes the floor power of two is 4096. Rounding up
+produced an 8192-lane bounded column kernel on the single BF16 row
+H=2080641, which took 9.829 µs against 8.790 µs. The full-copy
+kernel at T4096/U2 took 8.550/8.576 µs in two independent full suites.
+Validate full and partial chunks at the actual geometry before expanding it.
+Do not reuse these coefficients for an unqualified emitter, an additional
+pipeline stage or a different allocation policy. Counting only GM buffers
+misses simultaneously live UB temporaries.
+
 Derive the number of chunks from the logical half-row width and the UB-qualified tile. Specialize the address calculation when a half-row fits in one chunk or when the whole input is one row. For full aligned chunks use full-width copies. Use the true extent on a final partial chunk. Distribute only live chunks across the available vector blocks.
+
+For the generic remainder-capable flat emitter, choose the number of stages
+after choosing T. Count the full chunks in all rows. At two or more full
+chunks per active block, pass U=2 if the two-stage allocation fits:
+`T*(20 if itemsize == 2 else 24) <= usable_ub`. Otherwise pass U=1.
+The 20/24-byte coefficients already include both stages. The preliminary
+32-byte width bound also provides headroom and is used only for selecting
+T. Multiplying that bound by two again rejected a 4096-lane tile on a
+253952-byte device despite an observed two-stage allocation of 81920
+bytes. Test this fallback independently with H=2080641 at T4096/U2 when
+the more specific four-wave BF16 geometry cannot fit UB.
+For a short row or a different emitter, recheck live chunks and UB.
+
+For a single BF16 row in the 8–16 KiB per-half DMA range, call
+`launch_medium_bf16_stream` before the generic fallback. Its host guard
+first checks that four waves of aligned floor tiles leave at most half a
+tile of extra work. Round the tile **up** to a 16-lane quantum if the
+result fits the measured two-stage UB bound (20 bytes/lane) and all
+`4 * aivs` chunks still contain work. Block `b` owns four consecutive
+chunks beginning at `4*b`, with unroll two. Bound both input reads and
+the output write by the remaining lanes. Keep the floor-tile flat launch
+when rounding exceeds the payload or UB limit or would leave an empty chunk.
+
+At H=2080641 and 72 AIVs the floor tile of 7216 leaves an extra transfer
+of 2433 lanes. The rounded tile of 7232 covers the row in 288 transfers,
+including 5057 lanes in the last transfer. In three matched David rounds
+the floor tile took 8.315, 8.358 and 8.696 µs. At the rounded width the
+ordinary flat kernel took 8.039, 8.417 and 8.045 µs, and four consecutive
+chunks per block took 7.514, 7.726 and 7.780 µs. CANNBench 2.1.0 specifies
+8.790 µs. Use dimensions, available AIVs and usable UB in the guard.
+
+For a single FP16 row use `eight_wave_fp16_chunk` before generic chunk
+selection. It rounds H/(8*A) up to a 16-lane transfer quantum and limits
+the tile to 4–8 KiB per half. On a positive result, use the consecutive
+flat kernel, detected AIV count, unroll two, default L2 and the true final
+chunk extent. At H2095104 and A72 this gives T3648 and 575 chunks.
+Two fresh-process comparisons took 7.928 and 7.967 µs, versus 8.480 and
+8.313 µs for T4096/U2. Rounding down to T3632 took 8.417 and 8.732 µs.
+The corresponding single BF16 stream gave mixed results in the same
+experiment. Keep its qualified layout and grid.
+
+
+For a single BF16 row with about four moderate chunks per AIV, use
+`four_wave_bf16_chunk` from the flat template before the generic
+two-stage fallback. Its positive width launches the same consecutive
+full-chunk kernel at the detected AIV count, with unroll four.
+Keep the separate bounded same-launch remainder. The short-stream
+selector rounds H/(4*A) down to the 16-lane DMA quantum, limits the
+payload to 4–8 KiB per input half and reserves 36 bytes per output
+lane for the four-stage direct-division emitter. Check the compiled
+allocation on each new build. Require the remainder to fit one additional chunk and at most one
+DMA quantum per available AIV. At H=1046017 there are 288 full
+3,632-lane tiles and one output lane in the final bounded tile. On 72 AIVs the measured
+T3632/U4 times were 5.025/5.089 µs; the same kernel with T4096/U2
+took 5.535/5.630 µs. Other widths keep their generic selection.
+
+### Wide aligned FP32 half-rows with a nearly full remainder
+
+For the qualified direct-division kernel, when many wide FP32 half-rows
+leave at least three quarters of an ordinary tile as a remainder, size an
+exact full-copy chunk before dispatching the remainder loop. Start from
+the ordinary width `base`. Apply this rule when `R >= A`, H is aligned
+to the 32-byte DMA quantum (eight FP32 lanes), and `H % base >= 3*base/4`.
+For three-stage allocation reuse on this build the failed 8192-lane
+compile reported 294,912 bytes, or 36 bytes per lane. Take an initial
+capacity of `min(H, usable_UB//36)`, rounded down to eight lanes. From
+that capacity descend by eight to find the largest width greater than
+`base` that divides H. Choose it with unroll 3 if at least three waves
+of chunks remain. With no such divisor keep the existing geometry.
+Qualify the actual compiled allocation for the selected full-copy kernel.
+
+For 2039 rows of 32760 FP32 lanes per half, 72 AIVs and 253952 available
+UB bytes this gives five chunks of 6552 with no tail pass. The two
+shuffled controls took 521.929/521.204 µs, versus 529.821/529.377 µs
+at 4096 and unroll 3, or 524.550/524.646 µs at 8192 and unroll 2.
+The public baseline is 522.100 µs. Use `wide_fp32_chunk` from the
+flat template and pass its positive result to the full-copy launch
+with unroll 3. Count live chunks across every row: 2039 × 5 = 10195.
+One clean module compared five chunks per row with 216 required for
+three waves, rejected the divisor, and took 532.008 µs with T4096/U2.
+The full-suite T6552/U3 measurement was 521.531 µs.
+
+For this exact-divisor FP32 branch, bypass input L2 when the physical
+input exceeds 64 MiB and each half is read once. Calculate bytes as
+`2*R*H*itemsize` on the host. Launch the qualified flat kernel with
+`cache_input=False` for this regime and for the long FP16 stream below. The output descriptor retains its default caching.
+At R=2039, H=32760, T6552/U3/N72 the only changed device argument was
+the input L2 policy. The two medians were 449.609/450.055 µs versus
+521.382/522.254 µs with both descriptors at default. Disabling only
+output L2 took 536.570/536.163 µs. The 64 MiB guard scopes this first
+qualified policy to large, single-pass streams; the benchmark does not
+measure a cache-size crossover.
+
+Trace the wide-chunk selector by calling the public dispatcher on an
+eligible wide FP32 row and an ineligible short FP32 row. Both calls
+must resolve the same host function name as its definition. A generated
+module renamed the definition but retained the original call and failed
+before launching either FP32 geometry. A successful BF16 slab pilot and
+a syntax check both miss this error.
+
+### Complete aligned BF16 half-rows
+
+With at least eight waves of aligned BF16 rows, test a four-stage pipeline
+over complete half-rows of 8–32 KiB. For this fixed-copy emitter reserve
+32 bytes per lane for dispatch. Search from the available grid down to
+seven eighths of it for the largest grid dividing the row count into
+whole groups of four per block. With 4096 rows of 4096 BF16 lanes and 72
+available AIVs, the selected grid is 64, the tile is one half-row and
+the four-stage kernel used 114688 UB bytes. Five full standalone David
+series gave 45.011–45.636 µs against 48.590 µs. A clean source dispatching
+the same shape to 2D copies took 74.447 µs. A separate flat 4096-lane
+three-stage control on 72 blocks took 45.392 µs. These measurements support
+choosing whole-row copies for this shape; remeasure unroll and grid at
+fixed layout before attributing the gain to either parameter.
+
+### Long aligned FP16 single-row streams
+
+For a long pair of contiguous FP16 halves, a 16 KiB DMA chunk contains
+8192 lanes. With the direct-division flat emitter, unroll 4 and
+`reuse_alloc=2`, compilation at 9216 lanes required 258048 UB bytes
+(28 bytes per lane) on the 253952-byte device. The 8192-lane specialization
+fit. Use `long_fp16_grid` from the flat template before the generic
+capacity-based chunk rule. It restricts this tuning to a single row, at
+least 64 waves of full chunks, a fitting UB footprint, and a grid near
+the available AIV count that gives every block complete groups of four.
+
+For a positive `long_fp16_grid` and a physical input above 64 MiB, pass
+`False` as the input cache argument of the flat JIT. Keep the default
+output descriptor. At 256 MiB of FP16 input, N64/T8192/U4 took 169.517
+and 170.157 µs with input bypass, versus 240.871 and 241.618 µs with
+default caching. Bypassing both descriptors took 268.307 and 268.858 µs.
+At N72, the input-only bypass took 169.884 and 169.588 µs. These controls
+cover the long single-pass shape. Use default caching for other FP16 paths.
+
+For a half of 67108864 FP16 elements, 8192 chunks on 64 blocks give
+128 per block. The same 8192-lane, four-stage kernel took 241.468 and
+241.040 µs on 64 blocks against 245.958 and 246.154 µs on 72 in two
+shuffled runs. At three stages and 64 blocks it took 241.797 and 241.396 µs.
+The public 950PR threshold is 241.490 µs. The grid effect was larger than
+the difference between the two unrolls. Verify the public dispatcher and
+repeat the standalone suite after generating a new source.
+
+Keep consecutive chunks together on each block for this long, single-row
+FP16 path. In two shuffled rounds at fixed T8192, unroll 4 and 64 blocks,
+consecutive chunks took 241.814/240.386 µs. Assigning successive chunks
+to successive blocks took 247.742/246.959 µs. Cycling between blocks
+after groups of four took 255.900/254.606 µs. The same ordering held
+at unroll 3. A clean generation using consecutive chunks took 241.518 µs
+in its complete 20-case suite, so the measured margin at the public
+241.490 µs threshold changes sign across runs.
+
+### Moderate FP32 and BF16 streams
+
+For moderate streams consult the [two shape-dependent schedules](../templates/moderate-swiglu-stream.py).
+In the flat dispatcher, call `launch_moderate_flat` with the input, allocated output,
+logical row count and half-width, detected AIV count and usable UB. Return the output
+when it launches. Keep the ordinary flat path for other shapes and budgets.
+For a single FP32 row the selector rounds down to an eight-lane DMA quantum and
+uses one bounded quantum per active tail block. For a few wide BF16 rows it
+uses two complete grids of column chunks per row and traverses the rows at each
+column. In five complete David series the FP32 schedule at four waves of 4104
+lanes took 7.689–8.435 µs (950PR baseline 8.540 µs). The BF16 schedule at
+four rows of 1044735 lanes, chunk 7264, took 12.670–13.851 µs (14.280 µs).
+Both used 72 blocks. Check the actual generated entry point and remeasure it.
 
 Compare consecutive chunks per block with a grid-stride loop. Consecutive ranges can use the quotient and remainder of total chunks divided by the active blocks to balance work without dummy iterations. For long grids of FP32 rows, also try one strided descriptor for several complete rows. For widened FP16 or BF16 compare a third pipeline stage against the larger tile allowed by two stages. Check the compiled allocation, full output and warmed device times before adopting a regime.
 
@@ -61,6 +242,17 @@ four waves of 4,104 FP32 lanes cover 1,181,952 outputs. Block zero
 handles the final element in an eight-lane tile. The full-case median
 was 7.909 µs on Ascend950PR_9599. Benchmark other wave counts or the
 ordinary bounded loop when the residual needs more than N quanta.
+
+For this four-wave FP32 stream, keep the tile ordinal `step * A + block`
+for the full waves. It beat assigning each block four consecutive chunks
+in all three public and all three neighboring trials on 950PR. Both used
+the same 4,104-lane chunk, unroll two, and separately bounded tail. Rounding
+only the first three wave widths down to 4,096 and enlarging the fourth to
+4,128 won one of three rounds on each input. Keep the uniform width as
+the default for this regime. If profiling unequal widths, use distinct
+JIT tensor names for the last full wave and the tail to preserve the two
+static types at a control-flow join.
+[Matched stream timings and shape checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6862107842).
 
 
 For moderate single-row BF16 streams spanning one to two grids of the base tile, qualify both aligned roundings before switching away from grid-stride scheduling. With H = 1,046,017 and 72 AIVs, the 8,192-lane grid-stride kernel took 5.428 and 5.097 µs. Rounding down to 7,264 lanes with the one-element tail in the main launch took 5.356 and 5.923 µs. Rounding up to 7,280 lanes and assigning consecutive chunks took 5.162 and 5.780 µs. Retain the base tile on this target for that range.
