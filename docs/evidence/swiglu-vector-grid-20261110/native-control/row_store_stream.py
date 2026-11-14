@@ -50,7 +50,7 @@ for (uint16_t r = 0; r < {height}; ++r) {{
 {flush if mode == "tile" else ""}"""
 
 
-def render(source, height, half, mode, single_tail=False, dense_input=False):
+def render(source, height, half, mode, single_tail=False, dense_input=False, guard_window=None):
     if hashlib.sha256(source.encode()).hexdigest() != "1f0e5562b4a41228792ea34b61e8feaa7e295508d78986b670810d19958a0ff6":
         raise ValueError("expected the qualified W65 source")
     pitch = (half + 7) // 8 * 8
@@ -58,6 +58,8 @@ def render(source, height, half, mode, single_tail=False, dense_input=False):
         raise ValueError("require aligned full-register loads and burst-aligned tile ownership")
     if single_tail and dense_input:
         raise ValueError("dense-input study uses the common bounded tail")
+    if guard_window is not None and (not dense_input or guard_window not in ("bounded", "overlap")):
+        raise ValueError("guard windows require the dense input control")
     body = vector_body(height, half, pitch, mode, dense_input)
     func, = (f for f in ast.parse(source).body if getattr(f, "name", "") == "row_single_wave_fp32")
     lines = source.splitlines(keepends=True)
@@ -86,6 +88,18 @@ def render(source, height, half, mode, single_tail=False, dense_input=False):
         kernel = kernel.replace("x, [2 * R, H]", "x, [2 * R * H]")
         kernel = kernel.replace("[2 * r, 0], [2 * T, W], real_shape=[2 * valid, H]",
                                 f"[2 * r * H], [{capacity}], real_shape=[2 * valid * H]")
+        if guard_window is not None:
+            # Read into the guard only while the whole window fits in GM.
+            # The comparison case rebases the same tile and pads the guard.
+            prefix, bounded = kernel.split("    packed = ", 1)
+            count = capacity if guard_window == "overlap" else 2 * height * half
+            kernel = prefix + f"""    if 2 * (R - r) * H >= {capacity}:
+        win = asctile.global_tensor(x + 2 * r * H, [{capacity}], l2_cache=False)
+        full = asctile.copy_in(win, [0], [{capacity}], real_shape=[{count}], pad_value=0.0)
+        result = asctile.inline_vf({body!r}, {tile}, asctile.float32, [full])
+        asctile.copy_out(result, gy, {offset}, real_shape={real})
+    else:
+""" + "\n".join("    " + line for line in ("    packed = " + bounded).strip("\n").splitlines()) + "\n\n\n"
     if single_tail:
         marker = "    packed = asctile.copy_in("
         prefix, main = kernel.split(marker)
@@ -119,8 +133,9 @@ if __name__ == "__main__":
     parser.add_argument("mode", choices=("padded", "row", "tile"))
     parser.add_argument("--single-tail", action="store_true")
     parser.add_argument("--dense-input", action="store_true")
+    parser.add_argument("--guard-window", choices=("bounded", "overlap"))
     args = parser.parse_args()
-    code = render((args.package / "swi_glu.py").read_text(), args.height, args.half, args.mode, args.single_tail, args.dense_input)
+    code = render((args.package / "swi_glu.py").read_text(), args.height, args.half, args.mode, args.single_tail, args.dense_input, args.guard_window)
     compile(code, "swi_glu.py", "exec")
     args.dest.mkdir()
     (args.dest / "swi_glu.py").write_text(code)
