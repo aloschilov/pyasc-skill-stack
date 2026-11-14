@@ -43,6 +43,13 @@ flush and cost 0.41/0.03 µs with per-row flush. Keep the ordinary row
 path for this geometry.
 [Matched store layouts and exact-tail controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6874390643).
 
+If two AIVs share a row group, align the split in the **flattened output**
+and count input rows fetched by both owners. At H509/T8, splitting 4,072
+outputs at element 2,040 gives disjoint 32-byte sectors. Reading whole
+input rows then fetches 4,072 extra bytes per group. On 950PR this cost
+0.15/0.20 µs against the matched one-owner compact kernel.
+[Output intervals and emitted DMA lengths](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6874918770).
+
 When a flat input tile has extra UB capacity for unaligned register
 loads, inspect the full-block `copy_in` lowering. On 950PR a 32,576-byte
 1D transfer into a 33,024-byte UB allocation cleared the entire allocation

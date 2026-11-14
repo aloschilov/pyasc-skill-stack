@@ -94,6 +94,14 @@ fails to lower on this pin (`Reduction along all dimensions is not supported`).
 The leading singleton preserves one result per row. Preserve the output dtype
 and logical reduction axis.
 
+When a runtime condition changes the order of two loads, keep operations
+that use the branch-local tiles, including dtype lookup and the final
+store, inside the same arm on the public 950PR wheel. A tile created in
+both arms can still be out of scope after the conditional. A physical
+block parity check exposed this during device compilation. Verify the
+order of both loads in the emitted code and compare against uniform order.
+[Compiled branch example and measurements](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6874854669).
+
 ## Tails and padding
 
 For scalar address arithmetic inside a JIT use the Python builtins:
