@@ -8,14 +8,16 @@ from row_math_cost import W62
 from wave_rotation import prepare, run
 
 
-def vector_code(count, pairs):
+def vector_code(count, pairs, *, chains=None, mask_overlap=False):
     # All loads/stores start on 32-byte boundaries. A short final vector
     # reuses lanes from the preceding vector, entirely inside this UB tile.
     if count < 64 or count % 8:
         raise ValueError("expected an aligned FP32 tile of at least one register")
     n = count // 64 - int(count % 64 != 0)
     funcs = []
-    def batch(offsets):
+    def batch(offsets, masks=None):
+        if masks is None:
+            masks = ["m"] * len(offsets)
         lines = []
         for i, off in enumerate(offsets):
             lines += [f"RegTensor<float> g{i}, v{i}, t{i};",
@@ -23,16 +25,24 @@ def vector_code(count, pairs):
         for op in ("Muls(t{i}, g{i}, -1.0f, m);", "Exp(t{i}, t{i}, m);",
                    "Adds(t{i}, t{i}, 1.0f, m);", "Div(t{i}, g{i}, t{i}, m);",
                    "Mul(t{i}, t{i}, v{i}, m);"):
-            lines += [op.format(i=i) for i in range(len(offsets))]
-        lines += [f"StoreAlign(y + {off}, t{i}, m);" for i, off in enumerate(offsets)]
+            lines += [op.format(i=i).replace(", m);", f", {mask});") for i, mask in enumerate(masks)]
+        lines += [f"StoreAlign(y + {off}, t{i}, {masks[i]});" for i, off in enumerate(offsets)]
         return "\n".join(lines)
-    step = 2 if pairs else 1
+    step = chains if chains is not None else (2 if pairs else 1)
+    if step not in (1, 2, 4):
+        raise ValueError("expected 1, 2 or 4 independent register chains")
     funcs += [f"for(uint16_t i=0; i<{n//step}; ++i) {{",
               batch([f"{step*64}*i + {64*j}" for j in range(step)]), "}"]
     if n % step:
-        funcs += ["{", batch([str(64*(n-1))]), "}"]
+        funcs += ["{", batch([str(64*j) for j in range(n - n % step, n)]), "}"]
     if count % 64:
-        funcs += ["{", batch([str(n*64), str(count-64)]), "}"]
+        # The second register ends exactly at the allocation boundary.
+        # Its first lane is (count % 64) lanes beyond the first register.
+        masks = None
+        if mask_overlap:
+            funcs += [f"uint32_t live = {count % 64};", "auto edge = UpdateMask<float>(live);"]
+            masks = ["edge", "m"]
+        funcs += ["{", batch([str(n*64), str(count-64)], masks), "}"]
     return """using namespace AscendC::Reg;
 auto* g = reinterpret_cast<__ubuf__ float*>($1.GetPhyAddr());
 auto* v = reinterpret_cast<__ubuf__ float*>($2.GetPhyAddr());
