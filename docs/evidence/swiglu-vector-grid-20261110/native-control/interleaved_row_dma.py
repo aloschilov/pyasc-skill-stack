@@ -9,7 +9,7 @@ from textwrap import indent
 W65 = "1f0e5562b4a41228792ea34b61e8feaa7e295508d78986b670810d19958a0ff6"
 
 
-def render(source, owners):
+def render(source, owners, fixed_offsets=False):
     if sha256(source.encode()).hexdigest() != W65 or owners not in (1, 2, 4):
         raise ValueError("expected the W65 source and one, two or four owners per group")
     func, = (n for n in ast.parse(source).body if getattr(n, "name", None) == "row_single_wave_fp32")
@@ -23,12 +23,24 @@ def render(source, owners):
     if W == H and first + {owners} * T <= R:
         src = asctile.global_tensor(x + first * 2 * H, [T, {2*owners} * H], l2_cache=False)
         dst = asctile.global_tensor(y + first * H, [T, {owners} * H])
-        gate = asctile.copy_in(src, [0, 2 * owner * H], [T, W])
-        value = asctile.copy_in(src, [0, (2 * owner + 1) * H], [T, W])
-        out = (gate / (1.0 + asctile.exp(-gate))) * value
-        asctile.copy_out(out, dst, [0, owner * H])
-    else:
 """
+    transfers = """gate = asctile.copy_in(src, [0, 2 * owner * H], [T, W])
+value = asctile.copy_in(src, [0, (2 * owner + 1) * H], [T, W])
+out = (gate / (1.0 + asctile.exp(-gate))) * value
+asctile.copy_out(out, dst, [0, owner * H])
+"""
+    if fixed_offsets and owners > 1:
+        # Specializing the column leaves all DMA lengths compile-time constants.
+        for i in range(owners):
+            if i == owners - 1:
+                setup += "        else:\n"
+            else:
+                keyword = "if" if i == 0 else "elif"
+                setup += f"        {keyword} owner == {i}:\n"
+            setup += indent(transfers.replace("owner", str(i)), "            ")
+    else:
+        setup += indent(transfers, "        ")
+    setup += "    else:\n"
     # Full groups cover a real contiguous span, including both halves of
     # the last row. The residual group uses the original bounded descriptors.
     lines[start:func.end_lineno] = [before + setup + indent("    r = tile_index * T\n" + body, "    ")]
@@ -40,8 +52,9 @@ if __name__ == "__main__":
     parser.add_argument("package", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("owners", type=int, choices=(1, 2, 4))
+    parser.add_argument("--fixed-offsets", action="store_true", help="specialize each full-group DMA offset")
     args = parser.parse_args()
-    result = render((args.package / "swi_glu.py").read_text(), args.owners)
+    result = render((args.package / "swi_glu.py").read_text(), args.owners, args.fixed_offsets)
     compile(result, "swi_glu.py", "exec")
     args.output.mkdir()
     (args.output / "swi_glu.py").write_text(result)
