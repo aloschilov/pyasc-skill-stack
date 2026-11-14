@@ -559,7 +559,11 @@ On the 950PR with T4/H536/W536/N36, this rotation took 2.152 and 2.185
 µs in paired runs versus 2.217 and 2.314 µs for direct ownership. The
 three-row tail moved from physical block 35 to block 17. At
 T8/H509/W512/N35, rotating took 2.605/2.640 µs versus 2.597/2.639 µs.
-Verify ownership on the actual JIT and compare medians in the full suite.
+Trace individual block IDs through both reads and the store in the emitted JIT.
+At aligned R143/H536/T4/N36, block 0 owns rows 72–75 and block 17 owns
+140–142. At padded R273/H509/T6/N46, block 0 owns rows 0–5 and block 45
+owns 270–272. Counting writes and checking their union accepts either
+permutation. Compare medians in the full suite.
 
 When testing the cost of this rotation, keep the mapping of block to tile
 identical. If one wave owns every tile and the launch has exactly
