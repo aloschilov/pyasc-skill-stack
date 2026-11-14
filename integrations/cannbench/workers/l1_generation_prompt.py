@@ -202,7 +202,10 @@ def prompt(task, skills):
         sections.append(
             "Use x.element_size() for the host item size. Trace each branch including any default: "
             "pass the caller's x unchanged into the JIT. For an unsupported dtype raise TypeError. "
-            "Derive log_base with the positive-base predicate from the Exp skill. For a NaN base and finite x, the golden uses ordinary exp. "
+            "Use the scalar expression log_base = math.log(base) if base > 0.0 else 1.0, "
+            "then apply_log = log_base != 1.0. Positive infinity takes the logarithm branch. "
+            "Trace base=+inf at finite inputs -1, 0, 1 through the device body: outputs 0, NaN, +inf. "
+            "A NaN base takes the natural exponential branch. "
             "In the public Exp entry point, select the qualified short 16-bit regime before "
             "both the one-wave selector and generic streaming, and return from the selected short launch. "
             "The one-wave estimate can also fit all five short shapes. Trace 1024 squared FP16 "

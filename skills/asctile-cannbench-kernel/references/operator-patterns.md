@@ -126,8 +126,11 @@ already has the required scalar ABI. Pass the decisions to omit identities as se
 `asctile.ConstExpr` flags: `scale != 1`, `shift != 0`, `log_base != 1`.
 Use the public positive-base predicate exactly:
 `log_base = math.log(base) if base > 0.0 else 1.0`. An unordered NaN
-base takes the natural-exponential branch. Check it with finite inputs so
-a mismatch is visible. A nested kernel factory
+base takes the natural-exponential branch. Positive infinity satisfies the
+positive-base predicate. For inputs `[-1, 0, 1]`, unit scale and zero shift,
+the latter base yields `[0, NaN, +inf]` through FP32 multiplication.
+Exercise both bases with finite inputs when checking the scalar predicate.
+A nested kernel factory
 capturing Python values can compile the first values for a dtype into a
 binary that subsequent invocations reuse. An input with the same shape and
 dtype must produce different correct values as the public attributes change.
