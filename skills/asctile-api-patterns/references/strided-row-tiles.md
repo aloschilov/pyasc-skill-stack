@@ -43,6 +43,18 @@ flush and cost 0.41/0.03 µs with per-row flush. Keep the ordinary row
 path for this geometry.
 [Matched store layouts and exact-tail controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6874390643).
 
+When a flat input tile has extra UB capacity for unaligned register
+loads, inspect the full-block `copy_in` lowering. On 950PR a 32,576-byte
+1D transfer into a 33,024-byte UB allocation cleared the entire allocation
+first. If the backing GM tensor still contains a full allocation from
+this offset, an extended read can initialize the guard. Keep active lane
+counts and output ownership fixed, and use a bounded fallback at the end
+of the tensor. Verify both branches in the emitted C++ and time against
+the ordinary row kernel. At H509, reading an extra 448 bytes removed the
+full-block clear and saved 0.04–0.15 µs across four paired comparisons.
+The ordinary row kernel was still faster.
+[Full-block descriptors, guarded tail, and release timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6874654108).
+
 A partial output can also read a full input tile when its first row leaves
 at least T rows in the tensor. Place the short output interval at the
 front, then assign the remaining full tiles after it. Compare bounded and
