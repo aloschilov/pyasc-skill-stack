@@ -510,6 +510,18 @@ orders. With input bypass and four rows per tile on 950PR, value-first saved
 0.54/0.06 µs at H536. At H528 and H544 the direction changed between rounds.
 [Release and finite-input trials](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6873970983).
 
+When testing whether an operand read overlaps independent arithmetic, inspect
+the emitted C++ for both the issue order and the physical UB destination.
+Trace the destination of the second `DataCopyPad` back to the last vector
+instruction that reads that address. Distinct DMA buffer IDs can still share
+storage with a live arithmetic temporary. In a 950PR FP32 single-wave
+SwiGLU generation, the value DMA reused the denominator tile after `Div`.
+The emitted schedule used two tile buffers. Disabling reuse gave seven
+buffers but still issued the value DMA after division. A matched body with
+both loads ahead of arithmetic used three buffers. Compare each schedule
+on the target with the same ownership, input stream and tail. Account for
+all physical tiles when checking the UB budget.
+
 Exercise the selector with a smaller UB that fits only one iteration, a
 smaller UB that forces a shorter height, and short grids. Compare warmed
 task times and the full golden on the target.
