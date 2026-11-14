@@ -652,21 +652,26 @@ def padded_fp16_two_stage_height(rows, half, dtype, aivs, usable_ub):
     return (rows + aivs * waves - 1) // (aivs * waves)
 ```
 
-The bounded row kernel takes both `half` (the GM half-row stride) and
-`width` (the padded UB extent). Pass the selected height between them.
-For 3,003 rows and a logical half-width of 506, a launch trace should
-record the five scalar arguments `(3003, 506, 11, 512, 2)` after the
-two tensor arguments. Bind the recorded arguments to the actual JIT
-signature when checking host dispatch. This catches a missing stride
-before device compilation.
+Share the bounded launch between the padded FP16 selector and the ordinary
+row fallback. Each selector supplies tile height and unroll. The common
+call supplies both the logical GM half-width and the physical UB pitch.
+Keep specialized single-wave FP32 selection inside the ordinary branch.
+A positive padded FP16 selection reaches the common call with U=2.
+Bind the call to the decorated definition. On 3,003 rows of half-width
+506 the five scalar arguments after the tensors are (3003, 506, 11, 512, 2).
 
 ```python
 height = padded_fp16_two_stage_height(rows, half, dtype, aivs, usable_ub)
-if height > 0:
-    width = ((half + 15) // 16) * 16
-    blocks = min(aivs, (rows + height - 1) // height)
-    bounded_rows[blocks](x, out, rows, half, height, width, 2)
-    return out
+if height:
+    unroll = 2
+else:
+    # Ordinary UB fit, column fallback, single-wave FP32 dispatch, then
+    # bounded_row_unroll with the dtype-specific two-stage footprint.
+    ...
+# Only reached with a positive UB-fitted height and selected unroll.
+blocks = min(aivs, (rows + height - 1) // height)
+bounded_rows[blocks](x, out, rows, half, height, width, unroll)
+return out
 ```
 
 For aligned FP16 rows, check for two full waves plus a small row tail
