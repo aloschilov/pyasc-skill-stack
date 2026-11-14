@@ -30,6 +30,19 @@ not add candidate branches that detect the validator or catch its missing API
 to bypass a real dispatch path. Report that route as blocked and use a
 validator that can exercise it before claiming complete coverage.
 
+## Compare the generated entry on resident tensors
+
+For a short NPU kernel, record the input and output devices together with
+the Torch, torch_npu and AscTile wheel versions. Use a compatible Python ABI
+to call the unedited generated operator on ordinary NPU tensors. Check its
+output against the task golden. A matched CPU-input call through the same
+wheel can expose the effect of tensor placement on device-task time. Keep
+both calls on the same profiler and repeat them in reverse order. Under the
+CANNBench warmup and L2-clean protocol, verify one cache-clean task before
+each measured invocation and count every target task. Record a source hash
+and the observed launch sequence for each run. Separate this comparison
+from the full-suite GM, whose rows share the same input and timing protocol.
+
 ## Numerical checks
 
 Use the recipe's ordinary and adversarial numerical probe with the configured

@@ -66,6 +66,17 @@ requirement to run 18 full simulator suites inside one worker budget. Tune
 tile/unroll/core choices after comparing options at fixed geometry, and rerun
 correctness for the selected combination.
 
+For row-wise pointwise math with two planar operands, inspect which operation
+writes the final output when comparing rank-preserving tiles and flat UB views.
+A single `__VEC_SCOPE__` in both files can hide a difference in the fused
+expression. In 950PR SwiGLU, keeping both inputs at rank two fused the gate
+division and final value multiply, with two physical FP32 buffers. Reshaping
+both to rank one fused only the gate calculation. The emitted C++ performed
+a separate tile-wide multiply and used a third buffer. The full-tile UB spans
+were 17,152 versus 25,728 bytes for 2,144 lanes and 32,768 versus 49,152 for
+4,096 lanes. Compare task times at identical DMA geometry before making
+fusion a dispatch default.
+
 ## Diagnose the public JIT path before blaming it
 
 At the historical GeLU pin `adadd7d66ed0ee16d33d79487bf584899a26ef1e`, a

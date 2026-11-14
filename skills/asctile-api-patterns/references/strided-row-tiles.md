@@ -418,6 +418,30 @@ public R143/H536 rounds, but only one of three finite rounds at the same
 R/H/T and grid. At R144 it improved all three finite rounds, while R139
 and R140 were mixed. Keep the ordinary rotation above as the default.
 
+For a single-wave FP32 row launch on a resident Torch NPU input, submit
+the kernel to the current Torch stream for that input device. On the public
+wheel whose `LaunchOptions` takes `core_num, stream`, pass a pointer-width
+stream handle in the JIT subscript. The CPU staging route uses its regular
+grid-only call. Query the stream at invocation time so a caller using a
+different Torch stream gets the correct launch.
+
+```python
+import ctypes
+
+if input.device.type == "npu":
+    stream = ctypes.c_void_p(torch.npu.current_stream(input.device).npu_stream)
+    row_single_wave_fp32[blocks, stream](input, out, R, H, height, W)
+else:
+    row_single_wave_fp32[blocks](input, out, R, H, height, W)
+```
+
+Verify that the preceding framework task and the kernel have the same stream
+ID in the trace. Device IDs and correct output alone do not show this. On a
+950PR with CANNBench cache conditioning, using that stream saved 0.595 and
+0.613 µs at 36 blocks, and 0.545 and 0.437 µs at 35 blocks. The compiled
+device binary was identical within each shape. Repeat the comparison when
+changing the wheel or targeting a different launch family.
+
 For the ordinary padded FP32 single-wave body, issue the bounded value
 read first, then the bounded gate read, then compute
 `(gate / (1.0 + exp(-gate))) * value`. Keep both DMA bounds identical
