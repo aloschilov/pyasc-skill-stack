@@ -22,6 +22,7 @@ def run(package, task, case, output):
     from kernel_eval.eval.op_runner import OpRunner
     from kernel_eval.eval.perf_eval import PerfEvaluator
     from kernel_eval.utils.device_manager import DeviceConfig, DeviceManager
+    from kernel_eval.utils.tensor_utils import non_contiguous_reason
 
     operator = task.name
     sys.path[:0] = [str(package.parent), str(task)]
@@ -44,6 +45,9 @@ def run(package, task, case, output):
     def validate(actual, args, kwargs, index, phase):
         if str(actual.device) != manager.get_device() or actual.dtype != expected.dtype or actual.shape != expected.shape:
             raise ValueError("output device, dtype or shape changed")
+        layout_error = non_contiguous_reason(actual)
+        if layout_error is not None:
+            raise ValueError(layout_error)
         actual_cpu = actual.cpu().flatten()
         for part, ref in zip(actual_cpu.split(1048576), expected.flatten().split(1048576)):
             torch.testing.assert_close(part, ref, equal_nan=True)

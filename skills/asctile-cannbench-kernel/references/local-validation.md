@@ -58,7 +58,11 @@ For a local unary qualification, run
 in the matched CANNBench, PyAsc and torch_npu environment. The worker reads
 release case YAML and uses the evaluator's case-ID-derived seed and input
 distribution. Record this fixture identity alongside the measurement protocol
-when comparing with a previous run. The provider's
+when comparing with a previous run. Check output contiguity on the NPU before
+copying to the CPU for comparison. A host copy can normalize the strides of a
+sliced tensor. CANNBench 2.1.0 checks this with
+`kernel_eval.utils.tensor_utils.non_contiguous_reason` on the original output.
+The provider's
 release `build.sh` detects the device using `acl.get_soc_name()`. Check the
 reported SoC. If building with CMake directly, pass the corresponding
 `-DNPU_ARCH` value. The 950PR target is `ascend950` (Bisheng `dav-3510`).
