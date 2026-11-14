@@ -31,6 +31,16 @@ changing dispatch. In three rounds on each of two short FP32 geometries,
 the exact terminal extent gave no consistent speedup.
 [Generated C++ comparison and matched hardware controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6859782820).
 
+In a compiled 2D FP32 read, distinguish the number of right-pad elements
+from the `isPad` flag. On 950PR even an aligned 536-element half-row
+with zero right pad programmed `PAD_VAL_OUTTOUB` before each of the two
+input reads. A native control clearing the flag removed both writes and
+saved 0.03/0.13 µs at T4. At H509/T8 the three padded FP32 positions per
+row are excluded by the logical output store. Clearing the flag cost
+0.04 µs once and tied once. Check the actual descriptor and device
+instructions when evaluating a different public copy primitive.
+[Matched pad controls, emitted instructions and finite check](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6876372047).
+
 For a nonaligned row width, compare compact and padded UB outputs with
 the same input DMA and register math. A padded multirow copy already
 uses one strided DMA descriptor. A dense tile uses one contiguous DMA
