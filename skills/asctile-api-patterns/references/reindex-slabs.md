@@ -232,6 +232,14 @@ and per-group offsets increased the device median for the tested
 
 ## Two-wave BF16 half-rows
 
+Check the compiler's UB report when enabling VF fusion on a BF16 gather.
+On 950PR a two-wave T928/H7/U2 gather compiled with modern UB reuse.
+Adding `vf_fusion=True` to the same JIT required 259,840 bytes for
+6,496 output lanes, exceeding the available 253,952 bytes. For a dense
+T4096/H1/U2 gather the same switch compiled. Its explicit UB regions grew
+from 90,112 to 163,840 bytes. Qualify each specialization before reusing
+a fusion setting from pointwise FP32 rows.
+
 Use the default cached descriptor for a gate-index table shared by all
 blocks. Each AIV reads the same small table; streaming input descriptors
 and index-table descriptors have different reuse. At 928 rows per tile,
