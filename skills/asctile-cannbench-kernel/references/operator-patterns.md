@@ -90,7 +90,12 @@ Generate the kernel with `@asctile.jit(reuse_alloc=2)`; allocate with
 `out = x.new_empty(x.shape)` on the caller's device and invoke
 `kernel[vector_blocks(work_items)](x, out, ...)`. Read the
 [ranked copy example](../../asctile-api-patterns/SKILL.md#surface-to-use)
-before writing the body. Generate one unconditional device path for nonempty
+before writing the body. For the L1 generation package, the sibling runtime supplies
+`ensure_npu_platform`, `query_ub_bytes`, `query_aivs` and `vector_blocks`.
+Keep shape selectors and stream adapters in the generated module. Import the
+unchanged module from its real package parent before profiling so that a missing
+sibling export is identified separately from compilation or execution.
+Generate one unconditional device path for nonempty
 inputs. The wrapper consists only of platform selection, scalar attributes,
 shape/resource calculations, output allocation, the JIT launch and
 `return out`. There is no Python numerical fallback: passing CPU-backed
