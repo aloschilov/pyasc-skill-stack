@@ -512,10 +512,23 @@ tied in reverse order. Both allocators used two equal UB tiles. Audit which
 input the result overwrites and that both loads precede the aliased store.
 [Static and TPipe hardware comparison](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6882949124).
 
-For a one-wave FP32 row kernel whose gate and value are read once,
-use `asctile.global_tensor(x, [R, 2*H], l2_cache=False)` for the input
-and the default L2 descriptor for the output. Check the final partial
-tile with finite inputs.
+For single-wave FP32 row tiles on 950PR, keep the one-pass input reads
+on a shared L2-bypass descriptor. After computing the first row r and
+valid = min(T, R-r), choose the origin from the physical width:
+
+- At W == H, create `asctile.global_tensor(x + r*(2*H), [valid, 2*H], l2_cache=False)`.
+  Read gate at [0,0] and value at [0,H] with tile [T,W] and explicit
+  real_shape=[valid,H]. Address arithmetic on the FP32 pointer counts elements.
+- At W > H, create `asctile.global_tensor(x, [R, 2*H], l2_cache=False)`.
+  Read value at [r,H] and gate at [r,0] with the same logical extents.
+- In both branches use `asctile.global_tensor(y, [R,H])` with default caching
+  and write [valid,H] at [r,0]. Apply the block-to-tile rotation once.
+
+Tile-relative input reads won both process orders on public H536 and on
+finite aligned H528/H544 with four-row tiles. At padded H509, tensor-relative
+reads won both orders. These controls used unchanged layouts, math and grids.
+[Public H536/H509](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6882722644) · [Finite H528/H544](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6883091976).
+
 On the 950PR, changing the input descriptor alone gave 2.215/2.451 µs
 for 143 rows of half-width 536 and 2.753/2.725 µs for 273 rows of
 half-width 509. Default descriptors gave 2.497/2.468 and 2.805/2.878 µs.

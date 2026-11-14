@@ -263,8 +263,8 @@ containing copied input halves. Launch syntax is **one integer**:
 `kernel[vector_blocks(work_items)](input, out, ...)`. Compute work_items
 inside the selected branch. Even a single wide row can contain many chunks.
 
-Choose the GM descriptor rank **inside each kernel**. Both row kernels,
-including the single-wave specialization, use logical input strides via
+Choose the GM descriptor rank **inside each kernel**. Ordinary row kernels
+use logical input and output strides via
 `gx = asctile.global_tensor(x, [R, 2*H])` and
 `gy = asctile.global_tensor(y, [R, H])`. For example:
 
@@ -279,7 +279,11 @@ asctile.copy_out(out_tile, gy, [r, 0], real_shape=[rows, H])
 A flattened rank-one descriptor plus a two-dimensional physical tile does
 not introduce the row stride. Even when it compiles, it may read across
 half-row boundaries, store incorrect values or fault on the device.
-For the row branch, the selected height T belongs in the copy itself.
+For the aligned single-wave FP32 body on 950PR, start the input descriptor
+at the tile: `global_tensor(x + r*(2*H), [rows,2*H], l2_cache=False)`.
+Read offsets [0,0] and [0,H] and store at [r,0] in the full output.
+Padded single-wave rows use the full input with the same bypass hint.
+For ordinary row kernels, the selected height T belongs in the copy itself.
 Load one tile at `[r,0]` and one at `[r,H]`, each physical shape
 `[T,W]` and real shape `[min(T,R-r),H]`. Write one tile to the same
 valid output rectangle. A loop of T separate one-row copies loses batching.
