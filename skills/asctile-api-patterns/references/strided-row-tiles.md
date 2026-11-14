@@ -268,7 +268,11 @@ T6/W512/N46, with three valid rows starting at 270. Aligned R143/H536
 retains T4/N36. At R279/H511/W512 the same change saved 0.05 µs
 in both orders. At R267/H501/W504, six rows span 3,024 lanes with
 a 16-lane remainder. Timings changed by −0.02/+0.01 µs, so keep T8
-there. The balanced-grid helper below is a separate control.
+there. Treat the 8-KiB transfer size as a starting point. At H509 and
+H511 the smallest height meeting it was five rows. Compared with six,
+five rows increased latency in both measurement orders on both shapes
+despite the additional productive blocks.
+[Five and six rows with actual DMA bounds](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6880178952).
 
 Choose the ordinary bounded row kernel's unroll independently of whether
 a copy needs `real_shape`. A ragged final tile and a padded local row both
