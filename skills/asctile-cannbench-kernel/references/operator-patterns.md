@@ -244,8 +244,11 @@ another compiler version.
 
 For a resident 16-bit tensor on either short contiguous affine Exp path, launch
 on the current Torch stream for the input device. Read the stream at each
-public call, including a call made in a nondefault stream context. Use
-the integer block count alone for CPU-staged input. The AscTile grid
+public call, including a call made in a nondefault stream context.
+Select the integer-grid launch from the CPU device type. If the NPU
+stream lookup raises, propagate that error before launching. In a host
+dispatch test, inject a failing stream lookup and check that the JIT
+receives zero calls; also exercise two successful caller streams. The AscTile grid
 accepts the raw stream handle as its second component:
 
 ```python
