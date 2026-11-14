@@ -13,7 +13,7 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def run(package, task, case, output):
+def run(package, task, case, output, *, record_alignment=False):
     import torch
     from kernel_eval.benches.cann_loader import CannCaseLoader
     from kernel_eval.config import Config
@@ -41,6 +41,7 @@ def run(package, task, case, output):
     attrs = spec.attrs
     expected = golden(input_tensor, **attrs)
     checked = []
+    alignments = []
 
     def validate(actual, args, kwargs, index, phase):
         if str(actual.device) != manager.get_device() or actual.dtype != expected.dtype or actual.shape != expected.shape:
@@ -52,6 +53,15 @@ def run(package, task, case, output):
         for part, ref in zip(actual_cpu.split(1048576), expected.flatten().split(1048576)):
             torch.testing.assert_close(part, ref, equal_nan=True)
         checked.append(phase)
+        if record_alignment:
+            # The restored evaluator calls this validator after the profiler closes.
+            # Keep just address residues, never tensors or complete device addresses.
+            source = inspect.signature(candidate).bind(*args, **kwargs).arguments["input"]
+            if source.device != actual.device:
+                raise ValueError("alignment check requires the restored device input")
+            alignments.append({"index": index, "phase": phase,
+                               "input_mod": source.data_ptr() % 65536,
+                               "output_mod": actual.data_ptr() % 65536})
 
     if not config.perf_restore_inputs:
         raise ValueError("CANNBench restored-input protocol required")
@@ -71,6 +81,11 @@ def run(package, task, case, output):
                 or len(meta["step_kernel_us"]) != perf.repeat
                 or round(statistics.median(meta["step_kernel_us"]), 2) != result.elapsed_us):
             raise ValueError(f"incomplete restored run: {meta}")
+        if record_alignment:
+            if [row["phase"] for row in alignments] != phases:
+                raise ValueError("incomplete post-profile alignment observations")
+            with (output / "alignment.json").open("x") as stream:
+                json.dump({"period_bytes": 65536, "invocations": alignments}, stream)
         with (output / "result.json").open("x") as f:
             json.dump(dict(operator=operator, case=case, elapsed_us=result.elapsed_us,
                            case_id=spec.get_case_id_str(), eval_seed=config.eval_seed, fixture_seed=seed,
@@ -88,6 +103,9 @@ if __name__ == "__main__":
     parser.add_argument("task", type=Path)
     parser.add_argument("case", type=int)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--record-alignment", action="store_true",
+                        help="record input/output address residues after each invocation")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
-    run(args.package.resolve(), args.task.resolve(), args.case, args.output.resolve())
+    run(args.package.resolve(), args.task.resolve(), args.case, args.output.resolve(),
+        record_alignment=args.record_alignment)
