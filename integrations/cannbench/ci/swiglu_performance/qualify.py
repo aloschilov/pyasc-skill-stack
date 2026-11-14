@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import sys
 
+import asc
 import torch
 from asc import DataType
 from asc._C import ir
@@ -15,11 +16,13 @@ from asc.lib.utils import get_ascend_path
 from asc.runtime import config
 from asc.runtime.jit import MockTensor
 
-from geometry import DTYPES, all_specs, key, layout, slab_indices, validate
+from geometry import DTYPES, all_specs, full_row_probes, key, layout, slab_indices, validate
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]/'workers'))
 from local_compile_gate import prepare_specialization
+sys.path.insert(0, str(HERE.parents[3]/'tests/tools'))
+from execute_kernel import _install_launch_spy
 
 PACKED = Path('context/skills/asctile-api-patterns/templates/packed-bf16-swiglu.py')
 NAMES = {'rows':7,'slab':8,'flat':6}
@@ -113,16 +116,29 @@ def check(kernels, dtype, shape, axis, seed, policy):
         kwargs.extend([*indices,rows])
     else:
         kwargs.extend([rows,(rows+const[0]-1)//const[0] if route=='_swiglu_pair_groups' else half])
+
+    def dispatch(suppress):
+        cls, original, count = _install_launch_spy(asc, suppress)
+        try:
+            kernels[route][blocks](*kwargs,*const)
+        finally:
+            cls.run = original
+        if count['calls'] != 1:
+            raise ValueError(f'Expected one CaModel launch request for {route}, got {count["calls"]}')
+        return count['calls']
+
+    suppressed = dispatch(True)
     try:
         torch.testing.assert_close(out,expected,equal_nan=True)
     except AssertionError:
         pass
     else:
         raise ValueError('Suppressed launch passed the numerical oracle')
-    kernels[route][blocks](*kwargs,*const)
+    real = dispatch(False)
     torch.testing.assert_close(out,expected,equal_nan=True)
     return {'shape':list(x.shape),'dim':axis,'dtype':dtype,'route':route,'seed':seed,
-            'blocks':blocks,'constexprs':const,'positive':True,'suppressed_rejected':True}
+            'blocks':blocks,'constexprs':const,'positive':True,'suppressed_rejected':True,
+            'real_launches':real,'intercepted_launches':suppressed}
 
 
 def main(root, output):
@@ -143,6 +159,9 @@ def main(root, output):
         for shape,axis in [((131,14),1),((129,2),1),((3,128,8),1),((1,65538),1)]:
             for seed in (19,23):
                 checks.append(check(kernels,dtype,shape,axis,seed,policy))
+    for shape in full_row_probes(policy):
+        for seed in (19,23):
+            checks.append(check(kernels,'float32',shape,1,seed,policy))
     project = output/'package-source'
     folder = project/'csrc/ops/swi_glu/op_kernel'
     folder.mkdir(parents=True)

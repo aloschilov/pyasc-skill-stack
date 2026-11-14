@@ -35,7 +35,9 @@ def validate(policy):
                 raise ValueError('Row width stepping must be a multiple of 32 bytes')
             if b['route']=='flat' and b['tile']*size%32:
                 raise ValueError('Flat physical tiles require DMA alignment')
-            if (not natural(b['unroll'],2) or not natural(b['tiles_per_block'],128)
+            # U=3 selects the full-copy body; other dtypes and routes keep their existing ABI.
+            max_unroll = 3 if dtype == 'float32' and b['route'] == 'rows' else 2
+            if (not natural(b['unroll'],max_unroll) or not natural(b['tiles_per_block'],128)
                     or not natural(b['unroll_waves'],128)
                     or not (b['block_cap'] is None or natural(b['block_cap'],1024))):
                 raise ValueError('Invalid grid/unroll policy')
@@ -88,6 +90,29 @@ def all_specs(policy):
             yield dtype,route,const
 
 
+def full_row_probes(policy):
+    """Exercise one reachable full width per three-stage band, plus its two boundaries."""
+    shapes = set()
+    start = 1
+    for b in policy['float32']:
+        end = b['through']
+        if b['unroll'] == 3:
+            # The exact route requires a width on a physical width step or the band cap.
+            step = b.get('width_step_bytes',32*ceil(end/8))//4
+            half = end if end % 8 == 0 else end//step*step
+            if half < start:
+                raise ValueError('Three-stage band has no eligible unpadded half-width')
+            rows = (3*b['unroll_waves']+1)*b['tile']
+            if (rows+1)*2*half > 8*1024**2:
+                raise ValueError('Three-stage band exceeds the bounded numerical probe size')
+            shapes.add((rows,2*half))
+            shapes.add((rows+1,2*half))
+            shapes.add((rows,2*(half-1)))
+        if end is not None:
+            start = end+1
+    return sorted(shapes)
+
+
 def key(dtype, route, const):
     return '-'.join([dtype, route, *(str(v) for v in const)])
 
@@ -112,4 +137,7 @@ def layout(shape, dim, dtype, policy, cores):
     groups=rows*ceil(half/b['tile']) if b['route']=='flat' else ceil(rows/b['tile'])
     blocks=min(cores,b['block_cap'] or cores,ceil(groups/b['tiles_per_block']))
     u=b['unroll'] if groups>=blocks*b['unroll_waves'] else 1
-    return out,rows,half,b['route'],specialization(dtype,half,b,u),blocks
+    const = specialization(dtype,half,b,u)
+    if u == 3 and (rows % b['tile'] or half != const[1]):
+        const = specialization(dtype,half,b,1)
+    return out,rows,half,b['route'],const,blocks
