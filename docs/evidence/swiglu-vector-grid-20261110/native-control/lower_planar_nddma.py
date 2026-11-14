@@ -6,6 +6,10 @@ import sys
 
 
 def lower_fp32(package, workers, kernel_name, geometry, output):
+    return lower_typed(package, workers, kernel_name, ("float32", "float32"), geometry, output)
+
+
+def lower_typed(package, workers, kernel_name, tensor_dtypes, geometry, output):
     sys.path[:0] = [str(package.parent), str(workers)]
     from asc import DataType
     from asc.codegen.specialization import Specialization
@@ -14,8 +18,8 @@ def lower_fp32(package, workers, kernel_name, geometry, output):
     from local_compile_gate import prepare_specialization
     config.set_platform(config.Backend.Model, config.Platform.Ascend950PR_9599, check=False)
     kernel = getattr(import_module(f"{package.name}.swi_glu"), kernel_name)
-    tensor = MockTensor(DataType("float32"))
-    _, types, constants, codegen, options = prepare_specialization(kernel, (tensor, tensor, *geometry))
+    tensors = tuple(MockTensor(DataType(dtype)) for dtype in tensor_dtypes)
+    _, types, constants, codegen, options = prepare_specialization(kernel, (*tensors, *geometry))
     module = kernel._run_codegen(Specialization(types, constants), codegen)
     compiler = kernel.compiler(options)
     compiler.preprocess_module(module)
