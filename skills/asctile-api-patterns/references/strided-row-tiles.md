@@ -223,6 +223,15 @@ block. All four assignments were slower in both orders. Compare grids
 with additional productive work separately.
 [Serialized launches and exact byte counts](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6877618536).
 
+For an aligned one-wave tile, check the work per active block before
+rounding the grid. At R143/H536, spreading the rows across 40 blocks
+gave 23 four-row and 17 three-row blocks. Both bounded and fixed-size
+variants lost to the ordinary 36-block kernel in both orders. With 36
+blocks, specializing the three-row tail removed two conditional fills
+and saved 0.04/0.06 µs against the matched bounded version. Against the
+original kernel the difference changed sign. Keep the natural grid.
+[Active block counts, generated extents and device timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6878008231).
+
 For FP32 padded rows on 950PR, an intermediate fixed height can use more
 of a single wave while preserving useful DMA size. Start from a positive
 UB-fitted T and use this refinement only in the single-wave FP32 path.
