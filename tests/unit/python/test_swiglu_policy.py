@@ -1,12 +1,14 @@
 """The wheel and CaModel import this same launch planner."""
+import io
 import sys
 from copy import deepcopy
 from pathlib import Path
 import unittest
+import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]/'integrations/cannbench/ci/swiglu_performance'))
 from geometry import DTYPES, all_specs, full_row_probes, layout, validate
-from generate import pre_submission_overflow
+from generate import compiler_overflow, pre_submission_overflow
 
 
 def band(end,route,tile):
@@ -64,8 +66,20 @@ class Policy(unittest.TestCase):
                'steps':[{'name':'Run numerical CaModel controls and lower the same bytes to AscendC',
                          'conclusion':'failure'},
                         {'name':'Submit once and collect service timings','conclusion':'skipped'}]}
-        self.assertEqual(pre_submission_overflow([job]),15)
+        self.assertEqual(pre_submission_overflow([job]),job['name'])
         for steps in (job['steps'][:1], [job['steps'][0],dict(job['steps'][1],conclusion='failure')],
                       [dict(job['steps'][0],conclusion='success'),job['steps'][1]]):
             with self.assertRaises(ValueError):
                 pre_submission_overflow([dict(job,steps=steps)])
+
+    def test_ub_diagnostic_must_come_from_the_evaluation(self):
+        message = 'UB overflow: 253952 bytes are available, 344064 bytes are used.'
+        def logs(evaluation):
+            data = io.BytesIO()
+            with zipfile.ZipFile(data,'w') as archive:
+                archive.writestr('3_swiglu-performance _ evaluate.txt',evaluation)
+                archive.writestr('1_pr-gate.txt',message)
+            return data.getvalue()
+        self.assertEqual(compiler_overflow(logs('RuntimeError: '+message),'swiglu-performance / evaluate'),message)
+        with self.assertRaises(ValueError):
+            compiler_overflow(logs('Numerical mismatch'),'swiglu-performance / evaluate')

@@ -1,4 +1,5 @@
 """CI generation in an empty OpenCode project. Retain the original model-written bytes."""
+import io
 import json
 import os
 from pathlib import Path
@@ -6,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import zipfile
 
 from geometry import validate
 
@@ -37,7 +39,21 @@ def pre_submission_overflow(jobs):
     if (steps.get('Run numerical CaModel controls and lower the same bytes to AscendC') != 'failure'
             or steps.get('Submit once and collect service timings') != 'skipped'):
         raise ValueError('Policy recovery requires failure during CaModel before submission')
-    return job['id']
+    return job['name']
+
+
+def compiler_overflow(log_archive, job_name):
+    # The job is identified by its full reusable-workflow name in the run log ZIP.
+    with zipfile.ZipFile(io.BytesIO(log_archive)) as archive:
+        matches = [p for p in archive.namelist() if '/' not in p and
+                   re.sub(r'^\d+_', '',p).removesuffix('.txt') == job_name.replace(' / ', ' _ ')]
+        if len(matches) != 1:
+            raise ValueError('Expected one evaluation log in the Actions archive')
+        log = archive.read(matches[0]).decode(errors='replace')
+    match = re.search(r'UB overflow: (\d+) bytes are available, (\d+) bytes are used\.', log)
+    if not match:
+        raise ValueError('The CaModel log does not confirm a UB overflow')
+    return match.group()
 
 
 def recover_kernel(root, origin, context, prompt, kernel_profile):
@@ -68,18 +84,15 @@ def recover_kernel(root, origin, context, prompt, kernel_profile):
     if (prior/'project/policy.json').exists():
         jobs = json.loads(subprocess.check_output(
             ['gh','api',f"repos/{repo}/actions/runs/{origin}/attempts/{run['run_attempt']}/jobs"]))['jobs']
-        job_id = pre_submission_overflow(jobs)
-        log = subprocess.check_output(['gh','run','view',origin,'--repo',repo,'--job',str(job_id),
-                                       '--log-failed']).decode(errors='replace')
-        match = re.search(r'UB overflow: (\d+) bytes are available, (\d+) bytes are used\.', log)
-        if not match:
-            raise ValueError('The CaModel log does not confirm a UB overflow')
+        job_name = pre_submission_overflow(jobs)
+        log_archive = subprocess.check_output(['gh','api',f"repos/{repo}/actions/runs/{origin}/attempts/{run['run_attempt']}/logs"])
+        error = compiler_overflow(log_archive, job_name)
         receipt = ci.load(prior/'generation.json')
         if (str(receipt['run_id'])!=origin or receipt['revision']!=run['head_sha']
                 or receipt['policy_sha256']!=ci.smoke.sha(prior/'project/policy.json')
                 or receipt['candidate_sha256']!=ci.smoke.sha(prior/'project/candidate.py')):
             raise ValueError('Previous generation receipt differs')
-        origin_details = {'failed_policy_sha256':receipt['policy_sha256'],'camodel_error':match.group()}
+        origin_details = {'failed_policy_sha256':receipt['policy_sha256'],'camodel_error':error}
     elif not ended_at_limit((prior/'policy-continuation.log').read_text()):
         raise ValueError('Missing confirmed policy length stop')
     # Bind the bytes in the retained file to OpenCode's completed write in the native session.
