@@ -71,7 +71,9 @@ def package(root):
                 'Missing full-row or boundary control')
     require(checks['candidate_sha256']==sha(gen/'project/candidate.py')==g['candidate_sha256']
             and checks['policy_sha256']==sha(gen/'project/policy.json')==g['policy_sha256']
-            and len(checks['checks'])==24+2*len(probes) and all(c['positive'] and c['suppressed_rejected'] for c in checks['checks']),
+            and len(checks['checks'])==24+2*len(probes)
+            and all(c['positive'] and c['suppressed_rejected']
+                    and c['real_launches']==c['intercepted_launches']==1 for c in checks['checks']),
             'Missing CaModel numerical evidence')
     cpp = src/'csrc/ops/swi_glu/op_kernel'
     require(checks['sources']==ci.hashes(cpp)
