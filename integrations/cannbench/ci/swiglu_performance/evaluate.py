@@ -14,7 +14,7 @@ import sys
 import time
 import zipfile
 
-from geometry import DTYPES, all_specs, key
+from geometry import DTYPES, all_specs, full_row_probes, key
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -65,9 +65,13 @@ def package(root):
     package.mkdir()
     src = root/'qualification/package-source'
     checks = load(root/'qualification/camodel.json')
+    probes = full_row_probes(load(gen/'project/policy.json'))
+    for shape in probes:
+        require({c['seed'] for c in checks['checks'] if c['dtype']=='float32' and c['shape']==list(shape)}=={19,23},
+                'Missing full-row or boundary control')
     require(checks['candidate_sha256']==sha(gen/'project/candidate.py')==g['candidate_sha256']
             and checks['policy_sha256']==sha(gen/'project/policy.json')==g['policy_sha256']
-            and len(checks['checks'])==24 and all(c['positive'] and c['suppressed_rejected'] for c in checks['checks']),
+            and len(checks['checks'])==24+2*len(probes) and all(c['positive'] and c['suppressed_rejected'] for c in checks['checks']),
             'Missing CaModel numerical evidence')
     cpp = src/'csrc/ops/swi_glu/op_kernel'
     require(checks['sources']==ci.hashes(cpp)
@@ -185,7 +189,7 @@ def service(root, stage):
         'candidate_sha256':g['candidate_sha256'],'package_sha256':manifest['files']['submission.zip'],
         'model':g['model'],'opencode':g['opencode'],'loaded_skills':g['loaded_skills'],
         'service_score':job['result_score'],'cases':cases,'benchmark_version':job['benchmark_version'],
-        'hardware':job['target_hardware'],'simulator_image':IMAGE,'ca_model_pairs':24,
+        'hardware':job['target_hardware'],'simulator_image':IMAGE,'ca_model_pairs':len(load(root/'qualification/camodel.json')['checks']),
         'queued_at':job['queued_at'],'claimed_at':job['claimed_at'],'finished_at':job['finished_at'],
         'generated_ratio':geometric_mean(c['baseline_us']/c['elapsed_us'] for c in generated)})
     (public/'SHA256SUMS').write_text(''.join(f'{sha(p)}  {p.name}\n' for p in sorted(public.iterdir()) if p.name!='SHA256SUMS'))

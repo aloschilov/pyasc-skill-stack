@@ -15,7 +15,7 @@ from asc.lib.utils import get_ascend_path
 from asc.runtime import config
 from asc.runtime.jit import MockTensor
 
-from geometry import DTYPES, all_specs, key, layout, slab_indices, validate
+from geometry import DTYPES, all_specs, full_row_probes, key, layout, slab_indices, validate
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]/'workers'))
@@ -143,6 +143,9 @@ def main(root, output):
         for shape,axis in [((131,14),1),((129,2),1),((3,128,8),1),((1,65538),1)]:
             for seed in (19,23):
                 checks.append(check(kernels,dtype,shape,axis,seed,policy))
+    for shape in full_row_probes(policy):
+        for seed in (19,23):
+            checks.append(check(kernels,'float32',shape,1,seed,policy))
     project = output/'package-source'
     folder = project/'csrc/ops/swi_glu/op_kernel'
     folder.mkdir(parents=True)

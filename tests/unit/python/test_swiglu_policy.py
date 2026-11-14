@@ -5,7 +5,7 @@ from pathlib import Path
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]/'integrations/cannbench/ci/swiglu_performance'))
-from geometry import DTYPES, all_specs, layout, validate
+from geometry import DTYPES, all_specs, full_row_probes, layout, validate
 
 
 def band(end,route,tile):
@@ -32,6 +32,23 @@ class Policy(unittest.TestCase):
         self.assertEqual(layout((528,100),1,'float32',self.policy,72)[-2:],((16,56,2),5))
         self.assertEqual(layout((81,100),1,'float32',self.policy,72)[-2:],((16,56,1),3))
         self.assertEqual(layout((0,100),1,'float16',self.policy,4)[-1],0)
+
+    def test_three_stages_require_an_exact_fp32_row_tile(self):
+        row_band = self.policy['float32'][1]
+        row_band.update(through=64, tile=2, unroll=3, unroll_waves=8, block_cap=None, tiles_per_block=1)
+        shapes = full_row_probes(self.policy)
+        self.assertEqual(shapes,[(50,126),(50,128),(51,128)])
+        self.assertEqual([layout(s,1,'float32',self.policy,3)[-2][-1] for s in shapes],[1,3,1])
+        compiled = set(all_specs(self.policy))
+        for rows, half, expected in [(48,64,3),(50,64,3),(49,64,1),(48,63,1),(46,64,1)]:
+            _,_,_,route,const,blocks = layout((rows,2*half),1,'float32',self.policy,3)
+            self.assertEqual((const[-1],blocks),(expected,3))
+            self.assertIn(('float32',route,const),compiled)
+        for dtype,index in [('float16',1),('bfloat16',1),('float32',0),('float32',2)]:
+            invalid = deepcopy(self.policy)
+            invalid[dtype][index]['unroll'] = 3
+            with self.assertRaises(ValueError):
+                validate(invalid)
 
     def test_rejects_unbounded_or_case_specific_policy(self):
         for index,changes in [(0,{'case':12}),(0,{'through':100}),(1,{'through':5}),
