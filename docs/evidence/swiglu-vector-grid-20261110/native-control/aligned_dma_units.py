@@ -8,12 +8,17 @@ from row_dma_padding import run_control
 
 PYTHON_DIGEST = "ca0fbd3e6c5736786ec8006b58248fc4ed20f576a6331bc06fc3d10e8c31a08b"
 CPP_DIGEST = "926c478a646c22f288ebefebdd9491ced908124f21aff99642f8fdf9701a60dc"
-MODES = ("base", "read", "write", "both")
+MODES = ("base", "read", "write", "both", "nopad")
 
 
 def render(source, mode):
     if sha256(source.encode()).hexdigest() != CPP_DIGEST or mode not in MODES:
         raise ValueError("expected the W74 H536/T4 specialization and a known DMA mode")
+    if mode == "nopad":
+        flag = "DataCopyPadExtParams<float> v28{c1_i32,"
+        if source.count(flag) != 1:
+            raise ValueError("expected one shared input pad descriptor")
+        source = source.replace(flag, flag.replace("c1_i32", "c0_i32"))
     if mode in ("read", "both"):
         # 536 floats occupy 67 sectors. Each input skips the opposite half-row in GM
         # and stores consecutive rows in UB. Keep the dynamic count on the final tile.
