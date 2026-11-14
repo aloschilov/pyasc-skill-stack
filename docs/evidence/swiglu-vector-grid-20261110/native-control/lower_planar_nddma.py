@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 
 
-def lower(package, workers, case, output):
+def lower_fp32(package, workers, kernel_name, geometry, output):
     sys.path[:0] = [str(package.parent), str(workers)]
     from asc import DataType
     from asc.codegen.specialization import Specialization
@@ -13,8 +13,7 @@ def lower(package, workers, case, output):
     from asc.runtime.jit import MockTensor
     from local_compile_gate import prepare_specialization
     config.set_platform(config.Backend.Model, config.Platform.Ascend950PR_9599, check=False)
-    kernel = import_module(f"{package.name}.swi_glu").planar_nddma
-    geometry = {11: (273, 509, 8, 512), 13: (143, 536, 4, 536)}[case]
+    kernel = getattr(import_module(f"{package.name}.swi_glu"), kernel_name)
     tensor = MockTensor(DataType("float32"))
     _, types, constants, codegen, options = prepare_specialization(kernel, (tensor, tensor, *geometry))
     module = kernel._run_codegen(Specialization(types, constants), codegen)
@@ -27,6 +26,12 @@ def lower(package, workers, case, output):
     source = compiler.run_translation(module)
     with output.open("x") as f:
         f.write(source)
+    return source
+
+
+def lower(package, workers, case, output):
+    geometry = {11: (273, 509, 8, 512), 13: (143, 536, 4, 536)}[case]
+    source = lower_fp32(package, workers, "planar_nddma", geometry, output)
     if source.count("AscendC::DataCopy<") + source.count("AscendC::DataCopy(") < 1 or "NdDmaParams<float,3>" not in source.replace(" ", ""):
         raise ValueError("expected a rank-three DMA descriptor; inspect the saved output")
 
