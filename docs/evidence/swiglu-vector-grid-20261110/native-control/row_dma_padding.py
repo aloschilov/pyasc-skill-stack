@@ -41,12 +41,16 @@ def main():
     args = parser.parse_args()
     if sha256((args.package / "swi_glu.py").read_bytes()).hexdigest() != W65:
         raise ValueError("expected the independent W65 Python module")
+    run_control(args, lambda source: render(source, args.case, args.mode), "dma-pad.json")
+
+
+def run_control(args, transform, receipt):
     from asc.runtime.compiler import Compiler
     original_translate = Compiler.run_translation
     emitted = []
 
     def translate(module):
-        source = render(original_translate(module), args.case, args.mode)
+        source = transform(original_translate(module))
         emitted.append(source)
         return source
 
@@ -66,7 +70,7 @@ def main():
     record = dict(case=args.case, mode=args.mode, cpp=sha256(emitted[0].encode()).hexdigest(),
                   text=sha256(actual).hexdigest(), original_text=sha256(original).hexdigest(),
                   text_bytes=len(actual))
-    (args.dump / "dma-pad.json").write_text(json.dumps(record) + "\n")
+    (args.dump / receipt).write_text(json.dumps(record) + "\n")
 
 
 if __name__ == "__main__":
