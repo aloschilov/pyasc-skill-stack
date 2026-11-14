@@ -25,6 +25,7 @@ def main():
     parser.add_argument("placement", choices=("host", "device"))
     parser.add_argument("output", type=Path)
     parser.add_argument("--conditioned", action="store_true", help="use CANNBench frequency warmup and L2 clean")
+    parser.add_argument("--reference", type=Path, help="ordinary placement pilot for the same generated source and case")
     args = parser.parse_args()
     args.output.mkdir(exist_ok=False)
     sys.path.insert(0, str(args.candidate.resolve().parent))
@@ -86,18 +87,28 @@ def main():
     vector = [r for r in records if r["Accelerator Core"].upper() == "AI_VECTOR_CORE"]
     sequence = ["clean" if "cannbenchcacheclean" in r["Name"].lower() else r["Name"] for r in vector]
     target = "row_single_wave_fp32"
+    expected_grid = {11: 35, 13: 36}[args.case]
+    if args.reference:
+        pilot = json.loads(args.reference.read_text())
+        names = {t[0] for t in pilot["tasks"] if t[1].upper() == "AI_VECTOR_CORE"}
+        grids = set(pilot["launch_grid"])
+        if (pilot["case"] != args.case or pilot["operator"] != "swi_glu" or not pilot["correct"]
+                or pilot["candidate_sha256"] != digest(Path(wrapper.__file__))
+                or pilot["launches"] != 1 or len(names) != 1 or len(grids) != 1):
+            raise ValueError("pilot must be a successful single-launch run for the same source and fixture")
+        target, = names
+        expected_grid, = grids
     if sequence != (["clean", target] if args.conditioned else [target]) * 5:
         raise ValueError(f"unexpected measured vector tasks: {sequence}")
     selected = [r for r in vector if r["Name"] == target]
-    expected_grid = {11: 35, 13: 36}[args.case]
-    if len(selected) != 5 or any(r["Name"] != "row_single_wave_fp32" or
+    if len(selected) != 5 or any(r["Name"] != target or
                                 int(r["Block Num"]) != expected_grid for r in selected):
         raise ValueError([(r["Name"], r["Accelerator Core"], r["Block Num"]) for r in records])
     times = [float(r["Duration(us)"]) for r in selected]
     if any(t <= 0 for t in times):
         raise ValueError(times)
     result = dict(case=args.case, device=str(x.device), output_device=str(y.device), correct=True,
-                  times_us=times, median_us=statistics.median(times), grid=expected_grid, conditioned=args.conditioned,
+                  times_us=times, median_us=statistics.median(times), grid=expected_grid, kernel=target, conditioned=args.conditioned,
                   input_sha256=digest(args.raw), golden_sha256=digest(args.task / "golden.py"),
                   source_sha256=digest(Path(wrapper.__file__)), csv_sha256=digest(file),
                   torch=torch.__version__, torch_npu=torch_npu.__version__,
