@@ -1,6 +1,5 @@
 """Run one public unary case through the installed CANNBench restored-input evaluator."""
 import argparse
-import csv
 import hashlib
 import importlib
 import inspect
@@ -16,8 +15,10 @@ def digest(path):
 
 def run(package, task, case, output):
     import torch
+    from kernel_eval.benches.cann_loader import CannCaseLoader
     from kernel_eval.config import Config
     from kernel_eval.data.data_generator import DataGenerator
+    from kernel_eval.data.tensor_cache import case_seed
     from kernel_eval.eval.op_runner import OpRunner
     from kernel_eval.eval.perf_eval import PerfEvaluator
     from kernel_eval.utils.device_manager import DeviceConfig, DeviceManager
@@ -26,15 +27,17 @@ def run(package, task, case, output):
     sys.path[:0] = [str(package.parent), str(task)]
     candidate = getattr(importlib.import_module(f"{package.name}.{operator}"), operator)
     golden = getattr(importlib.import_module("golden"), operator)
-    with (task / "cases.csv").open(newline="") as f:
-        row, = (r for r in csv.DictReader(f) if int(r["case_id"]) == case)
-    shape, = json.loads(row["input_shape"])
-    dtype, = json.loads(row["dtype"])
-    attrs = json.loads(row["attrs"])
-    for key, value in attrs.items():
-        if isinstance(value, str) and value.lower() in {"inf", "+inf", "-inf", "nan"}:
-            attrs[key] = float(value)
-    input_tensor = DataGenerator(seed=case).generate_input_tensor(shape, dtype, json.loads(row["value_range"]))
+    tasks_root = task.parents[1]
+    config = Config(tasks_root=str(tasks_root), reports_dir=str(output))
+    rel_path = task.relative_to(tasks_root).as_posix()
+    specs = CannCaseLoader(tasks_root=str(tasks_root)).scan_by_rel_path(rel_path)
+    spec, = (entry for entry in specs if entry.case_num == case)
+    seed = case_seed(spec, config.eval_seed)
+    generator = DataGenerator(input_dist=config.input_dist)
+    input_tensor, = generator.generate_input_tensors_from_case(
+        spec.input_shapes, spec.dtypes, spec.value_ranges, seed=seed
+    )
+    attrs = spec.attrs
     expected = golden(input_tensor, **attrs)
     checked = []
 
@@ -46,14 +49,13 @@ def run(package, task, case, output):
             torch.testing.assert_close(part, ref, equal_nan=True)
         checked.append(phase)
 
-    config = Config(tasks_root=str(task.parents[1]), reports_dir=str(output))
     if not config.perf_restore_inputs:
         raise ValueError("CANNBench restored-input protocol required")
     manager = DeviceManager(DeviceConfig(type="npu", device_id=0))
     perf = PerfEvaluator(config=config, device_manager=manager)
     params = dict(inspect.signature(candidate).bind(input_tensor, **attrs).arguments)
     try:
-        result = OpRunner(manager, perf).run_ai_op(candidate, params, f"level1/{operator}_{case}",
+        result = OpRunner(manager, perf).run_ai_op(candidate, params, spec.get_case_id_str(),
                                                    [input_tensor], validator=validate)
         if not result.success:
             raise RuntimeError(result.error)
@@ -67,6 +69,8 @@ def run(package, task, case, output):
             raise ValueError(f"incomplete restored run: {meta}")
         with (output / "result.json").open("x") as f:
             json.dump(dict(operator=operator, case=case, elapsed_us=result.elapsed_us,
+                           case_id=spec.get_case_id_str(), eval_seed=config.eval_seed, fixture_seed=seed,
+                           input_dist=config.input_dist, cases_yaml_sha256=digest(task / "cases.yaml"),
                            metadata=meta, validated=checked, source_sha256=digest(package / f"{operator}.py"),
                            evaluator_sha256=digest(Path(inspect.getfile(PerfEvaluator))),
                            cases_sha256=digest(task / "cases.csv"), golden_sha256=digest(task / "golden.py")), f)

@@ -55,7 +55,10 @@ time when dividing the device JSON baseline by the candidate time.
 
 For a local unary qualification, run
 `integrations/cannbench/workers/profile_restored_l1.py PACKAGE TASK CASE OUTPUT`
-in the matched CANNBench, PyAsc and torch_npu environment. The provider's
+in the matched CANNBench, PyAsc and torch_npu environment. The worker reads
+release case YAML and uses the evaluator's case-ID-derived seed and input
+distribution. Record this fixture identity alongside the measurement protocol
+when comparing with a previous run. The provider's
 release `build.sh` detects the device using `acl.get_soc_name()`. Check the
 reported SoC. If building with CMake directly, pass the corresponding
 `-DNPU_ARCH` value. The 950PR target is `ascend950` (Bisheng `dav-3510`).
