@@ -1,5 +1,7 @@
 """Flat SwiGLU schedules for moderate streams on the public 950PR wheel."""
 
+import ctypes
+
 import torch
 from asc.experimental import asctile
 
@@ -62,7 +64,11 @@ def launch_moderate_flat(x, y, rows, half, aivs, usable_ub):
         tile = (half // (waves * aivs) // 8) * 8
         tail = half - waves * aivs * tile
         if tile >= 8 and 24 * tile <= usable_ub and tail <= aivs * 8:
-            single_row_edge[aivs](x, y, half, tile, aivs)
+            grid = aivs
+            if x.device.type == "npu":
+                stream = torch.npu.current_stream(x.device).npu_stream
+                grid = (aivs, ctypes.c_void_p(stream))
+            single_row_edge[grid](x, y, half, tile, aivs)
             return True
 
     if x.dtype == torch.bfloat16 and 1 < rows < aivs and aivs * 8192 < half <= 2 * aivs * 8192:

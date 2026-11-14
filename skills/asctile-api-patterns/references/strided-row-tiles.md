@@ -214,10 +214,20 @@ row JIT, that uses one uniform height, including the FP32 three-stage fallback:
 lanes_per_dma = 32 // x.element_size()
 width = ((half + lanes_per_dma - 1) // lanes_per_dma) * lanes_per_dma
 if rows % height == 0 and width == half:
-    full_rows[blocks](x, out, rows, half, height, width, unroll)
+    grid = blocks
+    if x.dtype == torch.float32 and unroll == 3 and x.device.type == "npu":
+        import ctypes
+        grid = (blocks, ctypes.c_void_p(torch.npu.current_stream(x.device).npu_stream))
+    full_rows[grid](x, out, rows, half, height, width, unroll)
 else:
     bounded_rows[blocks](x, out, rows, half, height, width, unroll)
 ```
+
+On the resident 950PR FP32 three-stage path, bind the fixed-copy launch
+to the input device's current Torch stream at each call. With R2046,
+H2048 and the same 72 blocks, two release-default rounds took 22.96 and
+23.15 µs on the caller stream. The integer-grid control took 23.91 and
+23.47 µs. A CPU-staged input still uses the integer grid.
 
 Compute the alignment in a single unit. At H2048 in FP32 this gives
 256 DMA units and W2048. Trace both R2048 and R2046 with T2 to the
