@@ -23,7 +23,8 @@ def two_wave_gate_index(half, tile, device, cache):
     """Build one signed 16-bit index per gate lane for a selected two-wave tile."""
     if half <= 1 or tile <= 0 or 2 * tile * half - 1 > 32767:
         raise ValueError("two-wave index exceeds its selected geometry")
-    key = ("two_wave_i16", device, half, tile)
+    stream_id = torch.npu.current_stream(device).npu_stream if device.type == "npu" else None
+    key = ("two_wave_i16", device, stream_id, half, tile)
     if key not in cache:
         k = torch.arange(tile * half, device=device, dtype=torch.int32)
         cache[key] = (k + half * (k // half)).to(torch.int16)
