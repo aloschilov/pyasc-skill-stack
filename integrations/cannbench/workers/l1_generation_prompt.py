@@ -146,7 +146,7 @@ def prompt(task, skills):
             "Use the strided 2D tile-index loop from the skill for ordinary multi-wave row loops. "
             "Check actual write intervals: R52224/T64/N72 gives 816 disjoint writes, "
             "the merged FP16 path at R1009/T7/N72 gives 144. Each output row has one owner. "
-            "For the single-wave FP32 row JIT, disable L2 on its input descriptor "
+            "For the single-wave FP32 row JIT, use @asctile.jit(reuse_alloc=2, vf_fusion=True) for the gate and value math, disable L2 on its input descriptor "
             "and keep default output caching. Issue both batched 2D "
             "reads and the store at the same logical tile start. In the single-wave JIT set tile_index to (b + n // 2) % n for W == H and b for W > H, with b=block_idx() and n=block_num(). "
             "Trace r=tile_index*T in both reads and the store. With aligned R143/H536/T4/N36, block 0 starts at row 72 and block 17 at row 140 with three rows. With padded R273/H509/T6/N46, block 0 starts at row 0 and block 45 at row 270 with three rows. Use runtime bounds and the same formula at other shapes. "
