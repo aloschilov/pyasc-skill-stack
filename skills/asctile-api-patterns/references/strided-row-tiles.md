@@ -510,6 +510,14 @@ independent row tiles to use the available AIVs. When measuring that change,
 hold the grid fixed and check both input halves and the bounded output of
 every stripe, including the final partial row and column.
 
+Use one productive block per independent row tile when the tiles fit in
+one wave. To evaluate a smaller grid at the same tile height, use a
+grid-stride loop and verify that changing the launch count preserves the
+compiled binary. On the 950PR, halving the grid at fixed FP32 tile heights
+of six and four rows made both shapes slower in both measurement orders.
+The last partial tile still ran in the main grid.
+[Matched grid-size measurements](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6880076398).
+
 Keep the remaining columns in the same full-width 2D copy when a single
 FP32 tile fits UB and spans several 64-lane vectors. On 950PR, splitting a
 536-lane half into 512+24 and giving the last 24 lanes to extra blocks
