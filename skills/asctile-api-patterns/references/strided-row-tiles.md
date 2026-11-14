@@ -424,7 +424,9 @@ At R1009/T7 its final read and write start at row 1001 and span eight rows. For 
 reads and the store. A copy that omits `real_shape` uses its full physical
 shape. Golden checks of the logical output can pass after an out-of-range
 write. For R2047/T2 verify that the last three-stage tile has one row too.
-Keep ordinary L2 caching for both three-stage descriptors.
+The bounded three-stage fallback keeps the default cache hints. The fixed-copy
+FP32 specialization above bypasses L2 on the input and keeps the default
+output hint.
 
 At 72 blocks and T2/U3, the fixed-copy level-3 specialization on the
 950PR took 23.173/23.367 µs at 2048 rows and 22.436/22.506 µs at 2046
