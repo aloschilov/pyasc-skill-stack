@@ -4,6 +4,7 @@ import ast
 import hashlib
 from pathlib import Path
 import shutil
+from textwrap import indent
 
 
 def render(source, cached_operand, reverse=False, value_first_parity=None):
@@ -21,7 +22,14 @@ def render(source, cached_operand, reverse=False, value_first_parity=None):
             raise ValueError("unexpected row read order")
         # In each branch the same two named operands feed the original math.
         # The choice is based on the physical AIV, before tile rotation.
-        body = body.replace(marker, f"    if b % 2 == {value_first_parity}:\n")
+        prefix, ordered = body.split(marker)
+        value_first, gate_first = ordered.split("    else:\n")
+        gate_first, math = gate_first.split("    gate_f = ", 1)
+        # A tensor constructed in a dynamic branch is scoped to that branch
+        # on the public wheel. Keep its downstream math and store there.
+        finish = indent("    gate_f = " + math, "    ")
+        body = (prefix + f"    if b % 2 == {value_first_parity}:\n"
+                + value_first + finish + "    else:\n" + gate_first + finish)
     if reverse:
         order = "    if W > H:\n"
         if body.count(order) != 1:
