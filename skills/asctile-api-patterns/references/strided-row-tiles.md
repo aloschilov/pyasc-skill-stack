@@ -473,7 +473,11 @@ took 2.544/2.594 µs versus 2.607/2.654 µs with gate read first.
 Another shuffle gave 2.649/2.589 versus 3.158/3.333 µs. The earlier
 denominator-before-value schedule gave 2.559/2.642 µs in its own run.
 For aligned FP32 keep the gate read first and both reads ahead of math.
-Verify the order at the actual JIT call and compare warmed medians.
+Verify the order at the actual JIT call. For a change to the aligned-row
+default, repeat the paired test on finite neighboring widths in both launch
+orders. With input bypass and four rows per tile on 950PR, value-first saved
+0.54/0.06 µs at H536. At H528 and H544 the direction changed between rounds.
+[Release and finite-input trials](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6873970983).
 
 Exercise the selector with a smaller UB that fits only one iteration, a
 smaller UB that forces a shorter height, and short grids. Compare warmed
