@@ -242,8 +242,9 @@ rounds. Scope the attribute to the calibrated kernel. Keep the FP32
 promotion, public scalar order, DMA geometry, and grid fixed when testing
 another compiler version.
 
-For a resident 16-bit tensor on either short contiguous affine Exp path, launch
-on the current Torch stream for the input device. Read the stream at each
+Launch both short contiguous affine Exp kernels on the input device's
+current Torch stream for resident FP16 and BF16. Use the same stream
+binding for the short grid-stride FP16 identity kernel. Read the stream at each
 public call, including a call made in a nondefault stream context.
 Select the integer-grid launch from the CPU device type. If the NPU
 stream lookup raises, propagate that error before launching. In a host
@@ -267,8 +268,7 @@ The block-only controls took 3.60/3.80 and 4.06/3.77 µs respectively,
 with the process order reversed in the second round.
 The same launch change took 3.24/3.09 µs for FP16 scale plus log and
 3.23/3.02 µs for FP16 shift only. The corresponding block-only controls
-took 3.86/3.78 and 4.03/3.81 µs. Apply this rule after the short affine
-selector so the identity branch retains its separately measured schedule.
+took 3.86/3.78 and 4.03/3.81 µs.
 
 Follow the FP16 identity launch into its own loop body. Two clean
 modules selected T4864 on 72 blocks but hardcoded unroll 1 in the JIT.
@@ -276,6 +276,14 @@ They took 4.655 and 4.663 µs for 1024² inputs. Set
 `unroll_factor=3` in the grid-stride loop used by the short selector,
 or pass a compile-time unroll parameter equal to 3 at this call. Keep
 the one-wave and general streaming paths on their own selected stages.
+
+For short FP16 identity, pass the existing U3 grid-stride launch the
+current stream when the input is on NPU. In three release-default rounds
+on 950PR, 72 blocks/T4864/U3 took 3.24, 3.22 and 3.43 µs on that
+stream. The same grid-only launches took 3.99, 3.84 and 3.88 µs. An
+exact two-wave schedule (64 blocks/T8192/U2) also cleared 3.813 µs,
+but took 3.70, 3.53 and 3.40 µs on the current stream. Keep the short
+identity tile formula based on useful input per detected AIV.
 
 For resident FP16 identity on 950PR, retain the three-stage schedule when
 an exact four-wave power-of-two grid also fits UB. With 1,048,576 input
