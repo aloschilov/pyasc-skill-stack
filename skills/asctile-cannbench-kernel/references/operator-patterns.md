@@ -242,6 +242,27 @@ rounds. Scope the attribute to the calibrated kernel. Keep the FP32
 promotion, public scalar order, DMA geometry, and grid fixed when testing
 another compiler version.
 
+For a resident BF16 tensor on either short contiguous Exp path, launch
+on the current Torch stream for the input device. Read the stream at each
+public call, including a call made in a nondefault stream context. Use
+the integer block count alone for CPU-staged input. The AscTile grid
+accepts the raw stream handle as its second component:
+
+```python
+grid = blocks
+if x.dtype == torch.bfloat16 and x.device.type == "npu":
+    import ctypes
+    handle = torch.npu.current_stream(x.device).npu_stream
+    grid = (blocks, ctypes.c_void_p(handle))
+kernel[grid](x, out, ...)
+```
+
+On 950PR with CANNBench 2.1.0 restored inputs, changing only this launch
+on 1023² BF16 took 3.15/3.03 µs (log-only, 64 blocks). On 1,000,007
+BF16 elements it took 3.12/2.99 µs (scale and shift, 72 blocks).
+The block-only controls took 3.60/3.80 and 4.06/3.77 µs respectively,
+with the process order reversed in the second round.
+
 Follow the FP16 identity launch into its own loop body. Two clean
 modules selected T4864 on 72 blocks but hardcoded unroll 1 in the JIT.
 They took 4.655 and 4.663 µs for 1024² inputs. Set
