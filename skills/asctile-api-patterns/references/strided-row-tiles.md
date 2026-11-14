@@ -106,6 +106,19 @@ paired version took 2.137 µs at T4/W536 and 2.598 µs at T8/W512. It
 beat the high-level body in two of three rounds on each public and finite
 fixture. Use a paired control before specializing another shape.
 
+To give each lane one owner in that overlapping pair, let
+`r = (T * W) % 64`. When r is nonzero, enable the first r lanes of the
+earlier vector for arithmetic and store, and enable all lanes of the
+final vector. Both loads still read 64 lanes. Check the two load offsets
+for 32-byte alignment and tile bounds, and check the predicates on the
+compiled vector instructions. At T4/W536 the mask removed 32 duplicate
+lane evaluations. With two interleaved chains it saved 0.05 µs against
+the same unmasked code in each of two restored-input rounds. Against
+the generated tile body it gained 0.07 µs once and tied once. At T8/W512
+the tile has no overlap and four chains lost both rounds. Use the mask
+as a measured option for pointwise register code.
+[Measured register schedules and edge predicates](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6876106549).
+
 For a single-wave FP32 tile split across two DMA stages, test the unsplit
 tile and both serial and prefetched stages at the same grid. When each
 stage owns a contiguous range of whole rows, the GM descriptor can start

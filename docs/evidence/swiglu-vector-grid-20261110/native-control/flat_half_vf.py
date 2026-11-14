@@ -22,10 +22,10 @@ def vector_code(count, pairs, *, chains=None, mask_overlap=False):
         for i, off in enumerate(offsets):
             lines += [f"RegTensor<float> g{i}, v{i}, t{i};",
                       f"LoadAlign(g{i}, g + {off});", f"LoadAlign(v{i}, v + {off});"]
-        for op in ("Muls(t{i}, g{i}, -1.0f, m);", "Exp(t{i}, t{i}, m);",
-                   "Adds(t{i}, t{i}, 1.0f, m);", "Div(t{i}, g{i}, t{i}, m);",
-                   "Mul(t{i}, t{i}, v{i}, m);"):
-            lines += [op.format(i=i).replace(", m);", f", {mask});") for i, mask in enumerate(masks)]
+        for op in ("Muls(t{i}, g{i}, -1.0f, {mask});", "Exp(t{i}, t{i}, {mask});",
+                   "Adds(t{i}, t{i}, 1.0f, {mask});", "Div(t{i}, g{i}, t{i}, {mask});",
+                   "Mul(t{i}, t{i}, v{i}, {mask});"):
+            lines += [op.format(i=i, mask=mask) for i, mask in enumerate(masks)]
         lines += [f"StoreAlign(y + {off}, t{i}, {masks[i]});" for i, off in enumerate(offsets)]
         return "\n".join(lines)
     step = chains if chains is not None else (2 if pairs else 1)
