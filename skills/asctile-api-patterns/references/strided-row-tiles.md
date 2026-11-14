@@ -31,6 +31,18 @@ changing dispatch. In three rounds on each of two short FP32 geometries,
 the exact terminal extent gave no consistent speedup.
 [Generated C++ comparison and matched hardware controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6859782820).
 
+For a nonaligned row width, compare compact and padded UB outputs with
+the same input DMA and register math. A padded multirow copy already
+uses one strided DMA descriptor. A dense tile uses one contiguous DMA
+of `valid_rows * H * itemsize` bytes, but register packing adds work.
+Check the emitted flush placement (once per row or once per tile) and
+whether the last block executes math on missing rows. At FP32 H509/T8,
+both compact layouts lost to the ordinary kernel in one of two paired
+rounds. Specializing a one-row tail saved 0.07/0.02 µs with per-tile
+flush and cost 0.41/0.03 µs with per-row flush. Keep the ordinary row
+path for this geometry.
+[Matched store layouts and exact-tail controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6874390643).
+
 A partial output can also read a full input tile when its first row leaves
 at least T rows in the tensor. Place the short output interval at the
 front, then assign the remaining full tiles after it. Compare bounded and
