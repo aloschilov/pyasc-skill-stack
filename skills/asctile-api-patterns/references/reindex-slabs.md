@@ -22,7 +22,13 @@ two). On this public build, let dense pairs reach
 the same gather selector as other short BF16 halves. An early return for
 the legacy transpose specialization would hide the eligible gather. For a new module, define a public slab kernel and call it from the
 host selector. View input and output as rank-one descriptors. Cache the
-input-independent gate table by dtype of the indices, device, H and T.
+input-independent gate table in the generated module. Pass that same cache
+into the index helper on every call. Key by index representation, device
+and tile geometry. For asynchronous producers, include the producing
+stream in the key or synchronize its first use on a different stream.
+Exercise two calls on different input tensors of the same shape. On the
+second call the wrapper must reuse the exact index tensor and issue zero
+Torch kernels to build it. Repeat with a second geometry to check the key.
 Pass its pointer as the third tensor argument and load it once per block
 before the tile loop. Use `ig = asctile.global_tensor(gate_idx_ptr, [T*H])`,
 `gate_idx_ub = asctile.copy_in(ig, [0], [T*H])`, and
@@ -60,7 +66,8 @@ first four indices are [0, 1, 4, 5] and their value indices are [2, 3, 6, 7].
 def dense_pair_gate_index(half, tile, device, cache):
     if half != 1 or tile < 1 or 2 * tile - 1 > 32767 or (2 * tile) % 32:
         return None
-    key = ("dense_pair_i16", device, tile)
+    stream = torch.npu.current_stream(device).npu_stream if device.type == "npu" else None
+    key = ("dense_pair_i16", device, stream, tile)
     if key not in cache:
         k = torch.arange(tile, device=device, dtype=torch.int32)
         cache[key] = (2 * k).to(torch.int16)
@@ -71,7 +78,8 @@ def ordinary_gate_index(half, tile, device, cache):
     gate_index = dense_pair_gate_index(half, tile, device, cache)
     if gate_index is not None:
         return gate_index
-    key = ("general_i32", device, half, tile)
+    stream = torch.npu.current_stream(device).npu_stream if device.type == "npu" else None
+    key = ("general_i32", device, stream, half, tile)
     if key not in cache:
         k = torch.arange(tile * half, dtype=torch.int32, device=device)
         cache[key] = 2 * half * (k // half) + k % half
