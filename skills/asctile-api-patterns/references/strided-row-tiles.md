@@ -514,6 +514,15 @@ independent row tiles to use the available AIVs. When measuring that change,
 hold the grid fixed and check both input halves and the bounded output of
 every stripe, including the final partial row and column.
 
+Prefer direct strided reads when each FP32 half-row is already a long
+contiguous run. A packed slab with cached shape indices exchanges an
+input transfer for a table read on every active block. At half-widths
+509 and 536 on the 950PR, the compiler emitted two gathers and three
+vector instructions for index arithmetic. The complete indexed kernels
+took longer in both orders at the same row height and grid. Include
+table traffic and index arithmetic when comparing the two layouts.
+[Direct FP32 halves and indexed slab](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6880538210).
+
 Use one productive block per independent row tile when the tiles fit in
 one wave. To evaluate a smaller grid at the same tile height, use a
 grid-stride loop and verify that changing the launch count preserves the
