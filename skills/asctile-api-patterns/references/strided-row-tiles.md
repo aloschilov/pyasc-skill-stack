@@ -28,6 +28,15 @@ into its own value took 2.18 and 2.51 µs in opposite run orders against
 the following row also lost twice. The final value read used H throughout.
 [Matched widths and compiled address checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6877764177).
 
+For padded rows, keep consecutive row ownership as the starting point.
+A row pitch of `p` bytes repeats its starting offset within a 32-byte sector
+every `32 // gcd(32, p)` rows. At 509 FP32 elements per half-row, interleaving
+the input at stride four took 2.29/2.27 µs, and interleaving input and output at
+stride eight took 2.33/2.37 µs. The matched contiguous descriptor took
+2.27/2.27 µs with the same 46 blocks. Verify emitted DMA extents and measure
+the whole kernel before using a constant row offset to justify interleaving.
+[Address replay and two device orders](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879127456).
+
 When investigating a partial final tile, compare the emitted C++ with
 separate fresh `PYASC_CACHE_DIR` and `PYASC_DUMP_PATH` directories per
 variant. On the public 950PR build, a bounded 2D `copy_in` produced the

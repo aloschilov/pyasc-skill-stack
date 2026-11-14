@@ -76,6 +76,14 @@ the allocation policy, the warm-up count and each process median. Score the
 generated operator via its normal evaluator entry point. Reused-buffer
 timings diagnose execution conditions.
 
+For fresh-buffer comparisons, the restored-profile worker's
+`--record-alignment` option records input and output pointer residues modulo
+65,536 after profiling. Pair these with the measured invocation index before
+grouping timings. On two short FP32 shapes the two address pairs alternated
+exactly by invocation parity across four processes per shape. Separating an
+address effect from an order effect requires variation within the same index.
+[Matched restored-input measurements](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879127456).
+
 When replaying a compiled image from a Torch NPU process, check how long
 the runtime keeps its binary registration alive. A fresh output tensor does
 not require a fresh registration. Hold the registered module, entry symbol
