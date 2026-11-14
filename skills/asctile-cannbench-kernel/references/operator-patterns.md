@@ -249,6 +249,14 @@ They took 4.655 and 4.663 µs for 1024² inputs. Set
 or pass a compile-time unroll parameter equal to 3 at this call. Keep
 the one-wave and general streaming paths on their own selected stages.
 
+For resident FP16 identity on 950PR, retain the three-stage schedule when
+an exact four-wave power-of-two grid also fits UB. With 1,048,576 input
+elements, the release restored-input evaluator returned 3.79 and 3.64 µs
+at 72 blocks/T4864/U3. The same grid-stride kernel took 4.14 and 3.89 µs
+at 64 blocks/T4096/U4. The earlier CPU-staged profile favored the latter
+geometry. Check timing under the intended input-restoration protocol
+before promoting an exact-divisor grid.
+
 For contiguous ownership set `M = ceil_div(N,T)` and
 `C = ceil_div(M,actual_blocks)`. Block `b` handles the `C` tiles from
 `b*C` in `asctile.range(C, unroll_factor=3)`. Clamp the offset of any
