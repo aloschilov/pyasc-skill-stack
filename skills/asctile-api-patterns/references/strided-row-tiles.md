@@ -833,16 +833,21 @@ Independent warmed medians were 6.530 and 6.359 µs, versus 6.781 and
 control, T=10 took 5.016 and 5.043 µs while T=8 took 5.011 and 4.569 µs.
 Retain the aligned selector for that regime.
 
-For aligned FP16 half-rows that fill the entire physical width, test a
-fixed full-wave loop. If the tile height divides R and N divides R / T,
-use full-size 2D loads and stores for every iteration. Compare the whole
-reported AIV count and a nearby divisor of the tile count that supports
-several complete pipeline waves. Derive both candidates from the runtime
-device properties. On one 72-AIV 950PR, 1,024 rows with a half-width of
-1,024 had 256 four-row tiles. Using 64 blocks, four complete waves and
-unroll two took 4.479 and 4.422 µs in two control groups. Guard the exact
-width and height conditions; regenerate the remainder path for ragged
-shapes.
+For aligned multiwave FP16 rows, keep the ordinary bounded 2D emitter as
+the starting point. Measure the grid and the copy bounds independently. If
+the height divides R and the physical width equals H, test fixed-size
+copies at the original grid. Test the bounded emitter at a near-capacity
+divisor of the tile count, then run the fixed emitter at that divisor.
+Use the release input-restore schedule and compare each public output.
+
+At R1024/H1024/T4/U2 on the 72-AIV 950PR there are 256 tiles. Explicit
+bounds took 5.22/5.15 µs on 72 blocks and 5.24/5.12 µs on 64. Using
+fixed copy extents took 6.62/6.57 µs on 72 and 5.84/5.99 µs on 64.
+All four variants used the same arithmetic and the fixed emitter removed
+six conditional fill sites in the generated code. An earlier four-wave
+loop took 4.479/4.422 µs under a different control protocol. Qualify
+changes to the loop and to copy extents separately on the target evaluator.
+[Fixed extents and grid size on restored inputs](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6883826427).
 
 ### Exact waves for aligned FP32 rows
 
