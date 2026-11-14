@@ -376,6 +376,16 @@ Compute the alignment in a single unit. At H2048 in FP32 this gives
 fixed-copy JIT; R2047 has one row left for the bounded JIT. At H509
 in FP32 the physical width is 512 and all DMA extents use H509.
 
+To test consecutive ownership on a multi-wave 2D kernel, keep the
+number of tiles per block fixed. With B blocks and Q full tiles, block b
+starts at `b*(Q//B) + min(b,Q%B)` and receives `Q//B + int(b<Q%B)`
+consecutive tiles. Compare against the cyclic loop with the same unroll
+and UB allocation. With 1,024 two-row FP32 tiles, this saved 0.46 and
+0.29 µs. At 1,023 tiles it saved 0.52 µs once and cost 0.04 µs once.
+Check neighboring shapes before extending this schedule to the whole
+three-stage branch.
+[Full address replay and reversed device comparisons](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6878672746).
+
 The aligned FP16 two-wave specialization below uses two explicit extents.
 At R1009/T7 its final read and write start at row 1001 and span eight rows. For generated code, replay the effective sizes of both
 reads and the store. A copy that omits `real_shape` uses its full physical
