@@ -24,12 +24,12 @@ def match(task, packets):
                for c, (start, duration) in actual.items())
 
 
-def extract(root, case):
+def extract(root, case, metric="PipeUtilization"):
     verified = json.loads((root / f"r-{case}.json").read_text())
     device, = (root / f"profile-{case}").glob("PROF*/device_0")
     sample = json.loads((device / "sample.json").read_text())
-    if sample["aiv_metrics"] != "PipeUtilization":
-        raise ValueError("expected 950PR PipeUtilization counters")
+    if sample["aiv_metrics"] != metric:
+        raise ValueError(f"expected {metric}, captured {sample['aiv_metrics']}")
     raw, = (device / "data").glob("ffts_profile.data.*.slice_0")
     if list(raw.parent.glob("ffts_profile.data.*.slice_[1-9]*")):
         raise ValueError("expected a single raw slice for this short profile")
@@ -46,7 +46,7 @@ def extract(root, case):
             raise ValueError("logical block IDs do not cover the launch")
         rows = [[p[12], p[9], p[25] - p[24], p[4], *p[14:24]] for p in group]
         results.append(dict(task=task["task"], phase=task["phase"], rows=sorted(rows)))
-    return dict(case=case, events=sample["aiv_profiling_events"],
+    return dict(case=case, metric=metric, events=sample["aiv_profiling_events"],
                 raw_sha256=hashlib.sha256(data).hexdigest(), results=results,
                 columns=["logical_block", "physical_core", "duration_ns", "total_cycles",
                          *[f"counter_{i}" for i in range(10)]])
@@ -57,7 +57,9 @@ if __name__ == "__main__":
     parser.add_argument("root", type=Path)
     parser.add_argument("case", type=int)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--metric", choices=("PipeUtilization", "ResourceConflictRatio", "L2Cache"),
+                        default="PipeUtilization")
     args = parser.parse_args()
-    record = extract(args.root, args.case)
+    record = extract(args.root, args.case, args.metric)
     with args.output.open("x") as stream:
         json.dump(record, stream, separators=(",", ":"))
