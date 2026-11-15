@@ -22,6 +22,11 @@ New tile kernels use `@asctile.jit`; `@asc2.jit` is obsolete.
 - calls to module-level JIT helpers and current pyasc builtins
 - assertions with simple/f-string messages
 
+In a JIT body on the CANN 9.2 public wheel, combine two operands per
+`and` or `or` expression. For longer predicates, bind pairs to names and
+combine their results. Exercise each host-selected specialization when
+checking a shape-dependent device branch. See [boolean guards](references/supported-syntax.md).
+
 Inside a device loop use only keywords present in the selected source.
 AscTile `asctile.range` supports `unroll_factor` and `gm_barrier`; it does
 not support a `parallel` keyword. Use a plain Python `range` for a genuinely

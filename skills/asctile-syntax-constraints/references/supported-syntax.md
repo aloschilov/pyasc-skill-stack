@@ -27,12 +27,20 @@ function`. This exact signature was measured on the pinned runtime in
 multiple CANNBench candidates; always write `asctile.block_idx()` /
 `asctile.block_num()`.
 
-Chains of three or more boolean operators are rejected: `if a >= 0 and a < D
-and b >= 0` fails with `UnsupportedSyntaxError: ... Chained boolean
-operators are not supported, group pairs with parentheses`. Group pairwise:
-`if (a >= 0 and a < D) and (b >= 0 and b < H):`. The same rule applies
-inside ternary conditions (measured on pinned-runtime candidates for
-conv_3d_backprop_filter and dilation_2d).
+The public CANN 9.2 AscTile JIT accepts two operands per boolean AST node.
+For example, `a >= 0 and a < D and b >= 0` contains two operators and
+three operands in one node. Compilation raises `UnsupportedSyntaxError`
+for that chain. Group the checks as `(a >= 0 and a < D) and (b >= 0 and b < H)`
+or assign the two pairs to names before combining them. The same rule
+applies to conditions in ternary expressions. Ordinary host Python
+conditions can use longer chains.
+
+For a quick source check on this wheel, inspect each device function for
+`ast.BoolOp` nodes with `len(node.values) > 2`. Then compile inputs that
+select each branch. A clean SwiGLU generation compiled on the aligned
+path and failed on a padded path with a four-operand chain. After the skill
+grouped the predicates, an independent generation compiled and ran the
+padded case on David. [Compiler and device results](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6891057620).
 
 A name may not be re-bound to a value of a *different type* within a JIT
 function. This bites hardest when clamping a partial-tile tail, where the
