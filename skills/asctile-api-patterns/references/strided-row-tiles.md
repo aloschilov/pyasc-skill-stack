@@ -924,6 +924,15 @@ and the current stream. The packed input takes `8*T*H` bytes and the separate
 output takes `4*T*H` bytes, each naturally DMA-aligned. Pass usable UB after
 platform reservations to the selector.
 
+For this one-wave rotation, read the actual block count once. Let
+`half_grid = count // 2`. Blocks below `count - half_grid` own
+`block + half_grid`. Each remaining block owns `block - (count - half_grid)`.
+This also covers odd grids and a one-block launch. On the qualified compiler
+the selection removes a scalar remainder instruction and preserves every row
+owner. The measured saving at widths 528 and 536 ranged from 0.01 to 0.04 µs
+in the two process orders.
+[Matched hardware runs and instruction sections](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6893431848).
+
 Read the valid packed rows in one bounded DMA. Process the first `H % 64`
 lanes with a masked store and each remaining 64-lane vector in a separate
 affine loop. Each unmasked register read, including the prefix read, stays

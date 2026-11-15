@@ -18,7 +18,10 @@ def packed_prefix_rows(x: asctile.GlobalAddress, y: asctile.GlobalAddress,
                        T: asctile.ConstExpr[int]):
     block = asctile.block_idx()
     count = asctile.block_num()
-    tile = (block + count // 2) % count
+    half_grid = count // 2
+    tile = block + half_grid
+    if block >= count - half_grid:
+        tile = block - (count - half_grid)
     r = tile * T
     valid = min(T, R - r)
     gx = asctile.global_tensor(x, [2 * R * H], l2_cache=False)
