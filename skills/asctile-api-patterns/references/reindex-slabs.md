@@ -34,9 +34,12 @@ before the tile loop. Use `ig = asctile.global_tensor(gate_idx_ptr, [T*H])`,
 `gate_idx_ub = asctile.copy_in(ig, [0], [T*H])`, and
 `value_idx_ub = gate_idx_ub + H`. For a slab starting at row r, copy
 `2*T*H` input lanes at offset `2*r*H`, with true extent
-`2*min(T,R-r)*H` and zero padding. Use `asctile.reindex(slab, gate_idx_ub)`
-and `asctile.reindex(slab, value_idx_ub)` before widening each gathered
-half. Store the resulting contiguous output at `r*H`, with true extent
+`2*min(T,R-r)*H` and zero padding. Gather and widen the gate first. Compute
+`active = gate / (asctile.exp(-gate) + 1.0)` before gathering and widening
+the value. Multiply `active` by that value, cast once, and store. On the
+950PR BF16 pair and multi-lane slabs this order lets the compiler reuse one
+FP32 tile of `T*H` lanes. Both schedules issue the same number of gathers.
+Store the resulting contiguous output at `r*H`, with true extent
 `min(T,R-r)*H`. The final partial tile belongs to the same launch.
 
 For ordinary dense pairs (`H == 1`) on the 950PR wheel, select a single
