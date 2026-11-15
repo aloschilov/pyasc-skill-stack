@@ -932,6 +932,14 @@ and the current stream. The packed input takes `8*T*H` bytes and the separate
 output takes `4*T*H` bytes, each naturally DMA-aligned. Pass usable UB after
 platform reservations to the selector.
 
+A packed read combines both input halves. Keep the height fitted for the
+planar input as the starting point. Changing it trades bytes per read against
+the number of productive blocks. At H536 on 950PR, the four-row, 17,152-byte
+read beat heights 2, 3, 5, 6 and 8 in both orders on the release shape. At
+H528 six rows gained 0.01–0.02 µs over four. Recheck the complete operator
+on a neighboring width before changing the height rule.
+[Smaller tiles](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6894659054) · [Larger tiles](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6895564986).
+
 For this one-wave rotation, read the actual block count once. Let
 `half_grid = count // 2`. Blocks below `count - half_grid` own
 `block + half_grid`. Each remaining block owns `block - (count - half_grid)`.
