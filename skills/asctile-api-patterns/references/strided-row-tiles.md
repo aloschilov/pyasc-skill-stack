@@ -28,7 +28,7 @@ into its own value took 2.18 and 2.51 µs in opposite run orders against
 the following row also lost twice. The final value read used H throughout.
 [Matched widths and compiled address checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6877764177).
 
-For padded rows, keep consecutive row ownership as the starting point.
+For padded rows, keep the rows within each tile consecutive.
 A row pitch of `p` bytes repeats its starting offset within a 32-byte sector
 every `32 // gcd(32, p)` rows. At 509 FP32 elements per half-row, interleaving
 the input at stride four took 2.29/2.27 µs, and interleaving input and output at
@@ -532,7 +532,7 @@ valid = min(T, R-r), choose the origin from the physical width:
 - At W > H, create `asctile.global_tensor(x, [R, 2*H], l2_cache=False)`.
   Read the two halves at [r,0] (gate) and [r,H] (value) with identical logical extents.
 - In both branches use `asctile.global_tensor(y, [R,H])` with default caching
-  and write [valid,H] at [r,0]. Apply the block-to-tile rotation once.
+  and write [valid,H] at [r,0]. Compute the tile ordinal once for both reads and the store.
 
 Keep both reads bounded by the valid rows and logical half-width. When
 testing implicit bounds on a partial tile, check each half separately.
@@ -672,18 +672,37 @@ path uses T6/N48. Blocks 0 through 32 own six rows each and the remaining
 15 own five. In two shuffled rounds this geometry took 2.576 and 2.574 µs.
 The eight-row N35 control took 2.621 µs in both. A fresh full-suite
 generation at N48 took 3.646 µs. In a subsequent shuffled control, N48
-took 3.301/2.800 µs and N35 took 2.713/3.337 µs. Use fixed-height tiles and their natural grid for padded rows in generated modules. For aligned FP32 retain the
-ordinary T and grid, rotating the tile ordinal by half the grid:
+took 3.301/2.800 µs and N35 took 2.713/3.337 µs. Use fixed-height tiles and their natural grid for padded rows in generated
+modules. On 950PR, distribute alternate tile pairs across the halves of
+an even one-wave grid when a padded full tile carries at least 8 KiB of
+useful FP32 data per half and fills whole 64-lane vector iterations.
+For aligned FP32, rotate the tile ordinal by half the grid.
 
 ```python
 b = asctile.block_idx()
 n = asctile.block_num()
-tile_index = (b + n // 2) % n if W == H else b
+count = (R + T - 1) // T
+if W == H:
+    tile_index = (b + n // 2) % n
+else:
+    tile_index = b
+    if count >= 4 and count % 2 == 0 and T * H * 4 >= 8192 and T * W % 64 == 0:
+        half_grid = count // 2
+        slot = b % half_grid
+        if (half_grid - 1 - slot) % 2 == 1:
+            tile_index = (b + half_grid) % count
 r = tile_index * T
 valid = min(T, R - r)
 ```
 
-On the 950PR with T4/H536/W536/N36, this rotation took 2.152 and 2.185
+Each exchanged pair has the same slot in opposite halves. The last pair
+stays put, preserving the partial tile. At R273/T6/N46, blocks 1 and 24
+exchange tile ordinals, so their starting rows become 144 and 6. The
+exchange lowered both process medians at H505, H509 and H510. At aligned
+H536/T4, applying it after the usual rotation increased both medians.
+[Padded neighbor trials](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6890569623) · [Aligned and padded public trials](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6890427467).
+
+On the 950PR with T4/H536/W536/N36, the aligned rotation took 2.152 and 2.185
 µs in paired runs versus 2.217 and 2.314 µs for direct ownership. The
 three-row tail moved from physical block 35 to block 17. At
 T8/H509/W512/N35, rotating took 2.605/2.640 µs versus 2.597/2.639 µs.
