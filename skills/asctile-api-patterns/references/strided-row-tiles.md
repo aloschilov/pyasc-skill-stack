@@ -37,16 +37,17 @@ stride eight took 2.33/2.37 µs. The matched contiguous descriptor took
 the whole kernel before using a constant row offset to justify interleaving.
 [Address replay and two device orders](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879127456).
 
-When investigating a partial final tile, compare the emitted C++ with
-separate fresh `PYASC_CACHE_DIR` and `PYASC_DUMP_PATH` directories per
-variant. On the public 950PR build, a bounded 2D `copy_in` produced the
-same conditional `Duplicate` of missing rows with implicit padding and
-with `pad_value=0.0`. A final-block branch using the true compile-time
-extent removed that fill and shortened its register calculation. Keep
-the output bounded and time both versions at the same grid before
-changing dispatch. In three rounds on each of two short FP32 geometries,
-the exact terminal extent gave no consistent speedup.
-[Generated C++ comparison and matched hardware controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6859782820).
+When specializing a partial final tile, keep the output bounded and compare
+three kernels at the same grid: generic bounds, static full/last-block DMA
+extents at the original UB height, and the same static extents with a shorter
+terminal UB tile. Inspect the emitted fills and register-loop counts using a
+fresh compiler cache and dump directory for each variant. On 950PR the last
+of 46 blocks eliminated 12 KiB of fills and halved its vector iterations.
+Whole-kernel time tied or increased by 0.04 µs against fixed extents alone.
+Fixed extents improved the public shape slightly but lost in both orders on
+a neighboring width. Check transfer across row widths and tail occupancies
+before choosing this specialization in the dispatcher.
+[Public geometry and tail lengths](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6887801240) · [Neighbor widths and compiled descriptors](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6887918925).
 
 When comparing aligned 2D copy primitives, convert burst lengths and strides
 to bytes and replay the valid rows of the final tile. Compare the device
