@@ -12,6 +12,7 @@ import sys
 from unittest.mock import patch
 
 from packed_math_cost import W81
+import split_stage_dma
 
 CPP = "a9e1aa349ca757b9e2e9ebff6718ddc5e40e7e780935c88260e964f675d544e3"
 MODES = {"empty": 0, "r1": 1, "r2": 2, "r3": 3, "full": 4, "upper": 4}
@@ -27,7 +28,7 @@ def device(original, mode):
         return head + "\n  return;\n}\n"
     # Vary contiguous input and output lengths independently. With a flat
     # write even the three-row terminal tile can emit exactly half its bytes.
-    limit = TILE if mode in VOLUME_MODES else MODES[mode]
+    limit = TILE if mode in (*VOLUME_MODES, *split_stage_dma.MODES) else MODES[mode]
     read_words = "valid * H" if mode in ("read", "both") else "valid * 2 * H"
     cpp = head + f"""
   using namespace AscendC;
@@ -53,6 +54,8 @@ def device(original, mode):
   DataCopyPad(dst[tile * limit * H], slab[{'valid * H' if mode == 'upper' else '0'}], write);
 }}
 """
+    if mode in split_stage_dma.MODES:
+        return split_stage_dma.render(cpp[:cpp.index("  DataCopyExtParams read")], mode)
     if mode in VOLUME_MODES:
         divisor = 2 if mode in ("write", "both") else 1
         cpp = cpp[:cpp.index("  DataCopyExtParams write")] + f"""
@@ -64,19 +67,23 @@ def device(original, mode):
 
 
 def output_elements(mode):
+    if mode in split_stage_dma.MODES:
+        return ROWS * HALF
     if mode in VOLUME_MODES:
         return ROWS * HALF // (2 if mode in ("write", "both") else 1)
     limit = MODES[mode]
     return (35 * limit + min(3, limit)) * HALF
 
 
-def stage(package, task, output, volume=False):
+def stage(package, task, output, volume=False, split=False):
     source = (package / "swi_glu.py").read_text()
     if sha256(source.encode()).hexdigest() != W81:
         raise ValueError("expected W81")
     anchor = "                packed_prefix_rows[grid](x, out, rows, half, height)\n"
     assert source.count(anchor + "                return out\n") == 1
     modes = ("full", *VOLUME_MODES) if volume else MODES
+    if split:
+        modes = ("full", *split_stage_dma.MODES)
     for mode in modes:
         limit = MODES.get(mode, TILE)
         root = output / mode
@@ -105,11 +112,14 @@ def swi_glu(input, dim=-1):
         if mode == "empty":
             golden += "    return rows.flatten()[:143*536].reshape(11,13,8,67).clone()\n"
         else:
+            stride = 2 if mode in split_stage_dma.MODES else 4
+            rows_to_read = stride if mode in split_stage_dma.MODES else limit
+            take_upper = mode == "upper" or mode.endswith("_upper")
             golden += f"""    parts = []
-    for start in range(0, 143, 4):
-        data = rows[start:start+min({limit}, 143-start)].flatten()
+    for start in range(0, 143, {stride}):
+        data = rows[start:start+min({rows_to_read}, 143-start)].flatten()
         n = data.numel() // {4 if mode in ("write", "both") else 2}
-        parts.append(data[{'n:' if mode == 'upper' else ':n'}])
+        parts.append(data[{'n:' if take_upper else ':n'}])
     result = torch.cat(parts)
 """
             golden += "    return result.reshape(11,13,8,67)\n" if n == ROWS * HALF else "    return result\n"
@@ -194,14 +204,16 @@ if __name__ == "__main__":
     cmd = p.add_subparsers(dest="cmd", required=True)
     s = cmd.add_parser("stage")
     for a in ("package", "task", "output"):s.add_argument(a, type=Path)
-    s.add_argument("--volume", action="store_true", help="stage the independent read/write volume controls")
+    family = s.add_mutually_exclusive_group()
+    family.add_argument("--split", action="store_true", help="stage the two-part read and write schedules")
+    family.add_argument("--volume", action="store_true", help="stage the independent read/write volume controls")
     for name in ("profile", "tag"):
         sub = cmd.add_parser(name)
         sub.add_argument("root", type=Path)
-        sub.add_argument("mode", choices=[*MODES, *VOLUME_MODES, "real", "wide"] if name == "profile" else [*MODES, *VOLUME_MODES])
+        sub.add_argument("mode", choices=[*MODES, *VOLUME_MODES, *split_stage_dma.MODES, "real", "wide"] if name == "profile" else [*MODES, *VOLUME_MODES, *split_stage_dma.MODES])
         if name == "profile":
             for a in ("task", "worker", "dest"):sub.add_argument(a, type=Path)
     a = p.parse_args()
-    if a.cmd == "stage":stage(a.package, a.task, a.output, a.volume)
+    if a.cmd == "stage":stage(a.package, a.task, a.output, a.volume, a.split)
     elif a.cmd == "profile":profile(a.root, a.mode, a.task, a.worker, a.dest)
     else:tagged(a.root, a.mode)
