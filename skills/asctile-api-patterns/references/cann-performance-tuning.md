@@ -59,6 +59,26 @@ reproduced implementations. Read their specific contracts before using them.
    control. Then hardware validates the candidate; model ticks are not NPU us.
    Do not run new hardware jobs or restart schedules without task authorization.
 
+### Measuring the transfer budget of a short vector kernel
+
+When a one-wave operator still misses its device-time target, compare the
+complete operator, an empty device body, and a DMA-only body at the same
+grid. Preserve tile owners, GM byte ranges, cache hints, stream and tail.
+Order the output DMA after its input arrives. In a separate untimed run,
+give each input word a unique tag and poison the output and guards. If the
+output is smaller than the input, export complementary slices of each UB
+tile in separate checks so that every input operand is observable.
+
+Sweep useful bytes per owner at fixed grid and alternate process order.
+Subtract the median full-footprint DMA duration from the reference budget.
+If the difference is negative across orders, prioritize the transfer schedule,
+grid, or compute/transfer overlap. The difference between the complete and
+DMA-only kernels includes synchronization and UB handling. On 950PR a packed
+FP32 control read 613,184 bytes and wrote 306,592 bytes in 1.606 µs against
+a 1.500 µs reference. The three-row transfer took longer than the full tile
+in each order, so interpolate transfer costs only when the sweep supports it.
+[Matched device profiles and coverage checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6894852362).
+
 ## When identical kernels time differently on hardware
 
 Compare the linked device `.text` bytes and the decoded instructions at the
