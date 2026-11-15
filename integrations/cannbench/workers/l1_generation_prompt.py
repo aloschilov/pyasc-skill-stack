@@ -150,7 +150,7 @@ def prompt(task, skills):
             "the merged FP16 path at R1009/T7/N72 gives 144. Each output row has one owner. "
             "For the single-wave FP32 row JIT, use @asctile.jit(reuse_alloc=2, vf_fusion=True) for the gate and value math, disable L2 on its input descriptor "
             "and keep default output caching. Issue both batched 2D "
-            "reads and the store at the same logical tile start. Use the single-wave ownership code from the row reference. Keep (b+n//2)%n for aligned rows. For padded rows begin with b and exchange alternate tile pairs on qualifying even grids, using count=ceil(R/T), useful T*H*4 >= 8192 and T*W divisible by 64. "
+            "reads and the store at the same logical tile start. Use the single-wave ownership code from the row reference. Keep (b+n//2)%n for aligned rows. For padded rows begin with b and exchange alternate tile pairs on qualifying even grids, using count=ceil(R/T), useful T*H*4 >= 8192 and T*W divisible by 64. In the device JIT assign even_grid and full_vectors separately as two-operand boolean expressions, then test even_grid and full_vectors. The compiler accepts two operands per boolean AST node. "
             "Trace r=tile_index*T in both reads and the store. With aligned R143/H536/T4/N36, block 0 starts at row 72 and block 17 at row 140 with three rows. With padded R273/H509/T6/N46, block 0 starts at row 0, block 1 at row 144, block 24 at row 6, and block 45 at row 270 with three rows. Use runtime bounds and the same formula at other shapes. "
             "Select this FP32 body for aligned and padded widths after the UB check. "
             "For W > H issue both bounded copies before arithmetic, in either operand order. Use gate for exp. "

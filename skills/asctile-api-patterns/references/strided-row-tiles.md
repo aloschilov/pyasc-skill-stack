@@ -686,7 +686,9 @@ if W == H:
     tile_index = (b + n // 2) % n
 else:
     tile_index = b
-    if count >= 4 and count % 2 == 0 and T * H * 4 >= 8192 and T * W % 64 == 0:
+    even_grid = count >= 4 and count % 2 == 0
+    full_vectors = T * H * 4 >= 8192 and T * W % 64 == 0
+    if even_grid and full_vectors:
         half_grid = count // 2
         slot = b % half_grid
         if (half_grid - 1 - slot) % 2 == 1:
