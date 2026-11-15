@@ -57,7 +57,7 @@ if __name__ == "__main__":
     parser.add_argument("root", type=Path)
     parser.add_argument("case", type=int)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--metric", choices=("PipeUtilization", "ResourceConflictRatio", "L2Cache"),
+    parser.add_argument("--metric", choices=("PipeUtilization", "ResourceConflictRatio", "L2Cache", "Memory"),
                         default="PipeUtilization")
     args = parser.parse_args()
     record = extract(args.root, args.case, args.metric)
