@@ -159,6 +159,19 @@ path for a whole-buffer clear introduced by the final register load's
 guard space before selecting the packed layout.
 [GM traffic and matched descriptor timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6892216646).
 
+To isolate guard initialization, keep DMA right-padding and all vector
+loads fixed. Clear only the suffix beyond the rounded transfer and check
+full and partial tiles. Two short FP32 shapes changed timing direction
+with process order. For an aligned half-row, placing the partial vector
+first can keep every load inside the row. Inspect the inner loop after
+lowering: a conditional address per vector can replace hardware address
+generators with scalar indexing. On a 536-element row, dropping the guard
+saved 0.09–0.11 µs at fixed leading-mask geometry, but the conditional
+version was still slower in both orders than the original packed loop.
+Compare a separate partial-vector step and a uniform full-vector loop
+before adopting this layout.
+[Measured fill and vector-address controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6892525019).
+
 Before using a conflict counter to select a code change, match the ordered
 events in the raw packet to the formulas for the installed chip and profiler.
 On CANN 9.2 / 950PR, `ResourceConflictRatio` reports UB bank conflict cycles

@@ -9,7 +9,7 @@ from packed_half_descriptors import PACKED
 from row_store_stream import vector_body
 
 
-def render(source, height, half, exact):
+def render(source, height, half, exact, *, peeled=False):
     if sha256(source.encode()).hexdigest() != PACKED:
         raise ValueError("expected the packed W79 control")
     if half < 64 or half % 8 or half % 64 == 0:
@@ -22,6 +22,18 @@ def render(source, height, half, exact):
     body2 = body.replace("c*64", "offset").replace("c * 64", "offset")
     body2 = body2.replace(marker, f"uint16_t count = c == 0 ? {prefix} : 64;\n"
                           f"        uint16_t offset = c == 0 ? 0 : {prefix} + (c - 1) * 64;")
+    if peeled:
+        # Keep the partial vector outside the uniform address-generation loop.
+        start = body2.index("    for (uint16_t c =")
+        end = body2.index("\n    }", start)
+        ops = body2[body2.index("        RegTensor<float>", start):end]
+        partial = (f"    {{\n        uint32_t active = {prefix};\n"
+                   "        auto mask = UpdateMask<float>(active);\n"
+                   + ops.replace(" + offset", "") + "\n    }")
+        bulk = (f"    for (uint16_t c = 0; c < {half // 64}; ++c) {{\n"
+                f"        uint16_t offset = {prefix} + c * 64;\n"
+                "        auto mask = CreateMask<uint8_t>();\n" + ops)
+        body2 = body2[:start] + partial + "\n" + bulk + body2[end:]
     updated = source.replace(repr(body), repr(body2))
     if exact:
         tile = 2 * half * height
@@ -37,9 +49,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("package", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("mode", choices=("guard", "exact"))
+    parser.add_argument("mode", choices=("guard", "exact", "peeled"))
     args = parser.parse_args()
-    source = render((args.package / "swi_glu.py").read_text(), 4, 536, args.mode == "exact")
+    source = render((args.package / "swi_glu.py").read_text(), 4, 536, args.mode != "guard",
+                    peeled=args.mode == "peeled")
     compile(source, "swi_glu.py", "exec")
     args.output.mkdir()
     (args.output / "swi_glu.py").write_text(source)
