@@ -43,6 +43,13 @@ select grids, prepare index descriptors and launch kernels. A launch spy
 can confirm the grid and arguments without compiling this device body;
 compile the selected kernel and check its output before timing.
 
+For a negative exponent on an FP32 tile, write `asctile.exp(-x)`. On the
+tested 950PR compiler, `asctile.exp(0.0 - x)` allocates and fills an extra
+FP32 tile for zero. Unary negation keeps its constant in a register. This
+held for flat and rank-two tiles, including FP16 and BF16 inputs widened
+to FP32. Recheck the emitted UB allocations when changing compiler versions.
+[Reproducible unary lowering probe](https://github.com/aloschilov/pyasc-skill-stack/blob/cc81637/docs/evidence/swiglu-vector-grid-20261110/native-control/scalar_left_exp_probe.py).
+
 Compute tile sizes, loop unroll and grids in the host dispatcher using
 Python integers. Declare specialized kernel parameters with
 `asctile.ConstExpr[int]` in the JIT signature and pass the computed integer
