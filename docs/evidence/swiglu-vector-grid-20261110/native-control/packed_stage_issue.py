@@ -58,5 +58,5 @@ if __name__ == "__main__":
         source = render(original, early=mode == "early")
         compile(source, str(dest / "swi_glu.py"), "exec")
         (dest / "swi_glu.py").write_text(source)
-        for name in ("__init__.py", "_pyasc_runtime.py"):
-            copyfile(args.package / name, dest / name)
+        (dest / "__init__.py").touch()
+        copyfile(args.package / "_pyasc_runtime.py", dest / "_pyasc_runtime.py")
