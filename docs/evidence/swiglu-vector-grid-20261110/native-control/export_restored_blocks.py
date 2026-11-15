@@ -52,7 +52,7 @@ def export(root, case, kernel):
             if not blocks or not detail:
                 raise ValueError(f"missing timing data for {stream}/{task}")
             data.append(dict(phase=phase, stream=stream, task=task, start_us=str(start),
-                             task_us=r["Task Duration(us)"].strip(), grid=int(r["Block Dim"]),
+                             task_us=r["Task Duration(us)"].strip(), grid=int(r["Block Num"]),
                              pmu=blocks, timeline=sorted(detail)))
     return dict(receipt=receipt, text_dump_sha256=hashlib.sha256(listing).hexdigest(),
                 pmu_fields=["physical_core", "raw_start", "duration_us"],
