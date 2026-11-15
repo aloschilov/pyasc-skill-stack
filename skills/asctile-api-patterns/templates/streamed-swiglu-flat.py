@@ -164,6 +164,14 @@ def launch_medium_bf16_stream(x, out, rows, half, aivs, usable_ub):
     return True
 
 
+def launch_single_pass_flat(x, out, rows, half, tile, unroll, blocks):
+    """Launch a selected long FP16 stream or exact-divisor FP32 stream."""
+    input_bytes = 2 * rows * half * x.element_size()
+    cache_input = input_bytes <= 64 * 1024**2
+    swiglu_flat[blocks](x, out, rows, half, tile, unroll, cache_input)
+    return out
+
+
 def wide_fp32_chunk(rows, half, dtype, aivs, usable_ub):
     """Choose a full divisor when all rows together sustain three stages."""
     if dtype != torch.float32 or min(half, aivs, usable_ub) <= 0 or rows < aivs or half % 8:

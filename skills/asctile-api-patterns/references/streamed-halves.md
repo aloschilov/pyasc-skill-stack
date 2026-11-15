@@ -104,8 +104,13 @@ The full-suite T6552/U3 measurement was 521.531 µs.
 
 For this exact-divisor FP32 branch, bypass input L2 when the physical
 input exceeds 64 MiB and each half is read once. Calculate bytes as
-`2*R*H*itemsize` on the host. Launch the qualified flat kernel with
-`cache_input=False` for this regime and for the long FP16 stream below. The output descriptor retains its default caching.
+`2*R*H*itemsize` on the host. Return
+`launch_single_pass_flat(x, out, R, H, tile, unroll, blocks)` from the
+exact-divisor FP32 and long FP16 branches. The shared host helper passes
+`cache_input = input_bytes <= 64 * 1024**2` to the JIT. Its input descriptor
+consumes that flag as `l2_cache=cache_input`. The output keeps its default.
+Trace the flag through the actual host launch to the input descriptor. At
+64 MiB it is True, and above 64 MiB it is False.
 At R=2039, H=32760, T6552/U3/N72 the only changed device argument was
 the input L2 policy. The two medians were 449.609/450.055 µs versus
 521.382/522.254 µs with both descriptors at default. Disabling only
