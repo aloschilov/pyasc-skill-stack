@@ -8,14 +8,28 @@ from shutil import copyfile
 from packed_math_cost import W81
 
 
+TARGETS = (8192, 12288, 20480, 24576, 32768)
+
+
 def render(source, target_bytes):
     if sha256(source.encode()).hexdigest() != W81:
         raise ValueError("expected the independent W81 operator")
-    if target_bytes not in (8192, 12288):
-        raise ValueError("expected an 8 or 12 KiB packed-input target")
+    if target_bytes not in TARGETS:
+        raise ValueError(f"expected a packed-input target in {TARGETS}")
     anchor = "            if use_packed_prefix(rows, half, width, height, aivs, usable_ub):\n"
     if source.count(anchor) != 1:
         raise ValueError("expected a single packed register dispatch")
+    if target_bytes > 16384:
+        # W81 already checked the original tile against this UB budget.
+        # The packed lowering keeps input (two halves) and output live.
+        # Extend the tile only if its complete rounded allocations fit.
+        return source.replace(anchor, anchor + f"""
+                packed_row_bytes = 2 * half * itemsize
+                desired = ({target_bytes} + packed_row_bytes - 1) // packed_row_bytes
+                max_rows = usable_ub // (3 * half * itemsize)
+                height = max(height, min(desired, max_rows, rows))
+                blocks = (rows + height - 1) // height
+""")
     return source.replace(anchor, anchor + f"""                packed_row_bytes = 2 * half * itemsize
                 dma_height = ({target_bytes} + packed_row_bytes - 1) // packed_row_bytes
                 single_wave_height = (rows + aivs - 1) // aivs
@@ -28,7 +42,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("package", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("target_bytes", type=int, choices=(8192, 12288))
+    parser.add_argument("target_bytes", type=int, choices=TARGETS)
     args = parser.parse_args()
     text = render((args.package / "swi_glu.py").read_text(), args.target_bytes)
     compile(text, "swi_glu.py", "exec")
