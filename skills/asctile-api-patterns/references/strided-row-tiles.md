@@ -933,7 +933,15 @@ owner. The measured saving at widths 528 and 536 ranged from 0.01 to 0.04 µs
 in the two process orders.
 [Matched hardware runs and instruction sections](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6893431848).
 
-Read the valid packed rows in one bounded DMA. Process the first `H % 64`
+Keep the short tile at the end of the packed row sequence. For tile index
+`i`, read exactly `2 * min(T, R - i*T) * H` FP32 elements from row `i*T`.
+A fixed-size overlapping read for a partial first tile saves a conditional UB
+clear, but transfers an extra `8 * (T - valid) * H` bytes on that block.
+At T4/H536 the bounded final tile was faster in both orders on finite inputs
+with two and three remaining rows.
+[Matched DMA extents and device timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6894383523).
+
+Process the first `H % 64`
 lanes with a masked store and each remaining 64-lane vector in a separate
 affine loop. Each unmasked register read, including the prefix read, stays
 inside its half-row. The bounded final store writes only valid rows.
