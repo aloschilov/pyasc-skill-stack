@@ -79,6 +79,15 @@ a 1.500 µs reference. The three-row transfer took longer than the full tile
 in each order, so interpolate transfer costs only when the sweep supports it.
 [Matched device profiles and coverage checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6894852362).
 
+For a proposed two-stage schedule, keep the whole-tile transfer as a timing
+control. Then use the same two output writes in three variants. Time one input
+read, two reads with a drain between stages, and two reads with separate
+readiness events issued before the first write. Compare the complete operator
+on restored inputs before selecting a staged path. On 950PR early issue saved
+0.324–0.475 µs versus the drained schedule. The original whole-tile DMA still
+finished 0.075–0.187 µs sooner.
+[Matched instruction orders and tagged payloads](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6896461135).
+
 ## When identical kernels time differently on hardware
 
 Compare the linked device `.text` bytes and the decoded instructions at the
