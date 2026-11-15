@@ -911,3 +911,27 @@ applying it across aligned FP16 inputs.
 For an aligned FP32 2D tile, compare the ordinary grid with a nearby even grid that divides the number of tiles. Keep the tile, unroll, compiler flags and loop body identical in the comparison. Let `A = min(number_of_tiles, reported_AIVs)`. After at least four waves of useful work, test even divisors from `A - A % 2` down to `ceil(7*A/8)`, inclusive. Take the largest qualifying divisor. Keep `A` if the interval contains none. Handle zero work before dividing. The seven-eighths bound limits the reduction in parallelism during calibration.
 
 On the 72-AIV 950PR, 2,048 aligned FP32 rows with a height of two produce 1,024 tiles. The same two-row, three-stage strided kernel took 23.333 and 23.115 µs at 64 blocks in two randomized control rounds, compared with 23.694 and 23.538 µs at 72. With 2,046 rows there are 1,023 tiles and no near-capacity even divisor. For that shape the 72-block medians were 22.553 and 22.609 µs. At 64 they were 22.885 and 22.519 µs. Apply the divisor choice only on a qualified layout. A dense FP32 gather with 816 tiles had mixed results at 68 blocks despite exact divisibility.
+
+### Register-enabled single-wave FP32
+
+For register-enabled SwiGLU on 950PR, take the final height of the ordinary
+single-wave FP32 path and test the packed-input selector before launching the
+planar body. Require contiguous halves, 32-byte DMA alignment, a half-row of
+at least 64 FP32 lanes, and a half-row byte count with a nonzero remainder
+modulo the 128-byte read sector. Adjacent half-rows can then share boundary
+sectors. Keep the fitted tile, the natural grid of exactly `ceil(R/T)` blocks,
+and the current stream. The packed input takes `8*T*H` bytes and the separate
+output takes `4*T*H` bytes, each naturally DMA-aligned. Pass usable UB after
+platform reservations to the selector.
+
+Read the valid packed rows in one bounded DMA. Process the first `H % 64`
+lanes with a masked store and each remaining 64-lane vector in a separate
+affine loop. Each unmasked register read, including the prefix read, stays
+inside its half-row. The bounded final store writes only valid rows.
+[Runnable register template](../templates/packed-prefix-fp32.py).
+
+On CANN 9.2 this loop beat the planar path in both orders for H536. The
+difference for H528 was 0.01 µs in each order. The ranking switched at
+sector-aligned H544. Recheck neighboring widths and inspect the emitted
+full-vector loop when qualifying a different compiler or device.
+[Restored inputs, finite neighbors and hardware disassembly](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6892945693).

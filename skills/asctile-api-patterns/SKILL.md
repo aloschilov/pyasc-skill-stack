@@ -441,6 +441,7 @@ numerical correctness or performance.
 - [JIT options and measured hazards](references/api-jit-options.md)
 - [Specialization and block scheduling for flat SwiGLU streams](references/streamed-halves.md)
 - [Height and unroll for strided 2D row copies](references/strided-row-tiles.md)
+- [Register-enabled packed FP32 single-wave rows on 950PR](references/strided-row-tiles.md#register-enabled-single-wave-fp32)
 - [DMA and UB sizing for row-slab reindex gathers](references/reindex-slabs.md)
 - [Reduction tiling](references/reduction-tiling.md)
 - [CANN performance techniques and evidence-driven experiments](references/cann-performance-tuning.md)

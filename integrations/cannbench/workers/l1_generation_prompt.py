@@ -1,13 +1,14 @@
 """Build a clean L1 generation prompt from a task contract and the checked-out skills.
 
-Usage: python l1_generation_prompt.py TASK_DIR SKILLS_DIR
+Usage: python l1_generation_prompt.py TASK_DIR SKILLS_DIR [--register-rows]
 Task directories must be named after the public Python entry point.
 """
+import argparse
 import sys
 from pathlib import Path
 
 
-def prompt(task, skills):
+def prompt(task, skills, *, register_rows=False):
     op = task.name
     api = skills / "asctile-api-patterns"
     sections = []
@@ -245,8 +246,28 @@ def prompt(task, skills):
             "the qualified streaming fallback. Keep one-wave, U3 short-stream and long-stream "
             "unroll independent in their actual JIT loops."
         )
+    if register_rows:
+        if op != "swi_glu":
+            raise ValueError("register-row generation requires a SwiGLU task")
+        include(api / "references/strided-row-tiles.md", "### Register-enabled single-wave FP32")
+        include(api / "templates/packed-prefix-fp32.py")
+        sections.append(
+            "This register-enabled build uses the supplied packed_prefix_rows JIT for accepted "
+            "single-wave FP32 inputs. Apply use_packed_prefix after deriving the final T and W "
+            "for the ordinary single-wave FP32 branch, before its planar launch. On acceptance "
+            "call packed_prefix_rows on ceil(R/T) blocks using the same resident stream or CPU "
+            "launch convention, pass (x, out, R, H, T) and return. The earlier two-read "
+            "instructions describe the planar fallback. Include the selector and full register "
+            "body in the module. Trace the first reachable launch for W==H at H528, H536 and H544."
+        )
     return "\n".join(sections)
 
 
 if __name__ == "__main__":
-    sys.stdout.write(prompt(Path(sys.argv[1]), Path(sys.argv[2])))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("task", type=Path)
+    parser.add_argument("skills", type=Path)
+    parser.add_argument("--register-rows", action="store_true",
+                        help="enable the measured 950PR packed FP32 register template for SwiGLU")
+    args = parser.parse_args()
+    sys.stdout.write(prompt(args.task, args.skills, register_rows=args.register_rows))
