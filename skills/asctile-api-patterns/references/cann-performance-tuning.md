@@ -84,6 +84,15 @@ exactly by invocation parity across four processes per shape. Separating an
 address effect from an order effect requires variation within the same index.
 [Matched restored-input measurements](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879127456).
 
+To test placement while preserving the evaluator's zero-offset tensors, hold
+an unused allocation live outside the timed region. Record both operand
+addresses at each measured call. Compare only ordinals where the intended
+residue changed and the other operand stayed fixed, then reverse the order
+of the allocation sizes. On two FP32 shapes a 32 KiB increase left all
+residues unchanged on one shape and moved the input on two of five calls on
+the other. Those two timing differences changed sign with process order.
+[Address and timing pairs](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6889586154).
+
 When replaying a compiled image from a Torch NPU process, check how long
 the runtime keeps its binary registration alive. A fresh output tensor does
 not require a fresh registration. Hold the registered module, entry symbol
