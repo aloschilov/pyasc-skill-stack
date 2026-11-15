@@ -147,6 +147,18 @@ The sign also switched with invocation ordinal. Use a same-owner arithmetic
 control before changing the calculation of the tile index.
 [Physical groups and matched tile ownership](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6891358083).
 
+For short rows, count the GM sectors touched by each input descriptor at
+its actual base offset. If alignment is assumed, state the assumption.
+Separate reads of two halves can charge the same boundary sector twice.
+Check the predicted difference per block and invocation. On CANN 9.2 /
+950PR, verify the Memory event order and use 128 bytes per 0x422 read or
+0x423 write. A packed FP32 read saved 214 and 486 transactions on two
+shapes. At fixed packed UB addresses, arithmetic and store, one descriptor
+saved only 0.01–0.03 µs on the aligned shape. Inspect the emitted full-tile
+path for a whole-buffer clear introduced by the final register load's
+guard space before selecting the packed layout.
+[GM traffic and matched descriptor timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6892216646).
+
 Before using a conflict counter to select a code change, match the ordered
 events in the raw packet to the formulas for the installed chip and profiler.
 On CANN 9.2 / 950PR, `ResourceConflictRatio` reports UB bank conflict cycles
