@@ -10,6 +10,9 @@ def prepare(task, output, family="aligned-order"):
     if family == "aligned-order":
         case, expected, dim = 13, [11, 13, 16, 67], 2
         shapes = (("lower", [139, 1, 16, 66]), ("upper", [141, 1, 16, 68]))
+    elif family == "aligned-tail":
+        case, expected, dim = 13, [11, 13, 16, 67], 2
+        shapes = (("r142", [142, 1, 16, 67]), ("r143", expected))
     elif family == "padded-height":
         case, expected, dim = 11, [3, 7, 13, 1018], -1
         shapes = (("lower", [267, 1, 1, 1002]), ("upper", [279, 1, 1, 1022]))
@@ -60,6 +63,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("task", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--family", choices=("aligned-order", "padded-height", "padded-width", "aligned-width", "fp16-waves", "padded-tail", "padded-pitch"), default="aligned-order")
+    parser.add_argument("--family", choices=("aligned-order", "aligned-tail", "padded-height", "padded-width", "aligned-width", "fp16-waves", "padded-tail", "padded-pitch"), default="aligned-order")
     args = parser.parse_args()
     prepare(args.task, args.output, args.family)
