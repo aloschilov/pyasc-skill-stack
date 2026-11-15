@@ -37,6 +37,14 @@ stride eight took 2.33/2.37 µs. The matched contiguous descriptor took
 the whole kernel before using a constant row offset to justify interleaving.
 [Address replay and two device orders](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879127456).
 
+Keep the per-block row count balanced when aligning output-sector starts would
+lengthen the busiest tiles in a single wave. Test the same mix of long and
+short tiles in two orders to isolate the benefit of alignment. At FP32
+half-widths 505 and 509, moving eight-row tiles to the edges of a four-owner
+group aligned 34 of 46 output starts. Uniform six-row ownership aligned 12
+and finished sooner in both orders on both shapes.
+[Matched 46-block ownership trials](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6895157269).
+
 When specializing a partial final tile, keep the output bounded and compare
 three kernels at the same grid: generic bounds, static full/last-block DMA
 extents at the original UB height, and the same static extents with a shorter
