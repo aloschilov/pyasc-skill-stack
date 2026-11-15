@@ -147,6 +147,18 @@ The sign also switched with invocation ordinal. Use a same-owner arithmetic
 control before changing the calculation of the tile index.
 [Physical groups and matched tile ownership](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6891358083).
 
+Before using a conflict counter to select a code change, match the ordered
+events in the raw packet to the formulas for the installed chip and profiler.
+On CANN 9.2 / 950PR, `ResourceConflictRatio` reports UB bank conflict cycles
+relative to task cycles and vector resource conflicts (0x528) relative to
+vector activity (0x502). The latter can exceed one. Compare full tiles at
+the same invocation ordinal before attributing a slow group to extra work.
+For cache studies, keep read, write and victim counts separate. Check the
+target's GM tensor implementation and compiled code before timing enum
+variants. On dav3510, explicit LAST and NORMAL produced identical output
+store code on both FP32 shapes. PERSISTENT increased runtime in both orders.
+[Event formulas and output cache controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6891726663).
+
 To test whether UB placement limits a short planar kernel, keep its GM
 descriptors, compute and grid fixed. Verify that a zero-shift rebuild has
 the wheel's device instruction bytes. Independently shift aligned buffer
