@@ -133,7 +133,7 @@ def prompt(task, skills):
             "Trace R=2048, H=2048, FP32, 72 AIVs and 253952 UB bytes through the public entry "
             "point: it must pass height 2 and unroll 3 to the actual JIT launch. "
             "Share one bounded-row launch statement between ordinary rows and the padded "
-            "FP16 two-stage selection. Select height and unroll first. If the padded FP16 "
+            "FP16 two-stage selection. Compute W = ceildiv(H, lanes_per_dma) * lanes_per_dma before either selector. Trace W*itemsize modulo 32 at the common JIT call, including the positive padded branch. If the padded FP16 "
             "height is positive, use U=2. Otherwise run the ordinary fit and single-wave "
             "specialization. The common bounded launch takes (input, out, R, H, T, W, U). "
             "For R3003/H506 on 72 AIVs and 253952 UB bytes bind (input, out, 3003, 506, "

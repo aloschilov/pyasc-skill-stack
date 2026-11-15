@@ -810,7 +810,13 @@ A positive padded FP16 selection reaches the common call with U=2.
 Bind the call to the decorated definition. On 3,003 rows of half-width
 506 the five scalar arguments after the tensors are (3003, 506, 11, 512, 2).
 
+Compute the physical pitch before either branch. Read and store only the
+logical half-width through `real_shape`. At the actual launch, check that
+`half <= width < half + lanes_per_dma` and `width * x.element_size() % 32 == 0`.
+
 ```python
+lanes_per_dma = 32 // x.element_size()
+width = ((half + lanes_per_dma - 1) // lanes_per_dma) * lanes_per_dma
 height = padded_fp16_two_stage_height(rows, half, dtype, aivs, usable_ub)
 if height:
     unroll = 2
