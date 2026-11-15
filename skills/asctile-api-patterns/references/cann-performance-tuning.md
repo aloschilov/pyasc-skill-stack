@@ -137,6 +137,16 @@ ordinary evaluator. On two short FP32 shapes the partial tile had the
 longest duration in one of five calls at 36 blocks and zero of five at 46.
 [Block timings, raw event mapping and ordinary controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6890427467).
 
+When a tile permutation exchanges work between physical core groups, keep
+track of which owners moved. Compare the two groups at the same invocation
+ordinal, separately for moved and unchanged full tiles. Balance the sample
+counts after excluding a partial tile and repeat both process orders.
+On the 950PR, the duration difference followed the same physical group
+on 9 of 10 measured calls after 22 owners exchanged address ranges.
+The sign also switched with invocation ordinal. Use a same-owner arithmetic
+control before changing the calculation of the tile index.
+[Physical groups and matched tile ownership](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6891358083).
+
 To test whether UB placement limits a short planar kernel, keep its GM
 descriptors, compute and grid fixed. Verify that a zero-shift rebuild has
 the wheel's device instruction bytes. Independently shift aligned buffer
