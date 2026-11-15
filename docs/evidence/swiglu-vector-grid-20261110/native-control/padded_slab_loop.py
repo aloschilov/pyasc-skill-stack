@@ -7,7 +7,7 @@ from shutil import copyfile
 from packed_math_cost import W81
 
 
-def render(source, slab):
+def render(source, slab, row_loop=False):
     if sha256(source.encode()).hexdigest() != W81:
         raise ValueError("expected W81")
     start = source.index("def row_single_wave_fp32(")
@@ -52,6 +52,17 @@ def render(source, slab):
     gy = asctile.global_tensor(y, [R, H])
     asctile.copy_out(result, gy, [r, 0], real_shape=[valid, H])
 '''.replace("POINTERS", pointers).replace("LOADS", loads).replace("INPUTS", inputs)
+    if row_loop:
+        # Expose the two constant strides to the vector address generator.
+        flat_head = "        for (uint16_t i = 0; i < {T * W // 64}; ++i) {{\n"
+        first, body = vf.split(flat_head)
+        body, after = body.split("        }}\n", 1)
+        body = body.replace("uint32_t offset = i * 64;", "uint32_t offset = row * {W} + col * 64;")
+        body = body.replace("offset + (i / {W // 64}) * {W}", "2 * row * {W} + col * 64")
+        nested = ("        for (uint16_t row = 0; row < {T}; ++row) {{\n"
+                  "            for (uint16_t col = 0; col < {W // 64}; ++col) {{\n")
+        vf = first + nested + "".join("    " + line for line in body.splitlines(True))
+        vf += "            }}\n        }}\n" + after
     insert = source.index("@asctile.jit", end)
     kernel = "@asctile.jit(reuse_alloc=2, vf_fusion=True)\n" + header + reads + vf
     dispatch = "            row_single_wave_fp32[grid](x, out, rows, half, height, width)"
@@ -68,12 +79,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("package",type=Path)
     parser.add_argument("output",type=Path)
+    parser.add_argument("--rows",action="store_true",help="also generate affine row and column loops")
     args = parser.parse_args()
     origin = (args.package / "swi_glu.py").read_text()
-    for mode in ("planes","slab"):
+    modes = ("planes","slab","planes_rows","slab_rows") if args.rows else ("planes","slab")
+    for mode in modes:
         root = args.output / mode
         root.mkdir(parents=True)
-        text = render(origin, slab=mode=="slab")
+        text = render(origin, slab=mode.startswith("slab"), row_loop=mode.endswith("_rows"))
         compile(text, str(root/"swi_glu.py"), "exec")
         (root/"swi_glu.py").write_text(text)
         (root/"__init__.py").touch()
