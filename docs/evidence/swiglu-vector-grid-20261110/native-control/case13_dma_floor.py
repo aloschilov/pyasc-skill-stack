@@ -1,4 +1,4 @@
-"""Private case 13 DMA and launch controls. Only the real mode computes SwiGLU."""
+"""Private case 13 DMA and launch controls. The real and wide modes compute full SwiGLU."""
 
 import argparse
 from contextlib import contextmanager
@@ -15,6 +15,7 @@ from packed_math_cost import W81
 
 CPP = "a9e1aa349ca757b9e2e9ebff6718ddc5e40e7e780935c88260e964f675d544e3"
 MODES = {"empty": 0, "r1": 1, "r2": 2, "r3": 3, "full": 4, "upper": 4}
+VOLUME_MODES = ("flat", "read", "write", "both")
 ROWS, HALF, TILE, GRID = 143, 536, 4, 36
 
 
@@ -24,9 +25,13 @@ def device(original, mode):
     head = original[:original.index(" {") + 2]
     if mode == "empty":
         return head + "\n  return;\n}\n"
-    return head + f"""
+    # Vary contiguous input and output lengths independently. With a flat
+    # write even the three-row terminal tile can emit exactly half its bytes.
+    limit = TILE if mode in VOLUME_MODES else MODES[mode]
+    read_words = "valid * H" if mode in ("read", "both") else "valid * 2 * H"
+    cpp = head + f"""
   using namespace AscendC;
-  constexpr int32_t H = {HALF}, T = {TILE}, R = {ROWS}, limit = {MODES[mode]};
+  constexpr int32_t H = {HALF}, T = {TILE}, R = {ROWS}, limit = {limit};
   const int32_t block = GetBlockIdx();
   const int32_t count = GetBlockNum();
   const int32_t cutoff = count - count / 2;
@@ -39,7 +44,7 @@ def device(original, mode):
   src.SetGlobalBuffer(v1_x);
   src.SetL2CacheHint<CacheRwMode::RW>(CacheMode::CACHE_MODE_DISABLE);
   dst.SetGlobalBuffer(v2_y);
-  DataCopyExtParams read{{1, static_cast<uint32_t>(valid * 2 * H * sizeof(float)), 0, 0, 0}};
+  DataCopyExtParams read{{1, static_cast<uint32_t>({read_words} * sizeof(float)), 0, 0, 0}};
   DataCopyPadExtParams<float> pad{{true, 0, 0, 0.0f}};
   DataCopyPad(slab, src[row * 2 * H], read, pad);
   SetFlag<HardEvent::MTE2_MTE3>(EVENT_ID0);
@@ -48,20 +53,32 @@ def device(original, mode):
   DataCopyPad(dst[tile * limit * H], slab[{'valid * H' if mode == 'upper' else '0'}], write);
 }}
 """
+    if mode in VOLUME_MODES:
+        divisor = 2 if mode in ("write", "both") else 1
+        cpp = cpp[:cpp.index("  DataCopyExtParams write")] + f"""
+  DataCopyExtParams write{{1, static_cast<uint32_t>(valid * H * sizeof(float) / {divisor}), 0, 0, 0}};
+  DataCopyPad(dst[tile * T * H / {divisor}], slab[0], write);
+}}
+"""
+    return cpp
 
 
 def output_elements(mode):
+    if mode in VOLUME_MODES:
+        return ROWS * HALF // (2 if mode in ("write", "both") else 1)
     limit = MODES[mode]
     return (35 * limit + min(3, limit)) * HALF
 
 
-def stage(package, task, output):
+def stage(package, task, output, volume=False):
     source = (package / "swi_glu.py").read_text()
     if sha256(source.encode()).hexdigest() != W81:
         raise ValueError("expected W81")
     anchor = "                packed_prefix_rows[grid](x, out, rows, half, height)\n"
     assert source.count(anchor + "                return out\n") == 1
-    for mode, limit in MODES.items():
+    modes = ("full", *VOLUME_MODES) if volume else MODES
+    for mode in modes:
+        limit = MODES.get(mode, TILE)
         root = output / mode
         root.mkdir()
         copyfile(package / "_pyasc_runtime.py", root / "_pyasc_runtime.py")
@@ -71,7 +88,7 @@ def stage(package, task, output):
             # An untouched, contiguous input view gives the private timing
             # harness a defined result. The separate sentinel test inspects y.
             ret = "return x.reshape(-1)[:out.numel()].view_as(out)"
-        elif limit < TILE:
+        elif n < ROWS * HALF:
             ret = f"return out.reshape(-1)[:{n}]"
         else:
             ret = "return out"
@@ -91,12 +108,33 @@ def swi_glu(input, dim=-1):
             golden += f"""    parts = []
     for start in range(0, 143, 4):
         data = rows[start:start+min({limit}, 143-start)].flatten()
-        n = data.numel() // 2
+        n = data.numel() // {4 if mode in ("write", "both") else 2}
         parts.append(data[{'n:' if mode == 'upper' else ':n'}])
     result = torch.cat(parts)
 """
-            golden += "    return result.reshape(11,13,8,67)\n" if limit == TILE else "    return result\n"
+            golden += "    return result.reshape(11,13,8,67)\n" if n == ROWS * HALF else "    return result\n"
         (fx / "golden.py").write_text(golden)
+
+    if volume:
+        # The VF already stores at row*H+col. Express that dense result as
+        # rank one so the public emitter can issue one full-span write.
+        old = (
+            '""", [T, H], asctile.float32, [slab])\n'
+            '    gy = asctile.global_tensor(y, [R, H])\n'
+            '    asctile.copy_out(result, gy, [r, 0], real_shape=[valid, H])'
+        )
+        new = (
+            '""", [T * H], asctile.float32, [slab])\n'
+            '    gy = asctile.global_tensor(y, [R * H])\n'
+            '    asctile.copy_out(result, gy, [r * H], real_shape=[valid * H])'
+        )
+        if source.count(old) != 1:
+            raise ValueError("expected one contiguous packed register result")
+        root = output / "wide"
+        root.mkdir()
+        (root / "__init__.py").touch()
+        copyfile(package / "_pyasc_runtime.py", root / "_pyasc_runtime.py")
+        (root / "swi_glu.py").write_text(source.replace(old, new))
 
 
 @contextmanager
@@ -111,9 +149,9 @@ def compiled(mode):
 
 def profile(root, mode, task, worker, dest):
     package = root / ("base" if mode == "real" else mode)
-    fx = task if mode == "real" else root / "input" / mode / "tasks/level1/swi_glu"
+    fx = task if mode in ("real", "wide") else root / "input" / mode / "tasks/level1/swi_glu"
     sys.argv = [str(worker), str(package), str(fx), "13", str(dest)]
-    if mode == "real":
+    if mode in ("real", "wide"):
         runpy.run_path(str(worker), run_name="__main__")
     else:
         with compiled(mode):
@@ -143,7 +181,10 @@ def tagged(root, mode):
         oracle = runpy.run_path(str(task))["swi_glu"](x, dim=2).flatten()
         assert torch.equal(filled, oracle)
     assert torch.equal(on_device.cpu(), x)
-    print(json.dumps(dict(mode=mode, blocks=GRID, input_bytes=n*8, output_bytes=n*4,
+    input_bytes = n * 8
+    if mode in VOLUME_MODES:
+        input_bytes = ROWS * HALF * (4 if mode in ("read", "both") else 8)
+    print(json.dumps(dict(mode=mode, blocks=GRID, input_bytes=input_bytes, output_bytes=n*4,
                           checked_elements=n, guards_intact=True, input_intact=True,
                           words_sha256=sha256(filled.numpy().tobytes()).hexdigest())))
 
@@ -153,13 +194,14 @@ if __name__ == "__main__":
     cmd = p.add_subparsers(dest="cmd", required=True)
     s = cmd.add_parser("stage")
     for a in ("package", "task", "output"):s.add_argument(a, type=Path)
+    s.add_argument("--volume", action="store_true", help="stage the independent read/write volume controls")
     for name in ("profile", "tag"):
         sub = cmd.add_parser(name)
         sub.add_argument("root", type=Path)
-        sub.add_argument("mode", choices=[*MODES, "real"] if name == "profile" else MODES)
+        sub.add_argument("mode", choices=[*MODES, *VOLUME_MODES, "real", "wide"] if name == "profile" else [*MODES, *VOLUME_MODES])
         if name == "profile":
             for a in ("task", "worker", "dest"):sub.add_argument(a, type=Path)
     a = p.parse_args()
-    if a.cmd == "stage":stage(a.package, a.task, a.output)
+    if a.cmd == "stage":stage(a.package, a.task, a.output, a.volume)
     elif a.cmd == "profile":profile(a.root, a.mode, a.task, a.worker, a.dest)
     else:tagged(a.root, a.mode)
