@@ -125,6 +125,18 @@ from 0.197 to 0.577 µs and MTE3 time from 0.316 to 0.573 µs. Pipeline
 activity can overlap. Use the separate task duration to compare end-to-end
 device performance and the ordinary evaluation run for qualification.
 
+For a single-wave kernel with a partial tile, derive the tile owner from
+the emitted block-to-row mapping. Check that owner's finish time across
+several calls before specializing the tail. On CANN 9.2 / 950PR,
+`msprof --task-block=all --aic-metrics=PipeUtilization` retained one raw
+block packet per launched AIV. Match the candidate's stream and task in
+the export, then reconcile physical core IDs, relative start times and
+durations with the raw packets. Check that logical IDs cover the grid once.
+Compare pipeline counts within each invocation and score changes under the
+ordinary evaluator. On two short FP32 shapes the partial tile had the
+longest duration in one of five calls at 36 blocks and zero of five at 46.
+[Block timings, raw event mapping and ordinary controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6890427467).
+
 To test whether UB placement limits a short planar kernel, keep its GM
 descriptors, compute and grid fixed. Verify that a zero-shift rebuild has
 the wheel's device instruction bytes. Independently shift aligned buffer
