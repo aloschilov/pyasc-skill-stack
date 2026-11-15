@@ -68,5 +68,5 @@ if __name__ == "__main__":
     compile(updated, "swi_glu.py", "exec")
     args.output.mkdir()
     (args.output / "swi_glu.py").write_text(updated)
-    for name in ("__init__.py", "_pyasc_runtime.py"):
-        copyfile(args.package / name, args.output / name)
+    (args.output / "__init__.py").touch()
+    copyfile(args.package / "_pyasc_runtime.py", args.output / "_pyasc_runtime.py")
