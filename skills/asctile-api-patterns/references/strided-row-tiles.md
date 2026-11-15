@@ -530,7 +530,7 @@ valid = min(T, R-r), choose the origin from the physical width:
   Read gate at [0,0] and value at [0,H] with tile [T,W] and explicit
   real_shape=[valid,H]. Address arithmetic on the FP32 pointer counts elements.
 - At W > H, create `asctile.global_tensor(x, [R, 2*H], l2_cache=False)`.
-  Read value at [r,H] and gate at [r,0] with the same logical extents.
+  Read the two halves at [r,0] (gate) and [r,H] (value) with identical logical extents.
 - In both branches use `asctile.global_tensor(y, [R,H])` with default caching
   and write [valid,H] at [r,0]. Apply the block-to-tile rotation once.
 
@@ -728,13 +728,16 @@ ID in the trace. Device IDs and correct output alone do not show this. On a
 device binary was identical within each shape. Repeat the comparison when
 changing the wheel or targeting a different launch family.
 
-For the ordinary padded FP32 single-wave body, issue the bounded value
-read first, then the bounded gate read, then compute
-`(gate / (1.0 + exp(-gate))) * value`. Keep both DMA bounds identical
-and keep gate as the argument of exp. At N35/T8/H509/W512 this order
-took 2.544/2.594 µs versus 2.607/2.654 µs with gate read first.
-Another shuffle gave 2.649/2.589 versus 3.158/3.333 µs. The earlier
-denominator-before-value schedule gave 2.559/2.642 µs in its own run.
+In the fused padded FP32 single-wave body, issue both bounded reads before
+computing `(gate / (1.0 + exp(-gate))) * value`. Either operand can be read
+first. Keep the gate and value offsets tied to their roles in the expression.
+On 950PR at R273/H509/T6/W512/N46, both read orders gave 2.23 µs across
+two opposed process orders. The faster operand order switched between
+processes at H505 and H510 as well. Older N35/T8/H509 measurements favored
+value-first (2.544/2.594 µs versus 2.607/2.654 µs gate-first). Recheck on
+the target when changing tile height, fusion or physical buffer placement.
+[Padded operand order on three widths](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6890094203).
+
 For aligned FP32 keep the gate read first and both reads ahead of math.
 Verify the order at the actual JIT call. For a change to the aligned-row
 default, repeat the paired test on finite neighboring widths in both launch
