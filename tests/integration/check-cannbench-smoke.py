@@ -9,6 +9,7 @@ import importlib.util
 from pathlib import Path
 import sys
 import types
+from unittest.mock import patch
 
 import torch
 from asc.experimental import asctile
@@ -44,3 +45,27 @@ for dtype in (torch.float16, torch.bfloat16, torch.float32):
         passed += 1
         print(f'PASS {dtype} shape={list(x.shape)} tails and special values', flush=True)
 print(f'Passed {passed}/6 simulator regressions; NPU qualification remains separate.')
+
+# CaModel tensors skip the standalone template's NPU setup and stream lookup.
+# Run that host branch with the real AscTile API and a recorded launch.
+template_path = ROOT / 'skills/asctile-api-patterns/templates/streamed-swiglu-flat.py'
+spec = importlib.util.spec_from_file_location('swiglu_template', template_path)
+template = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(template)
+x = torch.ones(2, 14)
+device = types.SimpleNamespace(type='npu', index=1)
+with (
+    patch.object(torch.Tensor, 'device', device),
+    patch.object(torch, 'npu', create=True) as npu,
+    patch.object(asctile, 'set_platform', autospec=True) as set_platform,
+    patch.object(template, 'swiglu_flat') as launch,
+):
+    npu.current_stream.return_value.npu_stream = 12345
+    result = template.swi_glu(x)
+    set_platform.assert_called_once_with(asctile.Backend.NPU)
+    npu.current_stream.assert_called_once_with(device)
+    blocks, stream = launch.__getitem__.call_args.args[0]
+    assert blocks == 1 and stream.value == 12345
+    launch.__getitem__.return_value.assert_called_once()
+    assert tuple(result.shape) == (2, 7)
+print('PASS standalone NPU wrapper platform selection and caller stream (mock launch).')

@@ -92,7 +92,7 @@ def swi_glu(input: torch.Tensor, dim: int = -1) -> torch.Tensor:
     tile = min(256, (half + alignment - 1) // alignment * alignment)
     grid = 1
     if input.device.type == "npu":
-        asctile.set_platform(asctile.Backend.NPU, asctile.runtime.current_platform())
+        asctile.set_platform(asctile.Backend.NPU)
         stream = torch.npu.current_stream(input.device).npu_stream
         grid = (1, ctypes.c_void_p(stream))
     swiglu_flat[grid](input.contiguous(), out, rows, half, tile, 1)
