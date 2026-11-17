@@ -19,8 +19,9 @@ attributes and requires distinct kernels or tile widths.
 
 ### Exp on 950PR
 
-Pass the original input and output tensors to the JIT. Widen each loaded
-tile to FP32, apply `scale * x + shift`, multiply by the base logarithm,
+Pass the original input and output tensors to the JIT. For the general
+affine/log path and BF16 inputs, widen each loaded tile to FP32,
+apply `scale * x + shift`, multiply by the base logarithm,
 take the exponential, and cast once at the store. Compute the scalar
 `math.log(base) if base > 0 else 1.0` on the host. Bind the three scalars
 at each call. Use separate constexpr flags to omit a unit scale, zero
@@ -28,6 +29,47 @@ shift or unit log multiplier. Test changed attributes on the same shape
 in one process. A NaN base takes the natural
 exponential branch. A positive infinite base at unit scale and zero
 shift gives `[0, NaN, +inf]` for input `[-1, 0, 1]`.
+
+For a short FP16 identity path, compare `asctile.exp(loaded)` directly on
+the FP16 tile with the FP32 intermediate path. Select it only when the
+actual input dtype is FP16 and the per-call constexpr flags omit all three
+operations: scale is exactly one, shift is zero, and computed `log_base`
+is one. This is **not** `base == 1`, which gives a zero log multiplier.
+Keep the existing host rule for nonpositive and NaN bases. With the flags
+declared `asctile.ConstExpr[bool]`, the checked JIT condition is:
+
+```python
+lane_dtype = loaded.dtype
+if (lane_dtype == asctile.float16) and not ((apply_scale or apply_shift) or apply_log):
+    result = asctile.exp(loaded)
+    asctile.copy_out(result, out_gm, [offset], real_shape=[valid])
+```
+
+The paired parentheses avoid unsupported chained boolean operators in
+the pinned parser. Keep the general FP32 path in `else`; do not cast BF16
+or another dtype to FP16 to enter this branch. On `ed793e45`, CANN 9.2,
+`Ascend950PR_9599` CaModel, fixed T=4,864, grid=72, unroll=3 and
+`reuse_alloc=2` reduced compiled UB from 48,640 to 29,184 bytes. All 65,536
+FP16 bit patterns matched FP32-exp-then-FP16 finite outputs bit for bit
+and matched NaN/Inf masks; three uneven tails passed, and all eight
+suppressed launches were rejected. Affine/BF16 controls kept identical
+emitted binaries. This is a manually tested numerical/allocation option,
+not a measured device speedup. Recheck the selected runtime and task
+comparator, then compare paired device timings before choosing it for
+performance.
+[Control and comparator scope](https://github.com/aloschilov/pyasc-skill-stack/pull/64#issuecomment-6957196429)
+
+For streaming FP16, a separately qualified option is
+`asctile.exp(loaded * 0.5)`. Select it with a per-call constexpr guard for
+actual FP16 input, scale exactly 0.5, zero shift and computed log multiplier
+exactly one; retain FP32 arithmetic for every other attribute/dtype. On the
+same runtime at T8192/U2/reuse2, UB fell from 65,536 to 32,768 bytes. Both
+arms passed the full FP16 value domain, tails and same-shape attribute changes,
+with 11 numerical checks and 11 rejecting suppressed controls per arm.
+This establishes that arithmetic option's local correctness; the full 67M
+official shape and physical speed remain unverified. Do not generalize it to
+arbitrary scales or affine expressions.
+[Half-scale control](https://github.com/aloschilov/pyasc-skill-stack/pull/64#issuecomment-6957993559)
 
 For FP16/BF16, compare three tiles per core with one tile per core
 when `24 * 1024 * A <= N * itemsize <= 32 * 1024 * A`, where A is
@@ -87,6 +129,12 @@ When the work needs multiple waves, read each input tile once through
 output descriptor at its default. Use the default input policy for the
 short and one-wave paths. Select by the actual launch geometry and UB
 capacity. The tested streaming inputs ranged from 3.98 to 256 MiB.
+
+The `l2_cache` parameter enables caching: `False` disables it. For a shared
+JIT, use a positive flag such as `cache_input: asctile.ConstExpr[bool]` and
+pass `False` for streaming, `True` for short/one-wave paths. A host flag that
+means "bypass" has the opposite polarity. Inspect the emitted input descriptor
+for each route; numerical checks alone cannot detect a reversed cache policy.
 
 On 950PR this single descriptor change reduced the median of five
 kernel timings on all 12 streaming shapes at fixed arithmetic, output,
