@@ -20,9 +20,18 @@ device=input.device)`, `gate_idx = 2*H*(k//H) + k%H` and
 is independent of input values. Pass the index tensors as kernel arguments
 and load them before the tile loop. For a slab starting at row r, copy
 `2*T*H` input lanes at offset `2*r*H`, with true extent
-`2*min(T,R-r)*H` and zero padding. Gather and widen the gate, compute
-its SiLU activation, then gather and widen the value for the final
-multiply. This shortens the time both widened halves occupy UB together.
+`2*min(T,R-r)*H` and zero padding. `asctile.reindex(src, index)` takes
+two UB tensors and returns the indexed lanes in the source dtype. Gather
+the value after gate activation to shorten the time both widened halves
+occupy UB together.
+
+```python
+gate = asctile.reindex(slab, gate_idx_ub).to(asctile.float32)
+activated = gate / (1.0 + asctile.exp(-gate))
+value = asctile.reindex(slab, value_idx_ub).to(asctile.float32)
+output_tile = (activated * value).to(slab.dtype)
+```
+
 Store the resulting contiguous output at `r*H`, with true extent
 `min(T,R-r)*H`. The final partial tile belongs to the same launch.
 
