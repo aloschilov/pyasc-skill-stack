@@ -65,6 +65,25 @@ and numerical results for each bounded experiment; preserve the last correct
 measured incumbent. Do not treat lowering via constructed options as proof
 that the decorator/cache path works.
 
+When optimizing the CANNBench score, compare complete candidates on the same
+catalog, hardware and timing protocol. Keep the source hash for each series.
+Apply the catalog's scorer to each measured time with that case's
+`baseline_perf_us` and `t_hw_us`. With the tasks 2.x weights and Eq.3, a fully
+correct 20-case operator earns `30 + 70 * mean(case_scores)`, subject to the
+operator cap. To choose the next tile experiment, replay the expected time
+change on the cases its dispatch branch handles and inspect the change in
+points. Use the published scorer for its behavior near the hardware floor.
+[Per-case formula](https://github.com/hicann/cann-bench/blob/53ea611a1b88da922b82812f2721dd0b2fa33476/src/kernel_eval/base/perf_metric.py) ·
+[Operator score and weights](https://github.com/hicann/cann-bench/blob/53ea611a1b88da922b82812f2721dd0b2fa33476/src/kernel_eval/benches/cann_scoring.py)
+
+Keep geometric-mean speedup alongside the score. On two complete 950PR
+SwiGLU runs, W72 led W75 on geometric mean (1.09109× versus 1.09043×).
+W75 led on projected points (69.9746 versus 69.9189). Treat such a small
+margin as a reason for paired repeats. Label a local replay as a projection
+until the service returns its score for the submitted ZIP.
+[W72 timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6882053364) ·
+[W75 timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6888454179)
+
 CANNBench submission is explicit and credit-consuming. Only its complete
 selected official case set, successful numerics, zero anti-cheat failures and
 finite positive device timings establish the hardware result. Preserve the
