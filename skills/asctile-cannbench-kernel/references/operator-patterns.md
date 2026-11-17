@@ -29,27 +29,49 @@ in one process. A NaN base takes the natural
 exponential branch. A positive infinite base at unit scale and zero
 shift gives `[0, NaN, +inf]` for input `[-1, 0, 1]`.
 
-For FP16/BF16, compare three tiles per core with one tile per core
-when `24 * 1024 * A <= N * itemsize <= 32 * 1024 * A`, where A is
-the available vector-core count. Check this dtype and byte window
-before testing UB fit. Outside the window compare one-wave and general
-streaming paths. Within it, evaluate the three-tile branch first since
-both geometries can fit.
+At the public launch site, bind every resident NPU input to its current
+Torch stream after choosing the geometry. On the measured wheel use
+`kernel[blocks, ctypes.c_void_p(torch.npu.current_stream(x.device).npu_stream)]`.
+CPU-backed CaModel uses `kernel[blocks]`. For each geometry, run the
+wrapper twice with different caller streams and inspect the two handles
+received by the launcher. Also exercise its CPU integer-grid path.
 
-For FP16 identity, start with grid-stride ownership and 32-byte input
+Classify the catalog by shape and dtype before choosing the streaming tile.
+Let `N = x.numel()`, `s = x.element_size()` and `A` be the available vector
+cores. Use the same decisions in the public `exp` wrapper:
+
+1. **Short 16-bit.** When FP16/BF16 has 24–32 KiB of input per core
+   (`24 * 1024 * A <= N * s <= 32 * 1024 * A`), try three aligned
+   tiles per core and unroll three. This window also fits one wave.
+2. **One wave.** For the remaining inputs, round `ceil(N / A)` up to DMA
+   alignment. If that whole tile fits the live UB budget, try one tile
+   per active block. The measured emitter budgeted `8 + s` bytes per lane.
+3. **Multiple waves.** When the one-wave tile exceeds capacity, select
+   the bounded streaming tile and unroll below. Capping the tile before
+   the one-wave fit test hides opportunities to cover a block in one tile.
+
+Trace the public wrapper across the catalog with the target core count
+and UB. Group its actual launches by tile, grid, unroll and input cache
+policy. If eligible short or one-wave inputs collapse to the streaming
+geometry, compare a representative shape from each group at fixed inputs
+before adopting the simpler route.
+
+For short FP16 identity, start with grid-stride ownership and 32-byte
 alignment. For affine or log-only paths, compare contiguous ownership
-and 256-byte alignment. Block b owns successive tiles beginning at
-`b * ceil(num_tiles / blocks)`. Bound the last block to the live tiles.
-With grid size `G` and alignment `q` in elements, use
-`T = q * ceil(N / (3 * G * q))`. Check compiled UB and bound the last
-transfer. Pass three as the short loop's actual `unroll_factor`.
+and 256-byte alignment. With grid size `G` and alignment `q` in
+elements, use `T = q * ceil(N / (3 * G * q))`, bound the last transfer
+and pass three as the loop's `unroll_factor`. Check compiled UB.
 
-For this short path, bind a resident FP16 or BF16 input to the current
-Torch stream of the input device at each call. On the measured
-PyASC wheel the launch accepts `kernel[blocks, ctypes.c_void_p(handle)]`,
-where `handle = torch.npu.current_stream(x.device).npu_stream`. CPU-backed
-CaModel and staged inputs use `kernel[blocks]`. Exercise the same shape
-on two caller streams and check the stream received by the launcher.
+Profile short identity, log-only and affine inputs separately. On local
+950PR, one three-stage implementation beat the published baseline on
+two of five short shapes (0.914× geometric mean). For a short affine
+shape, compare two contiguous loops: start each block at
+`b * ceil(num_tiles / G)`, or distribute the remainder over the first
+blocks. Keep tile, grid, unroll, compiler options and caller stream
+fixed. Check uneven tails and alternate measurement order. The measured
+implementations differed in both loop bounds and compiler options.
+[Route measurements and controls](https://github.com/aloschilov/pyasc-skill-stack/pull/68)
+
 For 1,024² FP16 identity at 72 blocks, T=4,864 and unroll three, the
 caller-stream medians were 3.24, 3.22 and 3.43 µs on 950PR. At the
 same geometry, integer-grid launches took 3.99, 3.84 and 3.88 µs.
@@ -57,11 +79,7 @@ same geometry, integer-grid launches took 3.99, 3.84 and 3.88 µs.
 · [FP16 and BF16 affine controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6871122168)
 
 Use `@asctile.jit(reuse_alloc=2)` for the measured short, one-wave and
-streaming Exp paths. After the short branch, round `ceil(N / A)` up to
-DMA alignment and check whether that tile fits UB for one tile per block.
-The earlier one-wave emitter budgeted `8 + itemsize` UB bytes per lane.
-
-Size the streaming tile separately for its selected unroll. On 950PR,
+streaming Exp paths. Size the streaming tile for its selected unroll. On 950PR,
 start with 8,192 lanes and unroll two. In a checked public-API emitter
 that combination used 65,536 UB bytes across all 12 streaming shapes.
 For another shape or compiler, measure the emitted specialization's
