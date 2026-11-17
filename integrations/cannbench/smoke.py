@@ -206,7 +206,20 @@ def verify(run):
     return manifest
 
 
-def submit_once(queue, run, ledger, *, retry_maintenance=False):
+def group_snapshot(queue, selections):
+    """Capture each selected operator under one accepted benchmark version."""
+    snapshots = [task_snapshot(queue, op, fn) for op, fn in selections]
+    slug, version = queue.benchmark_slug, snapshots[0][0]['benchmark_version']
+    if any((c['benchmark_slug'], c['benchmark_version']) != (slug, version) for c, _ in snapshots):
+        raise ValueError('Benchmark changed during capture')
+    operators = [c['operators'][0] for c, _ in snapshots]
+    catalog = {'benchmark_slug': slug, 'benchmark_version': version, 'operators': operators,
+               'required_operators': len(operators), 'required_cases': sum(op['case_count'] for op in operators)}
+    tasks = {spec['operators'][0]['function_name']: task for spec, task in snapshots}
+    return catalog, tasks
+
+
+def submit_once(queue, run, ledger, *, retry_maintenance=False, selections=None, public=False):
     manifest = verify(run)
     digest = manifest['files']['submission.zip']
     record = ledger / (digest + '.json')
@@ -232,15 +245,22 @@ def submit_once(queue, run, ledger, *, retry_maintenance=False):
     for path in ledger.glob('*.json'):
         if json.loads(path.read_text()).get('phase') not in ('finished', 'rejected'):
             raise ValueError('Reconcile existing intent before another submission: ' + str(path))
-    queue._check_credit()
+    queue._check_credit(len(selections) if selections else 1)
     jobs = queue._client.list_jobs(limit=100).get('jobs', [])
     if any(j.get('status') not in TERMINAL for j in jobs):
         raise ValueError('An account job is active or unknown; collect it first')
     operators = manifest['catalog'].get('operators', [])
-    if len(operators) != 1:
-        raise ValueError('Prepared catalog must select exactly one operator')
-    selected = operators[0]
-    current, task = task_snapshot(queue, selected['operator'], selected['function_name'])
+    if selections is None:
+        if len(operators) != 1 or public:
+            raise ValueError('Private smoke must select exactly one operator')
+        selected = operators[0]
+        current, task = task_snapshot(queue, selected['operator'], selected['function_name'])
+    else:
+        if [(op['operator'], op['function_name']) for op in operators] != list(selections):
+            raise ValueError('Prepared operators differ from requested selection')
+        if manifest.get('visibility') != ('public' if public else 'private'):
+            raise ValueError('Prepared submission visibility changed')
+        current, task = group_snapshot(queue, selections)
     if current != manifest['catalog'] or task != json.loads((run/'task.json').read_text()):
         raise ValueError('Task/version changed since prepare; prepare a new run')
     state = {'phase': 'upload-intent', 'created_at': now(), 'run_dir': str(run),
@@ -250,9 +270,9 @@ def submit_once(queue, run, ledger, *, retry_maintenance=False):
     save(record, state); save(run/'state.json', state)
     # Intent is durable before POST. Exceptions leave it unresolved; collect uses GET only.
     try:
-        posted = queue._submit_streaming(str(run/'submission.zip'), [selected['function_name']], state['job_tag'],
+        posted = queue._submit_streaming(str(run/'submission.zip'), [op['function_name'] for op in operators], state['job_tag'],
                                          aggregation_token=manifest['aggregation_token'],
-                                         benchmark_version=current['benchmark_version'])
+                                         benchmark_version=current['benchmark_version'], public=public)
     except Exception as exc:
         from evalqueue import SubmissionRejected
         state['phase'] = 'rejected' if isinstance(exc, SubmissionRejected) else 'ambiguous'

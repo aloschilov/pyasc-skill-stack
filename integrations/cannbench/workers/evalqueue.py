@@ -80,14 +80,14 @@ class EvalQueue:
             os.environ.get("CANNBENCH_UPLOAD_TIMEOUT", "3600")
         )
 
-    def _check_credit(self) -> None:
+    def _check_credit(self, required: int = 1) -> None:
         credits = self._client.get_credits().get("credits") or {}
-        if not credits.get("unlimited") and int(credits.get("remaining") or 0) < 1:
-            raise RemoteError("CANNBench has no submission credits remaining")
+        if not credits.get("unlimited") and int(credits.get("remaining") or 0) < required:
+            raise RemoteError(f"CANNBench requires {required} submission credit(s)")
 
     def _submit_streaming(
         self, zip_path: str, ops: str | list[str], tag: str, aggregation_token: str | None = None,
-        *, benchmark_version: str | None = None
+        *, benchmark_version: str | None = None, public: bool = False
     ) -> dict:
         """Upload without the adapter's fixed 120-second in-memory timeout.
 
@@ -135,7 +135,7 @@ class EvalQueue:
                 "--form-string",
                 f"job_tag={tag}",
                 "--form-string",
-                "is_private=true",
+                "is_private=false" if public else "is_private=true",
                 "--form",
                 f"file=@{zip_path};type=application/octet-stream",
                 f"{self._client.base_url}/api/submissions",

@@ -1,0 +1,206 @@
+"""Submit or collect one retained Exp + SwiGLU package on the standard CANNBench pool."""
+
+import argparse
+import fcntl
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import re
+import shutil
+import sys
+import tempfile
+import time
+from zipfile import ZipFile
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import smoke
+from single_operator import ci_client
+
+OPERATORS = (("Exp", "exp"), ("SwiGlu", "swi_glu"))
+
+
+def verify_package(run, manifest_sha):
+    if smoke.sha(run / "manifest.json") != manifest_sha:
+        raise ValueError("Qualification manifest differs from the selected digest")
+    manifest = smoke.verify(run)
+    required = {"task.json", "submission.zip", "qualification.json"}
+    if not required <= set(manifest["files"]):
+        raise ValueError("Missing prepared package, qualification or task snapshots")
+    catalog = manifest["catalog"]
+    if (
+        manifest.get("target_hardware") != "950pr"
+        or catalog.get("benchmark_slug") != "official-tasks"
+        or catalog.get("required_cases") != 40
+        or catalog.get("required_operators") != 2
+        or manifest.get("visibility") not in ("public", "private")
+    ):
+        raise ValueError("Expected the standard 950PR two-operator L1 qualification")
+    selected = [(op["operator"], op["function_name"]) for op in catalog["operators"]]
+    if selected != list(OPERATORS):
+        raise ValueError("Wrong L1 operators")
+    q = json.loads((run / "qualification.json").read_bytes())
+    if (
+        q.get("build_passed") is not True
+        or q.get("package_sha256") != manifest["files"]["submission.zip"]
+        or not re.fullmatch(r"[0-9a-f]{64}", q.get("wheel_sha256", ""))
+    ):
+        raise ValueError("Missing build evidence for these submitted ZIP bytes")
+    with ZipFile(run / "submission.zip") as z:
+        if (
+            len(z.namelist()) != len(set(z.namelist()))
+            or "build.sh" not in z.namelist()
+        ):
+            raise ValueError("Missing build.sh or duplicate archive members")
+        for op, fn in OPERATORS:
+            source = q["operators"][fn]
+            if (
+                source.get("passed_cases") != 20
+                or not re.fullmatch(r"[0-9a-f]{40}", source["skills_revision"])
+                or hashlib.sha256(z.read(source["package_source"])).hexdigest()
+                != source["source_sha256"]
+            ):
+                raise ValueError(
+                    "Invalid device qualification or generated source for " + op
+                )
+    return manifest
+
+
+def result_receipt(run, manifest, report):
+    job = json.loads((run / "job.json").read_bytes())["job"]
+    if (
+        set(job.get("selected_operators") or []) != {fn for _, fn in OPERATORS}
+        or job.get("case_set") != "standard"
+        or job.get("is_independent_environment") is not False
+        or job.get("is_private") is not (manifest["visibility"] == "private")
+    ):
+        raise ValueError(
+            "Measured job scope or visibility differs from the requested evaluation"
+        )
+    score = job.get("result_score")
+    if (
+        not isinstance(score, (float, int))
+        or isinstance(score, bool)
+        or not math.isfinite(score)
+    ):
+        raise ValueError("CANNBench has not returned a finite service score")
+    return {
+        "job": job["id"],
+        "submission": job["submission_id"],
+        "version": job["benchmark_version"],
+        "hardware": job["target_hardware"],
+        "visibility": manifest["visibility"],
+        "score": score,
+        "package_sha256": manifest["files"]["submission.zip"],
+        "qualification_sha256": manifest["files"]["qualification.json"],
+        "operators": report["operators"],
+        "queued_at": job["queued_at"],
+        "claimed_at": job["claimed_at"],
+        "finished_at": job["finished_at"],
+    }
+
+
+def stage(folder, visibility, q, base):
+    folder = smoke.external(folder)
+    base.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with tempfile.TemporaryDirectory(dir=base) as temporary:
+        run = Path(temporary) / "prepared"
+        run.mkdir()
+        for filename in ("submission.zip", "qualification.json"):
+            shutil.copyfile(folder / filename, run / filename)
+        catalog, tasks = smoke.group_snapshot(q, OPERATORS)
+        smoke.save(run / "task.json", tasks)
+        manifest = {
+            "scope": "Level 1 Exp and SwiGLU, all standard public cases",
+            "target_hardware": q.target_hardware,
+            "visibility": visibility,
+            "catalog": catalog,
+            "aggregation_token": os.environ["CANNBENCH_AGGREGATION_TOKEN"],
+            "files": {
+                n: smoke.sha(run / n)
+                for n in ("submission.zip", "qualification.json", "task.json")
+            },
+        }
+        smoke.save(run / "manifest.json", manifest)
+        digest = smoke.sha(run / "manifest.json")
+        verify_package(run, digest)
+        destination = base / digest
+        if destination.exists():
+            verify_package(destination, digest)
+        else:
+            run.rename(destination)
+    print(digest)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "action",
+        choices=[
+            "stage-private",
+            "stage-public",
+            "submit-private",
+            "submit-public",
+            "collect",
+        ],
+    )
+    parser.add_argument(
+        "input", help="Staging directory, or SHA-256 of an already staged manifest"
+    )
+    args = parser.parse_args()
+    base = Path.home() / ".local/state"
+    if args.action.startswith("stage-"):
+        stage(
+            Path(args.input),
+            args.action.removeprefix("stage-"),
+            ci_client(),
+            base / "pyasc-cannbench-l1",
+        )
+        return
+    if not re.fullmatch(r"[0-9a-f]{64}", args.input):
+        parser.error("Expected the SHA-256 of a staged qualification manifest")
+    run = base / "pyasc-cannbench-l1" / args.input
+    manifest = verify_package(run, args.input)
+    ledger = base / "pyasc-cannbench-smoke"
+    ledger.mkdir(exist_ok=True, parents=True, mode=0o700)
+    q = ci_client()
+    if args.action != "collect":
+        public = args.action == "submit-public"
+        if manifest["visibility"] != ("public" if public else "private"):
+            raise ValueError("Dispatch and manifest visibility differ")
+        if (
+            q._client._get_json("/api/public/service-status")["maintenance"]["enabled"]
+            is not False
+        ):
+            raise RuntimeError("CANNBench is in maintenance")
+        with (ledger / "lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            state = smoke.submit_once(
+                q, run, ledger, selections=OPERATORS, public=public
+            )
+        print("Submission state:", state["phase"], state.get("job_id"), flush=True)
+    deadline = time.monotonic() + 4 * 3600
+    while time.monotonic() < deadline:
+        code, report = smoke.collect(q, run, ledger)
+        if code == 0:
+            receipt = result_receipt(run, manifest, report)
+            smoke.save(run / "service-receipt.json", receipt)
+            print(
+                "40/40 cases passed. CANNBench score:",
+                receipt["score"],
+                "job:",
+                receipt["job"],
+                flush=True,
+            )
+            return
+        if code != 2:
+            raise RuntimeError(
+                "CANNBench did not qualify all 40 cases; see the retained report"
+            )
+        time.sleep(45)
+    raise TimeoutError("Resume this job with collect and the same manifest digest")
+
+
+if __name__ == "__main__":
+    main()

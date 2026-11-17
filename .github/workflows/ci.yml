@@ -7,10 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       cannbench_action:
-        description: 'Optional single-model operator NPU evaluation (uses one credit); resume never submits'
+        description: 'Optional CANNBench evaluation; L1 submits Exp + SwiGLU (two credits). Collect and resume are read-only.'
         type: choice
         default: none
-        options: [none, generate, repair, continue, resume, performance-generate, performance, performance-evaluate, performance-resume, performance-submit-prepared]
+        options: [none, generate, repair, continue, resume, performance-generate, performance, performance-evaluate, performance-resume, performance-submit-prepared, l1-submit-private, l1-submit-public, l1-collect]
+      l1_manifest_sha256:
+        description: 'SHA-256 of the staged qualification manifest for prepared L1 actions'
+        type: string
+        default: ''
       prepared_catalog_version:
         description: 'Optional new catalog for an existing SwiGLU checkpoint (2.1.0)'
         type: string
@@ -336,9 +340,30 @@ jobs:
       actions: read
     secrets: inherit
 
+  prepared-l1:
+    needs: pr-gate
+    if: github.event_name == 'workflow_dispatch' && startsWith(inputs.cannbench_action, 'l1-')
+    runs-on: cannbench-vm
+    timeout-minutes: 270
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install benchmark client
+        run: |
+          export CANNBENCH_VENV="$RUNNER_TEMP/l1-client-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          bash integrations/cannbench/setup-site-mcp.sh
+          echo "PYTHON=$CANNBENCH_VENV/bin/python" >> "$GITHUB_ENV"
+      - name: Evaluate the retained Exp and SwiGLU sources
+        env:
+          BENCHSITE_API_TOKEN: ${{ secrets.BENCHSITE_API_TOKEN }}
+          SELECTED_ACTION: ${{ inputs.cannbench_action }}
+          MANIFEST_SHA256: ${{ inputs.l1_manifest_sha256 }}
+        run: '"$PYTHON" integrations/cannbench/ci/prepared_l1.py "${SELECTED_ACTION#l1-}" "$MANIFEST_SHA256"'
+
   generated-hardware:
     needs: [pr-gate, examples-gate]
-    if: github.event_name == 'workflow_dispatch' && inputs.cannbench_action != 'none' && inputs.cannbench_action != '' && !startsWith(inputs.cannbench_action, 'performance')
+    if: github.event_name == 'workflow_dispatch' && inputs.cannbench_action != 'none' && inputs.cannbench_action != '' && !startsWith(inputs.cannbench_action, 'performance') && !startsWith(inputs.cannbench_action, 'l1-')
     uses: ./.github/workflows/cannbench-generated.yml
     permissions:
       contents: write

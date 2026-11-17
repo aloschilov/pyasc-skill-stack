@@ -290,3 +290,25 @@ Three generated kernels implement 19 official cases. The packed BF16 template im
 The compute turn uses GLM-5.3 high reasoning and freezes the written Python. The policy turn uses the GLM-5.3-low profile with the same native output limit. A confirmed length stop permits one bounded continuation for the missing file. If a CI generation exhausts both policy responses, or its CaModel evaluation reports a UB overflow before submission, pass its run ID as `origin_run` with `performance`. CI checks the original model write and context, then generates only the policy. After an overflow the model receives the rejected table and the compiler diagnostic. The receipt identifies the original kernel run and the failed policy.
 
 For a split run, `performance-generate` produces the generation artifact. Use `performance-evaluate` with `-f origin_run=GENERATION_RUN_ID` to qualify and submit its bytes. If the service is still pending, `performance-resume` takes the **evaluation** run ID and only collects the existing submission. After a confirmed service-maintenance rejection, `performance-submit-prepared` takes the evaluation run ID, verifies the saved GitHub Actions package and checks that submissions have reopened before sending it. For a SwiGLU package qualified on retired catalog 2.0.0, add `-f prepared_catalog_version=2.1.0` to that dispatch. CI checks that the public cases and golden source match and that the only contract change makes the existing input-to-output dtype relation explicit. It submits the archived ZIP under the requested version. The receipt records the qualification and service versions. Each successful evaluation publishes a release with `performance.json`, the submitted ZIP, the generated source and their SHA-256 checksums. GitHub Pages reads that release.
+## Evaluate a prepared Level 1 package
+
+For an Exp and SwiGLU package already checked on 950PR, place `submission.zip`
+and `qualification.json` together outside the checkout on the CANNBench runner.
+The qualification records `build_passed`, `package_sha256`, `wheel_sha256` and an `operators` entry for each
+of `exp` and `swi_glu`. Each entry gives the 40-character `skills_revision`,
+the generated source's `package_source` path and `source_sha256`, and
+`passed_cases` from the 20-case device run. Keep the underlying generation,
+build and device evidence with the qualification.
+
+With the benchmark credentials and `CANNBENCH_AGGREGATION_TOKEN` configured,
+run `python integrations/cannbench/ci/prepared_l1.py stage-private /path/to/package`
+on that runner. Staging checks the source bytes and captures both official
+tasks. Dispatch CI with `cannbench_action=l1-submit-private` and the printed
+`l1_manifest_sha256`. To submit publicly, select `stage-public` and
+`l1-submit-public`. CANNBench charges two credits for the pair. A staged
+package is tied to its visibility. `l1-collect` continues an existing
+submission using GET requests and the same digest.
+
+The runner retains the complete report and `service-receipt.json` in
+`~/.local/state/pyasc-cannbench-l1/<manifest SHA-256>/`. Compare the service
+score only after both operators pass all 40 numerical and timing checks.
