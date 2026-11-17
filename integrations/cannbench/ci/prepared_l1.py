@@ -56,7 +56,8 @@ def verify_package(run, manifest_sha):
         for op, fn in OPERATORS:
             source = q["operators"][fn]
             if (
-                source.get("passed_cases") != 20
+                source.get("package_source") != f"cann_bench/{fn}.py"
+                or source.get("passed_cases") != 20
                 or not re.fullmatch(r"[0-9a-f]{40}", source["skills_revision"])
                 or hashlib.sha256(z.read(source["package_source"])).hexdigest()
                 != source["source_sha256"]

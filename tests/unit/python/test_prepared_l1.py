@@ -1,10 +1,12 @@
 """Verify that a two-operator submission cannot change one task or its visibility."""
 
+from hashlib import sha256
 from pathlib import Path
 import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
+from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "integrations/cannbench/ci"))
@@ -61,6 +63,40 @@ class PreparedL1Test(unittest.TestCase):
             l1.smoke.submit_once(self.q, self.run, self.ledger, selections=l1.OPERATORS)
         self.q._submit_streaming.assert_not_called()
         self.assertEqual(list(self.ledger.iterdir()), [])
+
+    def test_source_proof_must_match_the_submitted_operator_module(self):
+        sources = {"exp": b"retained Exp", "swi_glu": b"retained SwiGLU"}
+        with ZipFile(self.run / "submission.zip", "w") as z:
+            z.writestr("build.sh", b"build")
+            z.writestr("notes/old_exp.py", sources["exp"])
+            for fn, content in sources.items():
+                z.writestr(f"cann_bench/{fn}.py", content)
+        q = {
+            "build_passed": True,
+            "package_sha256": l1.smoke.sha(self.run / "submission.zip"),
+            "wheel_sha256": "3" * 64,
+            "operators": {
+                fn: {
+                    "package_source": f"cann_bench/{fn}.py",
+                    "source_sha256": sha256(content).hexdigest(),
+                    "passed_cases": 20,
+                    "skills_revision": "a" * 40,
+                }
+                for fn, content in sources.items()
+            },
+        }
+
+        def pin():
+            l1.smoke.save(self.run / "qualification.json", q)
+            for name in ("qualification.json", "submission.zip"):
+                self.manifest["files"][name] = l1.smoke.sha(self.run / name)
+            l1.smoke.save(self.run / "manifest.json", self.manifest)
+            return l1.smoke.sha(self.run / "manifest.json")
+
+        self.assertEqual(l1.verify_package(self.run, pin()), self.manifest)
+        q["operators"]["exp"]["package_source"] = "notes/old_exp.py"
+        with self.assertRaisesRegex(ValueError, "source for Exp"):
+            l1.verify_package(self.run, pin())
 
     def test_private_qualification_never_becomes_public_by_dispatch(self):
         with self.assertRaisesRegex(ValueError, "visibility"):
