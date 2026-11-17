@@ -212,6 +212,68 @@ class PreparedL1Test(unittest.TestCase):
         for expected in ("job_a", "pending", "l1-collect", manifest):
             self.assertIn(expected, summary.read_text())
 
+    def test_retry_partial_preserves_original_attempt_and_reconciles_tag_first(self):
+        from evalqueue import RemoteError
+        size = (self.run / "submission.zip").stat().st_size
+        def submit(retry_partial=False):
+            return l1.smoke.submit_once(self.q, self.run, self.ledger,
+                selections=l1.OPERATORS, allow_confirmed_jobs=True, retry_partial=retry_partial)
+        self.q._client.token = "test-token"
+        self.q._submit_streaming.side_effect = RemoteError(
+            "CANNBench upload failed (HTTP 000, curl rc=28, 8 multipart bytes in 3600s): timeout")
+        with self.assertRaises(RemoteError):
+            submit()
+        state = submit()
+        self.assertEqual(state["phase"], "ambiguous")
+        self.q._client.list_jobs.return_value = {"jobs": [{"job_tag": state["job_tag"]}]}
+        self.assertEqual(submit(True), state)
+        self.q._submit_streaming.assert_called_once()
+        self.q._client.list_jobs.return_value = {"jobs": []}
+        error = self.run / "upload-error.json"
+        original = json.loads(error.read_bytes())
+        l1.smoke.save(error, dict(original, detail=original["detail"].replace("8 multipart", f"{size} multipart")))
+        with self.assertRaisesRegex(ValueError, "incomplete"):
+            submit(True)
+        l1.smoke.save(error, dict(original, intent_created_at="previous transfer"))
+        with self.assertRaisesRegex(ValueError, "incomplete"):
+            submit(True)
+        l1.smoke.save(error, original)
+        self.q._submit_streaming.side_effect = None
+        accepted = submit(True)
+        self.assertEqual(accepted["phase"], "submitted")
+        prior, = accepted["previous_intents"]
+        self.assertEqual(prior["partial_upload"]["error"], original)
+        self.assertEqual(prior["created_at"], state["created_at"])
+        self.assertEqual(submit(True), accepted)
+        self.assertEqual(self.q._submit_streaming.call_count, 2)
+
+    def test_legacy_incomplete_upload_requires_bound_final_read_counters(self):
+        run, ledger = self.run, self.ledger
+        record = ledger / "original.json"
+        state = {"phase": "ambiguous", "created_at": "2026-11-17T13:27:00+00:00"}
+        l1.smoke.save(record, state)
+        error = run / "upload-error.json"
+        l1.smoke.save(error, {"type": "RemoteError", "at": "2026-11-17T14:27:00+00:00",
+                              "detail": "CANNBench upload failed (HTTP 000, curl rc=28): timeout"})
+        size = (run / "submission.zip").stat().st_size
+        start = dict(event="before", at="2026-11-17T14:20:00+00:00", parent_rchar=1000,
+                     expected_zip_bytes=size, zip_offset=2, child_rchar=5)
+        trace = run / "transfer-trace.jsonl"
+        def bind(end):
+            tail = dict(event="parent_after_wait", at="2026-11-17T14:26:59+00:00", parent_rchar=1000+end,
+                        upper_bound_child_read_bytes=end, expected_zip_bytes=size)
+            trace.write_text(json.dumps(start)+"\n"+json.dumps(tail)+"\n")
+            l1.smoke.save(run/"partial-upload.json", dict(intent_sha256=l1.smoke.sha(record),
+                error_sha256=l1.smoke.sha(error), trace_sha256=l1.smoke.sha(trace)))
+        bind(size)
+        with self.assertRaisesRegex(ValueError, "incomplete ZIP"):
+            l1.smoke.verify_partial_upload(run, record, state)
+        bind(9)
+        self.assertEqual(l1.smoke.verify_partial_upload(run, record, state)["trace_sha256"], l1.smoke.sha(trace))
+        l1.smoke.save(record, {"phase": "another attempt"})
+        with self.assertRaisesRegex(ValueError, "original attempt"):
+            l1.smoke.verify_partial_upload(run, record, state)
+
     def test_public_receipt_requires_public_service_visibility(self):
         self.manifest["visibility"] = "public"
         job = {

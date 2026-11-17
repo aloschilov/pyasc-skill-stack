@@ -183,6 +183,7 @@ def main():
             "stage-public",
             "submit-private",
             "submit-public",
+            "retry-partial",
             "collect",
         ],
     )
@@ -208,7 +209,8 @@ def main():
     q = ci_client()
     deadline = time.monotonic() + 4 * 3600
     if args.action != "collect":
-        public = args.action == "submit-public"
+        partial = args.action == "retry-partial"
+        public = manifest["visibility"] == "public" if partial else args.action == "submit-public"
         if manifest["visibility"] != ("public" if public else "private"):
             raise ValueError("Dispatch and manifest visibility differ")
         if (
@@ -219,7 +221,8 @@ def main():
         with (ledger / "lock").open("a") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             state = smoke.submit_once(
-                q, run, ledger, selections=OPERATORS, public=public, allow_confirmed_jobs=True
+                q, run, ledger, selections=OPERATORS, public=public,
+                allow_confirmed_jobs=True, retry_partial=partial
             )
         print("Submission state:", state["phase"], state.get("job_id"), flush=True)
         if state.get("other_submitted_jobs") and state["phase"] == "submitted":

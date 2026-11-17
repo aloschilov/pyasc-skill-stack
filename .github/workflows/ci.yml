@@ -10,7 +10,7 @@ on:
         description: 'Optional CANNBench evaluation; L1 submits Exp + SwiGLU (two credits). Collect and resume are read-only.'
         type: choice
         default: none
-        options: [none, generate, repair, continue, resume, performance-generate, performance, performance-evaluate, performance-resume, performance-submit-prepared, l1-submit-private, l1-submit-public, l1-collect]
+        options: [none, generate, repair, continue, resume, performance-generate, performance, performance-evaluate, performance-resume, performance-submit-prepared, l1-submit-private, l1-submit-public, l1-collect, l1-retry-partial]
       l1_manifest_sha256:
         description: 'SHA-256 of the staged qualification manifest for prepared L1 actions'
         type: string

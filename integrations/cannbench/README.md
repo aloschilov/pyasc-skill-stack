@@ -321,8 +321,12 @@ and releases the runner for the other collector. Run `l1-collect` with the
 same manifest to obtain the hardware verdict and score.
 The paired worker gives transfer and collection a shared four-hour window.
 On a curl failure the private diagnostic retains the HTTP code, uploaded
-multipart bytes and elapsed time. A timeout still requires checking the
-original job tag before another submission can be considered.
+multipart bytes and elapsed time. For an interrupted upload, `l1-retry-partial`
+looks up the original tag first. It can resend the same staged ZIP when the
+recorded transfer byte count is smaller than the ZIP itself. An older runner
+can use its final process read counters bound to the original intent and error.
+The ledger retains the first attempt. Use `l1-collect` when the whole ZIP
+may have reached the service.
 
 The runner retains the complete report and `service-receipt.json` in
 `~/.local/state/pyasc-cannbench-l1/<manifest SHA-256>/`. Compare the service

@@ -219,11 +219,13 @@ def group_snapshot(queue, selections):
     return catalog, tasks
 
 
-def check_submission_slot(client, ledger, *, allow_confirmed_jobs=False):
+def check_submission_slot(client, ledger, *, allow_confirmed_jobs=False, incomplete_record=None):
     """Return other submitted jobs that still need their own collection."""
     outstanding = set()
     active = set()
     for path in sorted(ledger.glob('*.json')):
+        if path == incomplete_record:
+            continue
         state = json.loads(path.read_text())
         if state.get('phase') in ('finished', 'rejected'):
             continue
@@ -253,15 +255,65 @@ def check_submission_slot(client, ledger, *, allow_confirmed_jobs=False):
     return sorted(outstanding)
 
 
+def verify_partial_upload(run, record, state):
+    """Bind the runner's independent byte-count evidence to this exact failed attempt."""
+    error = json.loads((run/'upload-error.json').read_bytes())
+    if (error.get('type') != 'RemoteError'
+            or not re.match(r'CANNBench upload failed \(HTTP (?:000|100), curl rc=28\b', error.get('detail', ''))):
+        raise ValueError('Expected a completed, timed-out transfer')
+    size = (run/'submission.zip').stat().st_size
+    native = re.match(r'CANNBench upload failed \(HTTP (?:000|100), curl rc=28, (\d+) multipart bytes in ', error['detail'])
+    if native:
+        if (error.get('intent_created_at') != state['created_at'] or error.get('archive_sha256') != state['archive_sha256']
+                or int(native[1]) >= size):
+            raise ValueError('Transfer counters do not prove an incomplete ZIP')
+        return {'multipart_bytes': int(native[1]), 'zip_bytes': size, 'error': error}
+    # Older uploaders did not record curl's multipart byte count.
+    proof = json.loads((run/'partial-upload.json').read_bytes())
+    if (proof['intent_sha256'] != sha(record)
+            or proof['error_sha256'] != sha(run/'upload-error.json')
+            or proof['trace_sha256'] != sha(run/'transfer-trace.jsonl')):
+        raise ValueError('Partial-upload evidence differs from the original attempt')
+    trace = [json.loads(line) for line in (run/'transfer-trace.jsonl').read_text().splitlines()]
+    first, last = trace[0], trace[-1]
+    # Linux accounts all of a reaped child's reads to its waiting parent.
+    # Reads of other files can only increase this upper bound on ZIP bytes.
+    timestamp = datetime.fromisoformat
+    if (first['event'] != 'before' or last['event'] != 'parent_after_wait'
+            or not timestamp(state['created_at']) <= timestamp(first['at']) < timestamp(last['at']) <= timestamp(error['at'])
+            or size != first['expected_zip_bytes'] or size != last['expected_zip_bytes']
+            or not 0 <= first['zip_offset'] <= first['child_rchar']
+            <= last['parent_rchar'] - first['parent_rchar'] < size
+            or last['upper_bound_child_read_bytes'] != last['parent_rchar'] - first['parent_rchar']):
+        raise ValueError('Transfer trace does not establish an incomplete ZIP')
+    return dict(proof, error=error, zip_bytes=size, maximum_read_bytes=last['upper_bound_child_read_bytes'])
+
+
 def submit_once(queue, run, ledger, *, retry_maintenance=False, selections=None, public=False,
-                allow_confirmed_jobs=False):
+                allow_confirmed_jobs=False, retry_partial=False):
     manifest = verify(run)
     digest = manifest['files']['submission.zip']
     record = ledger / (digest + '.json')
     previous = []
+    incomplete_record = None
+    if retry_partial and not record.exists():
+        raise ValueError('No original submission intent for this ZIP')
     if record.exists():
         state = json.loads(record.read_text())
-        if state.get('phase') == 'rejected':
+        if retry_partial and state.get('phase') == 'ambiguous':
+            if (state.get('manifest_sha256') != sha(run/'manifest.json') or state.get('archive_sha256') != digest
+                    or state.get('job_tag') != 'pyasc-smoke-' + digest[:24] or state.get('job_id')
+                    or state.get('submission_id') or state.get('run_dir') != str(run)):
+                raise ValueError('Partial upload does not match this package and destination')
+            jobs = queue._client.list_jobs(limit=100, benchmark_slug=state['benchmark_slug'])['jobs']
+            if any(j.get('job_tag') == state['job_tag'] for j in jobs):
+                return state  # The collector reconciles the known tag without another POST.
+            proof = verify_partial_upload(run, record, state)
+            previous = state.get('previous_intents', []) + [dict(state, partial_upload=proof)]
+            incomplete_record = record
+        elif retry_partial and state.get('phase') not in ('submitted', 'finished'):
+            raise ValueError('Expected an interrupted upload or an existing job for collection')
+        elif state.get('phase') == 'rejected':
             if state['manifest_sha256'] == sha(run/'manifest.json'):
                 detail = json.loads((run/'upload-error.json').read_text()) if retry_maintenance else {}
                 retry_allowed = (detail.get('type')=='SubmissionRejected' and 'HTTP 403' in detail.get('detail','')
@@ -277,7 +329,8 @@ def submit_once(queue, run, ledger, *, retry_maintenance=False, selections=None,
             return state  # Never repeat a POST, including unknown delivery.
     if queue.target_hardware != manifest['target_hardware'] or queue.benchmark_slug != manifest['catalog']['benchmark_slug']:
         raise ValueError('Submission destination changed')
-    other_jobs = check_submission_slot(queue._client, ledger, allow_confirmed_jobs=allow_confirmed_jobs)
+    other_jobs = check_submission_slot(queue._client, ledger, allow_confirmed_jobs=allow_confirmed_jobs,
+                                       incomplete_record=incomplete_record)
     queue._check_credit(len(selections) if selections else 1)
     operators = manifest['catalog'].get('operators', [])
     if selections is None:
@@ -312,7 +365,8 @@ def submit_once(queue, run, ledger, *, retry_maintenance=False, selections=None,
         # Retain diagnostics privately, redacting the credential even if an SDK echoes it.
         detail = str(exc).replace(queue._client.token, '[REDACTED]')
         detail = re.sub(r'https?://[^\s\"<>]+', '[URL]', detail)
-        save(run/'upload-error.json', {'at': now(), 'type': type(exc).__name__, 'detail': detail})
+        save(run/'upload-error.json', {'at': now(), 'type': type(exc).__name__, 'detail': detail,
+                                      'intent_created_at': state['created_at'], 'archive_sha256': digest})
         raise
     state['job_id'] = posted.get('job_id') or (posted.get('job') or {}).get('id')
     state['submission_id'] = posted.get('submission_id') or (posted.get('submission') or {}).get('id')
