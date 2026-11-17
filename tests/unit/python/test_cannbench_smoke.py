@@ -136,6 +136,31 @@ class Smoke(unittest.TestCase):
             queue._client._get_json.assert_not_called()
             self.assertFalse((run/'report.json').exists())
 
+    def test_unchanged_queue_polls_only_status_and_rechecks_identity_on_transition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run, ledger, state = self.prepared(Path(tmp))
+            state.update(job_id='job_abc123', submission_id='sub_abc')
+            smoke.save(ledger / (state['archive_sha256'] + '.json'), state)
+            queue = Mock()
+            job = {k: state[k] for k in ('job_tag', 'submission_id')}
+            job.update(id=state['job_id'], status='queued')
+            queue._client.get_job.return_value = {'job': job}
+            self.assertEqual(smoke.collect(queue, run, ledger)[0], 2)
+            first_summary = (run / 'job.json').read_bytes()
+            queue._client._get_json.return_value = {'job': {'id': job['id'], 'status': 'queued'}}
+            self.assertEqual(smoke.collect(queue, run, ledger)[0], 2)
+            queue._client._get_json.assert_called_once_with('/api/jobs/job_abc123', {'detail': 'status'})
+            queue._client.get_job.assert_called_once_with(job['id'])
+            self.assertEqual((run / 'job.json').read_bytes(), first_summary)
+            queue._client._get_json.return_value = {'job': {'id': 'job_0000', 'status': 'queued'}}
+            with self.assertRaisesRegex(ValueError, 'identity'):
+                smoke.collect(queue, run, ledger)
+            queue._client._get_json.return_value = {'job': {'id': job['id'], 'status': 'succeeded'}}
+            queue._client.get_job.return_value = {'job': dict(job, status='succeeded', submission_id='other')}
+            with self.assertRaisesRegex(ValueError, 'submission identity'):
+                smoke.collect(queue, run, ledger)
+            self.assertFalse((run / 'report.json').exists())
+
     def test_terminal_summary_uses_verified_job_results_endpoint(self):
         with tempfile.TemporaryDirectory() as tmp:
             run,ledger,state=self.prepared(Path(tmp)); queue=Mock()

@@ -330,6 +330,18 @@ def collect(queue, run, ledger):
     if state['manifest_sha256'] != sha(run/'manifest.json'):
         raise ValueError('Manifest differs from submission intent')
     job_id = state.get('job_id') or reconcile(queue._client, state)
+    # A previous full read bound this job to its submission and archive tag.
+    # CANNBench provides a lightweight status endpoint for unchanged queue polls.
+    if (state.get('phase') == 'submitted' and state.get('checked_at') and state.get('submission_id')
+            and state.get('status') in ('queued', 'running') and (run/'job.json').is_file()
+            and re.fullmatch(r'job_[0-9a-f]+', job_id)):
+        status = queue._client._get_json(f'/api/jobs/{job_id}', {'detail': 'status'})['job']
+        if status.get('id') != job_id:
+            raise ValueError('Polled hardware job identity differs from submission intent')
+        if status.get('status') == state['status']:
+            state['checked_at'] = now()
+            save(record, state); save(run/'state.json', state)
+            return 2, state
     payload = queue._client.get_job(job_id)
     job = payload.get('job', payload)
     if job.get('id') != job_id or job.get('job_tag') != state['job_tag']:
