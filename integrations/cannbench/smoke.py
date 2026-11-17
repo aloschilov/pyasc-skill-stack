@@ -251,7 +251,8 @@ def submit_once(queue, run, ledger, *, retry_maintenance=False):
     # Intent is durable before POST. Exceptions leave it unresolved; collect uses GET only.
     try:
         posted = queue._submit_streaming(str(run/'submission.zip'), [selected['function_name']], state['job_tag'],
-                                         aggregation_token=manifest['aggregation_token'])
+                                         aggregation_token=manifest['aggregation_token'],
+                                         benchmark_version=current['benchmark_version'])
     except Exception as exc:
         from evalqueue import SubmissionRejected
         state['phase'] = 'rejected' if isinstance(exc, SubmissionRejected) else 'ambiguous'
@@ -286,6 +287,12 @@ def collect(queue, run, ledger):
     state.update(job_id=job_id, submission_id=job.get('submission_id'), status=job.get('status'), checked_at=now())
     state['phase'] = 'finished' if state['status'] in TERMINAL else 'submitted'
     save(record, state); save(run/'state.json', state)
+    # Newer summaries link the detailed results from this same verified job.
+    if state['phase']=='finished' and job.get('has_results') and job.get('results') is None:
+        if not re.fullmatch(r'job_[0-9a-f]+',job_id):
+            raise ValueError('Invalid service results job ID')
+        detail = queue._client._get_json(f'/api/jobs/{job_id}/results')
+        job['results'] = detail['results']
     # Keep service response private and outside Git; emit only the gate summary.
     save(run/'job.json', payload)
     if state['phase'] != 'finished':

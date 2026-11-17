@@ -72,7 +72,7 @@ class Smoke(unittest.TestCase):
     def prepared(self, root):
         run=root/'run'; run.mkdir(); ledger=root/'ledger'; ledger.mkdir()
         (run/'submission.zip').write_bytes(b'archive')
-        manifest={'files':{'submission.zip':smoke.sha(run/'submission.zip')}, 'catalog':{'benchmark_slug':'official-tasks','operators':[{'operator':'SwiGlu','function_name':'swi_glu'}]}, 'target_hardware':'950pr'}
+        manifest={'files':{'submission.zip':smoke.sha(run/'submission.zip')}, 'catalog':{'benchmark_slug':'official-tasks','benchmark_version':'2.0.0','operators':[{'operator':'SwiGlu','function_name':'swi_glu'}]}, 'target_hardware':'950pr'}
         smoke.save(run/'manifest.json',manifest)
         state={'phase':'upload-intent', 'run_dir':str(run), 'manifest_sha256':smoke.sha(run/'manifest.json'),
                'archive_sha256':manifest['files']['submission.zip'], 'job_tag':'pyasc-smoke-test',
@@ -133,7 +133,27 @@ class Smoke(unittest.TestCase):
             queue._client.get_job.return_value={'job':{'id':'job_test','job_tag':'other','status':'succeeded'}}
             with self.assertRaisesRegex(ValueError,'identity'):
                 smoke.collect(queue,run,ledger)
+            queue._client._get_json.assert_not_called()
             self.assertFalse((run/'report.json').exists())
+
+    def test_terminal_summary_uses_verified_job_results_endpoint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run,ledger,state=self.prepared(Path(tmp)); queue=Mock()
+            manifest=json.loads((run/'manifest.json').read_text())
+            manifest['scope']='SwiGlu public cases'; smoke.save(run/'manifest.json',manifest)
+            state.update(job_id='job_abc123',submission_id='sub_abc',manifest_sha256=smoke.sha(run/'manifest.json'))
+            smoke.save(ledger/(state['archive_sha256']+'.json'),state)
+            summary={'id':state['job_id'],'job_tag':state['job_tag'],'submission_id':'sub_abc',
+                     'status':'succeeded','has_results':True,'results':None}
+            detail={'operators':[{'cases':[]}]}
+            queue._client.get_job.return_value={'job':summary}
+            queue._client._get_json.return_value={'results':detail}
+            with patch.object(smoke,'evaluate',return_value={'gate_passed':False}) as gate:
+                code,_=smoke.collect(queue,run,ledger)
+            self.assertEqual(code,1)
+            queue._client._get_json.assert_called_once_with('/api/jobs/job_abc123/results')
+            self.assertEqual(gate.call_args.args[1][0]['job']['results'],detail)
+            self.assertEqual(json.loads((run/'job.json').read_text())['job']['results'],detail)
 
     def test_terminal_collection_retains_service_claim_time(self):
         with tempfile.TemporaryDirectory() as tmp:

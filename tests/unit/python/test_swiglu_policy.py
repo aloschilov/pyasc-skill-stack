@@ -9,6 +9,7 @@ import zipfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]/'integrations/cannbench/ci/swiglu_performance'))
 from geometry import DTYPES, all_specs, full_row_probes, layout, validate
 from generate import compiler_overflow, pre_submission_overflow
+from evaluate import verify_swiglu_transition
 
 
 def band(end,route,tile):
@@ -60,6 +61,21 @@ class Policy(unittest.TestCase):
             policy['float16'][index].update(changes)
             with self.assertRaises(ValueError):
                 validate(policy)
+
+    def test_public_catalog_transition_rejects_case_or_golden_drift(self):
+        catalog={'benchmark_slug':'official-tasks','benchmark_version':'2.0.0','required_cases':20}
+        current=dict(catalog,benchmark_version='2.1.0')
+        task={'function_name':'swi_glu','cases_yaml':[{'dtype':'float32'}],
+              'golden_source':'silu(x0)*x1', 'proto':{'outputs':[{'name':'output'}]}}
+        revised=deepcopy(task)
+        revised['proto']['outputs'][0]['dtype_relation']={'kind':'same_as','input':'input'}
+        verify_swiglu_transition(catalog,task,current,revised)
+        for changed in [dict(revised,golden_source='x0*x1'),dict(revised,cases_yaml=[{'dtype':'float16'}]),
+                        task,dict(revised,proto={'outputs':[{'dtype_relation':{'kind':'fixed'}}]})]:
+            with self.assertRaises(ValueError):
+                verify_swiglu_transition(catalog,task,current,changed)
+        with self.assertRaises(ValueError):
+            verify_swiglu_transition(catalog,task,dict(current,required_cases=21),revised)
 
     def test_policy_repair_requires_failed_camodel_and_skipped_upload(self):
         job = {'name':'swiglu-performance / evaluate', 'id':15, 'conclusion':'failure',
