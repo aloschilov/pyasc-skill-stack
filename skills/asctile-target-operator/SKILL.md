@@ -43,12 +43,12 @@ grep -rl --include='test_*.py' 'asctile\.jit' . | xargs grep -l 'asctile\.global
   `test_reduce_sum.py`/`test_reduce_max.py` for reductions,
   `test_softmax.py` for normalization, and `test_transpose.py` for movement.
 
-### Reading siblings without a checkout
+### Reading siblings without an upstream checkout
 
-This repository vendors a pinned copy of the suite at
-[`reference/asctile/target/`](../../reference/asctile/target/), which is enough
+The full skill-stack checkout (separate from a Skills CLI install) vendors a pinned copy of the suite at
+[`reference/asctile/target/`](https://github.com/aloschilov/pyasc-skill-stack/tree/main/reference/asctile/target), which is enough
 to read the canonical patterns. It is a **snapshot, not the upstream tree**:
-check [`reference/asctile/PIN.json`](../../reference/asctile/PIN.json) for which
+check [`reference/asctile/PIN.json`](https://github.com/aloschilov/pyasc-skill-stack/blob/main/reference/asctile/PIN.json) for which
 version it is, and never author a new test there. Refresh it with
 `scripts/sync-target-suite.sh`; verify it with `scripts/check-target-pin.sh`.
 - Use the matching `gitcode.com/cann/ops-*` implementation as semantic and

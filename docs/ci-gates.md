@@ -12,6 +12,7 @@ is reported separately from the existence of enabled controllers.
 | Job | Trigger | Acceptance |
 |---|---|---|
 | `pr-gate` | PR, push to `main`, manual dispatch | Offline unit, skill syntax, image-pin and reference-drift checks |
+| [Skills CLI install](../.github/workflows/skills-cli.yml) | PRs changing skills or the install check; manual dispatch | Lists and installs the candidate stack for OpenCode in an empty project, checks installed resources, and scaffolds a kernel without a runtime |
 | `examples-gate` | Same, after `pr-gate`; 20-minute cap | Pinned simulator verification contract and permanent numerical regression fixtures |
 | `merge-gate` | Push to `main`, or manual dispatch with both hardware and generation actions `none`; 60-minute cap | Every discovered target module compiles; failures **and resource blocks** fail the gate |
 | `generated-hardware` | Explicit manual dispatch with generate/repair/continue/resume | Selected operator recipe, exact package, strict hardware result and durable publication |
