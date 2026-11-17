@@ -219,7 +219,42 @@ def group_snapshot(queue, selections):
     return catalog, tasks
 
 
-def submit_once(queue, run, ledger, *, retry_maintenance=False, selections=None, public=False):
+def check_submission_slot(client, ledger, *, allow_confirmed_jobs=False):
+    """Return other submitted jobs that still need their own collection."""
+    outstanding = set()
+    active = set()
+    for path in sorted(ledger.glob('*.json')):
+        state = json.loads(path.read_text())
+        if state.get('phase') in ('finished', 'rejected'):
+            continue
+        job_id = state.get('job_id')
+        if (not allow_confirmed_jobs or state.get('phase') != 'submitted'
+                or not job_id or not state.get('submission_id')
+                or path.stem != state.get('archive_sha256')
+                or state.get('job_tag') != 'pyasc-smoke-' + path.stem[:24]):
+            raise ValueError('Reconcile existing intent before another submission: ' + str(path))
+        # Account list summaries can omit the submission ID. Verify the full job.
+        job = client.get_job(job_id)['job']
+        if (job.get('id') != job_id or job.get('submission_id') != state['submission_id']
+                or job.get('job_tag') != state['job_tag']):
+            raise ValueError('Active job identity differs from submission intent: ' + str(path))
+        if job.get('status') not in TERMINAL:
+            if job.get('status') not in ('queued', 'running'):
+                raise ValueError('Unknown active job status: ' + str(job_id))
+            active.add(job_id)
+        outstanding.add(job_id)
+    for job in client.list_jobs(limit=100)['jobs']:
+        if job.get('status') not in TERMINAL:
+            if job.get('id') not in outstanding:
+                raise ValueError('An account job is active or unknown; collect it first')
+            active.add(job['id'])
+    if len(active) >= 3:
+        raise ValueError('CANNBench already has three active jobs')
+    return sorted(outstanding)
+
+
+def submit_once(queue, run, ledger, *, retry_maintenance=False, selections=None, public=False,
+                allow_confirmed_jobs=False):
     manifest = verify(run)
     digest = manifest['files']['submission.zip']
     record = ledger / (digest + '.json')
@@ -242,13 +277,8 @@ def submit_once(queue, run, ledger, *, retry_maintenance=False, selections=None,
             return state  # Never repeat a POST, including unknown delivery.
     if queue.target_hardware != manifest['target_hardware'] or queue.benchmark_slug != manifest['catalog']['benchmark_slug']:
         raise ValueError('Submission destination changed')
-    for path in ledger.glob('*.json'):
-        if json.loads(path.read_text()).get('phase') not in ('finished', 'rejected'):
-            raise ValueError('Reconcile existing intent before another submission: ' + str(path))
+    other_jobs = check_submission_slot(queue._client, ledger, allow_confirmed_jobs=allow_confirmed_jobs)
     queue._check_credit(len(selections) if selections else 1)
-    jobs = queue._client.list_jobs(limit=100).get('jobs', [])
-    if any(j.get('status') not in TERMINAL for j in jobs):
-        raise ValueError('An account job is active or unknown; collect it first')
     operators = manifest['catalog'].get('operators', [])
     if selections is None:
         if len(operators) != 1 or public:
@@ -267,6 +297,8 @@ def submit_once(queue, run, ledger, *, retry_maintenance=False, selections=None,
              'manifest_sha256': sha(run/'manifest.json'), 'archive_sha256': digest,
              'benchmark_slug': queue.benchmark_slug, 'job_tag': 'pyasc-smoke-' + digest[:24],
              'job_id': None, 'previous_intents': previous}
+    if other_jobs:
+        state['other_submitted_jobs'] = other_jobs
     save(record, state); save(run/'state.json', state)
     # Intent is durable before POST. Exceptions leave it unresolved; collect uses GET only.
     try:

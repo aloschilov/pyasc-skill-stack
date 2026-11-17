@@ -141,6 +141,77 @@ class PreparedL1Test(unittest.TestCase):
         self.assertEqual(kwargs["benchmark_version"], "2.1.0")
         self.assertIs(kwargs["public"], False)
 
+    def add_active_job(self, number):
+        digest = sha256(str(number).encode()).hexdigest()
+        job = {"id": f"job_{number}", "submission_id": f"sub_{number}",
+               "job_tag": "pyasc-smoke-" + digest[:24], "status": "queued"}
+        state = {"phase": "submitted", "archive_sha256": digest, "job_id": job["id"],
+                 "submission_id": job["submission_id"], "job_tag": job["job_tag"]}
+        l1.smoke.save(self.ledger / (digest + ".json"), state)
+        return job
+
+    def test_accepts_different_package_alongside_verified_job(self):
+        current = self.add_active_job(1)
+        self.q._client.get_job.return_value = {"job": current}
+        self.q._client.list_jobs.return_value = {"jobs": [{"id": "job_1", "status": "queued"}]}
+        with self.assertRaisesRegex(ValueError, "Reconcile"):
+            l1.smoke.submit_once(self.q, self.run, self.ledger, selections=l1.OPERATORS)
+        for _ in range(2):
+            state = l1.smoke.submit_once(self.q, self.run, self.ledger,
+                selections=l1.OPERATORS, allow_confirmed_jobs=True)
+            self.assertEqual(state["other_submitted_jobs"], ["job_1"])
+        self.q._submit_streaming.assert_called_once()
+        self.q._client.get_job.assert_called_once_with("job_1")
+
+    def test_unknown_delivery_untracked_job_and_capacity_stop_new_upload(self):
+        def submit():
+            l1.smoke.submit_once(self.q, self.run, self.ledger,
+                selections=l1.OPERATORS, allow_confirmed_jobs=True)
+        untracked = {"id": "job_external", "status": "queued"}
+        self.q._client.list_jobs.return_value = {"jobs": [untracked]}
+        with self.assertRaisesRegex(ValueError, "active or unknown"):
+            submit()
+        first = self.add_active_job(1)
+        originals = {first["id"]: first}
+        self.q._client.get_job.side_effect = lambda ident: {"job": originals[ident]}
+        self.q._client.list_jobs.return_value = {"jobs": list(originals.values())}
+        for field in ("id", "submission_id", "job_tag"):
+            with self.subTest(field=field):
+                originals["job_1"] = {**first, field: "different"}
+                with self.assertRaisesRegex(ValueError, "identity differs"):
+                    submit()
+        originals["job_1"] = first
+        path = self.ledger / "unknown.json"
+        l1.smoke.save(path, {"phase": "ambiguous"})
+        with self.assertRaisesRegex(ValueError, "Reconcile"):
+            submit()
+        path.unlink()
+        for i in (2, 3):
+            job = self.add_active_job(i)
+            originals[job["id"]] = job
+        with self.assertRaisesRegex(ValueError, "three active jobs"):
+            submit()
+        self.q._submit_streaming.assert_not_called()
+
+    def test_overlapping_upload_returns_accepted_id_without_holding_runner(self):
+        manifest = "f" * 64
+        state = {"phase": "submitted", "job_id": "job_a", "other_submitted_jobs": ["job_b"]}
+        summary = self.run / "summary.md"
+        self.q._client._get_json.return_value = {"maintenance": {"enabled": False}}
+        with (
+            patch.dict(l1.os.environ, GITHUB_STEP_SUMMARY=str(summary)),
+            patch.object(l1.sys, "argv", ["prepared_l1", "submit-public", manifest]),
+            patch.object(l1.Path, "home", return_value=self.run.parent),
+            patch.object(l1, "ci_client", return_value=self.q),
+            patch.object(l1, "verify_package", return_value={"visibility": "public"}),
+            patch.object(l1.smoke, "submit_once", return_value=state),
+            patch.object(l1.smoke, "collect") as collect,
+        ):
+            l1.main()
+        collect.assert_not_called()
+        for expected in ("job_a", "pending", "l1-collect", manifest):
+            self.assertIn(expected, summary.read_text())
+
     def test_public_receipt_requires_public_service_visibility(self):
         self.manifest["visibility"] = "public"
         job = {

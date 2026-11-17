@@ -313,6 +313,13 @@ tasks. Dispatch CI with `cannbench_action=l1-submit-private` and the printed
 package is tied to its visibility. `l1-collect` continues an existing
 submission using GET requests and the same digest.
 
+If an earlier submission is still in the ledger, the paired workflow verifies
+its job ID, submission ID and package tag against CANNBench before sharing the
+[account limit of three active jobs](https://cannbench.com/docs/mcp). Unknown delivery or an untracked active job
+requires reconciliation. An overlapping submit returns the accepted job ID
+and releases the runner for the other collector. Run `l1-collect` with the
+same manifest to obtain the hardware verdict and score.
+
 The runner retains the complete report and `service-receipt.json` in
 `~/.local/state/pyasc-cannbench-l1/<manifest SHA-256>/`. Compare the service
 score after both operators pass their 20 numerical and timing checks. CI compares

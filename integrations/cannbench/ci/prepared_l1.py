@@ -218,9 +218,21 @@ def main():
         with (ledger / "lock").open("a") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             state = smoke.submit_once(
-                q, run, ledger, selections=OPERATORS, public=public
+                q, run, ledger, selections=OPERATORS, public=public, allow_confirmed_jobs=True
             )
         print("Submission state:", state["phase"], state.get("job_id"), flush=True)
+        if state.get("other_submitted_jobs") and state["phase"] == "submitted":
+            # The single service runner must also be able to collect the earlier job.
+            message = (
+                f"Accepted CANNBench job `{state['job_id']}`. Hardware score pending. "
+                f"Use `l1-collect` with manifest `{args.input}` for the final receipt."
+            )
+            print(message, flush=True)
+            summary = os.environ.get("GITHUB_STEP_SUMMARY")
+            if summary:
+                with open(summary, "a", encoding="utf-8") as output:
+                    print(message, file=output)
+            return
     deadline = time.monotonic() + 4 * 3600
     while time.monotonic() < deadline:
         code, report = smoke.collect(q, run, ledger)
