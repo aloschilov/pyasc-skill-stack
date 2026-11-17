@@ -292,13 +292,17 @@ The compute turn uses GLM-5.3 high reasoning and freezes the written Python. The
 For a split run, `performance-generate` produces the generation artifact. Use `performance-evaluate` with `-f origin_run=GENERATION_RUN_ID` to qualify and submit its bytes. If the service is still pending, `performance-resume` takes the **evaluation** run ID and only collects the existing submission. After a confirmed service-maintenance rejection, `performance-submit-prepared` takes the evaluation run ID, verifies the saved GitHub Actions package and checks that submissions have reopened before sending it. For a SwiGLU package qualified on retired catalog 2.0.0, add `-f prepared_catalog_version=2.1.0` to that dispatch. CI checks that the public cases and golden source match and that the only contract change makes the existing input-to-output dtype relation explicit. It submits the archived ZIP under the requested version. The receipt records the qualification and service versions. Each successful evaluation publishes a release with `performance.json`, the submitted ZIP, the generated source and their SHA-256 checksums. GitHub Pages reads that release.
 ## Evaluate a prepared Level 1 package
 
-For an Exp and SwiGLU package already checked on 950PR, place `submission.zip`
+For an Exp and SwiGLU package qualified with CaModel or on 950PR, place `submission.zip`
 and `qualification.json` together outside the checkout on the CANNBench runner.
 The qualification records `build_passed`, `package_sha256`, `wheel_sha256` and an `operators` entry for each
 of `exp` and `swi_glu`. Each entry gives the 40-character `skills_revision`,
-the generated source's `package_source` path and `source_sha256`, and
-`passed_cases` from the 20-case device run. Keep the underlying generation,
-build and device evidence with the qualification.
+the archive path `package_source` and its `source_sha256`. For a device run,
+record the 20 cases in `passed_cases`. For a first hardware measurement,
+supply a `camodel` object with the tested `source_sha256`, the archived
+simulator report's `evidence_sha256`, and all 20 `compiled_case_ids`. Its
+`numerical_pairs` list records `seed`, `launch_matches_golden` and
+`suppressed_rejected` for the tested fixtures across at least two seeds.
+Keep the generation, build and qualification evidence together.
 
 With the benchmark credentials and `CANNBENCH_AGGREGATION_TOKEN` configured,
 run `python integrations/cannbench/ci/prepared_l1.py stage-private /path/to/package`

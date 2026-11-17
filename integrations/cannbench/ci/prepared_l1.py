@@ -22,6 +22,25 @@ from single_operator import ci_client, download
 OPERATORS = (("Exp", "exp"), ("SwiGlu", "swi_glu"))
 
 
+def qualified_source(source):
+    if source.get("passed_cases") == 20:
+        return True
+    model = source.get("camodel") or {}
+    checks = model.get("numerical_pairs") or []
+    case_ids = model.get("compiled_case_ids") or []
+    return (
+        model.get("source_sha256") == source["source_sha256"]
+        and bool(re.fullmatch(r"[0-9a-f]{64}", model.get("evidence_sha256", "")))
+        and len(case_ids) == 20
+        and set(case_ids) == set(range(1, 21))
+        and all(type(case) is int for case in case_ids)
+        and all(type(pair.get("seed")) is int for pair in checks)
+        and len({pair["seed"] for pair in checks}) >= 2
+        and all(pair.get("launch_matches_golden") is True and
+                pair.get("suppressed_rejected") is True for pair in checks)
+    )
+
+
 def verify_package(run, manifest_sha):
     if smoke.sha(run / "manifest.json") != manifest_sha:
         raise ValueError("Qualification manifest differs from the selected digest")
@@ -58,13 +77,13 @@ def verify_package(run, manifest_sha):
             source = q["operators"][fn]
             if (
                 source.get("package_source") != f"cann_bench/{fn}.py"
-                or source.get("passed_cases") != 20
+                or not qualified_source(source)
                 or not re.fullmatch(r"[0-9a-f]{40}", source["skills_revision"])
                 or hashlib.sha256(z.read(source["package_source"])).hexdigest()
                 != source["source_sha256"]
             ):
                 raise ValueError(
-                    "Invalid device qualification or generated source for " + op
+                    "Invalid qualification or generated source for " + op
                 )
     return manifest
 

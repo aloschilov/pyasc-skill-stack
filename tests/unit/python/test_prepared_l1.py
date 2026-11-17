@@ -100,6 +100,27 @@ class PreparedL1Test(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "source for Exp"):
             l1.verify_package(self.run, pin())
 
+    def test_camodel_can_qualify_for_first_hardware_measurement(self):
+        source_sha = sha256(b"generated source").hexdigest()
+        model = {
+            "source_sha256": source_sha,
+            "evidence_sha256": sha256(b"simulator evidence").hexdigest(),
+            "compiled_case_ids": list(range(1, 21)),
+            "numerical_pairs": [
+                {"seed": s, "launch_matches_golden": True, "suppressed_rejected": True}
+                for s in (19, 23)
+            ],
+        }
+        source = {"source_sha256": source_sha, "camodel": model}
+        self.assertTrue(l1.qualified_source(source))
+        for change in (
+            {"source_sha256": "0" * 64}, {"compiled_case_ids": [1] * 20},
+            {"numerical_pairs": [model["numerical_pairs"][0]]},
+            {"numerical_pairs": [*model["numerical_pairs"], {"seed": 29, "suppressed_rejected": False}]},
+        ):
+            with self.subTest(change=change):
+                self.assertFalse(l1.qualified_source({**source, "camodel": {**model, **change}}))
+
     def test_private_qualification_never_becomes_public_by_dispatch(self):
         with self.assertRaisesRegex(ValueError, "visibility"):
             l1.smoke.submit_once(
