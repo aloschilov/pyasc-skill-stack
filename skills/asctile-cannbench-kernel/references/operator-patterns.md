@@ -17,6 +17,333 @@ using a qualified active-device resource query. Stable forms must
 preserve NaN and Inf behavior from `golden.py`. GELU has both `none` and `tanh`
 attributes and requires distinct kernels or tile widths.
 
+On the archive wheel, preserve the loaded local tile's dtype before
+widening: `lane_dtype = x.dtype`, `xf = x.to(asctile.float32)`.
+Evaluate floating activation math in FP32, including reciprocal and exp,
+then use `result.to(lane_dtype)` in the bounded store. FP16 arithmetic
+throughout sigmoid produced 2,170 out-of-tolerance values on a 1M-element
+input. For a bounded load or store compute `valid = min(size-offset, T)`
+once; assigning the Python int T to a loop-local PyASC scalar in a runtime
+branch fails type checking. Use typed dtype objects such as
+`asctile.float32` for `full`, `zeros` and casts. Multiply a local tensor
+by a scalar directly. When the equation needs a tile filled with a constant
+use `asctile.full(shape, constant, dtype=asctile.float32)`.
+
+For contiguous unary activations distinguish a single wave from many tiles
+per available AIV. On long streams compare an aligned two-stage tile
+against the single-stage control, using the same FP32 formula and dtype.
+The returned usable UB is already per AIV.
+Use the AIV count for grid and work distribution. Dividing UB by that count
+again shrinks a 950PR mask tile to 128 lanes regardless of stream length.
+Choose the largest aligned T that fits the simultaneous input, intermediate
+and output tiles for both stages and leaves at least two useful tiles per
+active block. Pass U as a ConstExpr and use it as the actual loop's
+`unroll_factor`. For full tiles, use fixed-size copies. Bound both transfers
+on the final partial tile and give it one owner. For short streams where
+two stages would leave cores idle, keep one stage and distribute the tiles
+across the available AIVs. Compute the live-byte budget once; account for
+physical buffer reuse from compiler evidence when available. Compare both
+short and long fixtures before applying the rule to another activation.
+
+Check every generated `asctile.<name>` against the installed wheel before
+profiling. This wheel exports `maximum`, `minimum`, `exp`, `log`,
+`abs`, `tanh` and `erf`. Use the operand's `.dtype` in the JIT.
+Resolve Python math constants on the host. Pass a numeric ConstExpr or use
+a literal inside the JIT. The wheel's dependency finder rejects
+`math.sqrt` inside a JIT even when the argument is constant. For GeLU use
+`0.7071067811865476` for 1/sqrt(2) and `0.7978845608028654` for
+sqrt(2/pi), and dispatch the exact and tanh modes from the public attribute.
+For Mish, compute a stable softplus (including the positive large-input
+limit) before tanh. Verify finite inputs and the public exceptional-value
+cases for each activation after the cast back.
+
+For a versioned CANNBench request, read `tasks/suite_manifest.json` first.
+Select operators by `level`, verify their public fixture digests, and pair
+them with the same suite's device metadata. For task versions 2.0.0 and 2.1.0 the L1
+entries are Exp and SwiGLU. Reuse an earlier profile only after verifying
+the executed fixture and operator contract and rescoring against the target
+release metadata. A changed YAML note alone does not change the inputs. The archived Season 1 entries have distinct
+coverage and baselines. On a local replay of a native operator, preserve
+the published `baseline_perf_us` as the numerator of the speed ratio.
+Read the metadata's baseline formula and release status. Season 2 on 950PR
+caps submitted measurements at three times the hardware model. When investigating
+a shortfall, record the profiler's clock warmup, L2 cleaning, timed calls and
+actual grid. Compare like-for-like traces before changing a generation rule.
+
+For special-value bounds, inspect the tensor produced by the pinned
+`DataGenerator`. With two NaN endpoints, the Season 2 generator masks
+roughly half the entries of a finite random tensor. Record input NaN counts
+and finite golden-output counts when interpreting a timing or correctness
+result. Use a second entirely finite input to exercise every output position.
+
+When validating a shared dispatch or tiling rule across L1, keep one complete
+generated module per operator. Run every public case and record both numerical
+coverage and the geometric mean of `baseline_perf_us / measured_us`. Use the
+950PR metadata from the same benchmark season as the cases. A failed or
+missing case leaves the operator GM unqualified. Once a complete operator
+exceeds 1×, exercise the rule on the other operator families before tuning
+individual cases further. For tensor-list operators compare every returned
+member and sum the durations of all device launches belonging to each call.
+
+On the archive-bundled evaluator import `from asc.experimental import asctile`.
+Generate the kernel with `@asctile.jit(reuse_alloc=2)`; allocate with
+`out = x.new_empty(x.shape)` on the caller's device and invoke
+`kernel[vector_blocks(work_items)](x, out, ...)`. Read the
+[ranked copy example](../../asctile-api-patterns/SKILL.md#surface-to-use)
+before writing the body. For the L1 generation package, the sibling runtime supplies
+`ensure_npu_platform`, `query_ub_bytes`, `query_aivs` and `vector_blocks`.
+Keep shape selectors and stream adapters in the generated module. Import the
+unchanged module from its real package parent before profiling so that a missing
+sibling export is identified separately from compilation or execution.
+Generate one unconditional device path for nonempty
+inputs. The wrapper consists only of platform selection, scalar attributes,
+shape/resource calculations, output allocation, the JIT launch and
+`return out`. There is no Python numerical fallback: passing CPU-backed
+tensors is the normal hardware path. Treat the Torch golden as an independent
+test oracle; never embed it in the implementation. The evaluator has no `asc.tile` module. Its inputs
+are ordinary CPU-backed Torch tensors. Select the NPU with the runtime
+helper, then launch with those tensors unchanged. A host check such as
+`if x.device.type != "npu": raise ...` rejects valid hardware work.
+
+### Exp host dispatch
+
+The public Exp contract covers FP16, BF16 and FP32. Read the input
+element width from `x.element_size()` and allocate `out = x.new_empty(x.shape)`.
+Pass `x` and `out` directly to the selected JIT. If a host dtype table
+needs to reject another dtype, raise a TypeError before allocation. Keep
+the same input object on every dispatcher branch, including the default.
+A clean generation that assigned `x = x.to(torch.float32)` in the default
+branch failed the source qualification even though the three public dtypes
+had separate entries.
+
+Declare a module-level JIT function and bind scalar attributes at
+each launch. Pass `scale: float`, `shift: float` and `log_base: float` as
+runtime FP32 scalars. Multiply and add those arguments directly to the
+FP32 tile, for example `acc = acc * scale` and `acc = acc + shift`.
+The archive wheel resolves JIT dependencies before execution and has no
+`asctile.cast_scalar`. A Python `float` launch argument with this annotation
+already has the required scalar ABI. Pass the decisions to omit identities as separate
+`asctile.ConstExpr` flags: `scale != 1`, `shift != 0`, `log_base != 1`.
+Use the public positive-base predicate exactly:
+`log_base = math.log(base) if base > 0.0 else 1.0`. An unordered NaN
+base takes the natural-exponential branch. Positive infinity satisfies the
+positive-base predicate. For inputs `[-1, 0, 1]`, unit scale and zero shift,
+the latter base yields `[0, NaN, +inf]` through FP32 multiplication.
+Exercise both bases with finite inputs when checking the scalar predicate.
+A nested kernel factory
+capturing Python values can compile the first values for a dtype into a
+binary that subsequent invocations reuse. An input with the same shape and
+dtype must produce different correct values as the public attributes change.
+Exercise two sets of attributes and then repeat the first in one process;
+check each call against the independent golden. Evaluate
+`scale*x + shift` in the golden compute dtype; for a positive base multiply
+by its natural logarithm before the exponential. Compute the scalar logarithm
+once outside the JIT, at the precision of the public golden. Elide identity
+multiplications and a zero shift. Do not fold a zero multiplier into a
+constant: infinities and NaNs still participate. Use one contiguous copy in
+and one copy out per tile. The two casts belong **inside the JIT**:
+`lane_dtype = loaded.dtype`, `acc = loaded.to(asctile.float32)`,
+then `asctile.copy_out(y.to(lane_dtype), out_gm, ...)`. Return the
+original-dtype output buffer directly. Do not widen input tensors on the
+host, allocate intermediate FP32 host tensors, or cast back on the host.
+A passing golden and an AI_VECTOR_CORE task do not account for that work.
+Bound the last transfer in the same launch.
+For a direct one-wave Exp candidate, round the work per available AIV
+**up** to the tile alignment. Let `A` be available AIVs, `N` elements,
+and `T = align_up(ceil_div(N, A), alignment_in_elements)`. Check the
+compiled live UB budget for this dtype, including casts and temporaries.
+If it fits, launch `ceil_div(N, T)` blocks, one tile per block, with a
+bounded final transfer and no grid-stride loop. Rounding down can leave a
+second wave for a tiny remainder. Measure this path against streaming.
+
+On the public 950PR build, count both live FP32 lanes in the one-wave
+affine Exp body. With allocation reuse, the observed requirements for
+the 16-bit and FP32 input specializations were exactly 10 and 12 bytes
+per tile element. One 29024-element BF16 tile used 290240 bytes, and one
+29088-element FP32 tile used 349056 bytes. The device had 253952 bytes.
+For this emitter, reject a one-wave tile when
+`T * (8 + itemsize) > available_ub`. Include additional workspace and
+a larger live footprint if the emitted specialization requires them.
+Send a rejected tile to the existing UB-qualified streaming path before
+launch. Tile size and actual JIT unroll must match the estimate.
+
+In the public dispatcher, evaluate short 16-bit eligibility first. A
+positive UB-qualified short geometry selects its JIT and returns. Then
+try the one-wave candidate on the remaining inputs, followed by general
+streaming. Both selectors can accept the same shape. At 1,048,576 FP16
+elements on 72 AIVs with 253,952 UB bytes, the one-wave allocation
+fits too. Trace the actual public call to the three-stage kernel (T4864)
+to check the branch order.
+
+For short 16-bit streams, evaluate three tiles per AIV. On the
+public 950PR, start with this path for about 24–32 KiB of useful input
+per AIV when unroll 3 fits. For the initial 32-byte DMA control, with `q = 32 // itemsize`, compute
+`T = ceil_div(N, 3*A*q)*q` elements and launch `min(A, ceil_div(N,T))`
+blocks. Check the compiled allocation against UB. In two matched runs
+with the same hardware, arithmetic, grid and tile, contiguous per-block
+ownership took 3.755/3.715 µs on the BF16 affine input versus
+4.221/4.168 µs for grid-stride ownership. On the FP16 shifted input
+these schedules took 3.602/3.596 and 3.512/3.676 µs. Use contiguous
+groups for the affine path when qualifying this regime. For identity
+FP16, try grid-stride first (3.671/3.556 µs). Keep the public FP32
+compute and numerical checks for all attributes.
+
+Select ownership using all three flags from the scalar ABI. In this
+three-tile regime, set `U=3` for both schedules. Use contiguous groups
+if `apply_scale or apply_shift or apply_log` and grid-stride for the
+FP16 identity. Here `apply_log` means that the emitted logarithm
+multiplier differs from one. A positive base of two, scale one and zero
+shift still multiplies by log(2) on device. At 72 AIVs the BF16 shape
+1023 by 1023 gives T=4848; the FP16 shape 1024 by 1024 gives T=4864.
+These are the 32-byte control geometries. For the measured 950PR affine
+paths, use the following refinement. The short-stream eligibility window
+uses the reported AIV count before choosing a launch grid.
+
+* Keep FP16 identity grid-stride with 32-byte alignment. For a contiguous
+  affine path, round T up to 256 input bytes (`q = 256 // itemsize`).
+  For BF16 with only the log multiplier active, compare the full grid to
+  the largest lower multiple of 16 AIVs within seven eighths of capacity.
+  Compute `g = (A // 16) * 16`; use g if positive and `8*g >= 7*A`,
+  otherwise use A. Other affine paths retain A. Compute
+  `T = ceil_div(N, 3*g*q)*q` using the selected grid and recheck UB.
+  Keep the runtime-count contiguous JIT loop with compile-time unroll 3.
+* On 950PR, 1023² BF16 values and base 2 with no scale or shift give N64,
+  T5504. In two shuffled rounds this took 3.277/3.628 µs, versus
+  3.988/3.518 µs at N72 and 256-byte alignment. The reduced grid beat
+  the 3.806 µs baseline on both runs; the two grids exchanged order.
+  On shifted FP16 (2049 by 513), N72/T4992 took 3.270/3.328 µs.
+  On scaled and shifted BF16 (1000007 values), N72/T4736 took
+  3.374/3.496 µs versus 3.893/3.523 µs at 32-byte alignment on N72.
+  Trace the public entry and qualify the complete generated module.
+
+An independent clean generator sent both calls down its generic stride
+path with unroll 1 and took 5.587 and 4.959 µs on the public cases.
+
+Use the same affine flag for ownership and DMA alignment. One clean
+generator correctly reduced the BF16 base-only grid to 64 yet kept a
+32-byte quantum because it tested only scale and shift. Its actual tile
+was 5456. Keep the dtype test on the grid reduction as well. The selector
+below returns a candidate geometry for the short path. Its caller checks
+the compiled UB footprint before launching; an ineligible input falls
+through to ordinary streaming or the one-wave path.
+
+```python
+def short_exp_geometry(n, dtype, aivs, apply_scale, apply_shift, apply_log):
+    if n <= 0 or aivs <= 0 or dtype not in (torch.float16, torch.bfloat16):
+        return None
+    if not 24576 * aivs <= 2 * n <= 32768 * aivs:
+        return None
+    affine = apply_scale or apply_shift or apply_log
+    grid = aivs
+    if dtype == torch.bfloat16 and apply_log and not (apply_scale or apply_shift):
+        reduced = (aivs // 16) * 16
+        if reduced > 0 and 8 * reduced >= 7 * aivs:
+            grid = reduced
+    quantum = 128 if affine else 16  # elements of two bytes
+    group = 3 * grid * quantum
+    tile = ((n + group - 1) // group) * quantum
+    blocks = min(grid, (n + tile - 1) // tile)
+    return tile, blocks, affine
+```
+
+On the archive-bundled 950PR build, use a separate
+`@asctile.jit(reuse_alloc=2, opt_level=3)` entry for short, contiguous
+scale/shift streams. The default JIT entry can share the same source loop
+shape and arithmetic for log-only BF16. At fixed U3, grid and tile, two
+shuffled hardware rounds with opt_level=3 took 3.265/3.595 µs on scaled
+base-2 FP16 (default 3.417/3.780), 3.384/3.429 µs on shifted FP16
+(default 3.709/3.429), and 3.337/3.407 µs on scaled and shifted BF16
+(default 3.446/3.582). For log-only BF16 its effect changed sign across
+rounds. Scope the attribute to the calibrated kernel. Keep the FP32
+promotion, public scalar order, DMA geometry, and grid fixed when testing
+another compiler version.
+
+Launch both short contiguous affine Exp kernels on the input device's
+current Torch stream for resident FP16 and BF16. Use the same stream
+binding for the short grid-stride FP16 identity kernel. Read the stream at each
+public call, including a call made in a nondefault stream context.
+Select the integer-grid launch from the CPU device type. If the NPU
+stream lookup raises, propagate that error before launching. In a host
+dispatch test, inject a failing stream lookup and check that the JIT
+receives zero calls; also exercise two successful caller streams. The AscTile grid
+accepts the raw stream handle as its second component:
+
+```python
+grid = blocks
+if x.device.type == "npu":
+    import ctypes
+    handle = torch.npu.current_stream(x.device).npu_stream
+    grid = (blocks, ctypes.c_void_p(handle))
+kernel[grid](x, out, ...)
+```
+
+On 950PR with CANNBench 2.1.0 restored inputs, changing only this launch
+on 1023² BF16 took 3.15/3.03 µs (log-only, 64 blocks). On 1,000,007
+BF16 elements it took 3.12/2.99 µs (scale and shift, 72 blocks).
+The block-only controls took 3.60/3.80 and 4.06/3.77 µs respectively,
+with the process order reversed in the second round.
+The same launch change took 3.24/3.09 µs for FP16 scale plus log and
+3.23/3.02 µs for FP16 shift only. The corresponding block-only controls
+took 3.86/3.78 and 4.03/3.81 µs.
+
+Follow the FP16 identity launch into its own loop body. Two clean
+modules selected T4864 on 72 blocks but hardcoded unroll 1 in the JIT.
+They took 4.655 and 4.663 µs for 1024² inputs. Set
+`unroll_factor=3` in the grid-stride loop used by the short selector,
+or pass a compile-time unroll parameter equal to 3 at this call. Keep
+the one-wave and general streaming paths on their own selected stages.
+
+For short FP16 identity, pass the existing U3 grid-stride launch the
+current stream when the input is on NPU. In three release-default rounds
+on 950PR, 72 blocks/T4864/U3 took 3.24, 3.22 and 3.43 µs on that
+stream. The same grid-only launches took 3.99, 3.84 and 3.88 µs. An
+exact two-wave schedule (64 blocks/T8192/U2) also cleared 3.813 µs,
+but took 3.70, 3.53 and 3.40 µs on the current stream. Keep the short
+identity tile formula based on useful input per detected AIV.
+
+For resident FP16 identity on 950PR, retain the three-stage schedule when
+an exact four-wave power-of-two grid also fits UB. With 1,048,576 input
+elements, the release restored-input evaluator returned 3.79 and 3.64 µs
+at 72 blocks/T4864/U3. The same grid-stride kernel took 4.14 and 3.89 µs
+at 64 blocks/T4096/U4. The earlier CPU-staged profile favored the latter
+geometry. Check timing under the intended input-restoration protocol
+before promoting an exact-divisor grid.
+
+For contiguous ownership set `M = ceil_div(N,T)` and
+`C = ceil_div(M,actual_blocks)`. Block `b` handles the `C` tiles from
+`b*C` in `asctile.range(C, unroll_factor=3)`. Clamp the offset of any
+empty final iteration with `offset = min(N, tile_id*T)` and use
+`valid = min(N-offset,T)`. This produces a nonnegative real extent in one
+expression. Recheck the generated schedule in its public entry point. The
+matched contiguous BF16 control above used these scalar minima. Its count
+was computed inside the JIT with `ceildiv(ceildiv(size,T), block_num())`
+from a runtime size argument. Keep the count and starting tile runtime
+values when reproducing that emitter. The unroll factor remains a
+compile-time 3. A separate experiment using the same tile, grid, scalar
+math and a compile-time loop count took 5.195/5.032 µs for bounded
+BF16 copies and 4.759/4.841 µs with full copies split from the tail.
+Those two trials support the comparison of bounds inside that series.
+In two further shuffled rounds, matched contiguous kernels using the same
+tile, 72 blocks, unroll 3 and scalar math compared runtime and fixed trip
+counts on five public shapes. On the BF16 base-only input they took
+4.263/3.686 µs with a runtime count and 5.396/5.155 µs with a fixed
+count. On the shift-only input the corresponding medians were 3.477/3.455
+and 4.562/4.679 µs. The runtime-count version was faster in both rounds
+on all five shapes. Interleaving the tiles on BF16 gave 3.672/3.831 µs;
+its ordering relative to runtime contiguous changed between rounds.
+Keep the affine scalars explicit launch arguments
+in every specialization. Larger streams still need the multi-wave rule.
+
+For multi-wave Exp, use an explicit pipelined range with compile-time
+unroll and allocation reuse. In two shuffled 950PR runs with identical
+arithmetic and verified outputs, 8192 elements and unroll 2 took
+5.471/5.788 µs on 1M FP16 and 14.342/14.869 µs on 4M FP32. Try that
+geometry when the compiled UB permits it. For 16M BF16, benchmark both
+4096 with unroll 3 (26.249/27.110 µs) and 8192 with unroll 2
+(27.266/27.120 µs). These samples exercise a single set of scalar
+attributes per dtype. Repeat the A–B–A check and qualify every public
+shape after selecting the geometry.
+
 ### High-level GeLU campaign (historical)
 
 Use `compiler-team/pyasc@adadd7d66ed0ee16d33d79487bf584899a26ef1e` — the
@@ -171,7 +498,10 @@ runtime costs must be recorded separately.
 Cover every cross-product present in `cases.yaml`: x is f16/bf16/f32; mask is
 int8/uint8/f16/bf16/f32. Direct vector arithmetic on int8 is unsupported in the
 observed runtime; cast int8 to f16 and then f32. Torch uint8 can be reinterpreted
-as int8 without copying, but values 128..255 then require an in-kernel f32 +256
+as int8 without copying. Trace the **actual load** of an int8 mask through
+`mask.to(asctile.float16).to(asctile.float32)` before the multiply.
+Direct int8-to-FP32 lowering fails even when the final FP32 multiply is
+supported. With unsigned storage reinterpreted as signed, values 128..255 then require an in-kernel f32 +256
 correction. Avoid f16 and bf16 temporaries coexisting in one specialization;
 use a two-kernel f32 bridge for cross-half combinations.
 
@@ -332,6 +662,22 @@ both operands are PlainValue. Keep the maximum in a LocalTensor-compatible
 accumulator or use a reduction form that the pinned scalar algebra supports.
 Return the final typed scalar as a 0-D metadata view of an aligned output
 buffer; perform dtype conversion in the final JIT kernel.
+
+On the archive wheel the atomic signature is
+`asctile.atomic_add(src_local, dst_global, offsets)`. The source is a
+LocalTensor. Load a rank-two tile [1,T] with a ranked GM descriptor [1,n], then use
+`asctile.reduce_sum(tile, 1)` to leave a length-one LocalTensor.
+A reduction over every axis of a rank-one tile has a different result kind.
+Express a tile walk as `for i in asctile.range(block_idx, ntiles, nblocks)`
+with `block_idx = asctile.block_idx()` and `nblocks = asctile.block_num()`.
+Python `while` in a JIT is rejected before lowering. The public row reduction
+example in `reference/asctile/target/test_reduce_sum.py` shows the ranked
+descriptor, tile accumulator and write-back. Adapt both passes with bounded
+input/output extents and FP32 accumulation.
+Indexing a LocalTensor as `acc[0]` fails in the JIT. For a two-pass reduction,
+write each block's partial into a distinct slot, then reduce those partials
+in a separate launch. Use the neutral element for padded lanes in each norm
+order and include the final launch in the measured time.
 
 ## RMSNorm
 

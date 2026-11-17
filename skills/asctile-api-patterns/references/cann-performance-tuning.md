@@ -59,6 +59,196 @@ reproduced implementations. Read their specific contracts before using them.
    control. Then hardware validates the candidate; model ticks are not NPU us.
    Do not run new hardware jobs or restart schedules without task authorization.
 
+### Measuring the transfer budget of a short vector kernel
+
+When a one-wave operator still misses its device-time target, compare the
+complete operator, an empty device body, and a DMA-only body at the same
+grid. Preserve tile owners, GM byte ranges, cache hints, stream and tail.
+Order the output DMA after its input arrives. In a separate untimed run,
+give each input word a unique tag and poison the output and guards. If the
+output is smaller than the input, export complementary slices of each UB
+tile in separate checks so that every input operand is observable.
+
+Sweep useful bytes per owner at fixed grid and alternate process order.
+Subtract the median full-footprint DMA duration from the reference budget.
+If the difference is negative across orders, prioritize the transfer schedule,
+grid, or compute/transfer overlap. The difference between the complete and
+DMA-only kernels includes synchronization and UB handling. On 950PR a packed
+FP32 control read 613,184 bytes and wrote 306,592 bytes in 1.606 µs against
+a 1.500 µs reference. The three-row transfer took longer than the full tile
+in each order, so interpolate transfer costs only when the sweep supports it.
+[Matched device profiles and coverage checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6894852362).
+
+For a proposed two-stage schedule, keep the whole-tile transfer as a timing
+control. Then use the same two output writes in three variants. Time one input
+read, two reads with a drain between stages, and two reads with separate
+readiness events issued before the first write. Compare the complete operator
+on restored inputs before selecting a staged path. On 950PR early issue saved
+0.324–0.475 µs versus the drained schedule. The original whole-tile DMA still
+finished 0.075–0.187 µs sooner.
+[Matched instruction orders and tagged payloads](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6896461135).
+
+## When identical kernels time differently on hardware
+
+Compare the linked device `.text` bytes and the decoded instructions at the
+entry point. The host executable, serialized wheel cache and raw device ELF
+have different envelopes. Use the compiler dump to identify the device image
+in the cache. Verify its hash for each run. Two different source expressions
+that compile to the same instruction bytes at the same grid provide one
+code-generation result.
+
+For a short kernel, keep the ELF, inputs, grid and profiler fixed and compare
+ordinary evaluator calls with repeated launches on the same device buffers.
+If their device-task intervals differ, retain the addresses and change the
+transfers between launches. Record which tensors move, in which direction,
+the allocation policy, the warm-up count and each process median. Score the
+generated operator via its normal evaluator entry point. Reused-buffer
+timings diagnose execution conditions.
+
+For fresh-buffer comparisons, the restored-profile worker's
+`--record-alignment` option records input and output pointer residues modulo
+65,536 after profiling. Pair these with the measured invocation index before
+grouping timings. On two short FP32 shapes the two address pairs alternated
+exactly by invocation parity across four processes per shape. Separating an
+address effect from an order effect requires variation within the same index.
+[Matched restored-input measurements](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879127456).
+
+To test placement while preserving the evaluator's zero-offset tensors, hold
+an unused allocation live outside the timed region. Record both operand
+addresses at each measured call. Compare only ordinals where the intended
+residue changed and the other operand stayed fixed, then reverse the order
+of the allocation sizes. On two FP32 shapes a 32 KiB increase left all
+residues unchanged on one shape and moved the input on two of five calls on
+the other. Those two timing differences changed sign with process order.
+[Address and timing pairs](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6889586154).
+
+When replaying a compiled image from a Torch NPU process, check how long
+the runtime keeps its binary registration alive. A fresh output tensor does
+not require a fresh registration. Hold the registered module, entry symbol
+and backing ELF bytes alive until the measured stream has synchronized.
+Compare register-once and register-per-call at fixed ELF, input, output
+allocation and grid. On two short FP32 shapes under the Season 2 cache-clean
+schedule, registration per call added 1.75–1.88 µs to the recorded device-task
+medians across two rounds. This difference is measured inside the device
+interval; host registration latency needs its own measurement.
+
+On a 950PR, the same 35-block FP32 packed-row ELF took 1.978–2.016 µs with
+resident buffers and 2.921–3.028 µs with input/output transfers around every
+launch. This held with either normal or huge pages at fixed device addresses.
+A second two-round experiment toggled the input upload, output upload and
+output readback independently. Across the eight paired comparisons, enabling
+the input upload added 0.739–0.931 µs to the device task. Enabling the output
+upload added 0.012–0.176 µs. Across those same pairs, uploading the input
+increased MTE2 time by 0.824–0.994 µs, while uploading the output increased
+MTE3 time by 0.214–0.271 µs. Output readback had mixed effects. When tuning
+this access pattern, compare input DMA strategies after refreshing the input
+as the evaluator does. Time the transfers separately to measure their own cost.
+
+For competing DMA layouts, compare per-kernel `PipeUtilization` counters
+at the same grid and under the same cache conditioning. Match each row by
+kernel name and block count. Check MTE2, vector and MTE3 together. Packing
+two half-rows into one transfer can move work into register unpacking or
+output stores. On a 36-block FP32 shape, packed and separate loads spent
+0.761 and 0.790 µs in MTE2, while the packed variant increased vector time
+from 0.197 to 0.577 µs and MTE3 time from 0.316 to 0.573 µs. Pipeline
+activity can overlap. Use the separate task duration to compare end-to-end
+device performance and the ordinary evaluation run for qualification.
+
+For a single-wave kernel with a partial tile, derive the tile owner from
+the emitted block-to-row mapping. Check that owner's finish time across
+several calls before specializing the tail. On CANN 9.2 / 950PR,
+`msprof --task-block=all --aic-metrics=PipeUtilization` retained one raw
+block packet per launched AIV. Match the candidate's stream and task in
+the export, then reconcile physical core IDs, relative start times and
+durations with the raw packets. Check that logical IDs cover the grid once.
+Compare pipeline counts within each invocation and score changes under the
+ordinary evaluator. On two short FP32 shapes the partial tile had the
+longest duration in one of five calls at 36 blocks and zero of five at 46.
+[Block timings, raw event mapping and ordinary controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6890427467).
+
+When a tile permutation exchanges work between physical core groups, keep
+track of which owners moved. Compare the two groups at the same invocation
+ordinal, separately for moved and unchanged full tiles. Balance the sample
+counts after excluding a partial tile and repeat both process orders.
+On the 950PR, the duration difference followed the same physical group
+on 9 of 10 measured calls after 22 owners exchanged address ranges.
+The sign also switched with invocation ordinal. Use a same-owner arithmetic
+control before changing the calculation of the tile index.
+[Physical groups and matched tile ownership](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6891358083).
+
+For short rows, count the GM sectors touched by each input descriptor at
+its actual base offset. If alignment is assumed, state the assumption.
+Separate reads of two halves can charge the same boundary sector twice.
+Check the predicted difference per block and invocation. On CANN 9.2 /
+950PR, verify the Memory event order and use 128 bytes per 0x422 read or
+0x423 write. A packed FP32 read saved 214 and 486 transactions on two
+shapes. At fixed packed UB addresses, arithmetic and store, one descriptor
+saved only 0.01–0.03 µs on the aligned shape. Inspect the emitted full-tile
+path for a whole-buffer clear introduced by the final register load's
+guard space before selecting the packed layout.
+[GM traffic and matched descriptor timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6892216646).
+
+To isolate guard initialization, keep DMA right-padding and all vector
+loads fixed. Clear only the suffix beyond the rounded transfer and check
+full and partial tiles. Two short FP32 shapes changed timing direction
+with process order. For an aligned half-row, placing the partial vector
+first can keep every load inside the row. Inspect the inner loop after
+lowering: a conditional address per vector can replace hardware address
+generators with scalar indexing. On a 536-element row, dropping the guard
+saved 0.09–0.11 µs at fixed leading-mask geometry, but the conditional
+version was still slower in both orders than the original packed loop.
+Compare a separate partial-vector step and a uniform full-vector loop
+before adopting this layout.
+[Measured fill and vector-address controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6892525019).
+
+Before using a conflict counter to select a code change, match the ordered
+events in the raw packet to the formulas for the installed chip and profiler.
+On CANN 9.2 / 950PR, `ResourceConflictRatio` reports UB bank conflict cycles
+relative to task cycles and vector resource conflicts (0x528) relative to
+vector activity (0x502). The latter can exceed one. Compare full tiles at
+the same invocation ordinal before attributing a slow group to extra work.
+For cache studies, keep read, write and victim counts separate. Check the
+target's GM tensor implementation and compiled code before timing enum
+variants. On dav3510, explicit LAST and NORMAL produced identical output
+store code on both FP32 shapes. PERSISTENT increased runtime in both orders.
+[Event formulas and output cache controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6891726663).
+
+To test whether UB placement limits a short planar kernel, keep its GM
+descriptors, compute and grid fixed. Verify that a zero-shift rebuild has
+the wheel's device instruction bytes. Independently shift aligned buffer
+bases within available UB and check for overlap. On 950PR, inserting 32
+bytes after scratch reduced the 36-block public FP32 case from 1.873 to
+1.842 µs across two process medians. The finite control rose from 1.852
+to 1.872 µs and the 35-block public case was effectively unchanged. These
+measurements support keeping the ordinary placement for this layout. A
+bank-conflict attribution requires a counter that measures those conflicts.
+
+To estimate the headroom for arithmetic tuning, keep the shape, launch grid,
+DMA extents and actual evaluator traffic fixed. Use a diagnostic operation
+that consumes both operands, such as elementwise multiplication, and check
+its numerical output with a separate oracle. Inspect the compiled DMA calls:
+returning just one operand can eliminate the other read. Compare paired
+process medians. Replacing SwiGLU with multiplication on one 36-block FP32
+layout changed task duration by −0.007 to +0.087 µs (full minus multiply)
+while leaving a gap of more than 0.5 µs to the target in all three rounds.
+Only the full operator qualifies for the benchmark.
+
+When a short complete operator remains slow, vary the logical width at
+fixed row count, tile height, grid and alignment class. Keep the input
+distribution finite and compare the full-width executable to the qualified
+one. On 950PR, reducing 509 FP32 lanes to 29 saved 0.23 and 0.29 µs at
+46 blocks. Reducing 536 lanes to 32 saved 0.36 and 0.41 µs at 36 blocks.
+Both the vector work and logical bytes vary with width. To isolate grid
+size, keep the tile widths and transfer extents fixed in a separate run.
+[Finite width sweep, both orders](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879841913).
+
+Check the lowering before substituting `exp2(x * log2(e))` for a natural
+exponential. On the tested 950PR release, AscTile emitted a tile-sized ln(2)
+broadcast, a second multiplication and the same `AscendC::Exp`. The short
+FP32 SwiGLU kernels required four UB tiles instead of three. Direct `exp`
+was equal or faster in all four paired device comparisons.
+[Generated instructions and measured timings](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6879318912).
+
 ## Simulator timing protocol
 
 - Keep simulator ticks, simulator host wall time and measured NPU microseconds

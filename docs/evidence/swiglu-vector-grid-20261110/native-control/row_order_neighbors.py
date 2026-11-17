@@ -1,0 +1,68 @@
+"""Materialize private finite row geometries for read-order and height controls."""
+import argparse
+import csv
+import json
+from pathlib import Path
+import shutil
+
+
+def prepare(task, output, family="aligned-order"):
+    if family == "aligned-order":
+        case, expected, dim = 13, [11, 13, 16, 67], 2
+        shapes = (("lower", [139, 1, 16, 66]), ("upper", [141, 1, 16, 68]))
+    elif family == "aligned-tail":
+        case, expected, dim = 13, [11, 13, 16, 67], 2
+        shapes = (("r142", [142, 1, 16, 67]), ("r143", expected))
+    elif family == "padded-height":
+        case, expected, dim = 11, [3, 7, 13, 1018], -1
+        shapes = (("lower", [267, 1, 1, 1002]), ("upper", [279, 1, 1, 1022]))
+    elif family == "padded-tail":
+        case, expected, dim = 11, [3, 7, 13, 1018], -1
+        # At six rows per tile all six shapes have 46 owners. Only the last
+        # owner changes occupancy. Keep the public tensor shape at 273.
+        shapes = [(f"r{rows}", expected if rows == 273 else [rows, 1, 1, 1018])
+                  for rows in range(271, 277)]
+    elif family == "padded-pitch":
+        # The stock dispatcher keeps T6/W512 and 46 productive blocks throughout.
+        # H508 aligns every input row while H505, H509 and H510 change sector phase.
+        case, expected, dim = 11, [3, 7, 13, 1018], -1
+        shapes = [(f"h{half}", [3, 7, 13, 2 * half]) for half in (505, 508, 509, 510)]
+    elif family == "padded-width":
+        case, expected, dim = 11, [3, 7, 13, 1018], -1
+        shapes = [(f"h{half}", [3, 7, 13, 2 * half]) for half in (29, 125, 253, 509)]
+    elif family == "fp16-waves":
+        case, expected, dim = 1, [1024, 2048], -1
+        shapes = (("lower", [1040, 2080]), ("upper", [1088, 2176]))
+    elif family == "aligned-width":
+        case, expected, dim = 13, [11, 13, 16, 67], 2
+        shapes = [(f"h{half}", [11, 13, 16, half // 8]) for half in (32, 128, 264, 536)]
+    else:
+        raise ValueError(f"unknown finite geometry family {family!r}")
+    with (task / "cases.csv").open(newline="") as f:
+        public, = (r for r in csv.DictReader(f) if int(r["case_id"]) == case)
+    if json.loads(public["input_shape"]) != [expected] or json.loads(public["attrs"]) != {"dim": dim}:
+        raise ValueError("expected the public split-axis schema")
+    for name, shape in shapes:
+        dest = output / name / "tasks/level1/swi_glu"
+        dest.mkdir(parents=True)
+        entry = dict(operator=public["operator"], case_id=case, input_shape=[shape],
+                     dtype=json.loads(public["dtype"]), attrs={"dim": dim},
+                     value_range=json.loads(public["value_range"]) if family in ("fp16-waves", "padded-tail", "padded-pitch") else [-2, 2],
+                     note="Private finite short-row transfer control")
+        # JSON is a YAML 1.2 subset. Serialize the same record to both inputs.
+        (dest / "cases.yaml").write_text(json.dumps({"cases": [entry]}, indent=2) + "\n")
+        with (dest / "cases.csv").open("w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=public)
+            writer.writeheader()
+            writer.writerow({k: json.dumps(v) if isinstance(v, (list, dict)) else v for k, v in entry.items()})
+        for file in ("proto.yaml", "golden.py"):
+            shutil.copyfile(task / file, dest / file)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("task", type=Path)
+    parser.add_argument("output", type=Path)
+    parser.add_argument("--family", choices=("aligned-order", "aligned-tail", "padded-height", "padded-width", "aligned-width", "fp16-waves", "padded-tail", "padded-pitch"), default="aligned-order")
+    args = parser.parse_args()
+    prepare(args.task, args.output, args.family)
