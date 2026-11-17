@@ -12,11 +12,12 @@ import shutil
 import sys
 import tempfile
 import time
+import urllib.request
 from zipfile import ZipFile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import smoke
-from single_operator import ci_client
+from single_operator import ci_client, download
 
 OPERATORS = (("Exp", "exp"), ("SwiGlu", "swi_glu"))
 
@@ -68,7 +69,7 @@ def verify_package(run, manifest_sha):
     return manifest
 
 
-def result_receipt(run, manifest, report):
+def result_receipt(run, manifest, report, queue):
     job = json.loads((run / "job.json").read_bytes())["job"]
     if (
         set(job.get("selected_operators") or []) != {fn for _, fn in OPERATORS}
@@ -86,14 +87,34 @@ def result_receipt(run, manifest, report):
         or not math.isfinite(score)
     ):
         raise ValueError("CANNBench has not returned a finite service score")
+    evaluated_zip = download(queue, job["submission_download_url"])
+    evaluated_sha256 = hashlib.sha256(evaluated_zip).hexdigest()
+    if evaluated_sha256 != manifest["files"]["submission.zip"]:
+        raise ValueError("The archive returned by CANNBench differs from the prepared ZIP")
+    public_job_url = None
+    if manifest["visibility"] == "public":
+        if not re.fullmatch(r"job_[0-9a-f]+", job["id"]):
+            raise ValueError("Invalid public job ID")
+        public_job_url = queue._client._url("/api/jobs/" + job["id"])
+        with urllib.request.urlopen(public_job_url, timeout=30) as response:
+            public_job = json.load(response)["job"]
+        for field in (
+            "id", "submission_id", "status", "benchmark_slug", "benchmark_version",
+            "target_hardware", "case_set", "result_score", "is_private",
+        ):
+            if public_job.get(field) != job[field]:
+                raise ValueError(f"Public CANNBench job differs in {field}")
+        if set(public_job.get("selected_operators") or ()) != set(job["selected_operators"]):
+            raise ValueError("Public CANNBench job differs in selected_operators")
     return {
         "job": job["id"],
+        "public_job_url": public_job_url,
         "submission": job["submission_id"],
         "version": job["benchmark_version"],
         "hardware": job["target_hardware"],
         "visibility": manifest["visibility"],
         "score": score,
-        "package_sha256": manifest["files"]["submission.zip"],
+        "package_sha256": evaluated_sha256,
         "qualification_sha256": manifest["files"]["qualification.json"],
         "operators": report["operators"],
         "queued_at": job["queued_at"],
@@ -185,7 +206,7 @@ def main():
     while time.monotonic() < deadline:
         code, report = smoke.collect(q, run, ledger)
         if code == 0:
-            receipt = result_receipt(run, manifest, report)
+            receipt = result_receipt(run, manifest, report, q)
             smoke.save(run / "service-receipt.json", receipt)
             print(
                 "40/40 cases passed. CANNBench score:",

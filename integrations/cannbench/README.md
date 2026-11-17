@@ -311,4 +311,6 @@ submission using GET requests and the same digest.
 
 The runner retains the complete report and `service-receipt.json` in
 `~/.local/state/pyasc-cannbench-l1/<manifest SHA-256>/`. Compare the service
-score only after both operators pass all 40 numerical and timing checks.
+score after both operators pass their 20 numerical and timing checks. CI compares
+the SHA-256 of the archive returned by CANNBench with the staged ZIP. For a
+public submission it also reads the job anonymously and verifies its score and identity.

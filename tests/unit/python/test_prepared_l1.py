@@ -1,6 +1,8 @@
 """Verify that a two-operator submission cannot change one task or its visibility."""
 
 from hashlib import sha256
+import io
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -129,4 +131,36 @@ class PreparedL1Test(unittest.TestCase):
         }
         l1.smoke.save(self.run / "job.json", {"job": job})
         with self.assertRaisesRegex(ValueError, "visibility"):
-            l1.result_receipt(self.run, self.manifest, {})
+            l1.result_receipt(self.run, self.manifest, {}, self.q)
+
+    def test_published_score_matches_downloaded_package_and_anonymous_job(self):
+        job = {
+            "id": "job_abc", "submission_id": "sub_def", "case_set": "standard",
+            "selected_operators": ["exp", "swi_glu"], "target_hardware": "950pr",
+            "benchmark_slug": "official-tasks", "benchmark_version": "2.1.0", "is_private": False,
+            "is_independent_environment": False, "result_score": 161.5, "status": "succeeded",
+            "queued_at": "2026-11-17", "claimed_at": "2026-11-17", "finished_at": "2026-11-17",
+            "submission_download_url": "/api/submissions/sub_def/download",
+        }
+        self.manifest["visibility"] = "public"
+        self.manifest["files"]["qualification.json"] = "b" * 64
+        self.q._client._url.return_value = "https://cannbench.example/api/jobs/job_abc"
+        l1.smoke.save(self.run / "job.json", {"job": job})
+        with patch.object(l1, "download", return_value=b"different source"), \
+                self.assertRaisesRegex(ValueError, "prepared ZIP"):
+            l1.result_receipt(self.run, self.manifest, {}, self.q)
+        qualified = (self.run / "submission.zip").read_bytes()
+        for field, value in [("result_score", 160), ("is_private", True), ("submission_id", "sub_abc"),
+                             ("selected_operators", ["exp"])]:
+            public = io.BytesIO(json.dumps({"job": {**job, field: value}}).encode())
+            with self.subTest(field=field), patch.object(l1, "download", return_value=qualified), \
+                    patch.object(l1.urllib.request, "urlopen", return_value=public), \
+                    self.assertRaisesRegex(ValueError, f"differs in {field}"):
+                l1.result_receipt(self.run, self.manifest, {}, self.q)
+        with patch.object(l1, "download", return_value=qualified), \
+                patch.object(l1.urllib.request, "urlopen",
+                             return_value=io.BytesIO(json.dumps({"job": job}).encode())) as anonymous:
+            receipt = l1.result_receipt(self.run, self.manifest, {"operators": []}, self.q)
+        anonymous.assert_called_once_with(self.q._client._url.return_value, timeout=30)
+        self.assertEqual(receipt["score"], job["result_score"])
+        self.assertEqual(receipt["package_sha256"], sha256(qualified).hexdigest())
