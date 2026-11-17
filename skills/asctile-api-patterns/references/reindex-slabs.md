@@ -20,10 +20,18 @@ device=input.device)`, `gate_idx = 2*H*(k//H) + k%H` and
 is independent of input values. Pass the index tensors as kernel arguments
 and load them before the tile loop. For a slab starting at row r, copy
 `2*T*H` input lanes at offset `2*r*H`, with true extent
-`2*min(T,R-r)*H` and zero padding. Use `asctile.reindex(slab, gate_idx_ub)`
-and `asctile.reindex(slab, value_idx_ub)` before widening each gathered
-half. Store the resulting contiguous output at `r*H`, with true extent
+`2*min(T,R-r)*H` and zero padding. Gather and widen the gate, compute
+its SiLU activation, then gather and widen the value for the final
+multiply. This shortens the time both widened halves occupy UB together.
+Store the resulting contiguous output at `r*H`, with true extent
 `min(T,R-r)*H`. The final partial tile belongs to the same launch.
+
+At fixed geometry and signed-int16 indices on 950PR, this order saved
+one physical FP32 tile on each of two BF16 shapes. At T=928, H=7,
+compiled UB fell from 168,896 to 142,912 bytes and the two process
+medians moved from 6.03/5.99 to 5.92/5.82 µs. Check the allocation
+again when the host supplies int32 indices or changes the unroll.
+[Matched gather-order controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6888851452)
 
 With `reuse_alloc=2`, aligned BF16 half-rows of one and seven elements used
 24 bytes per output lane at unroll 1 and 28 at unroll 2. These are compiled live-buffer costs. Recheck allocations

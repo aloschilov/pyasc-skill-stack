@@ -23,20 +23,38 @@ Pass the original input and output tensors to the JIT. Widen each loaded
 tile to FP32, apply `scale * x + shift`, multiply by the base logarithm,
 take the exponential, and cast once at the store. Compute the scalar
 `math.log(base) if base > 0 else 1.0` on the host. Bind the three scalars
-at each call and specialize only on identity operations. Test changed
-attributes on the same shape in one process. A NaN base takes the natural
+at each call. Use separate constexpr flags to omit a unit scale, zero
+shift or unit log multiplier. Test changed attributes on the same shape
+in one process. A NaN base takes the natural
 exponential branch. A positive infinite base at unit scale and zero
 shift gives `[0, NaN, +inf]` for input `[-1, 0, 1]`.
 
-For short FP16/BF16 streams around 24–32 KiB of input per available
-vector core, compare three tiles per core with one tile per core. Test
-the three-tile branch before the one-wave fallback since both can fit.
+For FP16/BF16, compare three tiles per core with one tile per core
+when `24 * 1024 * A <= N * itemsize <= 32 * 1024 * A`, where A is
+the available vector-core count. Check this dtype and byte window
+before testing UB fit. Outside the window compare one-wave and general
+streaming paths. Within it, evaluate the three-tile branch first since
+both geometries can fit.
+
 For FP16 identity, start with grid-stride ownership and 32-byte input
 alignment. For affine or log-only paths, compare contiguous ownership
-and 256-byte alignment. With grid size `G` and alignment `q` in elements,
-use `T = q * ceil(N / (3 * G * q))`; check compiled UB and bound the last
-transfer. For 1,024² FP16 identity elements on 72 AIVs this gives
-`T=4864`. Confirm the actual grid, stream and copies in a trace.
+and 256-byte alignment. Block b owns successive tiles beginning at
+`b * ceil(num_tiles / blocks)`. Bound the last block to the live tiles.
+With grid size `G` and alignment `q` in elements, use
+`T = q * ceil(N / (3 * G * q))`. Check compiled UB and bound the last
+transfer. Pass three as the short loop's actual `unroll_factor`.
+
+For this short path, bind a resident FP16 or BF16 input to the current
+Torch stream of the input device at each call. On the measured
+PyASC wheel the launch accepts `kernel[blocks, ctypes.c_void_p(handle)]`,
+where `handle = torch.npu.current_stream(x.device).npu_stream`. CPU-backed
+CaModel and staged inputs use `kernel[blocks]`. Exercise the same shape
+on two caller streams and check the stream received by the launcher.
+For 1,024² FP16 identity at 72 blocks, T=4,864 and unroll three, the
+caller-stream medians were 3.24, 3.22 and 3.43 µs on 950PR. At the
+same geometry, integer-grid launches took 3.99, 3.84 and 3.88 µs.
+[Matched identity controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6872091462)
+· [FP16 and BF16 affine controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6871122168)
 
 One freshly generated Exp using these choices passed all 20 L1 cases on
 a local Ascend950PR and beat the published 2.1.0 baseline on all 20
