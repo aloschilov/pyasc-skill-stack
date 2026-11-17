@@ -34,6 +34,6 @@ a numerical pass, and a simulator result is not a hardware measurement.
 ## What counts as a reference
 
 Correctness is judged against the Huawei-authored asctile target suite in
-[`reference/asctile/target/`](../../../reference/asctile/target/), performance
+[`reference/asctile/target/`](https://github.com/aloschilov/pyasc-skill-stack/tree/main/reference/asctile/target), performance
 against CANNBench. A kernel written by a model is a candidate, never a
-reference. See [`docs/evidence-sources.md`](../../../docs/evidence-sources.md).
+reference. See [`docs/evidence-sources.md`](https://github.com/aloschilov/pyasc-skill-stack/blob/main/docs/evidence-sources.md).

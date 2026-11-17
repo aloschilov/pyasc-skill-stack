@@ -5,9 +5,11 @@ description: Find pinned PyASC/asctile API documentation, reference kernels and 
 
 # PyASC/asctile resource routing
 
-Start with the skill-stack checkout that supplied this skill. Resolve paths
-below from that checkout, including when skills are installed through symlinks.
-Do not search unrelated workspaces for an apparently matching runtime.
+Start with the focused references beside this SKILL.md and the installed
+sibling skills. The `reference/` tree and search commands below belong to the
+[full skill-stack checkout](https://github.com/aloschilov/pyasc-skill-stack),
+which the Skills CLI does not install. Use a matching checkout when you need
+the pinned source; do not search unrelated workspaces for a runtime.
 
 ## Source authority
 
