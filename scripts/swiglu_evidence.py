@@ -84,8 +84,12 @@ def service_projection(fetch, pin):
     result = json.loads(raw)
     evaluation = match.group(1)
     origin = str(result['origin_run'])
+    version = result['benchmark_version']
+    qualified = result.get('qualification_benchmark_version',version)
+    require(version in ('2.0.0','2.1.0') and (qualified==version or (qualified,version)==('2.0.0','2.1.0')),
+            'Unrecognized public catalog transition')
     require(result['schema']==1 and re.fullmatch(r'[1-9][0-9]+',origin) and str(result['evaluation_run'])==evaluation
-            and result['hardware']=='950pr' and result['benchmark_version']=='2.0.0'
+            and result['hardware']=='950pr'
             and re.fullmatch(r'job_[0-9a-f]+',result['job_id']) and re.fullmatch(r'sub_[0-9a-f]+',result['submission_id'])
             and all(re.fullmatch(r'[0-9a-f]{64}',result[k]) for k in ['candidate_sha256','package_sha256']),
             'Unexpected generation or submission identity')
@@ -123,6 +127,7 @@ def service_projection(fetch, pin):
     public_cases = [{k:c[k] for k in ('id','kernel','baseline_us','elapsed_us','perf_score','t_hw_us') if k in c}
                     for c in sorted(cases,key=lambda c:int(c['id'].split('_')[-1]))]
     return {'status':'available','ratio':ratio,'score':result['service_score'],'job':result['job_id'],
+            'benchmark_version':version,'qualification_benchmark_version':qualified,
             'submission':result['submission_id'],'generation':generation_base+kernel_run,
             'policy_generation':generation_base+origin if result.get('policy_sha256') else None,
             'policy_profile':policy_profile,
@@ -172,10 +177,14 @@ def service_history(fetch, pinned, discover):
     history = sorted(runs.values(),key=lambda r:r['finished_at'],reverse=True)
     if complete:
         for current,previous in zip(history,history[1:]):
+            if (current['benchmark_version']!=previous['benchmark_version']
+                    and current['qualification_benchmark_version']!=previous['benchmark_version']
+                    and previous['qualification_benchmark_version']!=current['benchmark_version']):
+                continue
             paired = list(zip(previous['cases'],current['cases']))
             generated = [(a,b) for a,b in paired if b['kernel']!='_swiglu_pair_groups']
             current['previous'] = {
-                'job':previous['job'],'release':previous['release'],
+                'job':previous['job'],'release':previous['release'],'benchmark_version':previous['benchmark_version'],
                 'previous_over_current':geometric_mean(a['elapsed_us']/b['elapsed_us'] for a,b in generated),
                 'changed_baselines':sum(a['baseline_us']!=b['baseline_us'] for a,b in generated)}
             for old,new in paired:
