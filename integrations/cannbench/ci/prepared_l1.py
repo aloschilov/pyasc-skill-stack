@@ -206,6 +206,7 @@ def main():
     ledger = base / "pyasc-cannbench-smoke"
     ledger.mkdir(exist_ok=True, parents=True, mode=0o700)
     q = ci_client()
+    deadline = time.monotonic() + 4 * 3600
     if args.action != "collect":
         public = args.action == "submit-public"
         if manifest["visibility"] != ("public" if public else "private"):
@@ -233,7 +234,6 @@ def main():
                 with open(summary, "a", encoding="utf-8") as output:
                     print(message, file=output)
             return
-    deadline = time.monotonic() + 4 * 3600
     while time.monotonic() < deadline:
         code, report = smoke.collect(q, run, ledger)
         if code == 0:

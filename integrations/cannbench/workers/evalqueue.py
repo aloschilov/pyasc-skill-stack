@@ -112,7 +112,7 @@ class EvalQueue:
                 "--show-error",
                 "--fail-with-body",
                 "--write-out",
-                "\n%{http_code}",
+                "\n%{http_code} %{size_upload} %{time_total}",
                 "--connect-timeout",
                 "30",
                 "--max-time",
@@ -157,11 +157,14 @@ class EvalQueue:
                 text=True,
                 timeout=self.upload_timeout + 30,
             )
-        body, _, status = completed.stdout.rpartition("\n")
+        body, _, transfer = completed.stdout.rpartition("\n")
+        status, _, counters = transfer.partition(" ")
         if completed.returncode:
             detail = (body or completed.stderr).strip()
             error = SubmissionRejected if completed.returncode == 22 and status in ("400", "401", "403", "413", "422") else RemoteError
-            raise error(f"CANNBench upload failed (HTTP {status}, curl rc={completed.returncode}): {detail[:800]}")
+            uploaded, _, seconds = counters.partition(" ")
+            stats = f", {uploaded} multipart bytes in {seconds}s" if seconds else ""
+            raise error(f"CANNBench upload failed (HTTP {status}, curl rc={completed.returncode}{stats}): {detail[:800]}")
         try:
             return json.loads(body)
         except json.JSONDecodeError as exc:

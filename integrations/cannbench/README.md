@@ -319,6 +319,10 @@ its job ID, submission ID and package tag against CANNBench before sharing the
 requires reconciliation. An overlapping submit returns the accepted job ID
 and releases the runner for the other collector. Run `l1-collect` with the
 same manifest to obtain the hardware verdict and score.
+The paired worker gives transfer and collection a shared four-hour window.
+On a curl failure the private diagnostic retains the HTTP code, uploaded
+multipart bytes and elapsed time. A timeout still requires checking the
+original job tag before another submission can be considered.
 
 The runner retains the complete report and `service-receipt.json` in
 `~/.local/state/pyasc-cannbench-l1/<manifest SHA-256>/`. Compare the service

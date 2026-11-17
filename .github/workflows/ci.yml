@@ -356,6 +356,7 @@ jobs:
           echo "PYTHON=$CANNBENCH_VENV/bin/python" >> "$GITHUB_ENV"
       - name: Evaluate the retained Exp and SwiGLU sources
         env:
+          CANNBENCH_UPLOAD_TIMEOUT: "14400"
           BENCHSITE_API_TOKEN: ${{ secrets.BENCHSITE_API_TOKEN }}
           SELECTED_ACTION: ${{ inputs.cannbench_action }}
           MANIFEST_SHA256: ${{ inputs.l1_manifest_sha256 }}
