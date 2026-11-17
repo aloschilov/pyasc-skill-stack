@@ -56,13 +56,21 @@ policy. If eligible short or one-wave inputs collapse to the streaming
 geometry, compare a representative shape from each group at fixed inputs
 before adopting the simpler route.
 
-For FP16 identity, start with grid-stride ownership and 32-byte input
+For short FP16 identity, start with grid-stride ownership and 32-byte
 alignment. For affine or log-only paths, compare contiguous ownership
-and 256-byte alignment. Block b owns successive tiles beginning at
-`b * ceil(num_tiles / blocks)`. Bound the last block to the live tiles.
-With grid size `G` and alignment `q` in elements, use
-`T = q * ceil(N / (3 * G * q))`. Check compiled UB and bound the last
-transfer. Pass three as the short loop's actual `unroll_factor`.
+and 256-byte alignment. With grid size `G` and alignment `q` in
+elements, use `T = q * ceil(N / (3 * G * q))`, bound the last transfer
+and pass three as the loop's `unroll_factor`. Check compiled UB.
+
+Profile short identity, log-only and affine inputs separately. On local
+950PR, one three-stage implementation beat the published baseline on
+two of five short shapes (0.914× geometric mean). For a short affine
+shape, compare two contiguous loops: start each block at
+`b * ceil(num_tiles / G)`, or distribute the remainder over the first
+blocks. Keep tile, grid, unroll, compiler options and caller stream
+fixed. Check uneven tails and alternate measurement order. The measured
+implementations differed in both loop bounds and compiler options.
+[Route measurements and controls](https://github.com/aloschilov/pyasc-skill-stack/pull/68)
 
 For 1,024² FP16 identity at 72 blocks, T=4,864 and unroll three, the
 caller-stream medians were 3.24, 3.22 and 3.43 µs on 950PR. At the
