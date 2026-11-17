@@ -56,8 +56,27 @@ same geometry, integer-grid launches took 3.99, 3.84 and 3.88 µs.
 [Matched identity controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6872091462)
 · [FP16 and BF16 affine controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6871122168)
 
-One freshly generated Exp using these choices passed all 20 L1 cases on
-a local Ascend950PR and beat the published 2.1.0 baseline on all 20
+For the remaining inputs, round `ceil(N / A)` up to DMA alignment and
+check whether that tile fits UB for one tile per block. The measured
+FP32-compute specialization used `8 + itemsize` UB bytes per lane. When
+the work needs multiple waves, read each input tile once through
+`asctile.global_tensor(x_ptr, [N], l2_cache=False)` and keep the
+output descriptor at its default. Use the default input policy for the
+short and one-wave paths. Select by the actual launch geometry and UB
+capacity. The tested streaming inputs ranged from 3.98 to 256 MiB.
+
+On 950PR this single descriptor change reduced the median of five
+kernel timings on all 12 streaming shapes at fixed arithmetic, output,
+tile and grid. For 128 MiB FP16, time fell from 136.87 to 104.07 µs.
+For 256 MiB FP32 it fell from 319.82 to 277.36 µs. Check the public
+entry point and the emitted input descriptor when using a new compiler.
+Four shapes repeated with a different input seed also improved, including
+the 128 MiB FP16 case (137.25 to 102.69 µs).
+[Paired Exp measurements](https://github.com/aloschilov/pyasc-skill-stack/pull/64)
+
+An earlier OpenCode Exp using the short-stream tuning and default
+input caching passed all 20 L1 cases on a local Ascend950PR and beat
+the published 2.1.0 baseline on all 20
 (1.63211× geometric mean). This measurement covers the complete candidate;
 use a fixed-geometry control to attribute a difference to one choice.
 [Candidate hash, per-case timings and golden checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6872793874)
