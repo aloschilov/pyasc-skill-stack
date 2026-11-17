@@ -24,6 +24,14 @@ dispatch, captures selected JIT launches, and lowers every unique
 specialization through codegen, compiler passes, AscendC translation and UB
 checks. All selected case routes must pass; zero cases cannot pass.
 
+Inspect the emitted integer widths for tile counts, offsets and DMA byte
+strides, including fallback routes. An element count that fits signed 32-bit
+does not make `n + tile - 1` or `(n - valid) * itemsize` safe. Widen the
+arithmetic where the runtime supports it, or guard the supported input range
+before allocation and launch. Check boundary metadata without allocating
+huge tensors, and retain every official task case within that range. These
+host checks supplement numerical execution; they do not replace it.
+
 This gate does not execute numerical code or prove device launch, correctness
 or speed. Data-dependent host reads are unsupported by its tensor stubs. Do
 not add candidate branches that detect the validator or catch its missing API
