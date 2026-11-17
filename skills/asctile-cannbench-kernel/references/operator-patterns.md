@@ -56,10 +56,29 @@ same geometry, integer-grid launches took 3.99, 3.84 and 3.88 µs.
 [Matched identity controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6872091462)
 · [FP16 and BF16 affine controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6871122168)
 
-For the remaining inputs, round `ceil(N / A)` up to DMA alignment and
-check whether that tile fits UB for one tile per block. The measured
-FP32-compute specialization used `8 + itemsize` UB bytes per lane. When
-the work needs multiple waves, read each input tile once through
+Use `@asctile.jit(reuse_alloc=2)` for the measured short, one-wave and
+streaming Exp paths. After the short branch, round `ceil(N / A)` up to
+DMA alignment and check whether that tile fits UB for one tile per block.
+The earlier one-wave emitter budgeted `8 + itemsize` UB bytes per lane.
+
+Size the streaming tile separately for its selected unroll. On 950PR,
+start with 8,192 lanes and unroll two. In a checked public-API emitter
+that combination used 65,536 UB bytes across all 12 streaming shapes.
+For another shape or compiler, measure the emitted specialization's
+live bytes per lane and fixed workspace. Round the fitting tile down to
+DMA alignment and recheck it. Read `UB` from the lowered module's
+`ir.attr.memory_consumed` and compare it with the active device capacity.
+[Compile and allocation check](https://github.com/aloschilov/pyasc-skill-stack/blob/8129a4e/integrations/cannbench/workers/local_compile_gate.py#L395)
+
+The decorator matters at the same tile and grid. With bare `@asctile.jit`,
+one generated loop used 16–24 bytes per streamed FP16/BF16 lane at
+unroll one and 48–80 per short lane at unroll three. Setting only
+`reuse_alloc=2` reduced these to 6 and 10 bytes respectively. Streamed
+FP32 at unroll one fell from 12–16 to 4 bytes per lane. This brought all
+20 public shapes within 253,952 bytes, up from 6. Check both short affine
+and streaming variants when changing the decorator or number of stages.
+
+When the work needs multiple waves, read each input tile once through
 `asctile.global_tensor(x_ptr, [N], l2_cache=False)` and keep the
 output descriptor at its default. Use the default input policy for the
 short and one-wave paths. Select by the actual launch geometry and UB
