@@ -35,7 +35,9 @@ class PreparedL1Test(unittest.TestCase):
             return {
                 "benchmark_version": "2.1.0",
                 "benchmark_slug": "official-tasks",
-                "operators": [{"operator": op, "function_name": fn, "case_count": 20}],
+                "operators": [{"operator": op, "function_name": fn, "case_count": 20,
+                               "rel_path": f"level1/{fn}",
+                               "case_ids": [f"level1/{fn}_{i}" for i in range(1, 21)]}],
             }, {"contract": fn}
 
         self.snapshot = patch.object(l1.smoke, "task_snapshot", side_effect=task)
@@ -49,6 +51,7 @@ class PreparedL1Test(unittest.TestCase):
         l1.smoke.save(self.run / "task.json", tasks)
         self.manifest = {
             "catalog": catalog,
+            "scope": "Level 1 Exp and SwiGLU, all standard public cases",
             "visibility": "private",
             "target_hardware": "950pr",
             "aggregation_token": "example",
@@ -445,22 +448,149 @@ class PreparedL1Test(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "visibility"):
             l1.result_receipt(self.run, self.manifest, {}, self.q)
 
-    def test_published_score_matches_downloaded_package_and_anonymous_job(self):
+    def completed_job(self):
         job = {
             "id": "job_abc", "submission_id": "sub_def", "case_set": "standard",
             "selected_operators": ["exp", "swi_glu"], "target_hardware": "950pr",
+            "runner_hardware": "950pr",
             "benchmark_slug": "official-tasks", "benchmark_version": "2.1.0", "is_private": False,
             "is_independent_environment": False, "result_score": 161.5, "status": "succeeded",
             "queued_at": "2026-11-17", "claimed_at": "2026-11-17", "finished_at": "2026-11-17",
             "submission_download_url": "/api/submissions/sub_def/download",
+            "results": {"result_stage": "final", "contains_performance": True,
+                        "anti_cheat_failed_cases": 0,
+                        "summary": {"total_cases": 40, "passed_cases": 40},
+                        "operators": []},
         }
+        for spec in self.manifest["catalog"]["operators"]:
+            job["results"]["operators"].append({
+                "operator": spec["operator"], "rel_path": spec["rel_path"],
+                "total_cases": 20, "passed_cases": 20, "anti_cheat_failed_cases": 0,
+                "cases": [{"case_id": cid, "status": "success", "elapsed_us": 4.5,
+                           "baseline_perf_us": 3.0, "accuracy": {"passed": True},
+                           "op_times": {"device_kernels": {"compute": 4.5}}}
+                          for cid in spec["case_ids"]],
+            })
         self.manifest["visibility"] = "public"
         self.manifest["files"]["qualification.json"] = "b" * 64
         self.q._client._url.return_value = "https://cannbench.example/api/jobs/job_abc"
+        return job
+
+    def retained_report(self, job):
         l1.smoke.save(self.run / "job.json", {"job": job})
+        report = l1.smoke.evaluate(self.manifest["catalog"], [{"job": job}], "950pr")
+        report.update(scope=self.manifest["scope"],
+                      archive_sha256=self.manifest["files"]["submission.zip"],
+                      job_id=job["id"], submission_id=job["submission_id"],
+                      **{key: job.get(key) for key in
+                         ("queued_at", "claimed_at", "started_at", "finished_at")})
+        return report
+
+    def assert_receipt_refused(self, report, message):
+        with (patch.object(l1, "download") as download,
+              patch.object(l1.urllib.request, "urlopen") as anonymous,
+              self.assertRaisesRegex(ValueError, message)):
+            l1.result_receipt(self.run, self.manifest, report, self.q)
+        download.assert_not_called()
+        anonymous.assert_not_called()
+
+    def test_receipt_rejects_missing_or_false_accuracy_in_either_operator(self):
+        for op in range(2):
+            for accuracy in (None, {}, {"passed": False}, {"passed": 1}, {"passed": "true"}, True):
+                with self.subTest(operator=op, accuracy=accuracy):
+                    job = self.completed_job()
+                    case = job["results"]["operators"][op]["cases"][-1]
+                    if accuracy is None:
+                        del case["accuracy"]
+                    else:
+                        case["accuracy"] = accuracy
+                    report = self.retained_report(job)
+                    self.assertTrue(report["gate_passed"])  # The shared legacy gate is unchanged.
+                    self.assert_receipt_refused(report, "explicit numerical pass")
+
+    def test_receipt_rejects_absent_or_malformed_device_evidence_in_either_operator(self):
+        malformed = [None, {}, [], "compute", {"": 1.0}, {" ": 1.0}, {"compute": True},
+                     {"compute": "4.5"}, {"compute": {}}, {"compute": 0}, {"compute": -1},
+                     {"compute": float("nan")}, {"compute": float("inf")},
+                     {"compute": 4.5, "copy": None}]
+        for op in range(2):
+            for kernels in malformed:
+                with self.subTest(operator=op, kernels=kernels):
+                    job = self.completed_job()
+                    job["results"]["operators"][op]["cases"][-1]["op_times"] = {"device_kernels": kernels}
+                    # Service JSON can be malformed; retain the bytes so the receipt must reject them.
+                    report = self.retained_report(job)
+                    self.assert_receipt_refused(report, "device-kernel measurements")
+            for timings in (None, {}, "compute", ["compute"]):
+                with self.subTest(operator=op, op_times=timings):
+                    job = self.completed_job()
+                    case = job["results"]["operators"][op]["cases"][-1]
+                    if timings is None:
+                        del case["op_times"]
+                    else:
+                        case["op_times"] = timings
+                    self.assert_receipt_refused(self.retained_report(job), "device-kernel measurements")
+
+    def test_receipt_rechecks_failed_incomplete_and_mismatched_saved_job(self):
+        for defect in ("failed", "missing second operator", "missing second-operator case",
+                       "failed second-operator case", "duplicate case", "wrong case",
+                       "wrong catalog", "wrong hardware", "anti-cheat"):
+            with self.subTest(defect=defect):
+                job = self.completed_job()
+                report = self.retained_report(job)
+                results = job["results"]
+                cases = results["operators"][1]["cases"]
+                if defect == "failed": job["status"] = "correctness_failed"
+                elif defect == "missing second operator": results["operators"].pop()
+                elif defect == "missing second-operator case": cases.pop()
+                elif defect == "failed second-operator case":
+                    cases[-1]["status"] = "accuracy_failed"
+                    results["operators"][1]["passed_cases"] = 19
+                    results["summary"]["passed_cases"] = 39
+                elif defect == "duplicate case": cases[-1]["case_id"] = cases[0]["case_id"]
+                elif defect == "wrong case": cases[-1]["case_id"] = "level1/swi_glu_21"
+                elif defect == "wrong catalog": job["benchmark_version"] = "2.0.0"
+                elif defect == "wrong hardware": job["runner_hardware"] = "910b"
+                elif defect == "anti-cheat": results["anti_cheat_failed_cases"] = 1
+                l1.smoke.save(self.run / "job.json", {"job": job})
+                self.assert_receipt_refused(report, "exact 40-case pair")
+
+    def test_receipt_refuses_failed_incomplete_or_stale_input_report(self):
+        job = self.completed_job()
+        valid = self.retained_report(job)
+        for field, value in (("gate_passed", False), ("correct_cases", 39), ("operators", []),
+                             ("errors", ["failed"]), ("job_id", "job_other"),
+                             ("archive_sha256", "f" * 64), ("scope", "other cohort"),
+                             ("benchmark_version", "2.0.0")):
+            with self.subTest(field=field):
+                self.assert_receipt_refused({**valid, field: value}, "report differs")
+        changed = deepcopy(valid)
+        changed["operators"][1]["cases"][-1]["elapsed_us"] = 1.0
+        for report in ({}, None, {k: v for k, v in valid.items() if k != "operators"}, changed):
+            self.assert_receipt_refused(report, "report differs")
+
+    def test_receipt_rejects_changed_job_scope(self):
+        for field, value in (("selected_operators", ["exp"]),
+                             ("selected_operators", ["exp", "swi_glu", "exp"]),
+                             ("case_set", "custom"), ("is_independent_environment", True)):
+            with self.subTest(field=field, value=value):
+                job = self.completed_job()
+                report = self.retained_report(job)
+                job[field] = value
+                l1.smoke.save(self.run / "job.json", {"job": job})
+                self.assert_receipt_refused(report, "scope or visibility")
+
+    def test_published_score_matches_downloaded_package_and_anonymous_job(self):
+        job = self.completed_job()
+        # A valid multi-kernel path must remain acceptable; the receipt does not
+        # assume a particular compiler symbol or a single launch per case.
+        job["results"]["operators"][1]["cases"][-1]["op_times"]["device_kernels"] = {
+            "compute_specialization": 3.5, "copy_output": 1.0,
+        }
+        report = self.retained_report(job)
         with patch.object(l1, "download", return_value=b"different source"), \
                 self.assertRaisesRegex(ValueError, "prepared ZIP"):
-            l1.result_receipt(self.run, self.manifest, {}, self.q)
+            l1.result_receipt(self.run, self.manifest, report, self.q)
         qualified = (self.run / "submission.zip").read_bytes()
         for field, value in [("result_score", 160), ("is_private", True), ("submission_id", "sub_abc"),
                              ("selected_operators", ["exp"])]:
@@ -468,11 +598,13 @@ class PreparedL1Test(unittest.TestCase):
             with self.subTest(field=field), patch.object(l1, "download", return_value=qualified), \
                     patch.object(l1.urllib.request, "urlopen", return_value=public), \
                     self.assertRaisesRegex(ValueError, f"differs in {field}"):
-                l1.result_receipt(self.run, self.manifest, {}, self.q)
+                l1.result_receipt(self.run, self.manifest, report, self.q)
         with patch.object(l1, "download", return_value=qualified), \
                 patch.object(l1.urllib.request, "urlopen",
                              return_value=io.BytesIO(json.dumps({"job": job}).encode())) as anonymous:
-            receipt = l1.result_receipt(self.run, self.manifest, {"operators": []}, self.q)
+            receipt = l1.result_receipt(self.run, self.manifest, report, self.q)
         anonymous.assert_called_once_with(self.q._client._url.return_value, timeout=30)
         self.assertEqual(receipt["score"], job["result_score"])
+        self.assertEqual(receipt["job_sha256"], l1.smoke.sha(self.run / "job.json"))
+        self.assertEqual(receipt["operators"], report["operators"])
         self.assertEqual(receipt["package_sha256"], sha256(qualified).hexdigest())

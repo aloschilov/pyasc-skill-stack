@@ -365,7 +365,7 @@ submission using GET requests and the same digest.
 
 If an earlier submission is still in the ledger, the paired workflow verifies
 its job ID, submission ID and package tag against CANNBench before sharing the
-[account limit of three active jobs](https://cannbench.com/docs/mcp). Unknown delivery or an untracked active job
+local limit of three active jobs, subject to the service's current quota. Unknown delivery or an untracked active job
 requires reconciliation. An overlapping submit returns the accepted job ID
 and releases the runner for the other collector. Run `l1-collect` with the
 same manifest to obtain the hardware verdict and score.
@@ -380,6 +380,9 @@ may have reached the service.
 
 The runner retains the complete report and `service-receipt.json` in
 `~/.local/state/pyasc-cannbench-l1/<manifest SHA-256>/`. Compare the service
-score after both operators pass their 20 numerical and timing checks. CI compares
+score after both operators pass their 20 numerical and timing checks. The receipt
+requires explicit `accuracy.passed: true` and device-kernel evidence for every
+case in both operators, in addition to the complete hardware gate. Its
+`job_sha256` binds the receipt to the saved raw response. CI compares
 the SHA-256 of the archive returned by CANNBench with the staged ZIP. For a
 public submission it also reads the job anonymously and verifies its score and identity.

@@ -231,9 +231,12 @@ def verify_package(run, manifest_sha):
 
 
 def result_receipt(run, manifest, report, queue):
-    job = json.loads((run / "job.json").read_bytes())["job"]
+    job_bytes = (run / "job.json").read_bytes()
+    job = json.loads(job_bytes)["job"]
+    selected = job.get("selected_operators")
     if (
-        set(job.get("selected_operators") or []) != {fn for _, fn in OPERATORS}
+        not isinstance(selected, list) or len(selected) != len(OPERATORS)
+        or set(selected) != {fn for _, fn in OPERATORS}
         or job.get("case_set") != "standard"
         or job.get("is_independent_environment") is not False
         or job.get("is_private") is not (manifest["visibility"] == "private")
@@ -241,6 +244,37 @@ def result_receipt(run, manifest, report, queue):
         raise ValueError(
             "Measured job scope or visibility differs from the requested evaluation"
         )
+    # Revalidate the retained raw response, not a caller's assertion of 40/40.
+    checked = smoke.evaluate(manifest["catalog"], [{"job": job}], manifest["target_hardware"])
+    if (checked["gate_passed"] is not True
+            or (checked["required_operators"], checked["required_cases"],
+                checked["correct_cases"], checked["measured_cases"]) != (2, 40, 40, 40)
+            or {(op["operator"], op["function_name"]) for op in checked["operators"]} != set(OPERATORS)
+            or any(op["required_cases"] != 20 for op in checked["operators"])):
+        raise ValueError("Saved CANNBench job did not qualify the exact 40-case pair")
+    # generated_at is the time of gate evaluation; all substantive fields must
+    # match the original collector report, including its job/package binding.
+    checked.pop("generated_at")
+    checked.update(scope=manifest["scope"], archive_sha256=manifest["files"]["submission.zip"],
+                   job_id=job["id"], submission_id=job.get("submission_id"),
+                   **{key: job.get(key) for key in
+                      ("queued_at", "claimed_at", "started_at", "finished_at")})
+    if (not isinstance(report, dict) or report.get("gate_passed") is not True
+            or any(key not in report or report[key] != value for key, value in checked.items())):
+        raise ValueError("Hardware report differs from the saved CANNBench job or manifest")
+    for operator in job["results"]["operators"]:
+        for case in operator["cases"]:
+            accuracy = case.get("accuracy")
+            if not isinstance(accuracy, dict) or accuracy.get("passed") is not True:
+                raise ValueError("Missing explicit numerical pass: " + case["case_id"])
+            timings = case.get("op_times")
+            kernels = timings.get("device_kernels") if isinstance(timings, dict) else None
+            if (not isinstance(kernels, dict) or not kernels
+                    or any(not isinstance(name, str) or not name.strip()
+                           or type(duration) not in (int, float)
+                           or not math.isfinite(duration) or duration <= 0
+                           for name, duration in kernels.items())):
+                raise ValueError("Missing valid device-kernel measurements: " + case["case_id"])
     score = job.get("result_score")
     if (
         not isinstance(score, (float, int))
@@ -275,6 +309,7 @@ def result_receipt(run, manifest, report, queue):
         "hardware": job["target_hardware"],
         "visibility": manifest["visibility"],
         "score": score,
+        "job_sha256": hashlib.sha256(job_bytes).hexdigest(),
         "package_sha256": evaluated_sha256,
         "qualification_sha256": manifest["files"]["qualification.json"],
         "operators": report["operators"],
