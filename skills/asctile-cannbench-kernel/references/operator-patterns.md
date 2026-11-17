@@ -29,6 +29,13 @@ in one process. A NaN base takes the natural
 exponential branch. A positive infinite base at unit scale and zero
 shift gives `[0, NaN, +inf]` for input `[-1, 0, 1]`.
 
+At the public launch site, bind every resident NPU input to its current
+Torch stream after choosing the geometry. On the measured wheel use
+`kernel[blocks, ctypes.c_void_p(torch.npu.current_stream(x.device).npu_stream)]`.
+CPU-backed CaModel uses `kernel[blocks]`. For each geometry, run the
+wrapper twice with different caller streams and inspect the two handles
+received by the launcher. Also exercise its CPU integer-grid path.
+
 Classify the catalog by shape and dtype before choosing the streaming tile.
 Let `N = x.numel()`, `s = x.element_size()` and `A` be the available vector
 cores. Use the same decisions in the public `exp` wrapper:
@@ -57,12 +64,6 @@ With grid size `G` and alignment `q` in elements, use
 `T = q * ceil(N / (3 * G * q))`. Check compiled UB and bound the last
 transfer. Pass three as the short loop's actual `unroll_factor`.
 
-For this short path, bind a resident FP16 or BF16 input to the current
-Torch stream of the input device at each call. On the measured
-PyASC wheel the launch accepts `kernel[blocks, ctypes.c_void_p(handle)]`,
-where `handle = torch.npu.current_stream(x.device).npu_stream`. CPU-backed
-CaModel and staged inputs use `kernel[blocks]`. Exercise the same shape
-on two caller streams and check the stream received by the launcher.
 For 1,024² FP16 identity at 72 blocks, T=4,864 and unroll three, the
 caller-stream medians were 3.24, 3.22 and 3.43 µs on 950PR. At the
 same geometry, integer-grid launches took 3.99, 3.84 and 3.88 µs.
