@@ -304,6 +304,54 @@ simulator report's `evidence_sha256`, and all 20 `compiled_case_ids`. Its
 `suppressed_rejected` for the tested fixtures across at least two seeds.
 Keep the generation, build and qualification evidence together.
 
+For a compact AscendC package, explicitly select `packaging_mode: "source-aot-v1"`.
+The original generated files remain byte-identical at `pyasc_source/exp.py` and
+`pyasc_source/swi_glu.py`; these are the `operators.*.package_source` paths and
+still require the original source qualification above. The public
+`cann_bench/{function}.py` files are separately qualified host adapters. An
+adapter pass never replaces the generated source's numerical evidence.
+
+The AOT ZIP contains only UTF-8 source/build inputs, including `flags.json`
+and `cann_bench/specializations.json`. The wheel installs the matching
+`cann_bench` host files, rebuilt device binaries and standard wheel metadata,
+without the PyASC compiler/runtime. The qualification adds:
+
+* `aot.inputs`: SHA-256 for **every ZIP member**, including generated source,
+  wrappers, dispatch/ABI metadata, AscendC and all build inputs.
+* `aot.wheel_files`: SHA-256 for every installed wheel member.
+* `aot.runtime_revision`, `runtime_extension_sha256`,
+  `compiler_sha256` (`bisheng` and `ld.lld`), and `build_evidence_sha256`:
+  provenance of the locally verified build. These identify the tested
+  toolchain; they are not bundled compiler dependencies.
+* `aot.native_binaries`: one entry for every key in `flags.json`. Each records
+  `operator` (`exp` or `swi_glu`), `origin` (`retained` or `fallback`),
+  `pyasc_source`, `native_sha256` and `rebuilt_sha256`. The two binary hashes
+  must match the build flags, specialization entry and wheel's
+  `cann_bench/device/{key}.o`. Every specialization must map exactly once.
+
+`packaging_binding_sha256` is the value returned by
+`prepared_l1.aot_binding_sha256(qualification)`: SHA-256 of compact, sorted-key
+JSON containing `aot`, `wheel_sha256`, and `sources` (the two original source
+hashes keyed by function name). Thus any change to source, wrapper, build,
+dispatch metadata, compiler provenance, binary map or wheel invalidates the
+adapter's binding.
+
+The separate `host_adapter` object records that same `binding_sha256` and
+`wheel_sha256`, its archived `evidence_sha256`, and true values for
+`dispatch_matches_retained`, `caller_stream_preserved`, and
+`launch_grid_preserved`. Its `operators.{function}` objects use the CaModel
+fields described above, with `source_sha256` set to the **public wrapper** hash.
+Each must compile all 20 official case dispatches and record passing actual
+launches with rejecting suppressed controls. Label numerical pairs with
+`scope: "retained"` or `"fallback"`; both scopes require at least two seeds
+per operator. Run this adapter qualification from the final installed wheel.
+Archive the detailed per-geometry results, counts and limitations externally;
+this verifier validates their bindings and does not rerun their numerics.
+
+Omitting `packaging_mode` retains the existing `source-jit` contract. Unknown
+modes, extra binaries in the source ZIP, incomplete maps, changed inputs or
+unbound adapter evidence fail before a submission intent is created.
+
 With the benchmark credentials and `CANNBENCH_AGGREGATION_TOKEN` configured,
 run `python integrations/cannbench/ci/prepared_l1.py stage-private /path/to/package`
 on that runner. CANNBench limits the compressed `submission.zip` to 10 MiB

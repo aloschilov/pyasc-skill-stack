@@ -6,7 +6,7 @@ import hashlib
 import json
 import math
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import shutil
 import sys
@@ -51,6 +51,132 @@ def qualified_source(source):
     )
 
 
+def aot_binding_sha256(qualification):
+    """Bind source provenance, every build/host input and the resulting wheel."""
+    payload = {
+        "aot": qualification["aot"],
+        "wheel_sha256": qualification["wheel_sha256"],
+        "sources": {
+            fn: qualification["operators"][fn]["source_sha256"]
+            for _, fn in OPERATORS
+        },
+    }
+    return hashlib.sha256(json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()).hexdigest()
+
+
+def verify_aot(z, q):
+    """Verify an attested source-only AOT build, separately from source numerics.
+
+    This checks evidence bindings, not a replacement execution of that build.
+    Numerical/source receipts and the installed-wheel adapter receipt remain
+    distinct, and changing any submitted build input invalidates the latter.
+    """
+    def require(condition, message):
+        if not condition:
+            raise ValueError("Invalid source-aot-v1 qualification: " + message)
+
+    def digest(value):
+        return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value)
+
+    def safe_name(name):
+        return (isinstance(name, str) and bool(name) and "\\" not in name
+                and ":" not in name and not name.startswith("/")
+                and all(part not in ("", ".", "..") for part in name.split("/")))
+
+    aot = q["aot"]
+    inputs = aot["inputs"]
+    require(set(inputs) == set(z.namelist()), "incomplete build input inventory")
+    for name, expected in inputs.items():
+        require(safe_name(name), "unsafe archive member")
+        entry = z.getinfo(name)
+        require((entry.external_attr >> 16) & 0o170000 != 0o120000, "symlink input")
+        require(PurePosixPath(name).suffix in {
+            ".py", ".cpp", ".cce", ".c", ".h", ".hpp", ".sh", ".json",
+            ".toml", ".cfg", ".txt", ".md", ".in",
+        } or PurePosixPath(name).name == "LICENSE", "archive is not source-only")
+        content = z.read(name)
+        require(not content.startswith((b"\x7fELF", b"PK\x03\x04")), "binary input")
+        content.decode("utf-8")
+        require(digest(expected) and hashlib.sha256(content).hexdigest() == expected,
+                "changed build input " + name)
+
+    require(re.fullmatch(r"[0-9a-f]{40}", aot.get("runtime_revision", ""))
+            and digest(aot.get("runtime_extension_sha256")), "missing runtime provenance")
+    require(all(digest(aot.get("compiler_sha256", {}).get(tool))
+                for tool in ("bisheng", "ld.lld"))
+            and digest(aot.get("build_evidence_sha256")), "missing build provenance")
+    flags = json.loads(z.read("flags.json"))
+    entries = json.loads(z.read("cann_bench/specializations.json"))
+    native = aot["native_binaries"]
+    wheel = aot["wheel_files"]
+    require(bool(flags) and set(native) == set(flags), "incomplete native binary map")
+    require(all(safe_name(name) and digest(value) for name, value in wheel.items()),
+            "invalid wheel inventory")
+    # The wheel contains only the pinned host files, rebuilt device binaries and
+    # standard dist-info. In particular no compiler/runtime package is installed.
+    host = {name: value for name, value in inputs.items() if name.startswith("cann_bench/")}
+    require(all(wheel.get(name) == value for name, value in host.items()),
+            "wheel host sources differ from qualified inputs")
+    binaries = {"cann_bench/device/" + name + ".o" for name in flags}
+    metadata = {name for name in wheel if re.fullmatch(
+        r"cann_bench-[^/]+\.dist-info/(METADATA|WHEEL|top_level\.txt|RECORD)", name
+    )}
+    require({PurePosixPath(name).name for name in metadata} >= {"METADATA", "WHEEL", "RECORD"},
+            "incomplete wheel metadata")
+    require(set(wheel) == set(host) | binaries | metadata,
+            "unexpected wheel contents or missing device binaries")
+    seen = set()
+    for key, entry in entries.items():
+        signature = json.loads(key)
+        name = entry["file"].removesuffix(".o")
+        require(name not in seen and name in native and entry["file"] == name + ".o",
+                "duplicate or unmapped specialization")
+        seen.add(name)
+        proof, build = native[name], flags[name]
+        operator, symbol = signature[:2]
+        require(operator in {fn for _, fn in OPERATORS}
+                and proof["operator"] == operator and entry["symbol"] == symbol,
+                "specialization operator or symbol mismatch")
+        require(proof["origin"] in ("retained", "fallback"), "unknown kernel origin")
+        source = proof["pyasc_source"]
+        require(source in inputs and source.startswith("pyasc_source/")
+                and source.endswith(".py"), "missing original kernel source")
+        if proof["origin"] == "retained":
+            require(source == f"pyasc_source/{operator}.py", "wrong retained kernel source")
+        require(build["source"] in inputs and build["source"].endswith((".cpp", ".cce"))
+                and bool(build.get("commands")), "missing AscendC source or build commands")
+        binary = proof["native_sha256"]
+        require(digest(binary) and binary == proof["rebuilt_sha256"]
+                == build["binary_sha256"] == entry["binary_sha256"]
+                == wheel.get("cann_bench/device/" + entry["file"]),
+                "rebuilt/native/wheel binary mismatch")
+    require(seen == set(native), "unreferenced native binary")
+
+    binding = aot_binding_sha256(q)
+    adapter = q["host_adapter"]
+    require(q.get("packaging_binding_sha256") == binding
+            and adapter.get("binding_sha256") == binding
+            and adapter.get("wheel_sha256") == q["wheel_sha256"]
+            and digest(adapter.get("evidence_sha256")), "unbound host adapter evidence")
+    require(all(adapter.get(check) is True for check in (
+        "dispatch_matches_retained", "caller_stream_preserved", "launch_grid_preserved"
+    )), "host dispatch, stream or launch grid not qualified")
+    for _, fn in OPERATORS:
+        wrapper = f"cann_bench/{fn}.py"
+        require(wrapper in inputs, "missing public operator wrapper")
+        # Do not accept passed_cases=20 as a substitute for adapter qualification.
+        require(qualified_source({"source_sha256": inputs[wrapper],
+                                  "camodel": adapter["operators"][fn]}),
+                "missing installed-wheel CaModel adapter evidence for " + fn)
+        pairs = adapter["operators"][fn]["numerical_pairs"]
+        require(all(pair.get("scope") in ("retained", "fallback") for pair in pairs)
+                and all(len({pair["seed"] for pair in pairs if pair["scope"] == scope}) >= 2
+                        for scope in ("retained", "fallback")),
+                "retained and fallback adapter paths each need two seeds for " + fn)
+
+
 def verify_package(run, manifest_sha):
     if smoke.sha(run / "manifest.json") != manifest_sha:
         raise ValueError("Qualification manifest differs from the selected digest")
@@ -71,6 +197,9 @@ def verify_package(run, manifest_sha):
     if selected != list(OPERATORS):
         raise ValueError("Wrong L1 operators")
     q = json.loads((run / "qualification.json").read_bytes())
+    mode = q.get("packaging_mode", "source-jit")
+    if mode not in ("source-jit", "source-aot-v1"):
+        raise ValueError("Unknown packaging mode")
     if (
         q.get("build_passed") is not True
         or q.get("package_sha256") != manifest["files"]["submission.zip"]
@@ -85,8 +214,9 @@ def verify_package(run, manifest_sha):
             raise ValueError("Missing build.sh or duplicate archive members")
         for op, fn in OPERATORS:
             source = q["operators"][fn]
+            source_root = "pyasc_source" if mode == "source-aot-v1" else "cann_bench"
             if (
-                source.get("package_source") != f"cann_bench/{fn}.py"
+                source.get("package_source") != f"{source_root}/{fn}.py"
                 or not qualified_source(source)
                 or not re.fullmatch(r"[0-9a-f]{40}", source["skills_revision"])
                 or hashlib.sha256(z.read(source["package_source"])).hexdigest()
@@ -95,6 +225,8 @@ def verify_package(run, manifest_sha):
                 raise ValueError(
                     "Invalid qualification or generated source for " + op
                 )
+        if mode == "source-aot-v1":
+            verify_aot(z, q)
     return manifest
 
 

@@ -1,6 +1,7 @@
 """Verify that a two-operator submission cannot change one task or its visibility."""
 
 from hashlib import sha256
+from copy import deepcopy
 import io
 import json
 from pathlib import Path
@@ -158,6 +159,122 @@ class PreparedL1Test(unittest.TestCase):
         ):
             with self.subTest(change=change):
                 self.assertFalse(l1.qualified_source({**source, "camodel": {**model, **change}}))
+
+    def aot_fixture(self):
+        files = {"build.sh": b"build", "build_device.py": b"build device sources",
+                 "pyasc_source/fallback.py": b"general fallback"}
+        flags, entries, native, operators = {}, {}, {}, {}
+        for _, fn in l1.OPERATORS:
+            source = f"pyasc_source/{fn}.py"
+            files[source] = ("retained generated " + fn).encode()
+            files[f"cann_bench/{fn}.py"] = ("public adapter " + fn).encode()
+            operators[fn] = {"package_source": source, "source_sha256": sha256(files[source]).hexdigest(),
+                             "passed_cases": 20, "skills_revision": "a" * 40}
+            for origin in ("retained", "fallback"):
+                name, symbol = fn + "-" + origin, fn + "_" + origin
+                cpp = f"csrc/{name}.cpp"
+                files[cpp] = ("AscendC for " + name).encode()
+                binary = sha256(("ELF for " + name).encode()).hexdigest()
+                flags[name] = {"source": cpp, "commands": [["bisheng", "@SRC@"]], "binary_sha256": binary}
+                entries[json.dumps([fn, symbol, [], []])] = {
+                    "file": name + ".o", "symbol": symbol, "binary_sha256": binary,
+                }
+                native[name] = {"operator": fn, "origin": origin,
+                                "pyasc_source": source if origin == "retained" else "pyasc_source/fallback.py",
+                                "native_sha256": binary, "rebuilt_sha256": binary}
+        files["flags.json"] = json.dumps(flags).encode()
+        files["cann_bench/specializations.json"] = json.dumps(entries).encode()
+        inputs = {name: sha256(content).hexdigest() for name, content in files.items()}
+        wheel = {name: value for name, value in inputs.items() if name.startswith("cann_bench/")}
+        wheel.update({"cann_bench/device/" + name + ".o": proof["native_sha256"] for name, proof in native.items()})
+        wheel.update({f"cann_bench-0.1.0.dist-info/{name}": "7" * 64 for name in ("METADATA", "WHEEL", "RECORD")})
+        q = {
+            "packaging_mode": "source-aot-v1", "build_passed": True, "wheel_sha256": "3" * 64,
+            "operators": operators,
+            "aot": {"inputs": inputs, "wheel_files": wheel, "native_binaries": native,
+                    "runtime_revision": "e" * 40, "runtime_extension_sha256": "e" * 64,
+                    "compiler_sha256": {"bisheng": "c" * 64, "ld.lld": "d" * 64},
+                    "build_evidence_sha256": "b" * 64},
+        }
+        binding = l1.aot_binding_sha256(q)
+        q["packaging_binding_sha256"] = binding
+        q["host_adapter"] = {
+            "binding_sha256": binding, "wheel_sha256": q["wheel_sha256"], "evidence_sha256": "f" * 64,
+            "dispatch_matches_retained": True, "caller_stream_preserved": True, "launch_grid_preserved": True,
+            "operators": {fn: {
+                "source_sha256": inputs[f"cann_bench/{fn}.py"], "evidence_sha256": "f" * 64,
+                "compiled_case_ids": list(range(1, 21)),
+                "numerical_pairs": [{"seed": seed, "scope": scope,
+                                     "launch_matches_golden": True, "suppressed_rejected": True}
+                                    for scope in ("retained", "fallback") for seed in (19, 47)],
+            } for _, fn in l1.OPERATORS},
+        }
+        return files, q
+
+    def verify_aot_fixture(self, files, q):
+        with ZipFile(self.run / "submission.zip", "w") as z:
+            for name, content in files.items():
+                z.writestr(name, content)
+        q["package_sha256"] = l1.smoke.sha(self.run / "submission.zip")
+        l1.smoke.save(self.run / "qualification.json", q)
+        for name in ("qualification.json", "submission.zip"):
+            self.manifest["files"][name] = l1.smoke.sha(self.run / name)
+        l1.smoke.save(self.run / "manifest.json", self.manifest)
+        return l1.verify_package(self.run, l1.smoke.sha(self.run / "manifest.json"))
+
+    def test_aot_keeps_generated_source_and_installed_adapter_proofs_separate(self):
+        files, q = self.aot_fixture()
+        self.assertEqual(self.verify_aot_fixture(files, q), self.manifest)
+        changed = deepcopy(q)
+        changed["operators"]["exp"]["package_source"] = "cann_bench/exp.py"
+        changed["operators"]["exp"]["source_sha256"] = q["aot"]["inputs"]["cann_bench/exp.py"]
+        with self.assertRaisesRegex(ValueError, "source for Exp"):
+            self.verify_aot_fixture(files, changed)
+        for mutate in (
+            lambda v: v["operators"]["exp"].update(passed_cases=0),
+            lambda v: v["host_adapter"]["operators"]["exp"].update(passed_cases=20, numerical_pairs=[]),
+            lambda v: v["host_adapter"]["operators"]["exp"].update(source_sha256=q["operators"]["exp"]["source_sha256"]),
+            lambda v: v["host_adapter"]["operators"]["swi_glu"]["numerical_pairs"].pop(),
+            lambda v: v["host_adapter"]["operators"]["exp"]["numerical_pairs"][2].update(scope="retained"),
+            lambda v: v["host_adapter"].update(launch_grid_preserved=False),
+        ):
+            changed = deepcopy(q)
+            mutate(changed)
+            with self.subTest(changed=changed), self.assertRaises(ValueError):
+                self.verify_aot_fixture(files, changed)
+
+    def test_aot_rejects_unbound_build_wheel_and_binary_map(self):
+        files, q = self.aot_fixture()
+        for mutate in (
+            lambda v: v["aot"]["inputs"].update({"build_device.py": "0" * 64}),
+            lambda v: v["aot"]["wheel_files"].update({"cann_bench/exp.py": "0" * 64}),
+            lambda v: v["aot"]["wheel_files"].update({"asc/libpyasc.so": "0" * 64}),
+            lambda v: v["aot"]["native_binaries"].pop("exp-fallback"),
+            lambda v: v["aot"]["native_binaries"]["exp-retained"].update(rebuilt_sha256="0" * 64),
+            lambda v: v["aot"]["native_binaries"]["swi_glu-fallback"].update(operator="exp"),
+            lambda v: v["host_adapter"].update(binding_sha256="0" * 64),
+            lambda v: v.update(wheel_sha256="0" * 64),
+            lambda v: v.update(packaging_mode="guess"),
+        ):
+            changed = deepcopy(q)
+            mutate(changed)
+            with self.subTest(changed=changed), self.assertRaises(ValueError):
+                self.verify_aot_fixture(files, changed)
+        # Rehashing a changed build input does not requalify the installed adapter.
+        files["build_device.py"] += b" changed"
+        q["aot"]["inputs"]["build_device.py"] = sha256(files["build_device.py"]).hexdigest()
+        q["packaging_binding_sha256"] = l1.aot_binding_sha256(q)
+        with self.assertRaisesRegex(ValueError, "unbound host adapter"):
+            self.verify_aot_fixture(files, q)
+
+    def test_aot_rejects_binary_and_unsafe_source_members(self):
+        for name, content in (("hidden.cpp", b"\x7fELFbinary"), ("nested.whl", b"wheel"),
+                              ("../escape.py", b"source"), ("cann_bench/module.pyc", b"code")):
+            files, q = self.aot_fixture()
+            files[name] = content
+            q["aot"]["inputs"][name] = sha256(content).hexdigest()
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "source-aot-v1"):
+                self.verify_aot_fixture(files, q)
 
     def test_private_qualification_never_becomes_public_by_dispatch(self):
         with self.assertRaisesRegex(ValueError, "visibility"):
