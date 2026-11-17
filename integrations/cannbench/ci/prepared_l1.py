@@ -20,6 +20,16 @@ import smoke
 from single_operator import ci_client, download
 
 OPERATORS = (("Exp", "exp"), ("SwiGlu", "swi_glu"))
+MAX_ZIP_BYTES = 10 * 1024 * 1024  # CANNBench WEB-ZIP-001
+
+
+def check_upload_size(path):
+    size = path.stat().st_size
+    if size > MAX_ZIP_BYTES:
+        raise ValueError(
+            f"CANNBench WEB-ZIP-001: {path.name} is {size} bytes; "
+            f"the compressed ZIP limit is {MAX_ZIP_BYTES} bytes (10 MiB)"
+        )
 
 
 def qualified_source(source):
@@ -142,14 +152,18 @@ def result_receipt(run, manifest, report, queue):
     }
 
 
-def stage(folder, visibility, q, base):
+def stage(folder, visibility, base):
     folder = smoke.external(folder)
+    check_upload_size(folder / "submission.zip")
     base.mkdir(parents=True, exist_ok=True, mode=0o700)
     with tempfile.TemporaryDirectory(dir=base) as temporary:
         run = Path(temporary) / "prepared"
         run.mkdir()
         for filename in ("submission.zip", "qualification.json"):
             shutil.copyfile(folder / filename, run / filename)
+        # Check the retained copy in case the source changed during staging.
+        check_upload_size(run / "submission.zip")
+        q = ci_client()
         catalog, tasks = smoke.group_snapshot(q, OPERATORS)
         smoke.save(run / "task.json", tasks)
         manifest = {
@@ -184,6 +198,7 @@ def main():
             "submit-private",
             "submit-public",
             "retry-partial",
+            "check-size",
             "collect",
         ],
     )
@@ -196,13 +211,16 @@ def main():
         stage(
             Path(args.input),
             args.action.removeprefix("stage-"),
-            ci_client(),
             base / "pyasc-cannbench-l1",
         )
         return
     if not re.fullmatch(r"[0-9a-f]{64}", args.input):
         parser.error("Expected the SHA-256 of a staged qualification manifest")
     run = base / "pyasc-cannbench-l1" / args.input
+    if args.action != "collect":
+        check_upload_size(run / "submission.zip")
+    if args.action == "check-size":
+        return
     manifest = verify_package(run, args.input)
     ledger = base / "pyasc-cannbench-smoke"
     ledger.mkdir(exist_ok=True, parents=True, mode=0o700)

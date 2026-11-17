@@ -306,8 +306,10 @@ Keep the generation, build and qualification evidence together.
 
 With the benchmark credentials and `CANNBENCH_AGGREGATION_TOKEN` configured,
 run `python integrations/cannbench/ci/prepared_l1.py stage-private /path/to/package`
-on that runner. Staging checks the source bytes and captures both official
-tasks. Dispatch CI with `cannbench_action=l1-submit-private` and the printed
+on that runner. CANNBench limits the compressed `submission.zip` to 10 MiB
+(10,485,760 bytes, inclusive). Staging and submission check the file size
+locally before contacting CANNBench. Staging then checks the source bytes
+and captures both official tasks. Dispatch CI with `cannbench_action=l1-submit-private` and the printed
 `l1_manifest_sha256`. To submit publicly, select `stage-public` and
 `l1-submit-public`. CANNBench charges two credits for the pair. A staged
 package is tied to its visibility. `l1-collect` continues an existing

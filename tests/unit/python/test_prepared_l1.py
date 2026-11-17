@@ -57,6 +57,44 @@ class PreparedL1Test(unittest.TestCase):
         }
         l1.smoke.save(self.run / "manifest.json", self.manifest)
 
+    def test_upload_size_boundary_and_get_only_recovery(self):
+        digest = "a" * 64
+        home = self.run.parent
+        staged = home / ".local/state/pyasc-cannbench-l1" / digest
+        staged.mkdir(parents=True)
+        archive = staged / "submission.zip"
+        limit = 10 * 1024 * 1024
+        with archive.open("wb") as f:
+            f.truncate(limit)
+
+        def invoke(action, value=digest):
+            with patch.object(l1.sys, "argv", ["prepared_l1", action, value]):
+                l1.main()
+
+        with (patch.object(l1.Path, "home", return_value=home),
+              patch.object(l1, "ci_client", return_value=self.q) as client):
+            invoke("check-size")
+            with archive.open("ab") as f:
+                f.write(b"x")
+            for action in ("check-size", "stage-private", "stage-public", "submit-private",
+                           "submit-public", "retry-partial"):
+                with self.subTest(action=action), self.assertRaisesRegex(
+                    ValueError, "WEB-ZIP-001.*10485761.*10485760"
+                ):
+                    invoke(action, str(staged) if action.startswith("stage-") else digest)
+            client.assert_not_called()
+            self.assertFalse((home / ".local/state/pyasc-cannbench-smoke").exists())
+            self.assertEqual(list(staged.iterdir()), [archive])
+
+            with (patch.object(l1, "verify_package", return_value=self.manifest) as verify,
+                  patch.object(l1.smoke, "collect", return_value=(0, {})) as collect,
+                  patch.object(l1.smoke, "submit_once") as submit,
+                  patch.object(l1, "result_receipt", return_value={"score": 161, "job": "job_a"})):
+                invoke("collect")
+            verify.assert_called_once_with(staged, digest)
+            collect.assert_called_once()
+            submit.assert_not_called()
+
     def test_changed_second_task_stops_before_intent(self):
         self.save(
             {**self.tasks, "swi_glu": {"contract": "old"}}, self.manifest["catalog"]
@@ -195,6 +233,9 @@ class PreparedL1Test(unittest.TestCase):
 
     def test_overlapping_upload_returns_accepted_id_without_holding_runner(self):
         manifest = "f" * 64
+        staged = self.run.parent / ".local/state/pyasc-cannbench-l1" / manifest
+        staged.mkdir(parents=True)
+        (staged / "submission.zip").write_bytes(b"already verified")
         state = {"phase": "submitted", "job_id": "job_a", "other_submitted_jobs": ["job_b"]}
         summary = self.run / "summary.md"
         self.q._client._get_json.return_value = {"maintenance": {"enabled": False}}
