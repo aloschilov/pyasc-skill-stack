@@ -80,3 +80,29 @@ submitted package identity and report; do not infer qualification from a
 queued job, a different runtime, or local compilation. Full evidence stays
 outside checkout; accepted qualification gets a durable archive and a concise
 reference in repository documentation.
+
+Use terminal per-case timings after the service finishes any automatic
+rechecks. Preserve first-pass console times separately because a recheck can
+change the accepted timings. Recompute the case geometric mean as
+`exp(mean(log(baseline_us / candidate_us)))` over the exact matched cases.
+Check the aggregation behind a service summary label. Across runs, compare
+case identities, hardware, metric/profile and each reported baseline and
+hardware-floor anchor alongside candidate times. A matching catalog version
+alone does not establish a matched performance comparison.
+
+The Exp + SwiGLU control `job_dd91a091c27a` passed 40/40 cases with score
+150.7287. Its final 40-case geometric mean was 1.37914×. The summary field
+`geometric_mean_speedup` was 1.52967×, reproduced by taking the geometric mean
+of the two operators' arithmetic mean speedups. This control used retained
+Exp with a manual cache change and unchanged W75 SwiGLU. Attribute the result
+to those submitted bytes. A skill-improvement claim requires a separate
+generation comparison. [Terminal control report](https://cannbench.com/workspace/jobs/job_dd91a091c27a)
+and [retained evidence](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-l1-performance-44141381187).
+
+Treat `Failed to get acl to npu flow events` as a correlation diagnostic.
+Assess timing validity from the terminal numerics, anti-cheat and performance
+integrity results, with finite positive timings for actual candidate kernels.
+The control above passed those terminal checks despite the warning. Its
+published artifacts omitted raw CSVs and per-invocation durations, so repeat
+completeness and median aggregation remained independently unverified.
+Preserve that limit whenever the underlying records are unavailable.
