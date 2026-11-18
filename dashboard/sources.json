@@ -50,6 +50,14 @@
       "asset": "qualification-l1-performance-44141381187.tar.gz",
       "sha256": "e32c376170cc68cf01dc1245d18153795c5598c6ae3324d5f0db295cae91c225",
       "run_id": 44141381187
+    },
+    {
+      "id": "l1-44170410287",
+      "kind": "hardware-pair",
+      "release": "qualification-l1-performance-44170410287",
+      "asset": "qualification-l1-performance-44170410287.tar.gz",
+      "sha256": "021af202e4320f60d254b51d6c899c8aea17044483758f9270a184e228f12b74",
+      "run_id": 44170410287
     }
   ],
   "swiglu_study": {
