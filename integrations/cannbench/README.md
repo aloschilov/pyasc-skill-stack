@@ -328,6 +328,28 @@ without the PyASC compiler/runtime. The qualification adds:
   `pyasc_source`, `native_sha256` and `rebuilt_sha256`. The two binary hashes
   must match the build flags, specialization entry and wheel's
   `cann_bench/device/{key}.o`. Every specialization must map exactly once.
+* `aot.target_dispatch`: required for new AOT staging, submission and partial
+  retries. Record `hardware: "950pr"`, an archived trace `evidence_sha256`,
+  and unique positive `required_effective_aivs` (for example `[64, 72]` when
+  qualifying both capacities). Its `profiles` must cover exactly those
+  capacities. Each profile records `effective_aivs`, `usable_ub_bytes` and
+  all 40 official `cases`, once each. Each case records `operator` (`exp` or
+  `swi_glu`), integer `case_id` (1–20), the exact `key` string from
+  `specializations.json`, `binary_sha256` and positive integer `grid`.
+  The key and binary must resolve to a retained specialization of that
+  operator; the grid cannot exceed the profile's effective AIV capacity.
+  Official cases selecting a fallback are rejected even if that fallback
+  shares the intended kernel's symbol.
+
+Trace the installed host adapter over the full official set at the effective
+resource profiles required by the destination, including device/thread limits.
+A 72-AIV simulator trace does not establish coverage for a 64-AIV service:
+tile sizes, bodies and specialization keys can all change. Record whether
+capacities are observed or assumed in the linked evidence; this verifier
+checks the declared coverage and its bindings, not the machine's resources.
+Numerically qualify newly selected binaries separately; a complete host trace
+is not a numerical pass for all 40 cases. Immutable historical qualifications
+without `target_dispatch` remain collectable, but cannot start a new upload.
 
 `packaging_binding_sha256` is the value returned by
 `prepared_l1.aot_binding_sha256(qualification)`: SHA-256 of compact, sorted-key

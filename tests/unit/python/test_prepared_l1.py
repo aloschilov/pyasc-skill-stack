@@ -279,6 +279,100 @@ class PreparedL1Test(unittest.TestCase):
             with self.subTest(name=name), self.assertRaisesRegex(ValueError, "source-aot-v1"):
                 self.verify_aot_fixture(files, q)
 
+    def add_target_dispatch(self, files, q):
+        entries = json.loads(files["cann_bench/specializations.json"])
+        rows = []
+        for _, fn in l1.OPERATORS:
+            key = next(k for k, v in entries.items() if v["symbol"] == fn + "_retained")
+            rows.extend({"operator": fn, "case_id": case, "key": key,
+                         "binary_sha256": entries[key]["binary_sha256"], "grid": 32}
+                        for case in range(1, 21))
+        q["aot"]["target_dispatch"] = {
+            "hardware": "950pr", "required_effective_aivs": [64, 72],
+            "evidence_sha256": "d" * 64,
+            "profiles": [{"effective_aivs": n, "usable_ub_bytes": 253952,
+                          "cases": deepcopy(rows)} for n in (64, 72)],
+        }
+        self.rebind_aot(q)
+
+    def rebind_aot(self, q):
+        q["packaging_binding_sha256"] = l1.aot_binding_sha256(q)
+        q["host_adapter"]["binding_sha256"] = q["packaging_binding_sha256"]
+
+    def test_target_dispatch_binds_all_cases_to_declared_capacity_and_binary(self):
+        files, q = self.aot_fixture()
+        self.add_target_dispatch(files, q)
+        self.assertEqual(self.verify_aot_fixture(files, q), self.manifest)
+        # Even a well-formed new grid must invalidate the original adapter receipt.
+        changed = deepcopy(q)
+        changed["aot"]["target_dispatch"]["profiles"][0]["cases"][0]["grid"] = 31
+        with self.assertRaisesRegex(ValueError, "unbound host adapter"):
+            self.verify_aot_fixture(files, changed)
+
+        entries = json.loads(files["cann_bench/specializations.json"])
+        fallback = next(k for k, v in entries.items() if v["symbol"] == "exp_fallback")
+        other = next(k for k, v in entries.items() if v["symbol"] == "swi_glu_retained")
+        mutations = [
+            lambda t: t["profiles"].pop(0),  # the original 72-only blind spot
+            lambda t: t.update(required_effective_aivs=[64]),
+            lambda t: t.update(required_effective_aivs=[True, 72]),
+            lambda t: t.update(required_effective_aivs=[64, 64]),
+            lambda t: t.update(hardware="other"),
+            lambda t: t.update(evidence_sha256="unknown"),
+            lambda t: t["profiles"][0].update(effective_aivs=72),
+            lambda t: t["profiles"][0].update(effective_aivs=True),
+            lambda t: t["profiles"][0].update(usable_ub_bytes=0),
+            lambda t: t["profiles"][0]["cases"].pop(),
+            lambda t: t["profiles"][0]["cases"][0].update(case_id=2),
+            lambda t: t["profiles"][0]["cases"][0].update(case_id=True),
+            lambda t: t["profiles"][0]["cases"][0].update(operator="other"),
+            lambda t: t["profiles"][0]["cases"][0].update(key="missing"),
+            lambda t: t["profiles"][0]["cases"][0].update(key=other),
+            lambda t: t["profiles"][0]["cases"][0].update(
+                key=fallback, binary_sha256=entries[fallback]["binary_sha256"]),
+            lambda t: t["profiles"][0]["cases"][0].update(binary_sha256="0" * 64),
+        ]
+        mutations.extend(lambda t, n=n: t["profiles"][0]["cases"][0].update(grid=n)
+                         for n in (0, 65, True, 1.5))
+        for mutate in mutations:
+            changed = deepcopy(q)
+            mutate(changed["aot"]["target_dispatch"])
+            self.rebind_aot(changed)
+            with self.subTest(mutation=mutate), self.assertRaisesRegex(ValueError, "target dispatch"):
+                self.verify_aot_fixture(files, changed)
+
+    def test_legacy_aot_collects_but_cannot_start_a_new_submission(self):
+        files, q = self.aot_fixture()
+        self.verify_aot_fixture(files, q)
+        digest = l1.smoke.sha(self.run / "manifest.json")
+        home = self.run.parent
+        staged = home / ".local/state/pyasc-cannbench-l1" / digest
+        staged.parent.mkdir(parents=True)
+        self.run.rename(staged)
+        self.run = staged
+
+        def invoke(action, value=digest):
+            with patch.object(l1.sys, "argv", ["prepared_l1", action, value]):
+                l1.main()
+
+        with (patch.object(l1.Path, "home", return_value=home),
+              patch.object(l1, "ci_client", return_value=self.q) as client,
+              patch.object(l1.smoke, "submit_once") as submit):
+            for action in ("submit-private", "submit-public", "retry-partial",
+                           "stage-private", "stage-public"):
+                with self.subTest(action=action), self.assertRaisesRegex(
+                    ValueError, "target-capacity dispatch evidence"
+                ):
+                    invoke(action, str(staged) if action.startswith("stage-") else digest)
+            client.assert_not_called()
+            submit.assert_not_called()
+            self.assertFalse((home / ".local/state/pyasc-cannbench-smoke").exists())
+            with (patch.object(l1.smoke, "collect", return_value=(0, {})) as collect,
+                  patch.object(l1, "result_receipt", return_value={"score": 150, "job": "job_a"})):
+                invoke("collect")
+            collect.assert_called_once()
+            submit.assert_not_called()
+
     def test_private_qualification_never_becomes_public_by_dispatch(self):
         with self.assertRaisesRegex(ValueError, "visibility"):
             l1.smoke.submit_once(
@@ -356,6 +450,7 @@ class PreparedL1Test(unittest.TestCase):
         staged = self.run.parent / ".local/state/pyasc-cannbench-l1" / manifest
         staged.mkdir(parents=True)
         (staged / "submission.zip").write_bytes(b"already verified")
+        l1.smoke.save(staged / "qualification.json", {"packaging_mode": "source-jit"})
         state = {"phase": "submitted", "job_id": "job_a", "other_submitted_jobs": ["job_b"]}
         summary = self.run / "summary.md"
         self.q._client._get_json.return_value = {"maintenance": {"enabled": False}}

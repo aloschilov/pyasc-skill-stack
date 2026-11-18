@@ -66,6 +66,74 @@ def aot_binding_sha256(qualification):
     ).encode()).hexdigest()
 
 
+def verify_target_dispatch(aot, entries):
+    """Check declared resource-profile coverage, not physical resource discovery."""
+    target = aot.get("target_dispatch")
+    if target is None:
+        # Immutable historical jobs may still be collected. New submissions
+        # require this evidence before creating a client or submission intent.
+        return
+
+    def require(condition, message):
+        if not condition:
+            raise ValueError("Invalid AOT target dispatch: " + message)
+
+    require(isinstance(target, dict) and target.get("hardware") == "950pr",
+            "missing target hardware")
+    require(isinstance(target.get("evidence_sha256"), str)
+            and re.fullmatch(r"[0-9a-f]{64}", target["evidence_sha256"]),
+            "missing trace evidence digest")
+    required = target.get("required_effective_aivs")
+    require(isinstance(required, list) and bool(required)
+            and all(type(n) is int and n > 0 for n in required)
+            and len(set(required)) == len(required), "invalid required AIV capacities")
+    profiles = target.get("profiles")
+    require(isinstance(profiles, list) and bool(profiles), "missing resource profiles")
+    capacities = set()
+    expected = {(fn, case) for _, fn in OPERATORS for case in range(1, 21)}
+    for profile in profiles:
+        require(isinstance(profile, dict), "invalid resource profile")
+        capacity = profile.get("effective_aivs")
+        require(type(capacity) is int and capacity > 0 and capacity not in capacities,
+                "invalid or duplicate AIV capacity")
+        capacities.add(capacity)
+        ub = profile.get("usable_ub_bytes")
+        require(type(ub) is int and ub > 0, "missing usable UB capacity")
+        rows = profile.get("cases")
+        require(isinstance(rows, list) and len(rows) == len(expected),
+                "profile must cover all 40 official cases")
+        seen = set()
+        for row in rows:
+            require(isinstance(row, dict), "invalid case binding")
+            fn, case = row.get("operator"), row.get("case_id")
+            require(isinstance(fn, str) and type(case) is int
+                    and (fn, case) in expected and (fn, case) not in seen,
+                    "invalid or duplicate official case")
+            seen.add((fn, case))
+            key = row.get("key")
+            require(isinstance(key, str) and key in entries, "missing specialization key")
+            entry = entries[key]
+            require(json.loads(key)[0] == fn, "wrong specialization operator")
+            proof = aot["native_binaries"][entry["file"].removesuffix(".o")]
+            require(proof["origin"] == "retained", "official case selected fallback")
+            require(row.get("binary_sha256") == entry["binary_sha256"],
+                    "selected binary differs from specialization")
+            grid = row.get("grid")
+            require(type(grid) is int and 0 < grid <= capacity,
+                    "launch grid exceeds effective AIV capacity")
+    require(set(required) == capacities, "traced capacities differ from required target capacities")
+
+
+def require_target_dispatch(run):
+    qualification = json.loads((run / "qualification.json").read_bytes())
+    if (qualification.get("packaging_mode") == "source-aot-v1"
+            and not qualification.get("aot", {}).get("target_dispatch")):
+        raise ValueError(
+            "New AOT staging/submission requires target-capacity dispatch evidence; "
+            "use collect for an already submitted historical package"
+        )
+
+
 def verify_aot(z, q):
     """Verify an attested source-only AOT build, separately from source numerics.
 
@@ -153,6 +221,7 @@ def verify_aot(z, q):
                 == wheel.get("cann_bench/device/" + entry["file"]),
                 "rebuilt/native/wheel binary mismatch")
     require(seen == set(native), "unreferenced native binary")
+    verify_target_dispatch(aot, entries)
 
     binding = aot_binding_sha256(q)
     adapter = q["host_adapter"]
@@ -330,6 +399,7 @@ def stage(folder, visibility, base):
             shutil.copyfile(folder / filename, run / filename)
         # Check the retained copy in case the source changed during staging.
         check_upload_size(run / "submission.zip")
+        require_target_dispatch(run)
         q = ci_client()
         catalog, tasks = smoke.group_snapshot(q, OPERATORS)
         smoke.save(run / "task.json", tasks)
@@ -389,6 +459,8 @@ def main():
     if args.action == "check-size":
         return
     manifest = verify_package(run, args.input)
+    if args.action != "collect":
+        require_target_dispatch(run)
     ledger = base / "pyasc-cannbench-smoke"
     ledger.mkdir(exist_ok=True, parents=True, mode=0o700)
     q = ci_client()
