@@ -110,6 +110,17 @@ with matched inputs, runtime and measurement protocol. Preserve timing changes
 of unchanged-source controls as observed run variation, without using them as
 normalization factors for other kernels.
 
+For a local-to-service gap, distinguish matching source, matching retained
+instruction bodies and the binary actually bound to each timing record.
+A matching `.text` dump from another compilation does not establish which
+binary was timed. Record whether a digest covers the whole ELF, raw section
+bytes or formatted tool output. Check the selected dispatch, grid, launch ABI
+and registration/synchronization lifecycle as well as warmup, input restoration
+and per-invocation aggregation. Keep host wall time separate from device-kernel
+duration; a different host lifecycle alone does not explain a device-time gap.
+Without those bindings and raw repeats, retain the terminal service result
+and mark the cause unresolved before changing kernel geometry or arithmetic.
+
 The Exp + SwiGLU control `job_dd91a091c27a` passed 40/40 cases with score
 150.7287. Its final 40-case geometric mean was 1.37914×. The summary field
 `geometric_mean_speedup` was 1.52967×, reproduced by taking the geometric mean
