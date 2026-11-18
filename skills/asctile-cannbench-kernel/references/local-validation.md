@@ -80,6 +80,14 @@ and numerical results for each bounded experiment; preserve the last correct
 measured incumbent. Do not treat lowering via constructed options as proof
 that the decorator/cache path works.
 
+Distinguish the outer phase's wall-time limit from a reported device/kernel
+timeout. A phase that stops during or between expensive checks leaves the
+remaining checks incomplete; it does not establish a numerical failure or vector-core
+timeout. Preserve completed results and the exhausted budget. Any authorized
+continuation gets its own bounded record. With source, runtime, checker and
+fixtures unchanged, run only the missing checks; otherwise revalidate affected
+completed coverage.
+
 CANNBench submission is explicit and credit-consuming. Only its complete
 selected official case set, successful numerics, zero anti-cheat failures and
 finite positive device timings establish the hardware result. Preserve the
