@@ -159,6 +159,10 @@ implementation is in `asctile-codegen-workflow/templates/kernel-template.py`
 (`vector_blocks`). Bound each launch by its independent row groups or column
 tiles, including any tail assigned to that launch. Skip empty work. A simulator
 can report a different count from hardware even with the same requested target.
+Keep physical cube/core groups, effective vector capacity and the selected
+launch grid separate in measurements. A vector-core query already counts AIVs;
+do not double it again. Two 950PR machines can expose 72 and 64 AIVs, changing
+tile selection and specialization keys as well as the maximum launch grid.
 
 Supported current compile options include `always_compile`, `insert_sync`,
 `reuse_alloc` (`0`, `1`, `2`), `vf_fusion`, and `matmul_cube_only`. Do not use

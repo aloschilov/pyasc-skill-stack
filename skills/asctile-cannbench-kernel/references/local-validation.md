@@ -24,6 +24,17 @@ dispatch, captures selected JIT launches, and lowers every unique
 specialization through codegen, compiler passes, AscendC translation and UB
 checks. All selected case routes must pass; zero cases cannot pass.
 
+Replay the full official case set with the target's effective AIV capacity,
+including device/thread limits, rather than only the simulator's count or a
+small-input resource smoke. Record capacity, selected tile/unroll/grid and
+kernel binding per case. For AOT packaging, check that every target-selected
+specialization is present: a change from 72 to 64 AIVs can select a different
+tile or body. An unqualified missing-binding fallback must block promotion of
+that route. Even a numerically qualified fallback is separate coverage; its
+timing does not measure the intended generated specialization. If the service
+does not expose its query values, label injected counts as assumptions and
+compare actual reported kernel names before attributing a result.
+
 Inspect the emitted integer widths for tile counts, offsets and DMA byte
 strides, including fallback routes. An element count that fits signed 32-bit
 does not make `n + tile - 1` or `(n - valid) * itemsize` safe. Widen the
@@ -118,8 +129,9 @@ bytes or formatted tool output. Check the selected dispatch, grid, launch ABI
 and registration/synchronization lifecycle as well as warmup, input restoration
 and per-invocation aggregation. Keep host wall time separate from device-kernel
 duration; a different host lifecycle alone does not explain a device-time gap.
-Without those bindings and raw repeats, retain the terminal service result
-and mark the cause unresolved before changing kernel geometry or arithmetic.
+Retain the terminal service result when raw repeats or binary bindings are
+missing. Distinguish a demonstrated resource-dependent dispatch/binding change
+from an unmeasured explanation of its timing impact.
 
 The Exp + SwiGLU control `job_dd91a091c27a` passed 40/40 cases with score
 150.7287. Its final 40-case geometric mean was 1.37914×. The summary field
