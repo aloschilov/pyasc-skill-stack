@@ -324,10 +324,13 @@ without the PyASC compiler/runtime. The qualification adds:
   provenance of the locally verified build. These identify the tested
   toolchain; they are not bundled compiler dependencies.
 * `aot.native_binaries`: one entry for every key in `flags.json`. Each records
-  `operator` (`exp` or `swi_glu`), `origin` (`retained` or `fallback`),
+  `operator` (`exp` or `swi_glu`), `origin` (`retained`, `reference` or `fallback`),
   `pyasc_source`, `native_sha256` and `rebuilt_sha256`. The two binary hashes
   must match the build flags, specialization entry and wheel's
   `cann_bench/device/{key}.o`. Every specialization must map exactly once.
+  A `reference` kernel, such as a public template, uses a separate
+  `pyasc_source/*.py` input and records its exact `source_sha256` from
+  `aot.inputs`; it cannot name either operator's primary source file.
 * `aot.target_dispatch`: required for new AOT staging, submission and partial
   retries. Record `hardware: "950pr"`, an archived trace `evidence_sha256`,
   and unique positive `required_effective_aivs` (for example `[64, 72]` when
@@ -336,8 +339,13 @@ without the PyASC compiler/runtime. The qualification adds:
   all 40 official `cases`, once each. Each case records `operator` (`exp` or
   `swi_glu`), integer `case_id` (1–20), the exact `key` string from
   `specializations.json`, `binary_sha256` and positive integer `grid`.
-  The key and binary must resolve to a retained specialization of that
-  operator; the grid cannot exceed the profile's effective AIV capacity.
+  The key and binary must resolve to a retained or reference specialization
+  of that operator; a reference row must explicitly record `origin: "reference"`.
+  Any recorded origin must match the binary proof. `verify_target_dispatch`
+  returns per-profile/operator origin counts derived from those proofs, so
+  19 retained routes plus one template are not reported as 20 generated routes.
+  Retained source provenance still determines whether a route was generated
+  or subsequently adapted. The grid cannot exceed the effective AIV capacity.
   Official cases selecting a fallback are rejected even if that fallback
   shares the intended kernel's symbol.
 
@@ -364,9 +372,26 @@ The separate `host_adapter` object records that same `binding_sha256` and
 `launch_grid_preserved`. Its `operators.{function}` objects use the CaModel
 fields described above, with `source_sha256` set to the **public wrapper** hash.
 Each must compile all 20 official case dispatches and record passing actual
-launches with rejecting suppressed controls. Label numerical pairs with
-`scope: "retained"` or `"fallback"`; both scopes require at least two seeds
-per operator. Run this adapter qualification from the final installed wheel.
+launches with rejecting suppressed controls. Numerical pairs' `scope` values
+must exactly match that operator's shipped native origins, including `retained`,
+with at least two distinct integer seeds per origin. A `reference` pair also
+records its exact specialization `key` and `binary_sha256`; they must select
+that operator's reference kernel. Historical retained/fallback receipts remain
+valid. Run this adapter qualification from the final installed wheel.
+
+For an operator without a fallback origin, also record
+`missing_specialization_check: {key, rejected: true, launches: 0, evidence_sha256}`
+in its adapter object. Test a valid supported input after removing only its
+selected key from the installed adapter's in-memory lookup; require rejection
+and zero launches, then restore the lookup. The key must identify a packaged
+specialization of that operator. Bind the exception, launch spy, wheel/host
+hashes and adapter binding in the referenced evidence. This checks the tested
+missing-key path; native origin inventory alone does not prove the absence of
+hidden host fallbacks. Preserve explicit supported-domain guards and the
+complete finite-policy key inventory; reject unsupported inputs rather than
+silently substituting an unqualified implementation. This interface rejection
+is separate from numerical positive/suppressed pairs.
+
 Archive the detailed per-geometry results, counts and limitations externally;
 this verifier validates their bindings and does not rerun their numerics.
 

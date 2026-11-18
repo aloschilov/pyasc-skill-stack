@@ -67,12 +67,12 @@ def aot_binding_sha256(qualification):
 
 
 def verify_target_dispatch(aot, entries):
-    """Check declared resource-profile coverage, not physical resource discovery."""
+    """Check declared coverage and derive route-origin counts from binary proofs."""
     target = aot.get("target_dispatch")
     if target is None:
         # Immutable historical jobs may still be collected. New submissions
         # require this evidence before creating a client or submission intent.
-        return
+        return {}
 
     def require(condition, message):
         if not condition:
@@ -90,6 +90,7 @@ def verify_target_dispatch(aot, entries):
     profiles = target.get("profiles")
     require(isinstance(profiles, list) and bool(profiles), "missing resource profiles")
     capacities = set()
+    origin_counts = {}
     expected = {(fn, case) for _, fn in OPERATORS for case in range(1, 21)}
     for profile in profiles:
         require(isinstance(profile, dict), "invalid resource profile")
@@ -97,6 +98,9 @@ def verify_target_dispatch(aot, entries):
         require(type(capacity) is int and capacity > 0 and capacity not in capacities,
                 "invalid or duplicate AIV capacity")
         capacities.add(capacity)
+        counts = {fn: {origin: 0 for origin in ("retained", "reference", "fallback")}
+                  for _, fn in OPERATORS}
+        origin_counts[capacity] = counts
         ub = profile.get("usable_ub_bytes")
         require(type(ub) is int and ub > 0, "missing usable UB capacity")
         rows = profile.get("cases")
@@ -115,13 +119,19 @@ def verify_target_dispatch(aot, entries):
             entry = entries[key]
             require(json.loads(key)[0] == fn, "wrong specialization operator")
             proof = aot["native_binaries"][entry["file"].removesuffix(".o")]
-            require(proof["origin"] == "retained", "official case selected fallback")
+            origin = proof["origin"]
+            require(origin in ("retained", "reference"), "official case selected fallback")
+            require((origin != "reference" or row.get("origin") == origin)
+                    and ("origin" not in row or row["origin"] == origin),
+                    "case origin differs from binary proof")
+            counts[fn][origin] += 1
             require(row.get("binary_sha256") == entry["binary_sha256"],
                     "selected binary differs from specialization")
             grid = row.get("grid")
             require(type(grid) is int and 0 < grid <= capacity,
                     "launch grid exceeds effective AIV capacity")
     require(set(required) == capacities, "traced capacities differ from required target capacities")
+    return origin_counts
 
 
 def require_target_dispatch(run):
@@ -207,12 +217,17 @@ def verify_aot(z, q):
         require(operator in {fn for _, fn in OPERATORS}
                 and proof["operator"] == operator and entry["symbol"] == symbol,
                 "specialization operator or symbol mismatch")
-        require(proof["origin"] in ("retained", "fallback"), "unknown kernel origin")
-        source = proof["pyasc_source"]
-        require(source in inputs and source.startswith("pyasc_source/")
+        require(proof.get("origin") in ("retained", "reference", "fallback"), "unknown kernel origin")
+        source = proof.get("pyasc_source")
+        require(isinstance(source, str) and source in inputs and source.startswith("pyasc_source/")
                 and source.endswith(".py"), "missing original kernel source")
         if proof["origin"] == "retained":
             require(source == f"pyasc_source/{operator}.py", "wrong retained kernel source")
+        elif proof["origin"] == "reference":
+            require(source not in {f"pyasc_source/{fn}.py" for _, fn in OPERATORS}
+                    and digest(proof.get("source_sha256"))
+                    and proof["source_sha256"] == inputs[source],
+                    "reference kernel needs a separate hash-bound source")
         require(build["source"] in inputs and build["source"].endswith((".cpp", ".cce"))
                 and bool(build.get("commands")), "missing AscendC source or build commands")
         binary = proof["native_sha256"]
@@ -240,10 +255,33 @@ def verify_aot(z, q):
                                   "camodel": adapter["operators"][fn]}),
                 "missing installed-wheel CaModel adapter evidence for " + fn)
         pairs = adapter["operators"][fn]["numerical_pairs"]
-        require(all(pair.get("scope") in ("retained", "fallback") for pair in pairs)
+        origins = {proof["origin"] for proof in native.values() if proof["operator"] == fn}
+        require("retained" in origins, "missing retained kernels for " + fn)
+        require(all(isinstance(pair.get("scope"), str) for pair in pairs)
+                and {pair["scope"] for pair in pairs} == origins
                 and all(len({pair["seed"] for pair in pairs if pair["scope"] == scope}) >= 2
-                        for scope in ("retained", "fallback")),
-                "retained and fallback adapter paths each need two seeds for " + fn)
+                        for scope in origins),
+                "adapter scopes must match kernel origins with two seeds each for " + fn)
+        for pair in pairs:
+            if pair["scope"] != "reference":
+                continue
+            key = pair.get("key")
+            require(isinstance(key, str) and key in entries, "missing reference check key")
+            entry = entries[key]
+            proof = native[entry["file"].removesuffix(".o")]
+            require(proof["operator"] == fn and proof["origin"] == "reference"
+                    and pair.get("binary_sha256") == entry["binary_sha256"],
+                    "reference check differs from selected operator or binary")
+        if "fallback" not in origins:
+            check = adapter["operators"][fn].get("missing_specialization_check")
+            require(isinstance(check, dict) and check.get("rejected") is True
+                    and type(check.get("launches")) is int and check["launches"] == 0
+                    and digest(check.get("evidence_sha256")),
+                    "missing installed-wheel missing-specialization rejection for " + fn)
+            key = check.get("key")
+            require(isinstance(key, str) and key in entries
+                    and native[entries[key]["file"].removesuffix(".o")]["operator"] == fn,
+                    "missing-specialization check needs a supported operator key for " + fn)
 
 
 def verify_package(run, manifest_sha):

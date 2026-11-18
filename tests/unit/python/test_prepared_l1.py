@@ -163,7 +163,8 @@ class PreparedL1Test(unittest.TestCase):
             with self.subTest(change=change):
                 self.assertFalse(l1.qualified_source({**source, "camodel": {**model, **change}}))
 
-    def aot_fixture(self):
+    def aot_fixture(self, origins=None):
+        origins = origins or {fn: ("retained", "fallback") for _, fn in l1.OPERATORS}
         files = {"build.sh": b"build", "build_device.py": b"build device sources",
                  "pyasc_source/fallback.py": b"general fallback"}
         flags, entries, native, operators = {}, {}, {}, {}
@@ -173,7 +174,7 @@ class PreparedL1Test(unittest.TestCase):
             files[f"cann_bench/{fn}.py"] = ("public adapter " + fn).encode()
             operators[fn] = {"package_source": source, "source_sha256": sha256(files[source]).hexdigest(),
                              "passed_cases": 20, "skills_revision": "a" * 40}
-            for origin in ("retained", "fallback"):
+            for origin in origins[fn]:
                 name, symbol = fn + "-" + origin, fn + "_" + origin
                 cpp = f"csrc/{name}.cpp"
                 files[cpp] = ("AscendC for " + name).encode()
@@ -185,6 +186,11 @@ class PreparedL1Test(unittest.TestCase):
                 native[name] = {"operator": fn, "origin": origin,
                                 "pyasc_source": source if origin == "retained" else "pyasc_source/fallback.py",
                                 "native_sha256": binary, "rebuilt_sha256": binary}
+                if origin == "reference":
+                    reference = f"pyasc_source/{fn}_reference.py"
+                    files[reference] = ("public reference " + fn).encode()
+                    native[name].update(pyasc_source=reference,
+                                        source_sha256=sha256(files[reference]).hexdigest())
         files["flags.json"] = json.dumps(flags).encode()
         files["cann_bench/specializations.json"] = json.dumps(entries).encode()
         inputs = {name: sha256(content).hexdigest() for name, content in files.items()}
@@ -208,10 +214,19 @@ class PreparedL1Test(unittest.TestCase):
                 "source_sha256": inputs[f"cann_bench/{fn}.py"], "evidence_sha256": "f" * 64,
                 "compiled_case_ids": list(range(1, 21)),
                 "numerical_pairs": [{"seed": seed, "scope": scope,
-                                     "launch_matches_golden": True, "suppressed_rejected": True}
-                                    for scope in ("retained", "fallback") for seed in (19, 47)],
+                                     "launch_matches_golden": True, "suppressed_rejected": True,
+                                     **({"key": json.dumps([fn, fn + "_reference", [], []]),
+                                         "binary_sha256": native[fn + "-reference"]["native_sha256"]}
+                                        if scope == "reference" else {})}
+                                    for scope in origins[fn] for seed in (19, 47)],
             } for _, fn in l1.OPERATORS},
         }
+        for _, fn in l1.OPERATORS:
+            if "fallback" not in origins[fn]:
+                q["host_adapter"]["operators"][fn]["missing_specialization_check"] = {
+                    "key": json.dumps([fn, fn + "_" + origins[fn][0], [], []]),
+                    "rejected": True, "launches": 0, "evidence_sha256": "9" * 64,
+                }
         return files, q
 
     def verify_aot_fixture(self, files, q):
@@ -279,6 +294,94 @@ class PreparedL1Test(unittest.TestCase):
             with self.subTest(name=name), self.assertRaisesRegex(ValueError, "source-aot-v1"):
                 self.verify_aot_fixture(files, q)
 
+    def reference_aot_fixture(self):
+        return self.aot_fixture({"exp": ("retained", "fallback"),
+                                 "swi_glu": ("retained", "reference")})
+
+    def test_aot_qualifies_only_shipped_origin_scopes(self):
+        for origins in ({"exp": ("retained", "fallback"), "swi_glu": ("retained",)},
+                        {"exp": ("retained", "fallback"), "swi_glu": ("retained", "reference")}):
+            files, q = self.aot_fixture(origins)
+            with self.subTest(origins=origins):
+                self.assertEqual(self.verify_aot_fixture(files, q), self.manifest)
+        files, q = self.aot_fixture({"exp": ("retained", "fallback"), "swi_glu": ("reference",)})
+        with self.assertRaisesRegex(ValueError, "missing retained kernels"):
+            self.verify_aot_fixture(files, q)
+
+    def test_reference_source_requires_separate_exact_attribution(self):
+        files, q = self.reference_aot_fixture()
+        for mutate in (
+            lambda p: p.pop("pyasc_source"),
+            lambda p: p.update(pyasc_source="pyasc_source/missing.py"),
+            lambda p: p.update(pyasc_source="pyasc_source/swi_glu.py",
+                               source_sha256=q["aot"]["inputs"]["pyasc_source/swi_glu.py"]),
+            lambda p: p.pop("source_sha256"),
+            lambda p: p.update(source_sha256="0" * 64),
+            lambda p: p.update(origin="retained"),
+            lambda p: p.update(origin="undeclared"),
+        ):
+            changed = deepcopy(q)
+            mutate(changed["aot"]["native_binaries"]["swi_glu-reference"])
+            self.rebind_aot(changed)
+            with self.subTest(mutation=mutate), self.assertRaises(ValueError):
+                self.verify_aot_fixture(files, changed)
+        # Rehashing a changed reference does not preserve the adapter's old binding.
+        name = "pyasc_source/swi_glu_reference.py"
+        files[name] += b" changed"
+        digest = sha256(files[name]).hexdigest()
+        q["aot"]["inputs"][name] = digest
+        q["aot"]["native_binaries"]["swi_glu-reference"]["source_sha256"] = digest
+        q["packaging_binding_sha256"] = l1.aot_binding_sha256(q)
+        with self.assertRaisesRegex(ValueError, "unbound host adapter"):
+            self.verify_aot_fixture(files, q)
+
+    def test_origin_scopes_require_distinct_valid_seeds_and_no_extra_scope(self):
+        files, q = self.reference_aot_fixture()
+        for mutate in (
+            lambda pairs: pairs.pop(),
+            lambda pairs: pairs[-1].update(seed=pairs[-2]["seed"]),
+            lambda pairs: pairs[-1].update(seed=True),
+            lambda pairs: pairs[-1].update(launch_matches_golden=False),
+            lambda pairs: pairs[-1].update(suppressed_rejected=False),
+            lambda pairs: pairs[-1].update(scope="retained"),
+            lambda pairs: pairs[-1].update(scope="unknown"),
+            lambda pairs: pairs.append({**pairs[0], "scope": "fallback"}),
+        ):
+            changed = deepcopy(q)
+            mutate(changed["host_adapter"]["operators"]["swi_glu"]["numerical_pairs"])
+            with self.subTest(mutation=mutate), self.assertRaises(ValueError):
+                self.verify_aot_fixture(files, changed)
+
+    def test_reference_pairs_bind_same_operator_reference_key_and_binary(self):
+        files, q = self.aot_fixture({"exp": ("retained", "reference", "fallback"),
+                                     "swi_glu": ("retained", "reference")})
+        for change in (
+            {"key": None}, {"key": "missing"},
+            {"key": json.dumps(["exp", "exp_reference", [], []]),
+             "binary_sha256": q["aot"]["native_binaries"]["exp-reference"]["native_sha256"]},
+            {"key": json.dumps(["swi_glu", "swi_glu_retained", [], []]),
+             "binary_sha256": q["aot"]["native_binaries"]["swi_glu-retained"]["native_sha256"]},
+            {"binary_sha256": "0" * 64},
+        ):
+            changed = deepcopy(q)
+            changed["host_adapter"]["operators"]["swi_glu"]["numerical_pairs"][-1].update(change)
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                self.verify_aot_fixture(files, changed)
+
+    def test_no_fallback_requires_installed_missing_key_rejection(self):
+        files, q = self.reference_aot_fixture()
+        good = q["host_adapter"]["operators"]["swi_glu"]["missing_specialization_check"]
+        checks = [None, {}, *({**good, **change} for change in (
+            {"rejected": False}, {"rejected": 1}, {"launches": 1}, {"launches": False},
+            {"evidence_sha256": None}, {"key": "missing"},
+            {"key": json.dumps(["exp", "exp_retained", [], []])},
+        ))]
+        for check in checks:
+            changed = deepcopy(q)
+            changed["host_adapter"]["operators"]["swi_glu"]["missing_specialization_check"] = check
+            with self.subTest(check=check), self.assertRaises(ValueError):
+                self.verify_aot_fixture(files, changed)
+
     def add_target_dispatch(self, files, q):
         entries = json.loads(files["cann_bench/specializations.json"])
         rows = []
@@ -339,6 +442,32 @@ class PreparedL1Test(unittest.TestCase):
             mutate(changed["aot"]["target_dispatch"])
             self.rebind_aot(changed)
             with self.subTest(mutation=mutate), self.assertRaisesRegex(ValueError, "target dispatch"):
+                self.verify_aot_fixture(files, changed)
+
+    def test_target_reference_routes_expose_proof_derived_origin_counts(self):
+        files, q = self.reference_aot_fixture()
+        self.add_target_dispatch(files, q)
+        entries = json.loads(files["cann_bench/specializations.json"])
+        key = json.dumps(["swi_glu", "swi_glu_reference", [], []])
+        for profile in q["aot"]["target_dispatch"]["profiles"]:
+            row = next(r for r in profile["cases"] if r["operator"] == "swi_glu" and r["case_id"] == 12)
+            row.update(key=key, binary_sha256=entries[key]["binary_sha256"], origin="reference")
+        self.rebind_aot(q)
+        self.assertEqual(self.verify_aot_fixture(files, q), self.manifest)
+        counts = l1.verify_target_dispatch(q["aot"], entries)
+        for capacity in (64, 72):
+            self.assertEqual(counts[capacity]["swi_glu"], {"retained": 19, "reference": 1, "fallback": 0})
+            self.assertEqual(counts[capacity]["exp"], {"retained": 20, "reference": 0, "fallback": 0})
+        for origin in (None, "retained", "fallback"):
+            changed = deepcopy(q)
+            row = next(r for r in changed["aot"]["target_dispatch"]["profiles"][0]["cases"]
+                       if r["operator"] == "swi_glu" and r["case_id"] == 12)
+            if origin is None:
+                row.pop("origin")
+            else:
+                row["origin"] = origin
+            self.rebind_aot(changed)
+            with self.subTest(origin=origin), self.assertRaisesRegex(ValueError, "case origin"):
                 self.verify_aot_fixture(files, changed)
 
     def test_legacy_aot_collects_but_cannot_start_a_new_submission(self):
