@@ -118,6 +118,19 @@ streaming Exp paths. After the short branch, round `ceil(N / A)` up to
 DMA alignment and check whether that tile fits UB for one tile per block.
 The earlier one-wave emitter budgeted `8 + itemsize` UB bytes per lane.
 
+When host dispatch proves actual FP32 input, `unroll == 1` and
+`num_tiles == blocks` after tile alignment, compare a direct single-tile
+body with the grid-stride kernel. If `n` and block count remain runtime
+values, the compiler may retain a loop despite this host-side guarantee;
+inspect the emitted C++. Select the branch by dtype and geometry.
+Keep tile/alignment, grid, compiled UB, cache and JIT options fixed.
+Preserve bounded final-tile copies and scalar arithmetic order, including
+separate multiplications. Check affected specializations and unchanged
+dispatch paths. Removing a source loop or changing ELF size does not
+establish a performance improvement. First verify numerical controls;
+then compare repeated device timings on the same runner. A comparison
+that also changes alignment cannot isolate loop cost.
+
 Size the streaming tile separately for its selected unroll. On 950PR,
 start with 8,192 lanes and unroll two. In a checked public-API emitter
 that combination used 65,536 UB bytes across all 12 streaming shapes.
