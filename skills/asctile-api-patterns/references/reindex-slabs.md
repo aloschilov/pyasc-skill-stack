@@ -13,12 +13,20 @@ It also covers contiguous BF16 pairs (`H=1`, normalized final axis of length
 two). On this public build with cached int32 indices, let dense pairs reach
 the same gather selector as other short BF16 halves. An early return for
 the legacy transpose specialization would hide the eligible gather. For a new module, define a public slab kernel and call it from the
-host selector. View input and output as rank-one descriptors. Build reusable
-integer lane metadata on the host with `k = torch.arange(T*H, dtype=torch.int32,
-device=input.device)`, `gate_idx = 2*H*(k//H) + k%H` and
-`value_idx = gate_idx + H`. Cache by device, H and T. This metadata
-is independent of input values. Pass the index tensors as kernel arguments
-and load them before the tile loop. For a slab starting at row r, copy
+host selector. View input and output as rank-one descriptors. Build reusable,
+shape-only lane metadata with `k = torch.arange(T*H, dtype=torch.int32,
+device="cpu")`, `gate_idx = 2*H*(k//H) + k%H` and
+`value_idx = gate_idx + H`. Keep this arithmetic and any index-storage cast
+on CPU; device-side `torch.arange` required an unavailable `aclnnArange`
+binary on the CANNBench image. For NPU execution, transfer each completed
+table with `.to(input.device)` inside the input-device context and retain
+the device copy. Cache by H, T, index dtype and concrete device; include the
+caller stream unless cross-stream readiness is explicitly established.
+On PyASC `ed793e45`, a CPU-tensor kernel argument is copied for each launch,
+whereas an NPU-tensor argument supplies its existing device pointer. Keep
+CPU tables for CaModel inputs. Pass the selected index tensors as kernel
+arguments and load them from GM into UB before the tile loop.
+For a slab starting at row r, copy
 `2*T*H` input lanes at offset `2*r*H`, with true extent
 `2*min(T,R-r)*H` and zero padding. `asctile.reindex(src, index)` takes
 two UB tensors and returns the indexed lanes in the source dtype. Gather
@@ -84,8 +92,8 @@ footprints and measure the suitable DMA target and unroll.
 
 For a contiguous split, gate lane `k` indexes
 `2*H*(k//H) + k%H`. The corresponding value is exactly `H` elements
-later. Cache one gate-index vector per device, logical half-width and tile
-height. Load it once per block before the tile loop and derive the value
+later. Use the CPU construction and device-cache rules above for one
+gate-index vector. Load it once per block before the tile loop and derive the value
 indices with one integer add. Compare this with loading both int32
 vectors. The input slab and output store keep their original dtype.
 
