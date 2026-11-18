@@ -34,6 +34,9 @@ that route. Even a numerically qualified fallback is separate coverage; its
 timing does not measure the intended generated specialization. If the service
 does not expose its query values, label injected counts as assumptions and
 compare actual reported kernel names before attributing a result.
+Different tiles can share a kernel symbol. A matching name does not recover
+the specialization key or launch grid; leave that binding unresolved without
+the corresponding launch metadata.
 
 Compare the full launch configuration, not just specialization keys or ELF
 hashes. The same binary with a different grid is a distinct numerical check:
@@ -152,6 +155,16 @@ Exp with a manual cache change and unchanged W75 SwiGLU. Attribute the result
 to those submitted bytes. A skill-improvement claim requires a separate
 generation comparison. [Terminal control report](https://cannbench.com/workspace/jobs/job_dd91a091c27a)
 and [retained evidence](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-l1-performance-44141381187).
+
+The later [late-gather submission](https://cannbench.com/workspace/jobs/job_5c2ab4c8015d)
+also passed 40/40, but scored 124.0239 with unchanged baseline/floor anchors.
+Its ten reported `swiglu_fallback` routes match the missing bindings in the
+64-AIV dispatch replay. SwiGLU 9 ran that fallback in 1368.64 µs, versus
+7.86 µs for the control's retained kernel: this does not evaluate the proposed
+late-gather body. The service did not record its resource-query values, and
+Exp's shared `_exp_kernel` name cannot independently identify its fallback.
+Numerical acceptance must not promote such timings as measurements of the
+intended optimization.
 
 Treat `Failed to get acl to npu flow events` as a correlation diagnostic.
 Assess timing validity from the terminal numerics, anti-cheat and performance
