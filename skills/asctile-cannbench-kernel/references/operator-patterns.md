@@ -140,6 +140,20 @@ DMA alignment and recheck it. Read `UB` from the lowered module's
 `ir.attr.memory_consumed` and compare it with the active device capacity.
 [Compile and allocation check](https://github.com/aloschilov/pyasc-skill-stack/blob/8129a4e/integrations/cannbench/workers/local_compile_gate.py#L395)
 
+If streamed copies retain dynamic extents or zero-fill work for complete
+tiles, compare a complete-tile loop with a separate bounded tail. With
+`F = N // T` and grid `G`, preserve grid-stride ownership of the `F` full
+tiles; block `F % G` owns the tail only when `N % T != 0`. For a full tile,
+compare rebasing the GM pointers to its offset and declaring descriptors of
+length `T`, then copying at offset zero without `real_shape`. Omitting
+`real_shape` on a runtime-sized whole-input descriptor alone may leave the
+same dynamic bounds in emitted code. Keep arithmetic, geometry, cache and
+nonstreaming paths fixed; check ownership at wave/tail boundaries. On the
+retained `ed793e45`/CANN 9.2 Exp control, rebasing removed dynamic descriptor
+declarations for aligned streaming cases at unchanged UB. `DataCopyPad`
+remained: this compiler observation does not prove fewer DMA transactions
+or faster execution. Requalify the exact new source before device comparison.
+
 The decorator matters at the same tile and grid. With bare `@asctile.jit`,
 one generated loop used 16–24 bytes per streamed FP16/BF16 lane at
 unroll one and 48–80 per short lane at unroll three. Setting only
