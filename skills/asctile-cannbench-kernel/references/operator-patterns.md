@@ -17,6 +17,33 @@ using a qualified active-device resource query. Stable forms must
 preserve NaN and Inf behavior from `golden.py`. GELU has both `none` and `tanh`
 attributes and requires distinct kernels or tile widths.
 
+### Exp on 950PR
+
+Pass the original input and output tensors to the JIT. Widen each loaded
+tile to FP32, apply `scale * x + shift`, multiply by the base logarithm,
+take the exponential, and cast once at the store. Compute the scalar
+`math.log(base) if base > 0 else 1.0` on the host. Bind the three scalars
+at each call and specialize only on identity operations. Test changed
+attributes on the same shape in one process. A NaN base takes the natural
+exponential branch. A positive infinite base at unit scale and zero
+shift gives `[0, NaN, +inf]` for input `[-1, 0, 1]`.
+
+For short FP16/BF16 streams around 24–32 KiB of input per available
+vector core, compare three tiles per core with one tile per core. Test
+the three-tile branch before the one-wave fallback since both can fit.
+For FP16 identity, start with grid-stride ownership and 32-byte input
+alignment. For affine or log-only paths, compare contiguous ownership
+and 256-byte alignment. With grid size `G` and alignment `q` in elements,
+use `T = q * ceil(N / (3 * G * q))`; check compiled UB and bound the last
+transfer. For 1,024² FP16 identity elements on 72 AIVs this gives
+`T=4864`. Confirm the actual grid, stream and copies in a trace.
+
+One freshly generated Exp using these choices passed all 20 L1 cases on
+a local Ascend950PR and beat the published 2.1.0 baseline on all 20
+(1.63211× geometric mean). This measurement covers the complete candidate;
+use a fixed-geometry control to attribute a difference to one choice.
+[Candidate hash, per-case timings and golden checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6872793874)
+
 ### High-level GeLU campaign (historical)
 
 Use `compiler-team/pyasc@adadd7d66ed0ee16d33d79487bf584899a26ef1e` — the

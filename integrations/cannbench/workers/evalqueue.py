@@ -86,7 +86,8 @@ class EvalQueue:
             raise RemoteError("CANNBench has no submission credits remaining")
 
     def _submit_streaming(
-        self, zip_path: str, ops: str | list[str], tag: str, aggregation_token: str | None = None
+        self, zip_path: str, ops: str | list[str], tag: str, aggregation_token: str | None = None,
+        *, benchmark_version: str | None = None
     ) -> dict:
         """Upload without the adapter's fixed 120-second in-memory timeout.
 
@@ -139,6 +140,8 @@ class EvalQueue:
                 f"file=@{zip_path};type=application/octet-stream",
                 f"{self._client.base_url}/api/submissions",
             ]
+            if benchmark_version:
+                command[1:1] = ["--form-string", f"benchmark_version={benchmark_version}"]
             if aggregation_token:
                 command[1:1] = ["--form-string", f"aggregation_token={aggregation_token}"]
             resolve_ip = os.environ.get("CANNBENCH_RESOLVE_IP", "").strip()

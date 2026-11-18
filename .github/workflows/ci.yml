@@ -11,6 +11,10 @@ on:
         type: choice
         default: none
         options: [none, generate, repair, continue, resume, performance-generate, performance, performance-evaluate, performance-resume, performance-submit-prepared]
+      prepared_catalog_version:
+        description: 'Optional new catalog for an existing SwiGLU checkpoint (2.1.0)'
+        type: string
+        default: ''
       skills_revision:
         description: 'Optional full in-repository commit of the four skills for SwiGLU performance generation'
         type: string
@@ -324,6 +328,7 @@ jobs:
     uses: ./.github/workflows/swiglu-performance.yml
     with:
       action: ${{ inputs.cannbench_action }}
+      prepared_catalog_version: ${{ inputs.prepared_catalog_version }}
       skills_revision: ${{ inputs.skills_revision }}
       origin: ${{ inputs.origin_run }}
     permissions:

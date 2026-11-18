@@ -1,5 +1,6 @@
 """Bind Actions-generated PyASC, its CaModel checks and the package returned by CANNBench."""
 import argparse
+from copy import deepcopy
 import fcntl
 import hashlib
 import json
@@ -11,10 +12,11 @@ import shutil
 from statistics import geometric_mean
 import subprocess
 import sys
+import tempfile
 import time
 import zipfile
 
-from geometry import DTYPES, all_specs, key
+from geometry import DTYPES, all_specs, full_row_probes, key
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -65,15 +67,21 @@ def package(root):
     package.mkdir()
     src = root/'qualification/package-source'
     checks = load(root/'qualification/camodel.json')
+    probes = full_row_probes(load(gen/'project/policy.json'))
+    for shape in probes:
+        require({c['seed'] for c in checks['checks'] if c['dtype']=='float32' and c['shape']==list(shape)}=={19,23},
+                'Missing full-row or boundary control')
     require(checks['candidate_sha256']==sha(gen/'project/candidate.py')==g['candidate_sha256']
             and checks['policy_sha256']==sha(gen/'project/policy.json')==g['policy_sha256']
-            and len(checks['checks'])==24 and all(c['positive'] and c['suppressed_rejected'] for c in checks['checks']),
+            and len(checks['checks'])==24+2*len(probes)
+            and all(c['positive'] and c['suppressed_rejected']
+                    and c['real_launches']==c['intercepted_launches']==1 for c in checks['checks']),
             'Missing CaModel numerical evidence')
     cpp = src/'csrc/ops/swi_glu/op_kernel'
     require(checks['sources']==ci.hashes(cpp)
             and set(load(src/'flags.json'))=={key(*s) for s in all_specs(load(gen/'project/policy.json'))}, 'Incomplete lowering')
     catalog = load(gen/'catalog.json')
-    require(catalog['benchmark_version']=='2.0.0' and catalog['required_cases']==20, 'Unexpected catalog')
+    require(catalog['benchmark_version'] in ('2.0.0','2.1.0') and catalog['required_cases']==20, 'Unexpected catalog')
     entries = {str(p.relative_to(src)):p.read_bytes() for p in [src/'flags.json', *sorted(cpp.glob('*.cpp'))]}
     entries.update({
         'build.sh':b'#!/usr/bin/env bash\nset -eu\ncd "$(dirname "$0")"\npython3 build_device.py\npython3 setup.py bdist_wheel\n',
@@ -100,16 +108,64 @@ def package(root):
          'files':{p:sha(package/p) for p in ('submission.zip','catalog.json','task.json')}})
 
 
+def verify_swiglu_transition(old_catalog, old_task, catalog, task):
+    """2.1 makes explicit the output dtype already produced by this SwiGLU launcher."""
+    require(old_catalog['benchmark_slug']=='official-tasks' and old_catalog['benchmark_version']=='2.0.0'
+            and old_catalog['required_cases']==20 and old_task['function_name']=='swi_glu'
+            and catalog==dict(old_catalog,benchmark_version='2.1.0'), 'Different official SwiGLU catalog')
+    expected = deepcopy(old_task)
+    output, = expected['proto']['outputs']
+    require('dtype_relation' not in output, 'Unexpected source output contract')
+    output['dtype_relation'] = {'kind':'same_as','input':'input'}
+    require(expected==task, 'Public SwiGLU task, cases or numerical contract changed')
+
+
+def service_package(root, queue, stage, version):
+    prepared = root/'prepared'
+    if version:
+        require(stage=='reopen' and version=='2.1.0', 'A catalog transition requires a prepared 2.1.0 submission')
+    migrated = root/'service-package'
+    if not version and not (stage=='resume' and migrated.exists()):
+        return prepared
+    original = ci.smoke.verify(prepared)
+    if migrated.exists():
+        saved = ci.smoke.verify(migrated)
+        require(saved['qualified_manifest_sha256']==sha(prepared/'manifest.json')
+                and saved['files']['submission.zip']==original['files']['submission.zip']
+                and saved['catalog']['benchmark_version']=='2.1.0', 'Qualified checkpoint differs')
+        return migrated
+    catalog, task = ci.smoke.task_snapshot(queue)
+    require(original['target_hardware']==queue.target_hardware=='950pr', 'Hardware target changed')
+    verify_swiglu_transition(original['catalog'],load(prepared/'task.json'),catalog,task)
+    with zipfile.ZipFile(prepared/'submission.zip') as z:
+        require(z.read('cann_bench/swi_glu.py')==(HERE/'device_host.py').read_bytes(),
+                'Cannot verify output dtype on this archived host launcher')
+    # Publish the new snapshot atomically. The original manifest stays bound to the original catalog.
+    with tempfile.TemporaryDirectory(dir=root) as tmp:
+        package = Path(tmp)/'package'
+        package.mkdir()
+        os.link(prepared/'submission.zip',package/'submission.zip')
+        save(package/'catalog.json',catalog)
+        save(package/'task.json',task)
+        files = {name:sha(package/name) for name in ('submission.zip','catalog.json','task.json')}
+        save(package/'manifest.json',dict(original, catalog=catalog, files=files,
+             qualified_manifest_sha256=sha(prepared/'manifest.json'),
+             qualification_benchmark_version=original['catalog']['benchmark_version']))
+        package.rename(migrated)
+    return migrated
+
+
 def service(root, stage):
     package = root/'prepared'
     manifest = ci.smoke.verify(package)
     queue = ci.ci_client()
     LEDGER.mkdir(parents=True,exist_ok=True)
+    requested_version = os.environ.get('PREPARED_CATALOG_VERSION','')
+    require(not requested_version or stage=='reopen', 'Select performance-submit-prepared for a catalog transition')
     if stage in ('submit','reopen'):
         if stage=='reopen':
             origin = os.environ['EVALUATION_RUN']
             require(re.fullmatch(r'[1-9][0-9]*',origin), 'Invalid prepared evaluation ID')
-            import tempfile
             with tempfile.TemporaryDirectory() as folder:
                 subprocess.run(['gh','run','download',origin,'--repo',os.environ['GITHUB_REPOSITORY'],
                                 '--name','swiglu-prepared-'+origin,'--dir',folder],check=True)
@@ -122,8 +178,13 @@ def service(root, stage):
         ci.require_quota(queue._client.get_credits())
         with (LEDGER/'lock').open('a') as lock:
             fcntl.flock(lock,fcntl.LOCK_EX)
+            package = service_package(root,queue,stage,requested_version)
+            manifest = ci.smoke.verify(package)
             state = ci.smoke.submit_once(queue,package,LEDGER,retry_maintenance=stage=='reopen')
         print('CANNBench job',state.get('job_id'), 'submission',state.get('submission_id'),flush=True)
+    else:
+        package = service_package(root,queue,stage,requested_version)
+        manifest = ci.smoke.verify(package)
     end = time.monotonic()+4*3600
     visible_by = time.monotonic()+300
     while True:
@@ -152,6 +213,7 @@ def service(root, stage):
     if code:
         save(package/'job-logs.json',queue._client.get_job_logs(job['id']))
         raise ValueError('CANNBench failed; inspect the retained job and logs')
+    require(job.get('case_set','standard')=='standard','Unexpected CANNBench case set')
     op, = job['results']['operators']
     require(op['anti_cheat_failed_cases']==0 and math.isfinite(job['result_score']), 'Invalid service score')
     cases = []
@@ -185,7 +247,8 @@ def service(root, stage):
         'candidate_sha256':g['candidate_sha256'],'package_sha256':manifest['files']['submission.zip'],
         'model':g['model'],'opencode':g['opencode'],'loaded_skills':g['loaded_skills'],
         'service_score':job['result_score'],'cases':cases,'benchmark_version':job['benchmark_version'],
-        'hardware':job['target_hardware'],'simulator_image':IMAGE,'ca_model_pairs':24,
+        'qualification_benchmark_version':manifest.get('qualification_benchmark_version',manifest['catalog']['benchmark_version']),
+        'hardware':job['target_hardware'],'simulator_image':IMAGE,'ca_model_pairs':len(load(root/'qualification/camodel.json')['checks']),
         'queued_at':job['queued_at'],'claimed_at':job['claimed_at'],'finished_at':job['finished_at'],
         'generated_ratio':geometric_mean(c['baseline_us']/c['elapsed_us'] for c in generated)})
     (public/'SHA256SUMS').write_text(''.join(f'{sha(p)}  {p.name}\n' for p in sorted(public.iterdir()) if p.name!='SHA256SUMS'))

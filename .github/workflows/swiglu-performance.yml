@@ -5,6 +5,9 @@ on:
       action:
         type: string
         required: true
+      prepared_catalog_version:
+        type: string
+        required: false
       skills_revision:
         type: string
         required: false
@@ -151,6 +154,7 @@ jobs:
           STAGE: ${{ inputs.action == 'performance-resume' && 'resume' || inputs.action == 'performance-submit-prepared' && 'reopen' || 'submit' }}
           GH_TOKEN: ${{ inputs.action == 'performance-submit-prepared' && github.token || '' }}
           BENCHSITE_API_TOKEN: ${{ secrets.BENCHSITE_API_TOKEN }}
+          PREPARED_CATALOG_VERSION: ${{ inputs.prepared_catalog_version }}
           PREPARED_ARTIFACT_ID: ${{ steps.checkpoint.outputs.artifact-id }}
         run: '"$PYTHON" "$HELPER" "$STAGE" "$ROOT"'
       - name: Publish measured cases with the evaluated source package
