@@ -64,6 +64,36 @@ class Dashboard(unittest.TestCase):
         self.assertLess(record['all_ratio'],record['ratio'])
         self.assertNotIn('private',record['cases'][0])
 
+    def test_catalog_comparison_requires_evidence_of_the_same_public_cases(self):
+        import swiglu_evidence
+        cases=[{'id':f'level1/swi_glu_{n}', 'kernel':'_swiglu_pair_groups' if n==12 else 'rows',
+                'elapsed_us':2,'baseline_us':1} for n in range(1,21)]
+        previous={'schema':1,'evaluation_run':'41','origin_run':'39','hardware':'950pr',
+                  'benchmark_version':'2.0.0','job_id':'job_123','submission_id':'sub_456',
+                  'candidate_sha256':'a'*64,'package_sha256':'b'*64,'revision':'c'*40,
+                  'model':'test','finished_at':'2026-11-11T10:00:00','generated_ratio':.5,
+                  'service_score':43.5,'cases':cases}
+        current=dict(previous,benchmark_version='2.1.0',job_id='job_124',evaluation_run='42',
+                     finished_at='2026-11-17T10:00:00')
+        for has_transition in [False,True]:
+            if has_transition: current['qualification_benchmark_version']='2.0.0'
+            source={}
+            releases=[]
+            for row in (previous,current):
+                tag='qualification-swiglu-performance-'+row['evaluation_run']
+                raw=raw_json(row)
+                source[swiglu_evidence.RELEASE+'/download/'+tag+'/performance.json']=raw
+                releases.append({'tag_name':tag,'draft':False,'prerelease':False,
+                                 'assets':[{'name':'performance.json','size':len(raw),'digest':'sha256:'+dash.digest(raw)}]})
+            history=swiglu_evidence.service_history(lambda url: raw_json(releases) if 'api.github.com' in url else source[url],None,True)
+            self.assertTrue(history['complete'])
+            new,old=history['runs']
+            self.assertEqual((new['benchmark_version'],old['benchmark_version']),('2.1.0','2.0.0'))
+            self.assertEqual('previous' in new,has_transition)
+            if has_transition:
+                self.assertEqual(new['previous']['previous_over_current'],1)
+                self.assertEqual(new['previous']['benchmark_version'],'2.0.0')
+
     def write_catalog(self): self.catalog.write_bytes(raw_json(self.spec))
 
     def reviewed(self, accepted=True, requests=None):

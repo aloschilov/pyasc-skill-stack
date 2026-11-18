@@ -5,7 +5,7 @@ description: Current PyASC/AscTile syntax, typing, ConstExpr, loop, and kernel/d
 
 # Current PyASC/AscTile syntax constraints
 
-Use the syntax implementation and tests matching the repository runtime pin
+Use the syntax implementation and tests matching the full checkout’s runtime pin
 in `reference/images/ENV.json` and source pin in `reference/asctile/PIN.json`.
 An explicitly selected campaign must identify its own matching source/runtime.
 New tile kernels use `@asctile.jit`; `@asc2.jit` is obsolete.
