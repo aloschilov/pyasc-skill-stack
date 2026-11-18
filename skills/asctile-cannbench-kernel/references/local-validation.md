@@ -45,6 +45,13 @@ simulator. Preserve the official golden's dtype, tolerance, special-value,
 shape and list-output semantics. Retain per-case results and candidate hashes.
 Mark infeasible cases compile-only, never numerically passed.
 
+Record the precision of the golden's operations as well as its output dtype.
+Calling `golden(x.double())` can still compute in FP32 if the golden casts
+internally. If the result is then stored in FP64, label it as FP32-computed
+and FP64-stored. A separately implemented FP64 reference is a diagnostic with
+its own overflow and special-value behavior. Keep it distinct from the
+official acceptance oracle.
+
 The optional `integrations/cannbench/workers/run_camodel_smoke.py` contains
 reusable small numerical routes. Invoke it only in an already configured
 runtime, selecting the relevant operators explicitly:
