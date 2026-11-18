@@ -58,6 +58,22 @@
       "asset": "qualification-l1-performance-44170410287.tar.gz",
       "sha256": "021af202e4320f60d254b51d6c899c8aea17044483758f9270a184e228f12b74",
       "run_id": 44170410287
+    },
+    {
+      "id": "l1-44230092663",
+      "kind": "hardware-pair",
+      "release": "qualification-l1-performance-44230092663",
+      "asset": "qualification-l1-performance-44230092663.tar.gz",
+      "sha256": "647cd1fa0ba4532ae1831b8749c1b29b8b2e7ec959ecdb8e3032a74ca13059be",
+      "run_id": 44230092663
+    },
+    {
+      "id": "l1-44240367981",
+      "kind": "hardware-pair",
+      "release": "qualification-l1-performance-44240367981",
+      "asset": "qualification-l1-performance-44240367981.tar.gz",
+      "sha256": "b77c69c47c77fd12cea1af100c38a184e7eccb45b3db257124da773201a378db",
+      "run_id": 44240367981
     }
   ],
   "swiglu_study": {
