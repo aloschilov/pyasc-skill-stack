@@ -181,7 +181,7 @@ class PreparedL1Test(unittest.TestCase):
                 binary = sha256(("ELF for " + name).encode()).hexdigest()
                 flags[name] = {"source": cpp, "commands": [["bisheng", "@SRC@"]], "binary_sha256": binary}
                 entries[json.dumps([fn, symbol, [], []])] = {
-                    "file": name + ".o", "symbol": symbol, "binary_sha256": binary,
+                    "file": name + ".o", "symbol": symbol, "binary_sha256": binary, "ub_bytes": 65536,
                 }
                 native[name] = {"operator": fn, "origin": origin,
                                 "pyasc_source": source if origin == "retained" else "pyasc_source/fallback.py",
@@ -470,6 +470,41 @@ class PreparedL1Test(unittest.TestCase):
             with self.subTest(origin=origin), self.assertRaisesRegex(ValueError, "case origin"):
                 self.verify_aot_fixture(files, changed)
 
+    def test_target_dispatch_checks_selected_ub_against_each_profile(self):
+        files, q = self.aot_fixture()
+        self.add_target_dispatch(files, q)
+        entries = json.loads(files["cann_bench/specializations.json"])
+        # Exact capacity is valid; a lower declaration must not certify this binding.
+        for profile in q["aot"]["target_dispatch"]["profiles"]:
+            profile["usable_ub_bytes"] = 65536
+        self.rebind_aot(q)
+        self.assertEqual(self.verify_aot_fixture(files, q), self.manifest)
+        changed = deepcopy(q)
+        changed["aot"]["target_dispatch"]["profiles"][1]["usable_ub_bytes"] = 65535
+        self.rebind_aot(changed)
+        with self.assertRaisesRegex(ValueError, "valid UB allocation"):
+            self.verify_aot_fixture(files, changed)
+        for value in (None, 0, -1, True, 65536.0, "65536", 65537):
+            for origin in ("retained", "reference"):
+                with self.subTest(value=value, origin=origin):
+                    modified = deepcopy(entries)
+                    key = q["aot"]["target_dispatch"]["profiles"][0]["cases"][0]["key"]
+                    if value is None:
+                        modified[key].pop("ub_bytes")
+                    else:
+                        modified[key]["ub_bytes"] = value
+                    aot = deepcopy(q["aot"])
+                    name = modified[key]["file"].removesuffix(".o")
+                    aot["native_binaries"][name]["origin"] = origin
+                    for profile in aot["target_dispatch"]["profiles"]:
+                        for row in profile["cases"]:
+                            if row["key"] == key:
+                                row["origin"] = origin
+                    with self.assertRaisesRegex(ValueError, "valid UB allocation"):
+                        l1.verify_target_dispatch(aot, modified)
+        # Historical collection without a target declaration does not acquire new requirements.
+        self.assertEqual(l1.verify_target_dispatch({}, {}), {})
+
     def test_legacy_aot_collects_but_cannot_start_a_new_submission(self):
         files, q = self.aot_fixture()
         self.verify_aot_fixture(files, q)
@@ -755,6 +790,40 @@ class PreparedL1Test(unittest.TestCase):
                         case["op_times"] = timings
                     self.assert_receipt_refused(self.retained_report(job), "device-kernel measurements")
 
+    def test_receipt_rejects_explicit_profile_failures_before_any_download(self):
+        case_flags = ("perf_integrity_failed", "perf_collection_failed", "io_cleanup_failed", "profile_exception_type")
+        scopes = [("operator", key) for key in
+                  ("zeroed_by_integrity", "zeroed_by_no_npu_perf", "zeroed_by_cpu_fallback", "profile_exception_type")]
+        scopes += [(scope, key) for scope in ("case", "_perf_result", "metadata", "nested metadata") for key in case_flags]
+        for op_index in range(2):
+            for scope, key in scopes:
+                for value in (True, 0, None, "false", []):
+                    if key == "profile_exception_type" and value is None:
+                        continue  # An absent exception is explicitly valid.
+                    with self.subTest(operator=op_index, scope=scope, flag=key, value=value):
+                        job = self.completed_job()
+                        op = job["results"]["operators"][op_index]
+                        case = op["cases"][-1]
+                        if scope == "operator": target = op
+                        elif scope == "case": target = case
+                        elif scope == "nested metadata":
+                            case["_perf_result"] = {"metadata": {}}
+                            target = case["_perf_result"]["metadata"]
+                        else:
+                            case[scope] = {}; target = case[scope]
+                        target[key] = value
+                        report = self.retained_report(job)
+                        self.assertTrue(report["gate_passed"])  # Legacy gate alone misses these flags.
+                        self.assert_receipt_refused(report, "profiling or integrity failure")
+
+    def test_receipt_rejects_malformed_performance_containers(self):
+        for key in ("_perf_result", "metadata"):
+            for value in (False, 0, "unknown", [], {"metadata": "unknown"}):
+                with self.subTest(key=key, value=value):
+                    job = self.completed_job()
+                    job["results"]["operators"][1]["cases"][-1][key] = value
+                    self.assert_receipt_refused(self.retained_report(job), "profiling or integrity failure")
+
     def test_receipt_rechecks_failed_incomplete_and_mismatched_saved_job(self):
         for defect in ("failed", "missing second operator", "missing second-operator case",
                        "failed second-operator case", "duplicate case", "wrong case",
@@ -806,6 +875,13 @@ class PreparedL1Test(unittest.TestCase):
 
     def test_published_score_matches_downloaded_package_and_anonymous_job(self):
         job = self.completed_job()
+        for op in job["results"]["operators"]:
+            op.update(zeroed_by_integrity=False, zeroed_by_no_npu_perf=False, zeroed_by_cpu_fallback=False)
+            for case in op["cases"]:
+                case.update(perf_integrity_failed=False, perf_collection_failed=False, io_cleanup_failed=False,
+                            profile_exception_type=None,
+                            _perf_result={"elapsed_us": 4.5, "metadata": {"samples": 100,
+                                          "perf_collection_failed": False, "profile_exception_type": ""}})
         # A valid multi-kernel path must remain acceptable; the receipt does not
         # assume a particular compiler symbol or a single launch per case.
         job["results"]["operators"][1]["cases"][-1]["op_times"]["device_kernels"] = {

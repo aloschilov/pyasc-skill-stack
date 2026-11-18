@@ -346,6 +346,8 @@ without the PyASC compiler/runtime. The qualification adds:
   19 retained routes plus one template are not reported as 20 generated routes.
   Retained source provenance still determines whether a route was generated
   or subsequently adapted. The grid cannot exceed the effective AIV capacity.
+  Each selected entry's `ub_bytes` must be a positive integer no greater than
+  that profile's `usable_ub_bytes`.
   Official cases selecting a fallback are rejected even if that fallback
   shares the intended kernel's symbol.
 
@@ -434,7 +436,10 @@ The runner retains the complete report and `service-receipt.json` in
 `~/.local/state/pyasc-cannbench-l1/<manifest SHA-256>/`. Compare the service
 score after both operators pass their 20 numerical and timing checks. The receipt
 requires explicit `accuracy.passed: true` and device-kernel evidence for every
-case in both operators, in addition to the complete hardware gate. Its
+case in both operators, in addition to the complete hardware gate. Known
+operator and case profiling/integrity failure flags, including nested performance
+metadata, must be false booleans when present; malformed flags or a reported
+profiling exception reject the receipt before any download. Its
 `job_sha256` binds the receipt to the saved raw response. CI compares
 the SHA-256 of the archive returned by CANNBench with the staged ZIP. For a
 public submission it also reads the job anonymously and verifies its score and identity.

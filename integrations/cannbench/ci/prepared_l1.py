@@ -118,6 +118,9 @@ def verify_target_dispatch(aot, entries):
             require(isinstance(key, str) and key in entries, "missing specialization key")
             entry = entries[key]
             require(json.loads(key)[0] == fn, "wrong specialization operator")
+            used_ub = entry.get("ub_bytes")
+            require(type(used_ub) is int and 0 < used_ub <= ub,
+                    "selected specialization exceeds or lacks valid UB allocation")
             proof = aot["native_binaries"][entry["file"].removesuffix(".o")]
             origin = proof["origin"]
             require(origin in ("retained", "reference"), "official case selected fallback")
@@ -369,8 +372,26 @@ def result_receipt(run, manifest, report, queue):
     if (not isinstance(report, dict) or report.get("gate_passed") is not True
             or any(key not in report or report[key] != value for key, value in checked.items())):
         raise ValueError("Hardware report differs from the saved CANNBench job or manifest")
+    def no_failure(value, names):
+        return (all(type(value[key]) is bool and value[key] is False
+                    for key in names if key in value)
+                and value.get("profile_exception_type") in (None, ""))
+
+    case_flags = ("perf_integrity_failed", "perf_collection_failed", "io_cleanup_failed")
+
+    def valid_perf(value):
+        # Raw metadata can contain timing fields that the public projection omits.
+        # Inspect the same known flags recursively without discarding failures.
+        return value is None or (isinstance(value, dict) and no_failure(value, case_flags)
+                                 and valid_perf(value.get("metadata")))
+
     for operator in job["results"]["operators"]:
+        if not no_failure(operator, ("zeroed_by_integrity", "zeroed_by_no_npu_perf", "zeroed_by_cpu_fallback")):
+            raise ValueError("Operator reported a profiling or integrity failure: " + operator["operator"])
         for case in operator["cases"]:
+            if (not no_failure(case, case_flags) or not valid_perf(case.get("_perf_result"))
+                    or not valid_perf(case.get("metadata"))):
+                raise ValueError("Case reported a profiling or integrity failure: " + case["case_id"])
             accuracy = case.get("accuracy")
             if not isinstance(accuracy, dict) or accuracy.get("passed") is not True:
                 raise ValueError("Missing explicit numerical pass: " + case["case_id"])
