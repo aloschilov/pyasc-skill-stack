@@ -89,6 +89,11 @@ Check the aggregation behind a service summary label. Across runs, compare
 case identities, hardware, metric/profile and each reported baseline and
 hardware-floor anchor alongside candidate times. A matching catalog version
 alone does not establish a matched performance comparison.
+Matching anchors permits comparison of the reported ratios. Attributing a
+timing change to code also requires paired measurements on the same runner
+with matched inputs, runtime and measurement protocol. Preserve timing changes
+of unchanged-source controls as observed run variation, without using them as
+normalization factors for other kernels.
 
 The Exp + SwiGLU control `job_dd91a091c27a` passed 40/40 cases with score
 150.7287. Its final 40-case geometric mean was 1.37914×. The summary field

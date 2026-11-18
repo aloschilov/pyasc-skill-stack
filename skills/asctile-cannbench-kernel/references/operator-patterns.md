@@ -86,6 +86,21 @@ With grid size `G` and alignment `q` in elements, use
 `T = q * ceil(N / (3 * G * q))`. Check compiled UB and bound the last
 transfer. Pass three as the short loop's actual `unroll_factor`.
 
+Inspect both the fully unrolled and remainder bodies when blocks receive
+different tile counts. In retained Exp cases 7 and 12, 212 tiles over 72
+blocks gave 68 grid-stride blocks three tiles and four blocks two tiles.
+Those four blocks used the emitted remainder loop. The contiguous control
+scheduled three slots per block, bounding excess slots to zero valid lanes.
+Both sources kept the same FP32 arithmetic, tile/grid/unroll, cache policy
+and UB allocation for these cases. Times changed from 4.94 to 5.91 µs and
+4.97 to 5.62 µs on different service runners. Runner variation prevents causal
+attribution from those timings. Test the suspected remainder-path cost by
+comparing the two schedules in one package on the same runner with matched
+compiler options and repeated measurements, preserving
+bounded tails and checking zero-valid slots. Select ownership from that
+controlled comparison for the affected shape family.
+[Retained sources, lowering and terminal results](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-l1-performance-44170410287)
+
 For this short path, bind a resident FP16 or BF16 input to the current
 Torch stream of the input device at each call. On the measured
 PyASC wheel the launch accepts `kernel[blocks, ctypes.c_void_p(handle)]`,
