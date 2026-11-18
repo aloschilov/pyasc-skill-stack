@@ -68,6 +68,40 @@ all 20 timings, including the BF16 template on case 12. Time change compares
 candidate microseconds across runs. Baseline speed compares the candidate
 with CANNBench within one run. The service score covers all 20 cases.
 
+Retained Exp + SwiGLU packages use a separate `hardware-pair` source entry in
+the same `sources.json` catalog and Timing section. The pinned Release archive
+contains `evidence/{service-receipt,report,qualification,publication,public-job}.json`
+and the exact `evidence/submission.zip`. The adapter supports the compact
+`source-aot-v1` package, checks the two original source hashes against that ZIP,
+and checks all 40 measured kernel names against its specialization symbols.
+This does not establish which ELF/compiler ran on the service.
+
+The publisher first verifies the unchanged raw receipt privately, then calls
+`paired_public_job(raw_job)` from `scripts/evidence_dashboard.py` to construct
+the allowlisted `public-job.json`. Keep the raw job and manifest private: they
+can contain account identifiers, aggregation tokens and private service metadata.
+`publication.json` records `schema: 1`,
+`transformation: "allowlisted-cannbench-job-v1"`, `raw_receipt_verified: true`,
+the original receipt's `original_job_sha256`, and the separate
+`public_job_sha256`. It also records integer `evaluation_run` and
+`collection_run` with their exact 40-character `evaluation_revision` and
+`collection_revision`. The catalog's `run_id` identifies the evaluation CI;
+the UI links the later strict collection separately. The public projection
+cannot reproduce the hash of the privately retained original response.
+
+The paired row displays the actual service `result_score` once and recomputes
+baseline/candidate geometric means independently for Exp and SwiGLU from their
+20 terminal case timings. Service summary averages and intermediate profiling
+passes are not substituted for these values. Operator service scores must sum
+to the combined service score; component bonuses are not added again. Optional
+profiling/integrity failure flags survive the public projection and block an
+accepted record, including known nested performance metadata. Exception text
+is reduced to a failure marker rather than published as a log. Source/skill revisions and any
+`changes_after_generation` are shown separately for each operator. Retained
+candidates do not enter the daily first-generation comparison or the old
+19-generated-case SwiGLU history. Release publication and archive sanitization
+remain explicit steps; adding this adapter does not upload or submit anything.
+
 ## Daily skill quality
 
 Run `python3 scripts/evidence_dashboard.py --daily --output /outside/new-snapshot`

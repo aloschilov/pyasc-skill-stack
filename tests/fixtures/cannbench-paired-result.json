@@ -1,0 +1,136 @@
+{
+  "description": "Allowlisted terminal service values from job_dd91a091c27a; test package/source bytes and their hashes are synthesized in memory, not qualified candidates.",
+  "public_job": {
+    "job": {
+      "id": "job_dd91a091c27a",
+      "submission_id": "sub_9a7c67cd54c9",
+      "status": "succeeded",
+      "benchmark_slug": "official-tasks",
+      "benchmark_version": "2.1.0",
+      "target_hardware": "950pr",
+      "runner_hardware": "950pr",
+      "selected_operators": [
+        "exp",
+        "swi_glu"
+      ],
+      "case_set": "standard",
+      "is_private": false,
+      "is_independent_environment": false,
+      "result_score": 150.72871123850933,
+      "queued_at": "2026-11-17T17:56:41.826752",
+      "claimed_at": "2026-11-18T00:26:12.630918",
+      "finished_at": "2026-11-18T01:22:09.288933",
+      "results": {
+        "result_stage": "final",
+        "contains_performance": true,
+        "anti_cheat_failed_cases": 0,
+        "perf_metric": "eq3",
+        "score_weight_profile": "2",
+        "framework_version": "1.0.0",
+        "tasks_version": "2.1.0",
+        "summary": {
+          "total_cases": 40,
+          "passed_cases": 40,
+          "anti_cheat_failed_cases": 0
+        },
+        "operators": [
+          {
+            "operator": "Exp",
+            "rel_path": "level1/exp",
+            "total_cases": 20,
+            "passed_cases": 20,
+            "anti_cheat_failed_cases": 0,
+            "score": 74.59659705822276,
+            "zeroed_by_integrity": false,
+            "zeroed_by_no_npu_perf": false,
+            "zeroed_by_cpu_fallback": false,
+            "cases": [
+              {"case_id": "level1/exp_1","status": "success","elapsed_us": 4.97,"baseline_perf_us": 3.8130036363636357,"t_hw_us": 1.271001212121212,"perf_score": 0.4073068307221879,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_short_stride_kernel": 4.97}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_2","status": "success","elapsed_us": 14.18,"baseline_perf_us": 30.504029090909086,"t_hw_us": 10.168009696969696,"perf_score": 0.8352230694433465,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 14.18}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_3","status": "success","elapsed_us": 26.53,"baseline_perf_us": 61.00805818181817,"t_hw_us": 20.33601939393939,"perf_score": 0.8678364263455752,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 26.53}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_4","status": "success","elapsed_us": 104.18,"baseline_perf_us": 244.03223272727269,"t_hw_us": 81.34407757575757,"perf_score": 0.876911273605888,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 104.18}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_5","status": "success","elapsed_us": 282.31,"baseline_perf_us": 488.06446545454537,"t_hw_us": 162.68815515151513,"perf_score": 0.7311857510785511,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 282.31}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_6","status": "success","elapsed_us": 4.7,"baseline_perf_us": 3.80556,"t_hw_us": 1.2685199999999999,"perf_score": 0.42507020165803244,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_short_contiguous_kernel": 4.7}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_7","status": "success","elapsed_us": 4.94,"baseline_perf_us": 3.7461418181818185,"t_hw_us": 1.2487139393939395,"perf_score": 0.4035455351863382,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_short_contiguous_kernel_o3": 4.94}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_8","status": "success","elapsed_us": 6.79,"baseline_perf_us": 8.596021818181818,"t_hw_us": 2.865340606060606,"perf_score": 0.5935245006814254,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_one_wave_kernel": 6.79}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_9","status": "success","elapsed_us": 74.1,"baseline_perf_us": 180.69612,"t_hw_us": 60.23204,"perf_score": 0.8967635718180116,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 74.1}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_10","status": "success","elapsed_us": 5.2,"baseline_perf_us": 3.822316363636364,"t_hw_us": 1.2741054545454547,"perf_score": 0.3936004637214885,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_short_contiguous_kernel_o3": 5.2}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_11","status": "success","elapsed_us": 6.49,"baseline_perf_us": 7.947774545454546,"t_hw_us": 2.649258181818182,"perf_score": 0.5797534393083823,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_one_wave_kernel": 6.49}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_12","status": "success","elapsed_us": 4.97,"baseline_perf_us": 3.6363890909090912,"t_hw_us": 1.212129696969697,"perf_score": 0.3921398470704516,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_short_contiguous_kernel_o3": 4.97}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_13","status": "success","elapsed_us": 32.02,"baseline_perf_us": 79.36552,"t_hw_us": 26.455173333333335,"perf_score": 0.904834370734657,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 32.02}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_14","status": "success","elapsed_us": 8.25,"baseline_perf_us": 11.061960000000001,"t_hw_us": 3.68732,"perf_score": 0.6177802052722052,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 8.25}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_15","status": "success","elapsed_us": 6.36,"baseline_perf_us": 7.62973090909091,"t_hw_us": 2.5432436363636364,"perf_score": 0.5713072089763405,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_one_wave_kernel": 6.36}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_16","status": "success","elapsed_us": 6.56,"baseline_perf_us": 7.597145454545455,"t_hw_us": 2.5323818181818183,"perf_score": 0.5570337605307941,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 6.56}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_17","status": "success","elapsed_us": 6.42,"baseline_perf_us": 7.612970909090908,"t_hw_us": 2.5376569696969695,"perf_score": 0.5665894504068771,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 6.42}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_18","status": "success","elapsed_us": 8.64,"baseline_perf_us": 15.229658181818184,"t_hw_us": 5.076552727272728,"perf_score": 0.7402082473942565,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 8.64}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_19","status": "success","elapsed_us": 6.58,"baseline_perf_us": 7.599927272727273,"t_hw_us": 2.533309090909091,"perf_score": 0.5559581191943053,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 6.58}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/exp_20","status": "success","elapsed_us": 18.2,"baseline_perf_us": 38.360901818181816,"t_hw_us": 12.786967272727273,"perf_score": 0.8253126006288156,"accuracy": {"passed": true},"op_times": {"device_kernels": {"_exp_stream_kernel": 18.2}},"perf_collection_failed": false,"_perf_result": null}
+            ]
+          },
+          {
+            "operator": "SwiGlu",
+            "rel_path": "level1/swi_glu",
+            "total_cases": 20,
+            "passed_cases": 20,
+            "anti_cheat_failed_cases": 0,
+            "score": 76.13211418028656,
+            "zeroed_by_integrity": false,
+            "zeroed_by_no_npu_perf": false,
+            "zeroed_by_cpu_fallback": false,
+            "cases": [
+              {"case_id": "level1/swi_glu_1","status": "success","elapsed_us": 7.52,"baseline_perf_us": 7.626007272727271,"t_hw_us": 2.542002424242424,"perf_score": 0.5052677026032049,"accuracy": {"passed": true},"op_times": {"device_kernels": {"row_full_fixed": 7.52}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_2","status": "success","elapsed_us": 24.69,"baseline_perf_us": 61.00805818181817,"t_hw_us": 20.33601939393939,"perf_score": 0.9033007877519222,"accuracy": {"passed": true},"op_times": {"device_kernels": {"row_full_fixed": 24.69}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_3","status": "success","elapsed_us": 47.69,"baseline_perf_us": 122.01611636363634,"t_hw_us": 40.67203878787878,"perf_score": 0.9205771923283881,"accuracy": {"passed": true},"op_times": {"device_kernels": {"swiglu_flat": 47.69}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_4","status": "success","elapsed_us": 181.48,"baseline_perf_us": 488.06446545454537,"t_hw_us": 162.68815515151513,"perf_score": 0.9453992341615336,"accuracy": {"passed": true},"op_times": {"device_kernels": {"swiglu_flat": 181.48}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_5","status": "success","elapsed_us": 451.04,"baseline_perf_us": 971.6020363636363,"t_hw_us": 323.86734545454544,"perf_score": 0.8358866317483962,"accuracy": {"passed": true},"op_times": {"device_kernels": {"swiglu_flat": 451.04}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_6","status": "success","elapsed_us": 6.77,"baseline_perf_us": 7.607396363636365,"t_hw_us": 2.535798787878788,"perf_score": 0.54499325542731,"accuracy": {"passed": true},"op_times": {"device_kernels": {"swiglu_flat": 6.77}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_7","status": "success","elapsed_us": 6.91,"baseline_perf_us": 7.396887272727272,"t_hw_us": 2.4656290909090908,"perf_score": 0.5259655788430972,"accuracy": {"passed": true},"op_times": {"device_kernels": {"paired_rows": 6.91}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_8","status": "success","elapsed_us": 9.59,"baseline_perf_us": 17.192043636363636,"t_hw_us": 5.730681212121212,"perf_score": 0.7480974419841447,"accuracy": {"passed": true},"op_times": {"device_kernels": {"single_row_edge": 9.59}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_9","status": "success","elapsed_us": 7.86,"baseline_perf_us": 6.78216,"t_hw_us": 2.26072,"perf_score": 0.44675082405204375,"accuracy": {"passed": true},"op_times": {"device_kernels": {"two_wave_swiglu": 7.86}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_10","status": "success","elapsed_us": 6.44,"baseline_perf_us": 7.62973090909091,"t_hw_us": 2.5432436363636364,"perf_score": 0.5662194501925201,"accuracy": {"passed": true},"op_times": {"device_kernels": {"row_bounded": 6.44}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_11","status": "success","elapsed_us": 4.25,"baseline_perf_us": 2.021192727272727,"t_hw_us": 0.673730909090909,"perf_score": 0.2736668276680064,"accuracy": {"passed": true},"op_times": {"device_kernels": {"row_single_wave_fp32": 4.25}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_12","status": "success","elapsed_us": 8.35,"baseline_perf_us": 7.272749090909091,"t_hw_us": 2.424249696969697,"perf_score": 0.45000807762076045,"accuracy": {"passed": true},"op_times": {"device_kernels": {"ordinary_slab_swiglu": 8.35}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_13","status": "success","elapsed_us": 3.77,"baseline_perf_us": 1.5,"t_hw_us": 0.5,"perf_score": 0.234192037470726,"accuracy": {"passed": true},"op_times": {"device_kernels": {"row_single_wave_fp32": 3.77}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_14","status": "success","elapsed_us": 8.37,"baseline_perf_us": 11.05104,"t_hw_us": 3.68368,"perf_score": 0.6112125093747304,"accuracy": {"passed": true},"op_times": {"device_kernels": {"row_bounded": 8.37}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_15","status": "success","elapsed_us": 8.5,"baseline_perf_us": 15.252014545454543,"t_hw_us": 5.084004848484848,"perf_score": 0.7485281263061261,"accuracy": {"passed": true},"op_times": {"device_kernels": {"whole_fp32_rows": 8.5}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_16","status": "success","elapsed_us": 9.29,"baseline_perf_us": 15.131934545454545,"t_hw_us": 5.043978181818182,"perf_score": 0.7037792464643452,"accuracy": {"passed": true},"op_times": {"device_kernels": {"four_chunk_stream": 9.29}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_17","status": "success","elapsed_us": 9.95,"baseline_perf_us": 15.23712,"t_hw_us": 5.07904,"perf_score": 0.6758967971340818,"accuracy": {"passed": true},"op_times": {"device_kernels": {"swiglu_flat": 9.95}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_18","status": "success","elapsed_us": 24.33,"baseline_perf_us": 60.94848,"t_hw_us": 20.31616,"perf_score": 0.9100966354105258,"accuracy": {"passed": true},"op_times": {"device_kernels": {"row_full_fixed": 24.33}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_19","status": "success","elapsed_us": 14.61,"baseline_perf_us": 30.392290909090907,"t_hw_us": 10.130763636363636,"perf_score": 0.8189531887749477,"accuracy": {"passed": true},"op_times": {"device_kernels": {"column_stripe": 14.61}},"perf_collection_failed": false,"_perf_result": null},
+              {"case_id": "level1/swi_glu_20","status": "success","elapsed_us": 18.53,"baseline_perf_us": 37.98109090909091,"t_hw_us": 12.660363636363636,"perf_score": 0.8118125061936379,"accuracy": {"passed": true},"op_times": {"device_kernels": {"row_bounded": 18.53}},"perf_collection_failed": false,"_perf_result": null}
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "receipt": {
+    "job": "job_dd91a091c27a",
+    "public_job_url": "https://cannbench.com/api/jobs/job_dd91a091c27a",
+    "submission": "sub_9a7c67cd54c9",
+    "version": "2.1.0",
+    "hardware": "950pr",
+    "visibility": "public",
+    "score": 150.72871123850933,
+    "job_sha256": "9e0069b0bc6895611fcbcab701370c7dd6408ebea578ea9bb780bfebd78769c4",
+    "package_sha256": "918548f7dac6e61ff6c07d2d175b541a8a17075d2f5197d6986b4aa1779f22ce",
+    "qualification_sha256": "d7508093a2c6b421259fdc7ccbae088c09b344b6b4e63d48c13043b75032c224",
+    "queued_at": "2026-11-17T17:56:41.826752",
+    "claimed_at": "2026-11-18T00:26:12.630918",
+    "finished_at": "2026-11-18T01:22:09.288933"
+  },
+  "sources": {
+    "exp": {
+      "package_source": "pyasc_source/exp.py",
+      "source_sha256": "9fb66f8d8ea2abf51d51f9c18aa6a2a82d481c21f16bd6878f4bb71d7c4b4589",
+      "skills_revision": "2a1a43aad532f8fd5ec663b0577581566697ca59",
+      "changes_after_generation": "Streaming input descriptor sets l2_cache=False (manual control)"
+    },
+    "swi_glu": {
+      "package_source": "pyasc_source/swi_glu.py",
+      "source_sha256": "d2f91370bd596e49fc3bac470f7089246f05d7b31a27156f0b4985c8e288d39a",
+      "skills_revision": "148357605eef0d5e0dd022e65392373dd1838e51",
+      "changes_after_generation": null
+    }
+  }
+}

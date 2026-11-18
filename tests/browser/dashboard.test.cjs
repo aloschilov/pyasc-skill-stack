@@ -73,6 +73,43 @@ test('counts, exclusions, uncertainty and timing stay separate', async () => {
   assert.match(await page.locator('#records').innerText(),/Excluded cases were not numerically tested/);
 });
 
+test('retained paired service result keeps forty cases, operator provenance and no improvement claim', async () => {
+  const fixture = JSON.parse(fs.readFileSync(path.resolve(__dirname,'../fixtures/cannbench-paired-result.json')));
+  const job = fixture.public_job.job;
+  const operators = job.results.operators.map((op,i) => ({operator:op.operator,function_name:['exp','swi_glu'][i],
+    ...fixture.sources[['exp','swi_glu'][i]], required:20,qualified:20,
+    baseline_time_ratio:[1.3573776448341404,1.4012487188803113][i],service_score:op.score,
+    cases:op.cases.map(c => ({...c,speedup:c.baseline_perf_us/c.elapsed_us,device_kernels:c.op_times.device_kernels}))}));
+  const pair = record('hardware-pair',{category:'retained-candidates',level:'npu-numerical-and-timing',
+    required:40,qualified:40,counts:{qualified:40},models:[],observed_models:[],operators,
+    service_score:job.result_score,baseline_time_ratio:null,job:job.id,submission:job.submission_id,
+    benchmark:'official-tasks 2.1.0',hardware:'950pr',case_set:'standard',independent_environment:false,visibility:'public',publication:{collection_run:44208153512},
+    tasks:operators.flatMap(op=>op.cases.map(c=>({id:c.case_id}))),
+    note:'Public service projection is attested; original raw response is retained privately.',
+    service_protocol:{perf_metric:'eq3',score_weight_profile:'2',framework_version:'1.0.0',tasks_version:'2.1.0'}});
+  const payload = data(); payload.records.unshift(pair); await load(payload);
+  const panel = page.locator('#timing .hardware-result').first();
+  assert.match(await panel.innerText(),/150\.728711/);
+  assert.match(await panel.innerText(),/1\.357×/); assert.match(await panel.innerText(),/1\.401×/);
+  assert.match(await panel.innerText(),/40\/40 passed.*2\.1\.0/);
+  assert.match(await panel.innerText(),/manual control/);
+  assert.match(await panel.innerText(),/does not establish fresh-generation quality or a skills improvement/);
+  assert.doesNotMatch(await panel.innerText(),/19 generated|packed BF16 template/);
+  assert.equal(await panel.getByRole('link',{name:'Strict result collection'}).getAttribute('href'),
+    'https://github.com/aloschilov/pyasc-skill-stack/actions/runs/44208153512');
+  assert.equal(await panel.getByRole('link',{name:job.id,exact:true}).getAttribute('href'),
+    'https://cannbench.com/workspace/jobs/'+job.id);
+  await panel.getByText('All 40 cases and source attribution',{exact:true}).click();
+  assert.equal(await panel.locator('tbody tr').count(),40);
+  assert.match(await panel.innerText(),/row_single_wave_fp32/);
+  await page.setViewportSize({width:390,height:900}); await accessibility();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
+  await page.locator('#filter').selectOption('retained-candidates');
+  assert.deepEqual(await ids(),['synthetic-hardware-pair']);
+  await page.locator('#filter').selectOption('fresh-generated');
+  assert.equal(await page.locator('#timing .hardware-result').count(),0);
+});
+
 test('combined task, model, origin, verification and outcome filters retain cohort denominators', async () => {
   await load();
   await page.locator('#search').fill('ADD'); await page.locator('#filter').selectOption('fresh-generated');
