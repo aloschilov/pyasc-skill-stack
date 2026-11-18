@@ -94,6 +94,9 @@ native build mode separately in hardware comparisons.
   `vf_fusion={False,True}`. Record measured, failed, and untested combinations;
   validate UB, correctness, and performance separately. See the
   [JIT matrix and diagnostics](../asctile-api-patterns/references/api-jit-options.md).
+  High baseline compiled UB allocation alone does not rule out VF. Compare
+  emitted allocations before predicting overflow; without that comparison,
+  retain the incumbent with the alternative marked untested.
   Test the actual decorator/options in fresh processes: base-first keyword
   discovery has a measured inherited-cache bug, while cold AscTile-first
   probes pass. Call-time extraction uses `self.compiler.options_cls`; this is

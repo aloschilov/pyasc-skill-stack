@@ -247,7 +247,7 @@ function serviceTable(runs) {
   const history = el('table');
   history.append(el('caption','Choose a CANNBench evaluation to compare its cases'));
   const head = history.createTHead().insertRow();
-  for (const title of ['Finished (UTC)', 'Skill revision', 'Speed vs baseline (19)', 'Service score (20)']) {
+  for (const title of ['Finished (UTC)', 'Skill revision', 'Speed vs baseline (19)', 'Service score (20)', 'Catalog']) {
     const th = el('th', title); th.scope = 'col'; head.append(th);
   }
   const body = history.createTBody();
@@ -265,11 +265,12 @@ function serviceTable(runs) {
     row.insertCell().append(link(skills.slice(0,7), 'https://github.com/aloschilov/pyasc-skill-stack/commit/'+skills));
     row.insertCell().textContent = p.ratio.toFixed(3)+'×';
     row.insertCell().textContent = p.score.toFixed(4);
+    row.insertCell().textContent = p.benchmark_version || '2.0.0';
   }
   const wrap = el('div', undefined, 'case-scroll run-history');
   wrap.tabIndex = 0; wrap.setAttribute('role','region'); wrap.setAttribute('aria-label',history.caption.textContent);
   wrap.append(history);
-  panel.append(el('h3','SwiGLU · Ascend 950PR · official cases 2.0.0'), wrap, result);
+  panel.append(el('h3','SwiGLU · Ascend 950PR · official public cases'), wrap, result);
   function show(p) {
     const metrics = el('div', undefined, 'run-metrics');
     const metric = (value, title, note) => {
@@ -281,7 +282,7 @@ function serviceTable(runs) {
     if (p.previous) {
       metric(deltaText(deviceDelta(1, p.previous.previous_over_current), 2), 'Time vs previous run', 'Same 19 generated cases · geometric mean');
     }
-    metric(p.score.toFixed(4), 'CANNBench service score', 'All 20 official cases');
+    metric(p.score.toFixed(4), 'CANNBench service score', 'All 20 official cases · catalog '+(p.benchmark_version || '2.0.0'));
     const provenance = el('p', undefined, 'links');
     const job = el('a', p.job); job.href = 'https://cannbench.com/jobs/'+p.job;
     provenance.append(job, link(p.model+' · '+p.revision.slice(0,7), p.generation),
@@ -296,6 +297,9 @@ function serviceTable(runs) {
       const slower = comparable.filter(c => delta(c) > 0).length;
       const context = el('p', faster+' faster · '+slower+' slower · '+(comparable.length-faster-slower)+' unchanged vs ');
       context.append(link(p.previous.job, p.previous.release));
+      if (p.previous.benchmark_version && p.previous.benchmark_version !== p.benchmark_version) {
+        context.append('. Public case times compare catalog '+p.previous.benchmark_version+' with '+p.benchmark_version+'. Each service score uses its run’s catalog.');
+      }
       if (p.previous.changed_baselines) context.append(' · changed service baselines: '+p.previous.changed_baselines);
       comparable.sort((a,b) => Math.abs(delta(b)) - Math.abs(delta(a)));
       result.append(context, caseTable(p, comparable.slice(0,3), false));

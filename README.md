@@ -4,6 +4,33 @@ Skills for writing, reviewing and verifying PyASC kernels with the
 `asc.experimental.asctile` API. The repository contains the skills, a pinned
 upstream correctness reference and the tools used to check generated kernels.
 
+## Install the skills in your project
+
+From your project directory, use the [Skills CLI](https://github.com/vercel-labs/skills):
+
+```bash
+npx skills add aloschilov/pyasc-skill-stack --list  # preview the ten skills
+npx skills add aloschilov/pyasc-skill-stack         # choose skills and agents
+```
+
+For OpenCode, install the whole stack in the current project (some skills
+refer to one another):
+
+```bash
+npx skills add aloschilov/pyasc-skill-stack -a opencode --skill '*' -y
+```
+
+The install includes each skill’s instructions, references, templates and
+helper scripts. For example, OpenCode can use the installed
+`asctile-codegen-workflow/templates/kernel-template.py` to start a kernel.
+It does not install the PyASC/CANN runtime, the pinned target suite or the
+repository’s qualification tools.
+
+For reproducible generation and verification, follow the quick start below.
+If you want Skills CLI installation **and** verification from the same revision,
+clone the stack first, then run `npx skills add /absolute/path/to/pyasc-skill-stack -a opencode --skill '*' -y`
+from your project. Run the qualification commands from that checkout.
+
 ## Quick start: generate and verify one kernel
 
 Use Linux with Git, Python 3.10+, `jq`, Docker and a configured `opencode` CLI.
@@ -125,7 +152,9 @@ python tests/tools/verification_contract.py \
   --results-dir "$HOME/pyasc-qualification-runs/contract-$(date +%Y%m%d-%H%M%S)"
 ```
 
-The PR gate is offline. The contract needs Docker and the pre-pulled pinned
+The PR gate is offline. To test Skills CLI packaging separately, run
+`bash tests/tools/test-npx-install.sh` (requires Git, npm, Python 3 and access
+to the npm package or its cache). The contract needs Docker and the pre-pulled pinned
 image. `tests/run-tests.sh --all` also includes provider-backed tests and may
 incur charges; see [tests](tests/README.md).
 

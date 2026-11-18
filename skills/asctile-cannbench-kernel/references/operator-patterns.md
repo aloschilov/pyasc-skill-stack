@@ -19,27 +19,173 @@ attributes and requires distinct kernels or tile widths.
 
 ### Exp on 950PR
 
-Pass the original input and output tensors to the JIT. Widen each loaded
-tile to FP32, apply `scale * x + shift`, multiply by the base logarithm,
+Pass the original input and output tensors to the JIT. For the general
+affine/log path and BF16 inputs, widen each loaded tile to FP32,
+apply `scale * x + shift`, multiply by the base logarithm,
 take the exponential, and cast once at the store. Compute the scalar
 `math.log(base) if base > 0 else 1.0` on the host. Bind the three scalars
-at each call and specialize only on identity operations. Test changed
-attributes on the same shape in one process. A NaN base takes the natural
+at each call. Use separate constexpr flags to omit a unit scale, zero
+shift or unit log multiplier. Test changed attributes on the same shape
+in one process. A NaN base takes the natural
 exponential branch. A positive infinite base at unit scale and zero
 shift gives `[0, NaN, +inf]` for input `[-1, 0, 1]`.
 
-For short FP16/BF16 streams around 24–32 KiB of input per available
-vector core, compare three tiles per core with one tile per core. Test
-the three-tile branch before the one-wave fallback since both can fit.
+For a short FP16 identity path, compare `asctile.exp(loaded)` directly on
+the FP16 tile with the FP32 intermediate path. Select it only when the
+actual input dtype is FP16 and the per-call constexpr flags omit all three
+operations: scale is exactly one, shift is zero, and computed `log_base`
+is one. This is **not** `base == 1`, which gives a zero log multiplier.
+Keep the existing host rule for nonpositive and NaN bases. With the flags
+declared `asctile.ConstExpr[bool]`, the checked JIT condition is:
+
+```python
+lane_dtype = loaded.dtype
+if (lane_dtype == asctile.float16) and not ((apply_scale or apply_shift) or apply_log):
+    result = asctile.exp(loaded)
+    asctile.copy_out(result, out_gm, [offset], real_shape=[valid])
+```
+
+The paired parentheses avoid unsupported chained boolean operators in
+the pinned parser. Keep the general FP32 path in `else`; do not cast BF16
+or another dtype to FP16 to enter this branch. On `ed793e45`, CANN 9.2,
+`Ascend950PR_9599` CaModel, fixed T=4,864, grid=72, unroll=3 and
+`reuse_alloc=2` reduced compiled UB from 48,640 to 29,184 bytes. All 65,536
+FP16 bit patterns matched FP32-exp-then-FP16 finite outputs bit for bit
+and matched NaN/Inf masks; three uneven tails passed, and all eight
+suppressed launches were rejected. Affine/BF16 controls kept identical
+emitted binaries. This is a manually tested numerical/allocation option,
+not a measured device speedup. Recheck the selected runtime and task
+comparator, then compare paired device timings before choosing it for
+performance.
+[Control and comparator scope](https://github.com/aloschilov/pyasc-skill-stack/pull/64#issuecomment-6957196429)
+
+For streaming FP16, a separately qualified option is
+`asctile.exp(loaded * 0.5)`. Select it with a per-call constexpr guard for
+actual FP16 input, scale exactly 0.5, zero shift and computed log multiplier
+exactly one; retain FP32 arithmetic for every other attribute/dtype. On the
+same runtime at T8192/U2/reuse2, UB fell from 65,536 to 32,768 bytes. Both
+arms passed the full FP16 value domain, tails and same-shape attribute changes,
+with 11 numerical checks and 11 rejecting suppressed controls per arm.
+This establishes that arithmetic option's local correctness; the full 67M
+official shape and physical speed remain unverified. Do not generalize it to
+arbitrary scales or affine expressions.
+[Half-scale control](https://github.com/aloschilov/pyasc-skill-stack/pull/64#issuecomment-6957993559)
+
+For FP16/BF16, compare three tiles per core with one tile per core
+when `24 * 1024 * A <= N * itemsize <= 32 * 1024 * A`, where A is
+the available vector-core count. Check this dtype and byte window
+before testing UB fit. Outside the window compare one-wave and general
+streaming paths. Within it, evaluate the three-tile branch first since
+both geometries can fit.
+
 For FP16 identity, start with grid-stride ownership and 32-byte input
 alignment. For affine or log-only paths, compare contiguous ownership
-and 256-byte alignment. With grid size `G` and alignment `q` in elements,
-use `T = q * ceil(N / (3 * G * q))`; check compiled UB and bound the last
-transfer. For 1,024² FP16 identity elements on 72 AIVs this gives
-`T=4864`. Confirm the actual grid, stream and copies in a trace.
+and 256-byte alignment. Block b owns successive tiles beginning at
+`b * ceil(num_tiles / blocks)`. Bound the last block to the live tiles.
+With grid size `G` and alignment `q` in elements, use
+`T = q * ceil(N / (3 * G * q))`. Check compiled UB and bound the last
+transfer. Pass three as the short loop's actual `unroll_factor`.
 
-One freshly generated Exp using these choices passed all 20 L1 cases on
-a local Ascend950PR and beat the published 2.1.0 baseline on all 20
+Inspect both the fully unrolled and remainder bodies when blocks receive
+different tile counts. In retained Exp cases 7 and 12, 212 tiles over 72
+blocks gave 68 grid-stride blocks three tiles and four blocks two tiles.
+Those four blocks used the emitted remainder loop. The contiguous control
+scheduled three slots per block, bounding excess slots to zero valid lanes.
+Both sources kept the same FP32 arithmetic, tile/grid/unroll, cache policy
+and UB allocation for these cases. Times changed from 4.94 to 5.91 µs and
+4.97 to 5.62 µs on different service runners. Runner variation prevents causal
+attribution from those timings. Test the suspected remainder-path cost by
+comparing the two schedules in one package on the same runner with matched
+compiler options and repeated measurements, preserving
+bounded tails and checking zero-valid slots. Select ownership from that
+controlled comparison for the affected shape family.
+[Retained sources, lowering and terminal results](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-l1-performance-44170410287)
+
+For this short path, bind a resident FP16 or BF16 input to the current
+Torch stream of the input device at each call. On the measured
+PyASC wheel the launch accepts `kernel[blocks, ctypes.c_void_p(handle)]`,
+where `handle = torch.npu.current_stream(x.device).npu_stream`. CPU-backed
+CaModel and staged inputs use `kernel[blocks]`. Exercise the same shape
+on two caller streams and check the stream received by the launcher.
+For 1,024² FP16 identity at 72 blocks, T=4,864 and unroll three, the
+caller-stream medians were 3.24, 3.22 and 3.43 µs on 950PR. At the
+same geometry, integer-grid launches took 3.99, 3.84 and 3.88 µs.
+[Matched identity controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6872091462)
+· [FP16 and BF16 affine controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6871122168)
+
+Use `@asctile.jit(reuse_alloc=2)` for the measured short, one-wave and
+streaming Exp paths. After the short branch, round `ceil(N / A)` up to
+DMA alignment and check whether that tile fits UB for one tile per block.
+The earlier one-wave emitter budgeted `8 + itemsize` UB bytes per lane.
+
+When host dispatch proves actual FP32 input, `unroll == 1` and
+`num_tiles == blocks` after tile alignment, compare a direct single-tile
+body with the grid-stride kernel. If `n` and block count remain runtime
+values, the compiler may retain a loop despite this host-side guarantee;
+inspect the emitted C++. Select the branch by dtype and geometry.
+Keep tile/alignment, grid, compiled UB, cache and JIT options fixed.
+Preserve bounded final-tile copies and scalar arithmetic order, including
+separate multiplications. Check affected specializations and unchanged
+dispatch paths. Removing a source loop or changing ELF size does not
+establish a performance improvement. First verify numerical controls;
+then compare repeated device timings on the same runner. A comparison
+that also changes alignment cannot isolate loop cost.
+
+Size the streaming tile separately for its selected unroll. On 950PR,
+start with 8,192 lanes and unroll two. In a checked public-API emitter
+that combination used 65,536 UB bytes across all 12 streaming shapes.
+For another shape or compiler, measure the emitted specialization's
+live bytes per lane and fixed workspace. Round the fitting tile down to
+DMA alignment and recheck it. Read `UB` from the lowered module's
+`ir.attr.memory_consumed` and compare it with the active device capacity.
+[Compile and allocation check](https://github.com/aloschilov/pyasc-skill-stack/blob/8129a4e/integrations/cannbench/workers/local_compile_gate.py#L395)
+
+If streamed copies retain dynamic extents or zero-fill work for complete
+tiles, compare a complete-tile loop with a separate bounded tail. With
+`F = N // T` and grid `G`, preserve grid-stride ownership of the `F` full
+tiles; block `F % G` owns the tail only when `N % T != 0`. For a full tile,
+compare rebasing the GM pointers to its offset and declaring descriptors of
+length `T`, then copying at offset zero without `real_shape`. Omitting
+`real_shape` on a runtime-sized whole-input descriptor alone may leave the
+same dynamic bounds in emitted code. Keep arithmetic, geometry, cache and
+nonstreaming paths fixed; check ownership at wave/tail boundaries. On the
+retained `ed793e45`/CANN 9.2 Exp control, rebasing removed dynamic descriptor
+declarations for aligned streaming cases at unchanged UB. `DataCopyPad`
+remained: this compiler observation does not prove fewer DMA transactions
+or faster execution. Requalify the exact new source before device comparison.
+
+The decorator matters at the same tile and grid. With bare `@asctile.jit`,
+one generated loop used 16–24 bytes per streamed FP16/BF16 lane at
+unroll one and 48–80 per short lane at unroll three. Setting only
+`reuse_alloc=2` reduced these to 6 and 10 bytes respectively. Streamed
+FP32 at unroll one fell from 12–16 to 4 bytes per lane. This brought all
+20 public shapes within 253,952 bytes, up from 6. Check both short affine
+and streaming variants when changing the decorator or number of stages.
+
+When the work needs multiple waves, read each input tile once through
+`asctile.global_tensor(x_ptr, [N], l2_cache=False)` and keep the
+output descriptor at its default. Use the default input policy for the
+short and one-wave paths. Select by the actual launch geometry and UB
+capacity. The tested streaming inputs ranged from 3.98 to 256 MiB.
+
+The `l2_cache` parameter enables caching: `False` disables it. For a shared
+JIT, use a positive flag such as `cache_input: asctile.ConstExpr[bool]` and
+pass `False` for streaming, `True` for short/one-wave paths. A host flag that
+means "bypass" has the opposite polarity. Inspect the emitted input descriptor
+for each route; numerical checks alone cannot detect a reversed cache policy.
+
+On 950PR this single descriptor change reduced the median of five
+kernel timings on all 12 streaming shapes at fixed arithmetic, output,
+tile and grid. For 128 MiB FP16, time fell from 136.87 to 104.07 µs.
+For 256 MiB FP32 it fell from 319.82 to 277.36 µs. Check the public
+entry point and the emitted input descriptor when using a new compiler.
+Four shapes repeated with a different input seed also improved, including
+the 128 MiB FP16 case (137.25 to 102.69 µs).
+[Paired Exp measurements](https://github.com/aloschilov/pyasc-skill-stack/pull/64)
+
+An earlier OpenCode Exp using the short-stream tuning and default
+input caching passed all 20 L1 cases on a local Ascend950PR and beat
+the published 2.1.0 baseline on all 20
 (1.63211× geometric mean). This measurement covers the complete candidate;
 use a fixed-geometry control to attribute a difference to one choice.
 [Candidate hash, per-case timings and golden checks](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6872793874)
@@ -211,7 +357,7 @@ dimension. Degenerate `half_cols` therefore needs a separately evidenced path.
 The first reference smoke passed 18/20: case 9 failed around a host
 narrow/contiguous copy and case 12 had a bf16 NaN-position mismatch. A repaired
 reference using direct padded 2D PyASC loads/stores passed all 20 cases on
-2026-11-02 at runtime `030e9b2c`; see the [recorded qualification](../../../docs/hardware-lane.md).
+2026-11-02 at runtime `030e9b2c`; see the [recorded qualification](https://github.com/aloschilov/pyasc-skill-stack/blob/main/docs/hardware-lane.md).
 This supports that memory-access pattern for that runtime, not arbitrary
 generated candidates. The passing repair does not isolate the original NaN
 mismatch's cause. Avoid host copy fallbacks; independently qualify short rows,
@@ -238,7 +384,7 @@ never the case ID or a particular outer shape.
 For other contiguous splits, express the input as `[R, 2H]`, where
 `R = prod(shape[:d])` and `H = (shape[d] // 2) * prod(shape[d+1:])`.
 Choose the DMA layout from the half-row byte count and available independent
-tiles. The [950PR archive replay](../../../docs/evidence/swiglu-vector-grid-20261110/README.md#register-swiglu-and-archived-submission-replay)
+tiles. The [950PR archive replay](https://github.com/aloschilov/pyasc-skill-stack/blob/main/docs/evidence/swiglu-vector-grid-20261110/README.md#register-swiglu-and-archived-submission-replay)
 exercises three useful candidates:
 
 - For very short halves, load a contiguous slab of complete rows. On pins
@@ -285,7 +431,7 @@ overlap. In the matched 950PR replay, the generated H=7 gather took 15.229 µs
 versus 6.385 µs for the archived candidate. The H=1 dispatch took 10.625 µs
 versus 6.345 µs. Retain the selected kernel name, tile height, unroll, compiled
 UB and warmed samples for both shapes before promoting a short-row default.
-[Per-case replay and source](../../../docs/evidence/swiglu-vector-grid-20261110/README.md)
+[Per-case replay and source](https://github.com/aloschilov/pyasc-skill-stack/blob/main/docs/evidence/swiglu-vector-grid-20261110/README.md)
 
 For a reproducible public `asctile.reindex` check, use CPython 3.12, PyASC
 `ed793e45` and
@@ -336,7 +482,7 @@ on case 6 and 1,504.377 → 377.400 → 193.149 µs on case 19. The retained
 PyASC reference uses a `1 × 1024` wide tile, grid-strides over row/column
 tiles and launches up to 72 blocks. When an operator uses separate full-row
 and row-tail launches, sum their NPU task durations for each call before
-taking the median. The [20-case grid comparison](../../../docs/evidence/swiglu-vector-grid-20261110/README.md) records the actual launch sizes for the adaptive variant.
+taking the median. The [20-case grid comparison](https://github.com/aloschilov/pyasc-skill-stack/blob/main/docs/evidence/swiglu-vector-grid-20261110/README.md) records the actual launch sizes for the adaptive variant.
 
 ## ForeachAddcdivScalar
 

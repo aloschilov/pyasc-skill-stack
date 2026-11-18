@@ -5,7 +5,7 @@ description: Current PyASC/AscTile AscTile API and kernel patterns. Use when sel
 
 # Current PyASC/AscTile API patterns
 
-Use the runtime selected by `reference/images/ENV.json` and the matching
+For checkout-based verification, use the runtime selected by `reference/images/ENV.json` and the matching
 source recorded in `reference/asctile/PIN.json`. For an explicitly selected
 campaign, use its own source/runtime pin and keep its evidence separate.
 The public tile package is `asctile`; `asc2` and `tensor/load/store` belong to
@@ -159,6 +159,10 @@ implementation is in `asctile-codegen-workflow/templates/kernel-template.py`
 (`vector_blocks`). Bound each launch by its independent row groups or column
 tiles, including any tail assigned to that launch. Skip empty work. A simulator
 can report a different count from hardware even with the same requested target.
+Keep physical cube/core groups, effective vector capacity and the selected
+launch grid separate in measurements. A vector-core query already counts AIVs;
+do not double it again. Two 950PR machines can expose 72 and 64 AIVs, changing
+tile selection and specialization keys as well as the maximum launch grid.
 
 Supported current compile options include `always_compile`, `insert_sync`,
 `reuse_alloc` (`0`, `1`, `2`), `vf_fusion`, and `matmul_cube_only`. Do not use
@@ -194,7 +198,7 @@ different tile sizes pads every short row and misses the dense-slab path.
 |---|---|---|
 | BF16, `H * itemsize <= 32`, and an aligned multirow slab fits | One rank-one input copy of complete rows, two local `asctile.reindex` gathers, one rank-one output store. This includes H=1 and odd H. | Size T in **rows** using the [DMA and UB bounds](references/reindex-slabs.md). One work item owns up to T complete rows, including the final partial slab. |
 | Several moderate half-rows fit in UB with useful work across the grid | Two strided rank-two input copies and a bounded rank-two store. Use padded physical width for allocation and logical H for DMA. | Choose rows and unroll from [row geometry](references/strided-row-tiles.md). On this build 3 KiB per half-row is a measured starting cutover to streaming. |
-| Wide contiguous halves, a single long row, or too few rows to fill the grid with row tiles | Two rank-one contiguous chunk reads with source offsets H apart and a rank-one store. | T counts **elements**. There are `R * ceil(H/T)` live chunks. Keep each chunk inside its half-row and bound its tail as in the [flat template](templates/streamed-swiglu-flat.py). |
+| Wide contiguous halves, a single long row, or too few rows to fill the grid with row tiles | Two rank-one contiguous chunk reads with source offsets H apart and a rank-one store. | T counts **elements**. There are `R * ceil(H/T)` live chunks. Keep each chunk inside its half-row and bound its tail as in the [flat template](templates/streamed-swiglu-flat.py). For large single-pass inputs, compare [input L2 bypass](references/streamed-halves.md) at fixed geometry. |
 
 The archive-bundled CPython 3.12 evaluator uses CPU-backed Torch tensors
 and the PyASC launcher transfers them for device execution. Keep the input

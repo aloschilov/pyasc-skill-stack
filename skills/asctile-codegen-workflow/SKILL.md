@@ -11,6 +11,12 @@ load `asctile-code-review` for independent review and
 `asctile-build-run-verify` for validation. For CANNBench also load
 `asctile-cannbench-kernel`, whose task contract takes precedence.
 
+With a Skills CLI install, resolve `templates/`, `references/` and `scripts/`
+beside this SKILL.md. Use the bundled kernel and design templates for drafting.
+The pins, target tests and qualification commands below require the full
+[skill-stack checkout](https://github.com/aloschilov/pyasc-skill-stack#quick-start-generate-and-verify-one-kernel).
+If it is unavailable, record the missing checks as blocked.
+
 ## Phase 0 — pin and inspect
 
 1. Read `reference/images/ENV.json` and `reference/asctile/PIN.json` from the

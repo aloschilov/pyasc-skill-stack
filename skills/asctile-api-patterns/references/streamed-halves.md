@@ -4,6 +4,23 @@ Start from the [qualified flat kernel](../templates/streamed-swiglu-flat.py) on 
 
 Derive the number of chunks from the logical half-row width and the UB-qualified tile. Specialize the address calculation when a half-row fits in one chunk or when the whole input is one row. For full aligned chunks use full-width copies. Use the true extent on a final partial chunk. Distribute only live chunks across the available vector blocks.
 
+For a single long aligned FP16 row or many wide FP32 rows split into
+equal full chunks, compare input L2 bypass at a fixed tile and grid
+when each half is read once. In the flat template `cache_input` enables
+caching when true. The measured 950PR
+launcher passed `cache_input = 2 * R * H * x.element_size() <= 64 * 1024**2`
+for these routes. The byte count covers both halves. Keep the output
+descriptor at its default. Check the host selection at, below and above
+64 MiB, then inspect which descriptor received the hint in the emitted
+code. The measurements below cover two sizes above that cutoff.
+
+With restored inputs and reversed measurement order, input bypass cut
+FP16 time from 244.89/244.78 to 180.75/180.14 µs and FP32 time from
+516.54/516.33 to 448.64/448.64 µs. The same two shapes in a fresh
+OpenCode generation selected bypass and passed all numerical checks.
+[Paired controls](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6889277182)
+· [Independent generation](https://github.com/aloschilov/pyasc-skill-stack/pull/60#issuecomment-6889522635)
+
 Compare consecutive chunks per block with a grid-stride loop. Consecutive ranges can use the quotient and remainder of total chunks divided by the active blocks to balance work without dummy iterations. For long grids of FP32 rows, also try one strided descriptor for several complete rows. For widened FP16 or BF16 compare a third pipeline stage against the larger tile allowed by two stages. Check the compiled allocation, full output and warmed device times before adopting a regime.
 
 Use one supported `for t in asctile.range(begin, end, unroll_factor=U)` loop. Its logical step is one. For a balanced range with quotient q and remainder r, use the two prefix counts `q*b + min(b,r)` at block boundaries b and b+1. Define both outside runtime conditionals. A single chunk per row still has R distinct work items with source offsets `2*t*H` and `(2*t+1)*H`. A single row with many chunks instead uses `col=t*T`. Test both cases, multiple chunks on multiple rows, and a partial final chunk against the full output.

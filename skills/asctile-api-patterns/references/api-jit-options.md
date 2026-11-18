@@ -57,6 +57,13 @@ behavior, synchronization, and large-case runtime stability. A smaller UB
 number does not establish correctness or speed. Preserve the compare/select
 hazard below; a passing `reuse_alloc=1` is not proof that the overrun is absent.
 
+High baseline compiled UB allocation is not a reason by itself to reject VF.
+For the same tile and unroll, keeping intermediates in registers may reduce the fused
+allocation. Compare both compiled layouts; neither high nor low UB allocation
+measures register pressure or establishes a vector-core timeout. A hazard
+observed in another body identifies a check to perform, not a failed result
+for this variant.
+
 For each attempted combination record requested and effective options, pin,
 source hash, dtype/shape/mode, tile/core/unroll choices, compiled UB, compile
 result, numerical case coverage, and real-NPU timings when authorized.

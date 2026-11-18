@@ -6,7 +6,10 @@ description: Build, compile, execute, and verify AscTile kernels on exact-source
 # Build, run, and verify PyASC/AscTile asctile kernels
 
 Always keep source, wheel, Python ABI, compiler, and platform provenance
-together.
+together. With a Skills CLI install, the local verification guides and scripts
+are bundled. For the pins and qualification commands below, use the
+[full skill-stack checkout](https://github.com/aloschilov/pyasc-skill-stack#quick-start-generate-and-verify-one-kernel).
+If the checkout or runtime is missing, report the affected gate as blocked.
 
 **Default runtime:** the digest-pinned development simulator image in
 `reference/images/ENV.json`, paired with `reference/asctile/PIN.json`.
