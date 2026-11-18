@@ -2,6 +2,7 @@
 import importlib.util
 import io
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 import sys
 import tempfile
@@ -14,6 +15,25 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location('cannbench_smoke', ROOT/'integrations/cannbench/smoke.py')
 smoke = importlib.util.module_from_spec(spec); spec.loader.exec_module(smoke)
+
+
+class ServiceError(RuntimeError):
+    def __init__(self, status, detail):
+        self.status = status  # Same public error field as BenchSiteError.
+        super().__init__(f'HTTP {status}: {detail}')
+
+
+class VisibilityClock:
+    def __init__(self, timestamp='2026-11-18T03:26:05+00:00'):
+        self.current = datetime.fromisoformat(timestamp)
+        self.sleeps = []
+
+    def now(self):
+        return self.current.isoformat()
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.current += timedelta(seconds=seconds)
 
 
 class Smoke(unittest.TestCase):
@@ -64,7 +84,13 @@ class Smoke(unittest.TestCase):
                 self.assertIn(b'from .other import other',archive.read('cann_bench/__init__.py'))
             ledger=root/'ledger';ledger.mkdir();queue._client.list_jobs.return_value={'jobs':[]}
             queue._submit_streaming.return_value={'job_id':'job_other'}
-            smoke.submit_once(queue,root/'run',ledger)
+            with patch.object(smoke, 'now', side_effect=[
+                '2026-11-17T23:26:04+00:00', '2026-11-18T03:26:04+00:00'
+            ]):
+                accepted = smoke.submit_once(queue,root/'run',ledger)
+            self.assertEqual(accepted['submitted_at'], '2026-11-18T03:26:04+00:00')
+            self.assertEqual(json.loads((ledger/(accepted['archive_sha256']+'.json')).read_text()), accepted)
+            self.assertEqual(json.loads((root/'run/state.json').read_text()), accepted)
             self.assertEqual(queue._submit_streaming.call_args.args[1],['other'])
             queue._client.get_benchmark_task.return_value=dict(task,function_name='swi_glu')
             with self.assertRaisesRegex(ValueError,'task identity'): smoke.task_snapshot(queue,'Other','other')
@@ -135,6 +161,121 @@ class Smoke(unittest.TestCase):
                 smoke.collect(queue,run,ledger)
             queue._client._get_json.assert_not_called()
             self.assertFalse((run/'report.json').exists())
+
+    def newly_accepted(self, root):
+        run, ledger, state = self.prepared(root)
+        state.update(phase='submitted', job_id='job_5c2ab4c8015d', submission_id='sub_57399d078366',
+                     created_at='2026-11-17T23:26:04+00:00', submitted_at='2026-11-18T03:26:04+00:00')
+        smoke.save(ledger/(state['archive_sha256']+'.json'), state)
+        smoke.save(run/'state.json', state)
+        queue = Mock()
+        queue._client.get_job.return_value = {'job': {
+            'id': state['job_id'], 'submission_id': state['submission_id'],
+            'job_tag': state['job_tag'], 'status': 'queued'}}
+        return run, ledger, state, queue
+
+    def test_first_visibility_404_retries_only_the_same_accepted_job(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run, ledger, state, queue = self.newly_accepted(Path(tmp))
+            response = queue._client.get_job.return_value
+            queue._client.get_job.side_effect = [ServiceError(404, 'job not found'), response]
+            clock = VisibilityClock()
+            with patch.object(smoke, 'now', clock.now), patch.object(smoke.time, 'sleep', clock.sleep):
+                code, collected = smoke.collect(queue, run, ledger)
+            self.assertEqual(code, 2)
+            self.assertEqual(clock.sleeps, [15])
+            self.assertEqual([c.args for c in queue._client.get_job.call_args_list], [(state['job_id'],)]*2)
+            self.assertEqual(collected['submission_id'], state['submission_id'])
+            self.assertEqual(collected['submitted_at'], state['submitted_at'])
+            self.assertEqual(json.loads((run/'job.json').read_text()), response)
+            queue._client.list_jobs.assert_not_called()
+            queue._submit_streaming.assert_not_called()
+
+    def test_persistent_first_visibility_404_is_bounded_and_keeps_intent(self):
+        for start, delays, calls in [('03:26:05', [15, 30, 60, 60], 5), ('03:30:44', [15], 2)]:
+            with self.subTest(start=start), tempfile.TemporaryDirectory() as tmp:
+                run, ledger, state, queue = self.newly_accepted(Path(tmp))
+                record = ledger/(state['archive_sha256']+'.json')
+                original = record.read_bytes()
+                error = ServiceError(404, 'job not found')
+                queue._client.get_job.side_effect = error
+                clock = VisibilityClock('2026-11-18T'+start+'+00:00')
+                with (patch.object(smoke, 'now', clock.now), patch.object(smoke.time, 'sleep', clock.sleep),
+                      self.assertRaises(ServiceError) as caught):
+                    smoke.collect(queue, run, ledger)
+                self.assertIs(caught.exception, error)
+                self.assertEqual(clock.sleeps, delays)
+                self.assertEqual(queue._client.get_job.call_count, calls)
+                self.assertEqual(record.read_bytes(), original)
+                self.assertEqual((run/'state.json').read_bytes(), original)
+                self.assertFalse((run/'job.json').exists())
+                queue._submit_streaming.assert_not_called()
+
+    def test_first_visibility_does_not_retry_other_errors_or_old_jobs(self):
+        for status in (400, 401, 403, 429, 500, 503):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as tmp:
+                run, ledger, state, queue = self.newly_accepted(Path(tmp))
+                queue._client.get_job.side_effect = ServiceError(status, 'failed')
+                with patch.object(smoke.time, 'sleep') as sleep, self.assertRaises(ServiceError):
+                    smoke.collect(queue, run, ledger)
+                queue._client.get_job.assert_called_once_with(state['job_id'])
+                sleep.assert_not_called()
+                queue._submit_streaming.assert_not_called()
+        for changes, saved_job in [
+            ({'submitted_at': None}, False), ({'submitted_at': 'invalid'}, False),
+            ({'submitted_at': '2026-11-18T03:20:00+00:00'}, False),
+            ({'submitted_at': '2026-11-18T03:27:00+00:00'}, False),
+            ({'submitted_at': '2026-11-18T03:26:04'}, False),
+            ({'phase': 'ambiguous'}, False), ({'submission_id': None}, False),
+            ({'checked_at': '2026-11-18T03:26:04+00:00'}, False), ({}, True),
+        ]:
+            with self.subTest(changes=changes, saved_job=saved_job), tempfile.TemporaryDirectory() as tmp:
+                run, ledger, state, queue = self.newly_accepted(Path(tmp))
+                state.update(changes)
+                record = ledger/(state['archive_sha256']+'.json')
+                smoke.save(record, state)
+                original = record.read_bytes()
+                if saved_job:
+                    smoke.save(run/'job.json', queue._client.get_job.return_value)
+                queue._client.get_job.side_effect = ServiceError(404, 'job not found')
+                clock = VisibilityClock()
+                with (patch.object(smoke, 'now', clock.now), patch.object(smoke.time, 'sleep', clock.sleep),
+                      self.assertRaises(ServiceError)):
+                    smoke.collect(queue, run, ledger)
+                queue._client.get_job.assert_called_once_with(state['job_id'])
+                self.assertEqual(clock.sleeps, [])
+                self.assertEqual(record.read_bytes(), original)
+                queue._submit_streaming.assert_not_called()
+
+    def test_first_visible_wrong_identity_is_not_retried_or_saved(self):
+        for field in ('id', 'submission_id', 'job_tag'):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as tmp:
+                run, ledger, state, queue = self.newly_accepted(Path(tmp))
+                original = (ledger/(state['archive_sha256']+'.json')).read_bytes()
+                response = queue._client.get_job.return_value
+                response['job'][field] = 'other'
+                queue._client.get_job.side_effect = [ServiceError(404, 'job not found'), response]
+                clock = VisibilityClock()
+                with (patch.object(smoke, 'now', clock.now), patch.object(smoke.time, 'sleep', clock.sleep),
+                      self.assertRaisesRegex(ValueError, 'identity')):
+                    smoke.collect(queue, run, ledger)
+                self.assertEqual(queue._client.get_job.call_count, 2)
+                self.assertEqual(clock.sleeps, [15])
+                self.assertEqual((ledger/(state['archive_sha256']+'.json')).read_bytes(), original)
+                self.assertFalse((run/'job.json').exists())
+                queue._submit_streaming.assert_not_called()
+
+    def test_results_404_is_not_first_job_visibility(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run, ledger, state, queue = self.newly_accepted(Path(tmp))
+            queue._client.get_job.return_value['job'].update(status='succeeded', has_results=True, results=None)
+            queue._client._get_json.side_effect = ServiceError(404, 'results not found')
+            with patch.object(smoke.time, 'sleep') as sleep, self.assertRaises(ServiceError):
+                smoke.collect(queue, run, ledger)
+            queue._client.get_job.assert_called_once_with(state['job_id'])
+            queue._client._get_json.assert_called_once_with('/api/jobs/'+state['job_id']+'/results')
+            sleep.assert_not_called()
+            queue._submit_streaming.assert_not_called()
 
     def test_unchanged_queue_polls_only_status_and_rechecks_identity_on_transition(self):
         with tempfile.TemporaryDirectory() as tmp:

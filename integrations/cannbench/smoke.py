@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verify a local official case or prepare, submit and collect a hardware smoke.
 
-No generation campaign, remote shell, automatic retries or in-repo evidence.
+No generation campaign, remote shell, automatic resubmission or in-repo evidence.
 The runtime bundle is supplied separately; never download it implicitly.
 """
 import argparse
@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import time
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -373,8 +374,33 @@ def submit_once(queue, run, ledger, *, retry_maintenance=False, selections=None,
     if not state['job_id']:
         raise ValueError('Unknown submission delivery; collect, do not resubmit')
     state['phase'] = 'submitted'
+    state['submitted_at'] = now()
     save(record, state); save(run/'state.json', state)
     return state
+
+
+def get_job_after_acceptance(client, run, state, job_id):
+    """Allow brief first-read visibility lag for a durably accepted job only."""
+    first_read = (state.get('phase') == 'submitted' and state.get('job_id') == job_id
+                  and state.get('submission_id') and not state.get('checked_at')
+                  and not (run/'job.json').exists())
+    # Acceptance time, not intent time: uploading the ZIP can take hours.
+    for delay in (15, 30, 60, 60, None):
+        try:
+            return client.get_job(job_id)
+        except Exception as exc:
+            status = getattr(exc, 'status', getattr(exc, 'code', None))
+            if status != 404 or not first_read or delay is None:
+                raise
+            try:
+                age = (datetime.fromisoformat(now())
+                       - datetime.fromisoformat(state['submitted_at'])).total_seconds()
+            except (KeyError, TypeError, ValueError):
+                age = -1  # Legacy, invalid or timezone-naive records are not fresh acceptance.
+            if not 0 <= age <= 300 - delay:
+                raise
+            print(f'Accepted job {job_id} not visible yet; GET retry in {delay}s', flush=True)
+            time.sleep(delay)
 
 
 def collect(queue, run, ledger):
@@ -396,7 +422,7 @@ def collect(queue, run, ledger):
             state['checked_at'] = now()
             save(record, state); save(run/'state.json', state)
             return 2, state
-    payload = queue._client.get_job(job_id)
+    payload = get_job_after_acceptance(queue._client, run, state, job_id)
     job = payload.get('job', payload)
     if job.get('id') != job_id or job.get('job_tag') != state['job_tag']:
         raise ValueError('Hardware job identity differs from submission intent')

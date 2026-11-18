@@ -363,6 +363,11 @@ and captures both official tasks. Dispatch CI with `cannbench_action=l1-submit-p
 package is tied to its visibility. `l1-collect` continues an existing
 submission using GET requests and the same digest.
 
+A newly accepted job can briefly return HTTP 404 before it becomes readable.
+Collection retries that first lookup within a bounded window after the saved
+acceptance time. If the lookup still fails, retain the job ID and resume with
+`l1-collect`; do not upload the package again.
+
 If an earlier submission is still in the ledger, the paired workflow verifies
 its job ID, submission ID and package tag against CANNBench before sharing the
 local limit of three active jobs, subject to the service's current quota. Unknown delivery or an untracked active job
