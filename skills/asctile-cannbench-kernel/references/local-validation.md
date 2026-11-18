@@ -35,6 +35,12 @@ timing does not measure the intended generated specialization. If the service
 does not expose its query values, label injected counts as assumptions and
 compare actual reported kernel names before attributing a result.
 
+Compare the full launch configuration, not just specialization keys or ELF
+hashes. The same binary with a different grid is a distinct numerical check:
+block-strided loops and tail ownership can depend on the launch block count.
+Include grid-only changes when selecting numerical cases, or explicitly retain
+them as compile/dispatch-only coverage until checked at the target grid.
+
 Inspect the emitted integer widths for tile counts, offsets and DMA byte
 strides, including fallback routes. An element count that fits signed 32-bit
 does not make `n + tile - 1` or `(n - valid) * itemsize` safe. Widen the
@@ -55,6 +61,11 @@ Use the recipe's ordinary and adversarial numerical probe with the configured
 simulator. Preserve the official golden's dtype, tolerance, special-value,
 shape and list-output semantics. Retain per-case results and candidate hashes.
 Mark infeasible cases compile-only, never numerically passed.
+
+If a task export turns nonfinite range endpoints into `null`, recover them
+from the revision-bound canonical case specification before sampling. `null`
+alone cannot distinguish NaN from positive or negative infinity. Without that
+source, mark the input domain unresolved rather than choosing finite defaults.
 
 Record the precision of the golden's operations as well as its output dtype.
 Calling `golden(x.double())` can still compute in FP32 if the golden casts
