@@ -87,10 +87,12 @@ reproduced implementations. Read their specific contracts before using them.
   counts, and accumulated instruction cycles. Counted cycles are not wall time.
   Report absolute engine time alongside ratios: a ratio can grow simply because
   another engine became faster. Queue time may include waiting, not execution.
-- A high busy ratio does not establish the critical path. Check when each block
-  finishes, dependencies, and whether shortening that engine shortens the whole
-  envelope. Small grid, tail imbalance and launch overhead need different fixes.
-  Device-only simulator traces cannot measure host launch overhead.
+- A high busy ratio or a dependency chain in emitted C++ does not establish
+  the critical path. Without a timed trace, label the bottleneck a hypothesis.
+  Check when each block finishes, dependencies, and whether shortening that
+  engine shortens the whole envelope. Small grid, tail imbalance and launch
+  overhead need different fixes. Device-only simulator traces cannot measure
+  host launch overhead.
 - Record useful GM bytes separately from padded/actual transfers; derive any
   effective bandwidth using a matching scope/time. UB allocation is capacity
   consumption, not UB bandwidth, bank-conflict rate, occupancy or utilization.
@@ -111,6 +113,9 @@ and supported JIT settings, verifying emitted VF groups and UB loads/stores.
   intermediate UB store/load to expose shorter chains. Do not mandate either
   maximal fusion or minimal transfer count. For standalone exact GeLU with an
   opaque Erf/Erfc call, this is a hypothesis, not proof the same split helps.
+  A measured gain on another operator motivates a comparison; its direction,
+  numerical safety and timeout behavior remain unverified for the new body.
+  Low UB usage alone does not bound register pressure or execution time.
 - Distinguish host/block tiling, AscTile tile-loop unrolling, and compiler VF
   vector-loop unrolling. Sample `#pragma unroll 6` is not evidence to set AscTile
   unroll=6. Inspect remainder bodies, register pressure/spills, code size and
