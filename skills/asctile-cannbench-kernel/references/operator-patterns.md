@@ -357,7 +357,7 @@ dimension. Degenerate `half_cols` therefore needs a separately evidenced path.
 The first reference smoke passed 18/20: case 9 failed around a host
 narrow/contiguous copy and case 12 had a bf16 NaN-position mismatch. A repaired
 reference using direct padded 2D PyASC loads/stores passed all 20 cases on
-2026-11-02 at runtime `030e9b2c`; see the [recorded qualification](../../../docs/hardware-lane.md).
+2026-11-02 at runtime `030e9b2c`; see the [recorded qualification](https://github.com/aloschilov/pyasc-skill-stack/blob/main/docs/hardware-lane.md).
 This supports that memory-access pattern for that runtime, not arbitrary
 generated candidates. The passing repair does not isolate the original NaN
 mismatch's cause. Avoid host copy fallbacks; independently qualify short rows,
@@ -384,7 +384,7 @@ never the case ID or a particular outer shape.
 For other contiguous splits, express the input as `[R, 2H]`, where
 `R = prod(shape[:d])` and `H = (shape[d] // 2) * prod(shape[d+1:])`.
 Choose the DMA layout from the half-row byte count and available independent
-tiles. The [950PR archive replay](../../../docs/evidence/swiglu-vector-grid-20261110/README.md#register-swiglu-and-archived-submission-replay)
+tiles. The [950PR archive replay](https://github.com/aloschilov/pyasc-skill-stack/blob/main/docs/evidence/swiglu-vector-grid-20261110/README.md#register-swiglu-and-archived-submission-replay)
 exercises three useful candidates:
 
 - For very short halves, load a contiguous slab of complete rows. On pins
@@ -431,7 +431,7 @@ overlap. In the matched 950PR replay, the generated H=7 gather took 15.229 µs
 versus 6.385 µs for the archived candidate. The H=1 dispatch took 10.625 µs
 versus 6.345 µs. Retain the selected kernel name, tile height, unroll, compiled
 UB and warmed samples for both shapes before promoting a short-row default.
-[Per-case replay and source](../../../docs/evidence/swiglu-vector-grid-20261110/README.md)
+[Per-case replay and source](https://github.com/aloschilov/pyasc-skill-stack/blob/main/docs/evidence/swiglu-vector-grid-20261110/README.md)
 
 For a reproducible public `asctile.reindex` check, use CPython 3.12, PyASC
 `ed793e45` and
@@ -482,7 +482,7 @@ on case 6 and 1,504.377 → 377.400 → 193.149 µs on case 19. The retained
 PyASC reference uses a `1 × 1024` wide tile, grid-strides over row/column
 tiles and launches up to 72 blocks. When an operator uses separate full-row
 and row-tail launches, sum their NPU task durations for each call before
-taking the median. The [20-case grid comparison](../../../docs/evidence/swiglu-vector-grid-20261110/README.md) records the actual launch sizes for the adaptive variant.
+taking the median. The [20-case grid comparison](https://github.com/aloschilov/pyasc-skill-stack/blob/main/docs/evidence/swiglu-vector-grid-20261110/README.md) records the actual launch sizes for the adaptive variant.
 
 ## ForeachAddcdivScalar
 

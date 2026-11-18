@@ -5,7 +5,7 @@ description: Current PyASC/AscTile AscTile API and kernel patterns. Use when sel
 
 # Current PyASC/AscTile API patterns
 
-Use the runtime selected by `reference/images/ENV.json` and the matching
+For checkout-based verification, use the runtime selected by `reference/images/ENV.json` and the matching
 source recorded in `reference/asctile/PIN.json`. For an explicitly selected
 campaign, use its own source/runtime pin and keep its evidence separate.
 The public tile package is `asctile`; `asc2` and `tensor/load/store` belong to
