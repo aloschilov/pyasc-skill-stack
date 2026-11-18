@@ -1,6 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const titles = {paired:'Paired skills & context', models:'Model comparison', review:'Reviewed generation', target:'Upstream fixture subset', hardware:'Generated NPU candidate'};
+const titles = {paired:'Paired skills & context', models:'Model comparison', review:'Reviewed generation', target:'Upstream fixture subset', hardware:'Generated NPU candidate', 'hardware-pair':'Retained Exp + SwiGLU'};
 const levels = {'simulator-numerical':'Simulator numerics', 'npu-numerical-and-timing':'NPU numerics + timing'};
 const failures = ['candidate-failed', 'budget-exhausted', 'failed', 'timeout', 'timed-out'];
 const controls = ['search', 'filter', 'model', 'level', 'outcome'];
@@ -24,7 +24,7 @@ function models(r) {
   return [...(r.observed_models || []).map(m => `Observed: ${m}`), ...(r.models || []).map(m => `Requested: ${m.requested}`)];
 }
 function countsText(r) { return Object.entries(r.counts).map(([k,v]) => `${k}: ${v}`).join(' · '); }
-function unit(r) { return r.kind === 'target' ? 'fixture catalog cases' : r.kind === 'hardware' ? 'device cases' : ['paired','models'].includes(r.kind) ? 'trials' : 'candidate'; }
+function unit(r) { return r.kind === 'target' ? 'fixture catalog cases' : ['hardware','hardware-pair'].includes(r.kind) ? 'device cases' : ['paired','models'].includes(r.kind) ? 'trials' : 'candidate'; }
 function stateLabel(r) {
   if (!available(r)) return 'Unavailable';
   if (r.status !== 'complete') return r.status === 'partial' ? 'Partial scope' : 'Incomplete trials';
@@ -49,7 +49,7 @@ function renderOverview(data) {
     ['Retained archives', records.length, `${records.filter(available).length} available · ${records.filter(r => !available(r)).length} unavailable`],
     ['Generated / simulator', records.filter(r => available(r) && r.category === 'fresh-generated' && r.level === 'simulator-numerical').length, 'retained records · separate trial denominators'],
     ['Upstream fixtures', records.filter(r => available(r) && r.category === 'upstream-fixture').length, 'retained records · catalog ≠ tested coverage'],
-    ['Generated / NPU', records.filter(r => available(r) && r.level === 'npu-numerical-and-timing').length, 'retained records · numerics + device timing']
+    ['NPU qualifications', records.filter(r => available(r) && r.level === 'npu-numerical-and-timing').length, 'retained records · numerics + device timing']
   ];
   $('overview').replaceChildren(...groups.map(([label, value, note]) => {
     const card = el('article', undefined, 'summary-card'); card.append(el('h2', label), el('strong', value), el('p', note)); return card;
@@ -58,7 +58,7 @@ function renderOverview(data) {
 function evidenceLinks(r) {
   const links = el('div', undefined, 'links');
   links.append(link('Retained archive', r.release_url), link('Download', r.archive_url));
-  if (r.ci_url) links.append(link('CI identity', r.ci_url));
+  if (r.ci_url) links.append(link(r.kind === 'hardware-pair' ? 'Submission / evaluation CI' : 'CI identity', r.ci_url));
   return links;
 }
 function provenance(r, trigger) {
@@ -102,6 +102,7 @@ function kernelViewer(r, trigger) {
 }
 
 function scopeText(r) {
+  if (r.kind === 'hardware-pair') return 'Exp: 20 cases · SwiGLU: 20 cases';
   const tasks = r.tasks || [];
   // Shorten verbose pytest node IDs for scanning; full identifiers remain in provenance.
   const names = [...new Set(tasks.map(t => t.module || t.id.split('::')[0]))];
@@ -110,7 +111,7 @@ function scopeText(r) {
 function renderRow(r) {
   const row = el('tr'); row.dataset.recordId = r.id;
   const scope = el('td'); scope.append(el('h3', titles[r.kind]), el('div', r.id, 'record-id'));
-  if (available(r)) scope.append(el('p', r.category === 'upstream-fixture' ? 'Upstream fixtures · manual run' : 'Generated candidates', 'scope'), el('p', scopeText(r), 'scope'));
+  if (available(r)) scope.append(el('p', r.category === 'upstream-fixture' ? 'Upstream fixtures · manual run' : r.category === 'retained-candidates' ? 'Retained sources · separate operator provenance' : 'Generated candidates', 'scope'), el('p', scopeText(r), 'scope'));
   const attribution = el('td');
   if (available(r)) {
     const observed = r.observed_models;
@@ -119,7 +120,7 @@ function renderRow(r) {
     else if (r.models.length) {
       for (const m of r.models) attribution.append(el('span', m.requested, 'model-name'));
       attribution.append(el('span', 'Requested · observed identity not published', 'subtle'));
-    } else attribution.append(el('span', 'No model generation', 'subtle'));
+    } else attribution.append(el('span', r.kind === 'hardware-pair' ? 'No fresh generation in this evaluation' : 'No model generation', 'subtle'));
   } else attribution.append(el('span', 'Unknown', 'subtle'));
   const verification = el('td');
   verification.append(el('strong', levels[r.level] || 'Not verified'));
@@ -312,7 +313,57 @@ function serviceTable(runs) {
   show(runs[0]);
   return panel;
 }
+function pairedServicePanel(r) {
+  const panel = el('article', undefined, 'panel hardware-result');
+  panel.append(el('h3', 'Exp + SwiGLU · public CANNBench'), el('div', r.id, 'record-id'));
+  const metrics = el('div', undefined, 'run-metrics');
+  const score = el('div');
+  score.append(el('span', 'CANNBench service score'), el('strong', r.service_score.toFixed(6)),
+    el('small', 'One service-defined score for all 40 cases; not a timing speedup.'));
+  metrics.append(score);
+  for (const op of r.operators) {
+    const block = el('div');
+    block.append(el('span', `${op.operator} · baseline / candidate time`), el('strong', op.baseline_time_ratio.toFixed(3)+'×'),
+      el('small', 'Geometric mean over 20 cases, using baselines reported by this job.'));
+    metrics.append(block);
+  }
+  panel.append(metrics, el('p', `40/40 passed · ${r.benchmark} · ${r.hardware} · standard cases · shared pool`),
+    el('p', 'Retained candidates; this result does not establish fresh-generation quality or a skills improvement.'));
+  for (const op of r.operators) {
+    const text = el('p', `${op.operator}: `);
+    text.append(link('skills '+op.skills_revision.slice(0,7), 'https://github.com/aloschilov/pyasc-skill-stack/commit/'+op.skills_revision),
+      ' · '+(op.changes_after_generation || 'Retained source; no post-generation changes recorded.'));
+    panel.append(text);
+  }
+  const links = evidenceLinks(r);
+  const job = el('a', r.job); job.href = 'https://cannbench.com/workspace/jobs/'+r.job;
+  links.append(job, link('Strict result collection', 'https://github.com/aloschilov/pyasc-skill-stack/actions/runs/'+r.publication.collection_run));
+  panel.append(links);
+  const detail = el('details'); detail.append(el('summary', 'All 40 cases and source attribution'));
+  for (const op of r.operators) {
+    detail.append(el('h4', op.operator), el('p', 'Operator service score: '+op.service_score.toFixed(6)),
+      el('code', 'Source SHA256 '+op.source_sha256, 'checksum'));
+    const table = el('table'); table.append(el('caption', op.operator+' · 20 measured cases'));
+    const head = table.createTHead().insertRow();
+    for (const title of ['Case', 'Candidate µs', 'Baseline µs (this job)', 'Baseline / candidate', 'Measured device kernels']) {
+      const th = el('th', title); th.scope = 'col'; head.append(th);
+    }
+    const body = table.createTBody();
+    for (const c of op.cases) {
+      const row = body.insertRow();
+      for (const value of [c.case_id, c.elapsed_us.toFixed(3), c.baseline_perf_us.toFixed(3), c.speedup.toFixed(3)+'×', Object.keys(c.device_kernels).join(', ')]) row.insertCell().textContent = value;
+    }
+    const scroll = el('div', undefined, 'case-scroll'); scroll.tabIndex = 0;
+    scroll.setAttribute('role','region'); scroll.setAttribute('aria-label', op.operator+' timings'); scroll.append(table); detail.append(scroll);
+  }
+  const protocol = r.service_protocol;
+  detail.append(el('p', r.note, 'subtle'), el('p', `Service-reported scoring: ${protocol.perf_metric || 'unspecified'} · weight profile ${protocol.score_weight_profile || 'unspecified'} · framework ${protocol.framework_version || 'unspecified'} · tasks ${protocol.tasks_version || 'unspecified'}`, 'subtle'),
+    el('code', 'Archive SHA256 '+r.archive_sha256, 'checksum'));
+  panel.append(detail);
+  return panel;
+}
 function renderTiming(records, data) {
+  const paired = records.filter(r => available(r) && r.kind === 'hardware-pair').map(pairedServicePanel);
   const panels = records.filter(r => available(r) && r.baseline_time_ratio != null).map(r => {
     const panel = el('article', undefined, 'panel'); panel.append(el('h3', `${titles[r.kind]} · ${r.qualified}/${r.required} device cases`), el('div', r.id, 'record-id'));
     const metrics = el('div', undefined, 'timing-metrics');
@@ -331,7 +382,7 @@ function renderTiming(records, data) {
     if (archived.childElementCount > 1) panels.push(archived);
   }
   if (history?.complete===false) panels.push(el('p','Some service receipts could not be verified.','attention'));
-  $('timing').replaceChildren(...(panels.length ? panels : [el('p', 'No retained NPU timing evidence matches these filters. Simulator qualification does not supply a device timing ratio.', 'empty')]));
+  $('timing').replaceChildren(...(paired.length || panels.length ? [...paired,...panels] : [el('p', 'No retained NPU timing evidence matches these filters. Simulator qualification does not supply a device timing ratio.', 'empty')]));
 }
 function render(data) {
   const records = data.records.filter(matches);
@@ -494,7 +545,7 @@ function validate(data) {
       for (const file of sources.files) require(typeof file.id === 'string' && ['qualified','failed'].includes(file.outcome) && typeof file.member === 'string' && typeof file.sha256 === 'string' && /^[0-9a-f]{64}$/.test(file.sha256) && typeof file.text === 'string' && file.text.length > 0 && file.text.length <= 131072);
       for (const item of sources.missing) require(typeof item.id === 'string' && typeof item.reason === 'string');
     }
-    require(Object.hasOwn(levels, r.level) && ['fresh-generated','upstream-fixture'].includes(r.category) && ['complete','partial','incomplete'].includes(r.status) && ['recent','stale'].includes(r.freshness));
+    require(Object.hasOwn(levels, r.level) && ['fresh-generated','upstream-fixture','retained-candidates'].includes(r.category) && ['complete','partial','incomplete'].includes(r.status) && ['recent','stale'].includes(r.freshness));
     require(Number.isInteger(r.required) && r.required > 0 && Number.isInteger(r.qualified) && r.qualified >= 0 && r.qualified <= r.required);
     require(r.counts && Object.values(r.counts).every(n => Number.isInteger(n) && n >= 0) && Object.values(r.counts).reduce((a,b) => a+b,0) === r.required && (r.counts.qualified || 0) === r.qualified);
     require(Array.isArray(r.tasks) && r.tasks.every(t => typeof t.id === 'string' && (t.cases === undefined || Array.isArray(t.cases))));
@@ -506,6 +557,13 @@ function validate(data) {
     }
     require(r.baseline_time_ratio == null || r.level === 'npu-numerical-and-timing' && Number.isFinite(r.baseline_time_ratio) && r.baseline_time_ratio > 0);
     require(r.service_score == null || Number.isFinite(r.service_score));
+    if (r.kind === 'hardware-pair') {
+      require(r.category === 'retained-candidates' && r.level === 'npu-numerical-and-timing' && r.required === 40 && r.qualified === 40 && r.baseline_time_ratio === null && Number.isFinite(r.service_score));
+      require(r.hardware === '950pr' && /^official-tasks 2\.[01]\.0$/.test(r.benchmark) && r.case_set === 'standard' && r.independent_environment === false && r.visibility === 'public');
+      require(/^job_[0-9a-f]+$/.test(r.job) && Number.isSafeInteger(r.publication.collection_run) && r.publication.collection_run > 0 && typeof r.note === 'string' && r.service_protocol && ['perf_metric','score_weight_profile','framework_version','tasks_version'].every(k => r.service_protocol[k] === null || typeof r.service_protocol[k] === 'string'));
+      require(r.operators.length === 2 && r.operators.every((op,i) => op.function_name === ['exp','swi_glu'][i] && typeof op.operator === 'string' && /^[0-9a-f]{64}$/.test(op.source_sha256) && /^[0-9a-f]{40}$/.test(op.skills_revision) && (op.changes_after_generation === null || typeof op.changes_after_generation === 'string') && Number.isFinite(op.baseline_time_ratio) && op.baseline_time_ratio > 0 && op.cases.length === 20 && op.cases.every((c,n) => c.case_id === `level1/${op.function_name}_${n+1}` && ['elapsed_us','baseline_perf_us','speedup'].every(k => Number.isFinite(c[k]) && c[k] > 0) && c.device_kernels && !Array.isArray(c.device_kernels) && Object.keys(c.device_kernels).length > 0 && Object.values(c.device_kernels).every(v => Number.isFinite(v) && v > 0))));
+      require(r.operators.every(op=>Number.isFinite(op.service_score)) && Math.abs(r.operators.reduce((sum,op)=>sum+op.service_score,0)-r.service_score)<1e-9);
+    }
   }
 }
 function unavailable() {

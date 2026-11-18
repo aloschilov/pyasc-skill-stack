@@ -290,3 +290,156 @@ Three generated kernels implement 19 official cases. The packed BF16 template im
 The compute turn uses GLM-5.3 high reasoning and freezes the written Python. The policy turn uses the GLM-5.3-low profile with the same native output limit. A confirmed length stop permits one bounded continuation for the missing file. If a CI generation exhausts both policy responses, or its CaModel evaluation reports a UB overflow before submission, pass its run ID as `origin_run` with `performance`. CI checks the original model write and context, then generates only the policy. After an overflow the model receives the rejected table and the compiler diagnostic. The receipt identifies the original kernel run and the failed policy.
 
 For a split run, `performance-generate` produces the generation artifact. Use `performance-evaluate` with `-f origin_run=GENERATION_RUN_ID` to qualify and submit its bytes. If the service is still pending, `performance-resume` takes the **evaluation** run ID and only collects the existing submission. After a confirmed service-maintenance rejection, `performance-submit-prepared` takes the evaluation run ID, verifies the saved GitHub Actions package and checks that submissions have reopened before sending it. For a SwiGLU package qualified on retired catalog 2.0.0, add `-f prepared_catalog_version=2.1.0` to that dispatch. CI checks that the public cases and golden source match and that the only contract change makes the existing input-to-output dtype relation explicit. It submits the archived ZIP under the requested version. The receipt records the qualification and service versions. Each successful evaluation publishes a release with `performance.json`, the submitted ZIP, the generated source and their SHA-256 checksums. GitHub Pages reads that release.
+## Evaluate a prepared Level 1 package
+
+For an Exp and SwiGLU package qualified with CaModel or on 950PR, place `submission.zip`
+and `qualification.json` together outside the checkout on the CANNBench runner.
+The qualification records `build_passed`, `package_sha256`, `wheel_sha256` and an `operators` entry for each
+of `exp` and `swi_glu`. Each entry gives the 40-character `skills_revision`,
+the archive path `package_source` and its `source_sha256`. For a device run,
+record the 20 cases in `passed_cases`. For a first hardware measurement,
+supply a `camodel` object with the tested `source_sha256`, the archived
+simulator report's `evidence_sha256`, and all 20 `compiled_case_ids`. Its
+`numerical_pairs` list records `seed`, `launch_matches_golden` and
+`suppressed_rejected` for the tested fixtures across at least two seeds.
+Keep the generation, build and qualification evidence together.
+
+For a compact AscendC package, explicitly select `packaging_mode: "source-aot-v1"`.
+The original generated files remain byte-identical at `pyasc_source/exp.py` and
+`pyasc_source/swi_glu.py`; these are the `operators.*.package_source` paths and
+still require the original source qualification above. The public
+`cann_bench/{function}.py` files are separately qualified host adapters. An
+adapter pass never replaces the generated source's numerical evidence.
+
+The AOT ZIP contains only UTF-8 source/build inputs, including `flags.json`
+and `cann_bench/specializations.json`. The wheel installs the matching
+`cann_bench` host files, rebuilt device binaries and standard wheel metadata,
+without the PyASC compiler/runtime. The qualification adds:
+
+* `aot.inputs`: SHA-256 for **every ZIP member**, including generated source,
+  wrappers, dispatch/ABI metadata, AscendC and all build inputs.
+* `aot.wheel_files`: SHA-256 for every installed wheel member.
+* `aot.runtime_revision`, `runtime_extension_sha256`,
+  `compiler_sha256` (`bisheng` and `ld.lld`), and `build_evidence_sha256`:
+  provenance of the locally verified build. These identify the tested
+  toolchain; they are not bundled compiler dependencies.
+* `aot.native_binaries`: one entry for every key in `flags.json`. Each records
+  `operator` (`exp` or `swi_glu`), `origin` (`retained`, `reference` or `fallback`),
+  `pyasc_source`, `native_sha256` and `rebuilt_sha256`. The two binary hashes
+  must match the build flags, specialization entry and wheel's
+  `cann_bench/device/{key}.o`. Every specialization must map exactly once.
+  A `reference` kernel, such as a public template, uses a separate
+  `pyasc_source/*.py` input and records its exact `source_sha256` from
+  `aot.inputs`; it cannot name either operator's primary source file.
+* `aot.target_dispatch`: required for new AOT staging, submission and partial
+  retries. Record `hardware: "950pr"`, an archived trace `evidence_sha256`,
+  and unique positive `required_effective_aivs` (for example `[64, 72]` when
+  qualifying both capacities). Its `profiles` must cover exactly those
+  capacities. Each profile records `effective_aivs`, `usable_ub_bytes` and
+  all 40 official `cases`, once each. Each case records `operator` (`exp` or
+  `swi_glu`), integer `case_id` (1–20), the exact `key` string from
+  `specializations.json`, `binary_sha256` and positive integer `grid`.
+  The key and binary must resolve to a retained or reference specialization
+  of that operator; a reference row must explicitly record `origin: "reference"`.
+  Any recorded origin must match the binary proof. `verify_target_dispatch`
+  returns per-profile/operator origin counts derived from those proofs, so
+  19 retained routes plus one template are not reported as 20 generated routes.
+  Retained source provenance still determines whether a route was generated
+  or subsequently adapted. The grid cannot exceed the effective AIV capacity.
+  Each selected entry's `ub_bytes` must be a positive integer no greater than
+  that profile's `usable_ub_bytes`.
+  Official cases selecting a fallback are rejected even if that fallback
+  shares the intended kernel's symbol.
+
+Trace the installed host adapter over the full official set at the effective
+resource profiles required by the destination, including device/thread limits.
+A 72-AIV simulator trace does not establish coverage for a 64-AIV service:
+tile sizes, bodies and specialization keys can all change. Record whether
+capacities are observed or assumed in the linked evidence; this verifier
+checks the declared coverage and its bindings, not the machine's resources.
+Numerically qualify newly selected binaries separately; a complete host trace
+is not a numerical pass for all 40 cases. Immutable historical qualifications
+without `target_dispatch` remain collectable, but cannot start a new upload.
+
+`packaging_binding_sha256` is the value returned by
+`prepared_l1.aot_binding_sha256(qualification)`: SHA-256 of compact, sorted-key
+JSON containing `aot`, `wheel_sha256`, and `sources` (the two original source
+hashes keyed by function name). Thus any change to source, wrapper, build,
+dispatch metadata, compiler provenance, binary map or wheel invalidates the
+adapter's binding.
+
+The separate `host_adapter` object records that same `binding_sha256` and
+`wheel_sha256`, its archived `evidence_sha256`, and true values for
+`dispatch_matches_retained`, `caller_stream_preserved`, and
+`launch_grid_preserved`. Its `operators.{function}` objects use the CaModel
+fields described above, with `source_sha256` set to the **public wrapper** hash.
+Each must compile all 20 official case dispatches and record passing actual
+launches with rejecting suppressed controls. Numerical pairs' `scope` values
+must exactly match that operator's shipped native origins, including `retained`,
+with at least two distinct integer seeds per origin. A `reference` pair also
+records its exact specialization `key` and `binary_sha256`; they must select
+that operator's reference kernel. Historical retained/fallback receipts remain
+valid. Run this adapter qualification from the final installed wheel.
+
+For an operator without a fallback origin, also record
+`missing_specialization_check: {key, rejected: true, launches: 0, evidence_sha256}`
+in its adapter object. Test a valid supported input after removing only its
+selected key from the installed adapter's in-memory lookup; require rejection
+and zero launches, then restore the lookup. The key must identify a packaged
+specialization of that operator. Bind the exception, launch spy, wheel/host
+hashes and adapter binding in the referenced evidence. This checks the tested
+missing-key path; native origin inventory alone does not prove the absence of
+hidden host fallbacks. Preserve explicit supported-domain guards and the
+complete finite-policy key inventory; reject unsupported inputs rather than
+silently substituting an unqualified implementation. This interface rejection
+is separate from numerical positive/suppressed pairs.
+
+Archive the detailed per-geometry results, counts and limitations externally;
+this verifier validates their bindings and does not rerun their numerics.
+
+Omitting `packaging_mode` retains the existing `source-jit` contract. Unknown
+modes, extra binaries in the source ZIP, incomplete maps, changed inputs or
+unbound adapter evidence fail before a submission intent is created.
+
+With the benchmark credentials and `CANNBENCH_AGGREGATION_TOKEN` configured,
+run `python integrations/cannbench/ci/prepared_l1.py stage-private /path/to/package`
+on that runner. CANNBench limits the compressed `submission.zip` to 10 MiB
+(10,485,760 bytes, inclusive). Staging and submission check the file size
+locally before contacting CANNBench. Staging then checks the source bytes
+and captures both official tasks. Dispatch CI with `cannbench_action=l1-submit-private` and the printed
+`l1_manifest_sha256`. To submit publicly, select `stage-public` and
+`l1-submit-public`. CANNBench charges two credits for the pair. A staged
+package is tied to its visibility. `l1-collect` continues an existing
+submission using GET requests and the same digest.
+
+A newly accepted job can briefly return HTTP 404 before it becomes readable.
+Collection retries that first lookup within a bounded window after the saved
+acceptance time. If the lookup still fails, retain the job ID and resume with
+`l1-collect`; do not upload the package again.
+
+If an earlier submission is still in the ledger, the paired workflow verifies
+its job ID, submission ID and package tag against CANNBench before sharing the
+local limit of three active jobs, subject to the service's current quota. Unknown delivery or an untracked active job
+requires reconciliation. An overlapping submit returns the accepted job ID
+and releases the runner for the other collector. Run `l1-collect` with the
+same manifest to obtain the hardware verdict and score.
+The paired worker gives transfer and collection a shared four-hour window.
+On a curl failure the private diagnostic retains the HTTP code, uploaded
+multipart bytes and elapsed time. For an interrupted upload, `l1-retry-partial`
+looks up the original tag first. It can resend the same staged ZIP when the
+recorded transfer byte count is smaller than the ZIP itself. An older runner
+can use its final process read counters bound to the original intent and error.
+The ledger retains the first attempt. Use `l1-collect` when the whole ZIP
+may have reached the service.
+
+The runner retains the complete report and `service-receipt.json` in
+`~/.local/state/pyasc-cannbench-l1/<manifest SHA-256>/`. Compare the service
+score after both operators pass their 20 numerical and timing checks. The receipt
+requires explicit `accuracy.passed: true` and device-kernel evidence for every
+case in both operators, in addition to the complete hardware gate. Known
+operator and case profiling/integrity failure flags, including nested performance
+metadata, must be false booleans when present; malformed flags or a reported
+profiling exception reject the receipt before any download. Its
+`job_sha256` binds the receipt to the saved raw response. CI compares
+the SHA-256 of the archive returned by CANNBench with the staged ZIP. For a
+public submission it also reads the job anonymously and verifies its score and identity.

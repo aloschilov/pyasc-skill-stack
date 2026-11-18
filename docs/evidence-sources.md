@@ -47,6 +47,35 @@ measurements. The hardware lane reports their unweighted geometric mean; it is
 not the service score and is not simulator ticks. Do not apply a historical
 campaign threshold to this measurement.
 
+Use terminal timings after service rechecks, and compare the actual reported
+baseline and hardware-floor anchors across jobs. Equal catalog versions do
+not establish equal anchors. In the retained Exp + SwiGLU control below, the
+service summary's `geometric_mean_speedup` aggregates operator arithmetic
+means; the dashboard instead recomputes geometric means from the case pairs.
+
+The [public paired control](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-l1-performance-44141381187)
+passed all 40 numerical and timing cases with zero anti-cheat failures and
+service score **150.72871123850933**. Exp contributes **74.59659705822276**
+and SwiGLU **76.13211418028656**. This tests retained sources with a documented
+manual Exp cache change, not fresh generation or an improvement caused by skills.
+The archive SHA256 is
+`e32c376170cc68cf01dc1245d18153795c5598c6ae3324d5f0db295cae91c225`.
+The original response is retained privately; the public archive contains an
+attested allowlisted projection. Raw profiler CSVs and per-invocation totals
+were not exposed by the service, so their median calculation cannot be
+independently reconstructed from the published evidence.
+
+The [GLM-reviewed Exp with unchanged SwiGLU](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-l1-performance-44170410287)
+also passed 40/40, but scored **149.82623126665453**: Exp **73.7516316682896**
+and SwiGLU **76.07459959836494**. All 40 reported baseline and hardware-floor
+anchors match the control. Exp time increased by 3.50% geometrically and
+unchanged SwiGLU by 0.32%; different runners and multiple Exp code changes
+prevent isolated causal attribution. This result is a regression, not evidence
+of improved skills. The Exp source includes a separate model review; that review
+hit its step cap without `review.md`. The paired evaluation did not freshly
+generate both operators. Archive SHA256:
+`021af202e4320f60d254b51d6c899c8aea17044483758f9270a184e228f12b74`.
+
 The [recorded generated qualification](hardware-lane.md) includes model/skill
 provenance, runtime, exact package continuity, official numerical results and
 device-kernel timings in a durable Release. This is an implemented CI path,

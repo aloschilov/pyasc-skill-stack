@@ -24,7 +24,7 @@
       <p class="section-note" id="filter-help">Filters select whole retained records. Task and model matches keep the original cohort denominators; they do not produce per-task or per-model pass rates.</p>
       <form id="filters" class="toolbar" aria-label="Filter results" aria-describedby="filter-help">
         <label class="search">Task / operator / record<input id="search" type="search" placeholder="e.g. broadcast, swi_glu" autocomplete="off"></label>
-        <label>Kernel origin<select id="filter"><option value="all">All origins</option><option value="fresh-generated">Generated candidates</option><option value="upstream-fixture">Upstream fixtures</option></select></label>
+        <label>Kernel origin<select id="filter"><option value="all">All origins</option><option value="fresh-generated">Generated candidates</option><option value="upstream-fixture">Upstream fixtures</option><option value="retained-candidates">Retained operator candidates</option></select></label>
         <label>Model attribution<select id="model"><option value="all">All models</option></select></label>
         <label>Verification<select id="level"><option value="all">All levels</option><option value="simulator-numerical">Simulator numerics</option><option value="npu-numerical-and-timing">NPU numerics + timing</option></select></label>
         <label>Outcome / state<select id="outcome"><option value="all">All outcomes</option><option value="qualified">Contains qualified</option><option value="failures">Contains failures</option><option value="excluded">Contains excluded</option><option value="partial">Partial / incomplete</option><option value="stale">Stale results</option><option value="unavailable">Unavailable evidence</option></select></label>

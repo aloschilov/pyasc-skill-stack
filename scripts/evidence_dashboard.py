@@ -18,6 +18,7 @@ import tarfile
 import urllib.error
 import urllib.request
 import zlib
+from zipfile import BadZipFile, ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = 'aloschilov/pyasc-skill-stack'
@@ -104,7 +105,7 @@ def catalog(path):
     ids = set()
     for row in value['sources']:
         require(set(row) == {'id', 'kind', 'release', 'asset', 'sha256', 'run_id'}, 'Unknown source field')
-        require(row['kind'] in ('paired', 'models', 'review', 'target', 'hardware'), 'Unknown lane')
+        require(row['kind'] in ('paired', 'models', 'review', 'target', 'hardware', 'hardware-pair'), 'Unknown lane')
         for key in ('id', 'release', 'asset'):
             require(isinstance(row[key], str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,150}', row[key]), 'Invalid source identifier')
         require(row['id'] not in ids and re.fullmatch(r'[0-9a-f]{64}', row['sha256']), 'Duplicate source/invalid hash')
@@ -331,10 +332,176 @@ def hardware(archive, entry):
         'note': 'One retained candidate; no cross-model or overall skills-effect claim. Provider revision remains unknown.'}
 
 
+def paired_public_job(job):
+    """Allowlist a service response for publication after verifying its raw receipt.
+
+    This is a sanitized projection, not the original response. The publisher must
+    attest and hash the transformation; it must not rewrite receipt.job_sha256.
+    """
+    def fields(value, names): return {k: value[k] for k in names if k in value}
+    def failures(value, names):
+        # Publish only flags, never exception logs or malformed free-form values.
+        flags = {k:value[k] if type(value[k]) is bool or value[k] is None else True for k in names if k in value}
+        if 'profile_exception_type' in value:
+            error = value['profile_exception_type']
+            flags['profile_exception_type'] = None if error is None else '' if error == '' else 'reported'
+        return flags
+    case_flags = ('perf_integrity_failed','perf_collection_failed','io_cleanup_failed')
+    def performance(value):
+        if value is None: return None
+        if not isinstance(value,dict): return {'invalid':True}
+        result = failures(value,case_flags)
+        if 'metadata' in value: result['metadata'] = performance(value['metadata'])
+        return result
+    public = fields(job, ('id', 'submission_id', 'status', 'benchmark_slug', 'benchmark_version',
+        'target_hardware', 'runner_hardware', 'selected_operators', 'case_set', 'is_private',
+        'is_independent_environment', 'result_score', 'queued_at', 'claimed_at', 'finished_at'))
+    results = job['results']
+    public['results'] = fields(results, ('result_stage', 'contains_performance', 'anti_cheat_failed_cases',
+        'perf_metric', 'score_weight_profile', 'framework_version', 'tasks_version'))
+    public['results']['summary'] = fields(results.get('summary', {}),
+        ('total_cases', 'passed_cases', 'anti_cheat_failed_cases'))
+    operators = public['results']['operators'] = []
+    for op in results['operators']:
+        item = fields(op, ('operator', 'rel_path', 'total_cases', 'passed_cases', 'anti_cheat_failed_cases', 'score'))
+        item.update(failures(op, ('zeroed_by_integrity','zeroed_by_no_npu_perf','zeroed_by_cpu_fallback')))
+        item['cases'] = []
+        for case in op['cases']:
+            row = fields(case, ('case_id', 'status', 'elapsed_us', 'baseline_perf_us',
+                't_hw_us', 'perf_score', 'anti_cheat_passed', 'anti_cheat_failed'))
+            row['accuracy'] = fields(case.get('accuracy', {}), ('passed',))
+            row['op_times'] = fields(case.get('op_times', {}), ('device_kernels',))
+            row.update(failures(case, case_flags))
+            for key in ('_perf_result','metadata'):
+                if key in case: row[key] = performance(case[key])
+            item['cases'].append(row)
+        operators.append(item)
+    return {'job': public}
+
+
+def paired_hardware(archive, entry):
+    """Read an attested public projection without confusing retained sources with a fresh generation."""
+    import sys
+    sys.path.insert(0, str(ROOT/'integrations/cannbench/ci'))
+    from hardware_gate import evaluate
+    raw = {name: archive.raw(archive.one(name), MAX_ARCHIVE) for name in
+           ('service-receipt.json', 'report.json', 'qualification.json', 'publication.json',
+            'public-job.json', 'submission.zip')}
+    receipt, report, qualification, publication, public = (decode(raw[name]) for name in
+        ('service-receipt.json', 'report.json', 'qualification.json', 'publication.json', 'public-job.json'))
+    require(type(publication['schema']) is int and publication['schema'] == 1 and publication['transformation'] == 'allowlisted-cannbench-job-v1'
+        and publication['raw_receipt_verified'] is True
+        and type(publication['evaluation_run']) is int and publication['evaluation_run'] == entry['run_id']
+        and type(publication['collection_run']) is int and publication['collection_run'] > 0
+        and re.fullmatch(r'[0-9a-f]{40}', publication['collection_revision'])
+        and re.fullmatch(r'[0-9a-f]{40}', publication['evaluation_revision'])
+        and re.fullmatch(r'[0-9a-f]{64}', receipt['job_sha256'])
+        and publication['original_job_sha256'] == receipt['job_sha256']
+        and publication['public_job_sha256'] == digest(raw['public-job.json']), 'Missing publication attestation')
+    # The original hash identifies privately retained bytes. Only the public
+    # projection hash can be reproduced from this archive.
+    job = public['job']
+    require(public == paired_public_job(job) and job['status'] == 'succeeded'
+        and re.fullmatch(r'job_[0-9a-f]+', job['id']) and re.fullmatch(r'sub_[0-9a-f]+', job['submission_id'])
+        and job['benchmark_slug'] == 'official-tasks' and job['benchmark_version'] in ('2.0.0', '2.1.0')
+        and job['target_hardware'] == job['runner_hardware'] == '950pr'
+        and job['selected_operators'] == ['exp', 'swi_glu'] and job['case_set'] == 'standard'
+        and job['is_private'] is False and job['is_independent_environment'] is False, 'Wrong paired service protocol')
+    for key, expected in {'job':job['id'], 'submission':job['submission_id'], 'version':job['benchmark_version'],
+                         'hardware':'950pr', 'visibility':'public', 'score':finite(job['result_score']),
+                         'public_job_url':'https://cannbench.com/api/jobs/'+job['id'],
+                         **{k:job[k] for k in ('queued_at','claimed_at','finished_at')}}.items():
+        require(receipt[key] == expected, 'Receipt and public service response differ')
+    require(finite(receipt['score']) == job['result_score']
+        and digest(raw['qualification.json']) == receipt['qualification_sha256']
+        and digest(raw['submission.zip']) == receipt['package_sha256'] == qualification['package_sha256']
+        and qualification['build_passed'] is True and qualification['packaging_mode'] == 'source-aot-v1',
+        'Paired source package binding differs')
+    catalog = {'benchmark_slug':'official-tasks', 'benchmark_version':receipt['version'],
+        'required_operators':2, 'required_cases':40, 'operators':[
+            {'operator':name, 'function_name':fn, 'rel_path':'level1/'+fn, 'case_count':20,
+             'case_ids':[f'level1/{fn}_{i}' for i in range(1,21)]} for name,fn in [('Exp','exp'),('SwiGlu','swi_glu')]]}
+    checked = evaluate(catalog, [public], '950pr')
+    require(checked['gate_passed'] is True and report['gate_passed'] is True
+        and all(report.get(k) == v for k,v in checked.items() if k != 'generated_at')
+        and receipt['operators'] == checked['operators'] and report['job_id'] == job['id']
+        and report['submission_id'] == job['submission_id'] and report['archive_sha256'] == receipt['package_sha256'],
+        'Paired hardware report differs from exact public cases')
+    require(math.isclose(math.fsum(finite(op['score']) for op in job['results']['operators']),
+                         receipt['score'], rel_tol=1e-12, abs_tol=1e-9), 'Operator scores do not sum to the service score')
+    operators = []
+    with ZipFile(io.BytesIO(raw['submission.zip'])) as package:
+        require(len(package.namelist()) == len(set(package.namelist())), 'Duplicate package member')
+        require(package.getinfo('cann_bench/specializations.json').file_size <= MAX_JSON, 'Specializations too large')
+        specializations = decode(package.read('cann_bench/specializations.json'))
+        symbols = {(decode(key.encode())[0], value['symbol']) for key,value in specializations.items()}
+        for result, spec in zip(checked['operators'], catalog['operators']):
+            source = qualification['operators'][spec['function_name']]
+            root = 'pyasc_source' if qualification.get('packaging_mode') == 'source-aot-v1' else 'cann_bench'
+            member = f'{root}/{spec["function_name"]}.py'
+            require(source['package_source'] == member and package.getinfo(member).file_size <= MAX_KERNEL_SOURCE
+                and digest(package.read(member)) == source['source_sha256']
+                and re.fullmatch(r'[0-9a-f]{40}', source['skills_revision']), 'Paired source attribution mismatch')
+            change = source['changes_after_generation']
+            require(change is None or isinstance(change,str) and 0 < len(change) <= 500
+                and all(ord(c) >= 32 for c in change), 'Missing retained-source change attribution')
+            measured, = [op for op in job['results']['operators'] if op['operator'] == spec['operator']]
+            def no_failure(value, names):
+                return all(type(value[k]) is bool and value[k] is False for k in names if k in value) and value.get('profile_exception_type') in (None,'')
+            def valid_perf(value):
+                flags = ('perf_integrity_failed','perf_collection_failed','io_cleanup_failed')
+                return value is None or (isinstance(value,dict)
+                    and set(value) <= {*flags,'profile_exception_type','metadata'}
+                    and no_failure(value,flags) and valid_perf(value.get('metadata')))
+            require(no_failure(measured, ('zeroed_by_integrity','zeroed_by_no_npu_perf','zeroed_by_cpu_fallback')),
+                    'Operator reported a profiling or integrity failure')
+            for case in measured['cases']:
+                flags = ('perf_integrity_failed','perf_collection_failed','io_cleanup_failed')
+                require(no_failure(case,flags) and valid_perf(case.get('_perf_result')) and valid_perf(case.get('metadata')),
+                        'Case reported a profiling or integrity failure')
+                kernels = case['op_times']['device_kernels']
+                require(case['accuracy']['passed'] is True and isinstance(kernels,dict) and kernels
+                    and all(isinstance(k,str) and k.strip() and finite(v,True) for k,v in kernels.items()),
+                    'Missing explicit numerical or device evidence')
+                require(all((spec['function_name'], name) in symbols for name in kernels),
+                        'Measured kernel is not in the submitted operator specialization map')
+            by_id = {c['case_id']:c for c in measured['cases']}
+            operators.append({'operator':spec['operator'], 'function_name':spec['function_name'],
+                'source_sha256':source['source_sha256'], 'skills_revision':source['skills_revision'],
+                'changes_after_generation':change, 'required':20, 'qualified':20,
+                'baseline_time_ratio':result['geometric_mean_speedup'], 'service_score':measured['score'],
+                'cases':[{**c, 'device_kernels':by_id[c['case_id']]['op_times']['device_kernels']}
+                         for c in result['cases']]})
+    duration = (timestamp(job['finished_at'])-timestamp(job['claimed_at'])).total_seconds()
+    queue = (timestamp(job['claimed_at'])-timestamp(job['queued_at'])).total_seconds()
+    require(duration >= 0 and queue >= 0, 'Invalid paired result chronology')
+    protocol = {key:job['results'].get(key) for key in
+                ('perf_metric','score_weight_profile','framework_version','tasks_version')}
+    require(all(v is None or isinstance(v,str) and 0 < len(v) <= 100 and all(ord(c) >= 32 for c in v)
+                for v in protocol.values()), 'Malformed service-reported scoring metadata')
+    return {'category':'retained-candidates', 'level':'npu-numerical-and-timing', 'status':'complete',
+        'stack_revision':publication['evaluation_revision'], 'models':[], 'observed_models':[], 'skill_hashes':{},
+        'tasks':[{'id':c['case_id']} for op in operators for c in op['cases']],
+        'required':40, 'qualified':40, 'counts':{'qualified':40}, 'repetitions':1, 'comparisons':{},
+        'benchmark':'official-tasks '+receipt['version'], 'hardware':'950pr', 'case_set':'standard',
+        'independent_environment':False, 'visibility':'public', 'finished_at':job['finished_at'],
+        'service_score':receipt['score'], 'baseline_time_ratio':None, 'elapsed_seconds':duration,
+        'queue_seconds':queue, 'operators':operators, 'job':job['id'], 'submission':job['submission_id'],
+        'package_sha256':receipt['package_sha256'], 'qualification_sha256':receipt['qualification_sha256'],
+        'publication':{key:publication[key] for key in ('schema','evaluation_run','evaluation_revision',
+            'collection_run','collection_revision','transformation','raw_receipt_verified',
+            'original_job_sha256','public_job_sha256')},
+        'service_protocol':protocol,
+        'note':'Retained sources with separate operator attribution; no fresh-generation or skills-improvement claim. '
+               'Public service projection is attested; the original raw response is retained privately. '
+               'Service-reported scoring metadata does not independently verify the deployed profiling protocol.'}
+
+
 def summarize(archive, entry):
     if entry['kind'] in ('paired', 'models', 'review'): return generated(archive, entry)
     if entry['kind'] == 'target': return target(archive, entry)
     if entry['kind'] == 'hardware': return hardware(archive, entry)
+    if entry['kind'] == 'hardware-pair': return paired_hardware(archive, entry)
     raise ValueError('Unknown lane')
 
 
@@ -347,7 +514,7 @@ def kernel_sources(archive, entry):
     Missing source is independent of numerical acceptance: it cannot create a new
     pass or remove a failed trial from the original cohort denominator.
     """
-    if entry['kind'] == 'target':
+    if entry['kind'] in ('target', 'hardware-pair'):
         return {'status': 'not-applicable', 'files': [], 'missing': []}
     files, missing = [], []
 
@@ -419,7 +586,7 @@ def kernel_sources(archive, entry):
 
 
 def validate_projection(value):
-    require(value['category'] in ('fresh-generated', 'upstream-fixture')
+    require(value['category'] in ('fresh-generated', 'upstream-fixture', 'retained-candidates')
         and value['level'] in ('simulator-numerical', 'npu-numerical-and-timing')
         and value['status'] in ('complete', 'incomplete', 'partial'), 'Unknown public result schema')
     for key in ('required', 'qualified', 'repetitions'):
@@ -527,7 +694,7 @@ def build(catalog_path, output, loader=fetch, now=None, daily=None, recent=recen
             require(age >= -1, 'Future result timestamp')
             record.update(projection, availability='available', freshness='stale' if age > spec['max_age_hours'] else 'recent',
                           kernel_sources=kernel_sources(archive, entry))
-        except (OSError, ValueError, LookupError, TypeError, AttributeError, ArithmeticError,
+        except (OSError, ValueError, LookupError, TypeError, AttributeError, ArithmeticError, BadZipFile,
                 EOFError, RecursionError, zlib.error, tarfile.TarError) as exc:
             # External payloads/error strings are never copied into public pages.
             record.update(availability='unavailable', freshness='unknown', error='Evidence could not be retrieved or validated',

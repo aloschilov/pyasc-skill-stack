@@ -8,6 +8,7 @@ import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
+from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT/'scripts'))
@@ -95,6 +96,134 @@ class Dashboard(unittest.TestCase):
                 self.assertEqual(new['previous']['benchmark_version'],'2.0.0')
 
     def write_catalog(self): self.catalog.write_bytes(raw_json(self.spec))
+
+    def paired_result(self):
+        fixture = json.loads((ROOT/'tests/fixtures/cannbench-paired-result.json').read_bytes())
+        public, receipt = fixture['public_job'], fixture['receipt']
+        job = public['job']
+        # Tiny substitute sources exercise hash binding, never kernel execution.
+        package = io.BytesIO(); source = fixture['sources']; specializations = {}
+        with ZipFile(package, 'w') as z:
+            for fn, op in zip(('exp','swi_glu'), job['results']['operators']):
+                content = f'# Test-only {fn} source\n'.encode()
+                z.writestr(source[fn]['package_source'], content)
+                source[fn]['source_sha256'] = dash.digest(content)
+                for case in op['cases']:
+                    for name in case['op_times']['device_kernels']:
+                        specializations[json.dumps([fn,name])] = {'symbol':name}
+            z.writestr('cann_bench/specializations.json', raw_json(specializations))
+        package = package.getvalue()
+        qualification = {'build_passed':True, 'packaging_mode':'source-aot-v1',
+                         'package_sha256':dash.digest(package), 'operators':source}
+        sys.path.insert(0,str(ROOT/'integrations/cannbench/ci'))
+        from hardware_gate import evaluate
+        catalog = {'benchmark_slug':'official-tasks', 'benchmark_version':'2.1.0',
+            'required_operators':2, 'required_cases':40, 'operators':[
+                {'operator':name, 'function_name':fn, 'rel_path':'level1/'+fn, 'case_count':20,
+                 'case_ids':[f'level1/{fn}_{i}' for i in range(1,21)]}
+                for name,fn in [('Exp','exp'),('SwiGlu','swi_glu')]]}
+        report = evaluate(catalog, [public], '950pr')
+        report.update(job_id=job['id'], submission_id=job['submission_id'], archive_sha256=dash.digest(package))
+        receipt.update(operators=report['operators'], package_sha256=dash.digest(package),
+                       qualification_sha256=dash.digest(raw_json(qualification)))
+        publication = {'schema':1, 'evaluation_run':44141381187, 'evaluation_revision':'65f274cb3a749cb445a58fd47a677c01edd1be11',
+            'collection_run':44208153512, 'collection_revision':'9264dd2f964fdfbc8aab38e950065ffe3594d2db',
+            'transformation':'allowlisted-cannbench-job-v1', 'raw_receipt_verified':True,
+            'original_job_sha256':receipt['job_sha256'], 'public_job_sha256':dash.digest(raw_json(public))}
+        self.entry.update(id='retained-exp-swiglu', kind='hardware-pair', run_id=publication['evaluation_run'])
+        return {'public-job.json':public, 'service-receipt.json':receipt, 'report.json':report,
+                'qualification.json':qualification, 'publication.json':publication, 'submission.zip':package}
+
+    def paired_projection(self, files, output='pair'):
+        raw = archive({'evidence/'+name:value for name,value in files.items()})
+        self.entry['sha256'] = dash.digest(raw); self.write_catalog()
+        return dash.build(self.catalog,self.root/output,loader=lambda _:raw,
+                          now=datetime(2026,11,18,4,tzinfo=timezone.utc))['records'][0]
+
+    def test_paired_actual_terminal_values_keep_operator_provenance_and_service_score_separate(self):
+        files = self.paired_result()
+        record = self.paired_projection(files)
+        self.assertEqual(record['availability'],'available')
+        self.assertEqual(record['category'],'retained-candidates')
+        self.assertEqual(record['service_score'],150.72871123850933)
+        self.assertIsNone(record['baseline_time_ratio'])
+        self.assertEqual((record['qualified'],record['required']),(40,40))
+        self.assertAlmostEqual(record['operators'][0]['baseline_time_ratio'],1.3573776448341404)
+        self.assertAlmostEqual(record['operators'][1]['baseline_time_ratio'],1.4012487188803113)
+        self.assertIn('manual control',record['operators'][0]['changes_after_generation'])
+        self.assertIsNone(record['operators'][1]['changes_after_generation'])
+        self.assertEqual(record['publication']['collection_run'],44208153512)
+        self.assertNotIn('first_hardware',record)
+        self.assertEqual(record['service_protocol']['perf_metric'],'eq3')
+        self.assertEqual(record['service_protocol']['score_weight_profile'],'2')
+        self.assertAlmostEqual(sum(op['service_score'] for op in record['operators']),record['service_score'])
+        self.assertEqual(record['comparisons'],{})
+        self.assertEqual(record['models'],[])
+        self.assertIn('attested',record['note'])
+        from daily_skill_quality import hardware_pair
+        self.assertEqual(hardware_pair(['2026-11-17','2026-11-18'],[record]),{'status':'unavailable'})
+
+    def test_public_pair_allowlist_excludes_service_credentials_and_unrelated_summary_ratio(self):
+        job = self.paired_result()['public-job.json']['job']
+        job.update(aggregation_token='PRIVATE TOKEN', user_id='PRIVATE USER', runner={'secret':'PRIVATE HOST'})
+        job['results']['summary']['geometric_mean_speedup'] = 1.529672956
+        projected = dash.paired_public_job(job)
+        encoded = json.dumps(projected)
+        self.assertNotIn('PRIVATE',encoded)
+        self.assertNotIn('geometric_mean_speedup',encoded)
+        self.assertEqual(projected['job']['result_score'],150.72871123850933)
+
+    def test_paired_projection_rejects_unbound_receipts_scope_numerics_sources_and_attestation(self):
+        for i, defect in enumerate(('score','case','accuracy','kernels','unknown kernel','report','source','attestation',
+                                    'raw hash','public hash','package hash','private','collection revision','leaked field','operator score')):
+            with self.subTest(defect=defect):
+                files = self.paired_result()
+                job = files['public-job.json']['job']
+                case = job['results']['operators'][1]['cases'][-1]
+                if defect == 'score': job['result_score'] += 1
+                elif defect == 'case': case['case_id'] = 'level1/swi_glu_21'
+                elif defect == 'accuracy': case['accuracy']['passed'] = False
+                elif defect == 'kernels': case['op_times']['device_kernels'] = {}
+                elif defect == 'unknown kernel': case['op_times']['device_kernels'] = {'unbound_kernel':1.0}
+                elif defect == 'report': files['report.json']['operators'][1]['cases'].pop()
+                elif defect == 'source': files['qualification.json']['operators']['swi_glu']['source_sha256'] = '0'*64
+                elif defect == 'attestation': files['publication.json']['raw_receipt_verified'] = False
+                elif defect == 'raw hash': files['publication.json']['original_job_sha256'] = '0'*64
+                elif defect == 'package hash': files['service-receipt.json']['package_sha256'] = '0'*64
+                elif defect == 'private': job['is_private'] = True
+                elif defect == 'collection revision': files['publication.json']['collection_revision'] = 'main'
+                elif defect == 'leaked field': job['aggregation_token'] = 'PRIVATE TOKEN'
+                elif defect == 'operator score': job['results']['operators'][1]['score'] += 1
+                if defect != 'public hash':
+                    files['publication.json']['public_job_sha256'] = dash.digest(raw_json(files['public-job.json']))
+                else: files['publication.json']['public_job_sha256'] = '0'*64
+                files['service-receipt.json']['qualification_sha256'] = dash.digest(raw_json(files['qualification.json']))
+                record = self.paired_projection(files,str(i))
+                self.assertEqual(record['availability'],'unavailable')
+                self.assertNotIn('service_score',record)
+                self.assertNotIn('PRIVATE',json.dumps(record))
+
+    def test_negative_profile_evidence_survives_allowlist_and_cannot_become_pass(self):
+        defects = [(scope,key) for scope in ('case','_perf_result','metadata','nested metadata') for key in
+                   ('perf_integrity_failed','perf_collection_failed','io_cleanup_failed','profile_exception_type')]
+        defects += [('operator',key) for key in ('zeroed_by_integrity','zeroed_by_no_npu_perf','zeroed_by_cpu_fallback')]
+        for index,(scope,key) in enumerate(defects):
+            with self.subTest(scope=scope,key=key):
+                files = self.paired_result()
+                job = files['public-job.json']['job']
+                op = job['results']['operators'][1]
+                case = op['cases'][-1]
+                if scope == 'operator': target = op
+                elif scope == 'case': target = case
+                elif scope == 'nested metadata':
+                    case['_perf_result'] = {'metadata':{}}; target = case['_perf_result']['metadata']
+                else:
+                    case[scope] = {}; target = case[scope]
+                target[key] = 'PRIVATE exception log' if key == 'profile_exception_type' else True
+                files['public-job.json'] = dash.paired_public_job(job)
+                self.assertNotIn('PRIVATE',json.dumps(files['public-job.json']))
+                files['publication.json']['public_job_sha256'] = dash.digest(raw_json(files['public-job.json']))
+                self.assertEqual(self.paired_projection(files,'failure-'+str(index))['availability'],'unavailable')
 
     def reviewed(self, accepted=True, requests=None):
         common = {'model':{'requested':'gateway/test','expected_response':'test-1','profile':'test'},
