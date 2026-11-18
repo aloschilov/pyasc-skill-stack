@@ -161,10 +161,20 @@ also passed 40/40, but scored 124.0239 with unchanged baseline/floor anchors.
 Its ten reported `swiglu_fallback` routes match the missing bindings in the
 64-AIV dispatch replay. SwiGLU 9 ran that fallback in 1368.64 µs, versus
 7.86 µs for the control's retained kernel: this does not evaluate the proposed
-late-gather body. The service did not record its resource-query values, and
+late-gather body. The available service artifacts do not expose resource-query values, and
 Exp's shared `_exp_kernel` name cannot independently identify its fallback.
 Numerical acceptance must not promote such timings as measurements of the
 intended optimization.
+
+The [follow-up run](https://cannbench.com/workspace/jobs/job_7ffaa136fa8f)
+retained byte-identical SwiGLU source, host wrappers, resource helper, all 23
+packaged C++ specializations and their compiler flags. It passed all 20 SwiGLU
+cases without a reported fallback; case 11 used `row_single_wave_fp32` at
+4.24 µs. Both jobs requested `950pr`, but their reported execution environments
+differed. A target-family label and identical source package do not establish
+the same effective AIV count, selected specialization or service-built ELF.
+Preserve those unknowns instead of assigning every service run a fixed count
+or treating this timing recovery as evidence of a source optimization.
 
 Treat `Failed to get acl to npu flow events` as a correlation diagnostic.
 Assess timing validity from the terminal numerics, anti-cheat and performance
