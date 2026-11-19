@@ -16,6 +16,20 @@ local-validation and submission guides apply when you own those steps. Check
 that the wrapper defines its launch grid and bounds every store by the
 allocated output shape before handing the file back.
 
+For a full SwiGLU based on a shipped template, ask OpenCode to copy the
+[callable flat baseline](../asctile-api-patterns/templates/streamed-swiglu-flat.py)
+to `candidate.py` and stop. This gives you a concrete single-block operator
+to check with the configured CaModel backend. In a second request, ask
+OpenCode to specialize one family of shapes, choosing the tile and block
+count from tensor geometry and available resources. Keep the flat fallback
+for the other shapes and record which code came from the template.
+
+The standalone template lets `asctile.set_platform(asctile.Backend.NPU)`
+discover the active SoC. When packaging the operator, use the supplied
+`ensure_npu_platform()` for that step and keep the caller's Torch stream in
+the launch grid. Exercise the NPU wrapper branch separately: CaModel inputs
+take the CPU-tensor branch.
+
 For a from-scratch full-suite SwiGLU, use the
 [split-half layout dispatch](../asctile-api-patterns/SKILL.md#choose-a-memory-layout-for-split-half-swiglu)
 when writing the entry point and device kernels. Follow each reachable

@@ -104,7 +104,11 @@ controlled comparison for the affected shape family.
 For this short path, bind a resident FP16 or BF16 input to the current
 Torch stream of the input device at each call. On the measured
 PyASC wheel the launch accepts `kernel[blocks, ctypes.c_void_p(handle)]`,
-where `handle = torch.npu.current_stream(x.device).npu_stream`. CPU-backed
+where `handle = torch.npu.current_stream(x.device).npu_stream`. This lookup
+does not select the active device: wrap resource queries, allocations and
+launch in `with torch.npu.device(x.device)` so another current device cannot
+supply the wrong resources or launch context. The guard restores the caller's
+device even if the call raises. CPU-backed
 CaModel and staged inputs use `kernel[blocks]`. Exercise the same shape
 on two caller streams and check the stream received by the launcher.
 For 1,024² FP16 identity at 72 blocks, T=4,864 and unroll three, the

@@ -90,6 +90,17 @@ Use fixed-size copies when the physical and logical widths match and the
 height divides the row count. A partial final wave is legal because the
 strided loop stops at the tile count. A partial tile needs bounded copies.
 
+Inspect the row count in the emitted `AscendC::DataCopyExtParams`. On
+PyASC `ed793e45`, even a fixed `[T, H]` copy from a whole-tensor view
+recomputed that count inside the loop. For complete tiles starting at row
+`r`, try input and output views at `x + r * (2 * H)` and `y + r * H`,
+with shapes `[T, 2 * H]` and `[T, H]`. Read the two halves at `[0, 0]`
+and `[0, H]` and write at `[0, 0]`. This keeps the input row pitch.
+With H=2,048 and T=2 the compiler emitted a constant two-row descriptor
+and kept the same 147,456-byte UB allocation. Preserve the bounded path for
+partial tiles. Compare warmed device times at the same grid, unroll and
+cache settings before choosing between the two views.
+
 For this single-pass specialization construct the input descriptor with
 `l2_cache=False` and use the default output descriptor. On two neighboring
 FP32 shapes, input bypass improved all four comparisons in reversed run

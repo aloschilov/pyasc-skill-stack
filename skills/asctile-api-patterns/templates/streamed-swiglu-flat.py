@@ -1,5 +1,10 @@
 """Process [R, 2H] in full contiguous chunks and one partial chunk per row."""
 
+import ctypes
+from contextlib import nullcontext
+from math import prod
+
+import torch
 from asc.experimental import asctile
 
 
@@ -64,3 +69,34 @@ def swiglu_flat(
             out_tile = out_f.to(out_dtype)
 
             asctile.copy_out(out_tile, gy, [row * H + col], real_shape=[valid])
+
+
+def swi_glu(input: torch.Tensor, dim: int = -1) -> torch.Tensor:
+    """Bounded, single-block baseline for an even split along any dimension."""
+    rank = input.ndim
+    if not -rank <= dim < rank:
+        raise ValueError(f"Invalid split dimension {dim} for rank {rank}")
+    axis = dim % rank
+    shape = list(input.shape)
+    if shape[axis] % 2:
+        raise ValueError("SwiGLU needs two equal halves along the split dimension")
+
+    rows = prod(shape[:axis])
+    shape[axis] //= 2
+    half = prod(shape[axis:])
+    on_npu = input.device.type == "npu"
+    with torch.npu.device(input.device) if on_npu else nullcontext():
+        out = input.new_empty(shape)
+        if out.numel() == 0:
+            return out
+
+        # Keep this starting point small enough for a single unrolled stage.
+        alignment = 32 // input.element_size()
+        tile = min(256, (half + alignment - 1) // alignment * alignment)
+        grid = 1
+        if on_npu:
+            asctile.set_platform(asctile.Backend.NPU)
+            stream = torch.npu.current_stream(input.device).npu_stream
+            grid = (1, ctypes.c_void_p(stream))
+        swiglu_flat[grid](input.contiguous(), out, rows, half, tile, 1)
+        return out
