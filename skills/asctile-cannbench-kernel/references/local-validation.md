@@ -202,3 +202,13 @@ The control above passed those terminal checks despite the warning. Its
 published artifacts omitted raw CSVs and per-invocation durations, so repeat
 completeness and median aggregation remained independently unverified.
 Preserve that limit whenever the underlying records are unavailable.
+
+Separate numerical correctness from a later input-challenge or profiling failure.
+If the service reports `no unseen legal input`, inspect the pinned official
+input generator before changing the kernel: a constant domain such as `[0, 0]`
+cannot supply a distinct input by changing the seed. Reproduce that property on
+CPU, retain the failed job and its error, and report the benchmark incompatibility
+before another submission. Do not change the official domain, omit the case or
+disable the integrity check to obtain a score. Keep any earlier numerical-stage
+pass separate from final acceptance; incomplete performance coverage is not a
+qualified result, and its missing timings must not be filled from another run.
