@@ -24,6 +24,13 @@ Check that a short BF16 pair and a wider short BF16 half-row reach the slab
 kernel, a moderate row reaches the strided kernel and a wide stream reaches
 the chunk kernel. These are geometry checks on the generated code.
 
+For a full operator submission, the public rows are examples of the supported
+contract, not the only shapes that need an efficient implementation. Plan a
+vectorized route for other legal shapes before adding exact-shape fast paths.
+When packaging AOT, follow the [coverage beyond public rows](references/local-validation.md#coverage-beyond-public-rows)
+check: successful JIT dispatch does not prove that the shipped package contains
+its selected specialization. This does not widen a request for one named case.
+
 ## AscTile snapshot
 
 Use the runtime/source pin recorded by the current run's manifest. The manual
@@ -120,8 +127,8 @@ native build mode separately in hardware comparisons.
    the worker static contract check.
 5. Run the exact-runtime local compile gate for that operator as described in
    [local validation](references/local-validation.md). A compile failure is
-   measured feedback; repair it and re-run all 20 cases within the assigned
-   validation budget. Confirm the runtime and gate actually use the recorded
+   measured feedback; repair it and re-run the selected task snapshot's required
+   cases within the assigned validation budget. Confirm the runtime and gate use the recorded
    pin and public decorator before counting a pass.
 6. For numerically sensitive formulas, run the adversarial camodel smoke when
    the native runtime is available. It must exercise both ordinary and
@@ -150,7 +157,9 @@ on a large case.
 
 ## Evidence labels
 
-Use exactly one label for every conclusion:
+Label execution evidence with its verified scope. Describe source inspection
+and package/hash checks directly; they are not kernel execution. Keep incomplete
+routes explicitly unqualified rather than labeling the whole operator passed.
 
 - `verified-local-compile`: all task routes lower through pinned PyASC/AscTile.
 - `verified-camodel-smoke`: the stated representative routes executed and
