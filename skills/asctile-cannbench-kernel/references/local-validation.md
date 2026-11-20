@@ -51,12 +51,37 @@ arithmetic where the runtime supports it, or guard the supported input range
 before allocation and launch. Check boundary metadata without allocating
 huge tensors, and retain every official task case within that range. These
 host checks supplement numerical execution; they do not replace it.
+For a full operator, a guard that rejects another legal input is a documented
+coverage limit, not a repair of its address arithmetic. Check the declared
+operator domain as well as the public examples before claiming full support.
 
 This gate does not execute numerical code or prove device launch, correctness
 or speed. Data-dependent host reads are unsupported by its tensor stubs. Do
 not add candidate branches that detect the validator or catch its missing API
 to bypass a real dispatch path. Report that route as blocked and use a
 validator that can exercise it before claiming complete coverage.
+
+## Coverage beyond public rows
+
+For a full operator submission, replay host dispatch on a small, independently
+chosen set of legal shapes outside the public case list. Derive these probes
+from the operator contract and implementation boundaries: byte alignment,
+tile/slab thresholds, one and many rows, final tails, supported dtypes, split
+axes and strides. Keep this set separate from official qualification; do not
+reconstruct hidden inputs or add branches keyed to reported case IDs.
+
+Check the actual packaged callable and its native lookup, not only the JIT
+source. Record the selected kernel, constexpr key, launch grid, origin and
+whether that binding exists. Exact-width specializations may remain useful,
+but an AOT package with no JIT compiler also needs a qualified general route
+for supported widths absent from its table. Prefer a bounded family of physical
+tiles with runtime logical extents where the pinned compiler supports them.
+For a retained generic fallback, measure and identify its kernel separately:
+correct outputs alone do not show that the intended vectorized path ran.
+
+Run numerical and suppressed-launch checks on representative new routes and
+their boundary tails. A dispatch replay proves selection and binding coverage,
+not numerics or speed; a synthetic smoke does not prove the hidden dataset.
 
 ## Numerical checks
 
@@ -139,6 +164,12 @@ submitted package identity and report; do not infer qualification from a
 queued job, a different runtime, or local compilation. Full evidence stays
 outside checkout; accepted qualification gets a durable archive and a concise
 reference in repository documentation.
+
+Inspect per-case performance errors even when the terminal job says
+`succeeded` and all accuracy checks passed. Report missing times and distinguish
+the first device error from later checks skipped after an unrecoverable error.
+Keep standard and hidden case sets separate, including their measured counts;
+their combined leaderboard score does not establish improvement on either set.
 
 Use terminal per-case timings after the service finishes any automatic
 rechecks. Preserve first-pass console times separately because a recheck can

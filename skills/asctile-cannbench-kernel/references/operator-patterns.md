@@ -475,6 +475,16 @@ For a shape-dependent constexpr, count the emitted specializations before
 shipping an AOT package. The full SwiGLU tile family produced 1,266 device
 sources. Building common layouts eagerly and compiling the others at first
 use preserved the official cases’ machine code and passed the service build.
+That first-use strategy requires a compiler in the deployed package. A compact
+AOT-only build cannot assume that an unseen half-width will compile on demand.
+Retain a vectorized general route with runtime `R`, `H` and row strides where
+supported by the pinned compiler, and constexpr physical tile dimensions from
+a bounded family. For contiguous inputs it can grid-stride over row/column
+tiles, loading the halves at offsets separated by runtime `H` and bounding both
+loads and stores. Short, unaligned halves still need the qualified padded-row
+or slab route. Before adding more exact-width fast paths, replay the
+[non-public shape probes](local-validation.md#coverage-beyond-public-rows)
+through the shipped native lookup and numerically qualify its general routes.
 
 Measure the grid separately at fixed geometry. With the parent's tile and
 the same inputs, 8 → 32 → 64 blocks took 1,294.781 → 307.247 → 162.471 µs
