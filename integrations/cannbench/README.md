@@ -311,6 +311,41 @@ still require the original source qualification above. The public
 `cann_bench/{function}.py` files are separately qualified host adapters. An
 adapter pass never replaces the generated source's numerical evidence.
 
+New AOT staging, submission and partial retries also require a top-level
+`source_build_validation` receipt. `build_passed` and historical per-object
+rebuild hashes establish provenance; they do not establish a complete source
+build within its budget. Run the submitted ZIP's `bash build.sh` from a fresh,
+network-isolated container with no prebuilt native outputs. The receipt records:
+
+* `schema_version: 1`, `scope: "full-source-cold-build"`, `status: "passed"`,
+  the exact `package_sha256`, `build_command: ["bash", "build.sh"]`, and
+  integer `exit_code: 0`.
+* Positive finite `elapsed_seconds` for the entire script, including linking
+  and wheel packaging, no greater than `budget.seconds`. `budget.basis` is
+  `explicitly-declared-local` (`reference.reason`), `observed-service-runner`
+  (`reference.job_id`, `compile_log_sha256`, positive `line`), or
+  `verified-service-contract` (`reference.source` and `sha256`). A timeout
+  observed in one service job is not a universal service limit.
+* Unique `compiled_keys` exactly matching every key in `flags.json`, with
+  `inherited_keys: []` and `initial_native_outputs: []`. An incremental build
+  or a sum of per-object times cannot substitute for this complete invocation.
+* `compiler_sha256` matching `aot.compiler_sha256`, and `environment` with
+  immutable `image_digest`, positive `cpu_limit`, integer `memory_limit_bytes`
+  and `compiler_workers`, `network: "none"`, and `fresh_container: true`.
+* The raw `output_wheel_sha256`, `output_wheel_files_sha256` equal to the
+  SHA-256 of compact, sorted-key JSON for `aot.wheel_files`, and
+  `evidence_sha256` for the archived detailed build receipt. Compare every
+  actual built wheel member; ZIP timestamps alone need not match the original
+  wheel. Keep logs, resource observations and the full output inventory outside
+  the checkout.
+
+This receipt is outside `aot`, so adding build validation does not invalidate
+unchanged installed-wheel numerical bindings. Its qualification manifest still
+binds it. Local completion establishes the recorded environment and budget,
+not the performance of an unknown service runner. Missing or partial receipts
+block new uploads before the client or submission intent is created; historical
+`collect` remains available without rebuilding or rewriting old evidence.
+
 The AOT ZIP contains only UTF-8 source/build inputs, including `flags.json`
 and `cann_bench/specializations.json`. The wheel installs the matching
 `cann_bench` host files, rebuilt device binaries and standard wheel metadata,
