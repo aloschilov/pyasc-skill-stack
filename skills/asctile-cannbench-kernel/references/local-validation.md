@@ -121,6 +121,16 @@ python3 integrations/cannbench/workers/run_camodel_smoke.py \
   --output /absolute/path/outside-checkout/numerics.json
 ```
 
+`--candidate-root` must contain `__init__.py` and export the selected Python
+wrappers from within that package. Relative imports are supported. The helper
+loads this directory in an isolated namespace and records `source_binding`
+with the requested and imported source paths and SHA-256 hashes; it rejects
+missing packages and exports from another package instead of falling back to
+an installed `cann_bench`. A temporary bytecode cache prevents stale `.pyc`
+files from substituting for current sources, without modifying existing source
+caches. The helper compares the package's Python source hashes before import
+and after the run; a mismatch fails the smoke.
+
 Its basic, critical and adversarial suites have different coverage. The
 adversarial suite supports only the two operators shown. Inspect simulator
 diagnostics as well as comparisons: padded lanes may perform invalid arithmetic

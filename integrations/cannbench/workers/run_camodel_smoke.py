@@ -8,11 +8,11 @@ replacement for the 20 official cases per operator or for real-NPU profiling.
 from __future__ import annotations
 
 import argparse
-import importlib
 import json
 import math
-import sys
 from pathlib import Path
+
+from candidate_import import candidate_root, load_candidate_package, verify_sources_unchanged
 
 import torch
 import torch.nn.functional as F
@@ -215,64 +215,73 @@ def main() -> int:
     ops = tuple(value.strip() for value in args.ops.split(",") if value.strip())
     if not ops or any(op not in ALL_OPS for op in ops):
         parser.error("Select at least one supported operator")
-    sys.path.insert(0, str(args.candidate_root.parent.resolve()))
+    try:
+        candidate_root(args.candidate_root)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     config.set_platform(config.Backend.Model, config.Platform.Ascend950PR_9599)
-    package = importlib.import_module(args.candidate_root.name)
-    # Submission wrappers correctly select NPU in production. Camodel owns the
-    # process here, so disable only that host switch; kernels are unchanged.
-    for op in ops:
-        getattr(package, op).__globals__["ensure_npu_platform"] = lambda: None
+    with load_candidate_package(args.candidate_root, ops) as (package, binding):
+        # Submission wrappers correctly select NPU in production. Camodel owns the
+        # process here, so disable only that host switch; kernels are unchanged.
+        for op in ops:
+            getattr(package, op).__globals__["ensure_npu_platform"] = lambda: None
 
-    reports = []
-    for op in ops:
-        before = rt.current_tick()
-        try:
-            runner = {
-                "basic": run_case,
-                "critical": run_critical_case,
-                "adversarial": run_adversarial_case,
-            }[args.suite]
-            runner(op, package)
-            status = "passed"
-            error = None
-        except Exception as exc:
-            status = "failed"
-            error = f"{type(exc).__name__}: {exc}"
-        after = rt.current_tick()
-        report = {
-            "operator": op,
-            "status": status,
-            "camodel_ticks": after - before if before is not None and after is not None else None,
-            "error": error,
+        reports = []
+        for op in ops:
+            before = rt.current_tick()
+            try:
+                runner = {
+                    "basic": run_case,
+                    "critical": run_critical_case,
+                    "adversarial": run_adversarial_case,
+                }[args.suite]
+                runner(op, package)
+                status = "passed"
+                error = None
+            except Exception as exc:
+                status = "failed"
+                error = f"{type(exc).__name__}: {exc}"
+            after = rt.current_tick()
+            report = {
+                "operator": op,
+                "status": status,
+                "camodel_ticks": after - before if before is not None and after is not None else None,
+                "error": error,
+            }
+            reports.append(report)
+            print(json.dumps(report), flush=True)
+        result = {
+            "schema_version": 1,
+            "evidence": "verified-camodel-smoke",
+            "platform": "Ascend950PR_9599",
+            "suite": args.suite,
+            "source_binding": binding,
+            "operators": reports,
+            "status": "passed" if all(v["status"] == "passed" for v in reports) else "failed",
+            "limitations": [
+                (
+                    "one small float32 route per operator"
+                    if args.suite == "basic"
+                    else (
+                        "selected dtype and control-flow routes only"
+                        if args.suite == "critical"
+                        else "simulator-sized adversarial routes, not full shapes"
+                    )
+                ),
+                "not the complete official task case set",
+                "camodel ticks are not silicon performance",
+            ],
         }
-        reports.append(report)
-        print(json.dumps(report), flush=True)
-    result = {
-        "schema_version": 1,
-        "evidence": "verified-camodel-smoke",
-        "platform": "Ascend950PR_9599",
-        "suite": args.suite,
-        "operators": reports,
-        "status": "passed" if all(v["status"] == "passed" for v in reports) else "failed",
-        "limitations": [
-            (
-                "one small float32 route per operator"
-                if args.suite == "basic"
-                else (
-                    "selected dtype and control-flow routes only"
-                    if args.suite == "critical"
-                    else "simulator-sized adversarial routes, not full shapes"
-                )
-            ),
-            "not the complete official task case set",
-            "camodel ticks are not silicon performance",
-        ],
-    }
-    if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-    return 0 if result["status"] == "passed" else 1
+        try:
+            verify_sources_unchanged(binding)
+        except (OSError, ValueError) as exc:
+            binding['sources_unchanged'] = False
+            result.update(status='failed', error=str(exc))
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        return 0 if result["status"] == "passed" else 1
 
 
 if __name__ == "__main__":
