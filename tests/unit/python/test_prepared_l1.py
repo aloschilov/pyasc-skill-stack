@@ -537,6 +537,141 @@ class PreparedL1Test(unittest.TestCase):
             collect.assert_called_once()
             submit.assert_not_called()
 
+    def full_build_fixture(self):
+        files, q = self.aot_fixture()
+        self.add_target_dispatch(files, q)
+        self.verify_aot_fixture(files, q)
+        q["source_build_validation"] = {
+            "schema_version": 1, "scope": "full-source-cold-build", "status": "passed",
+            "package_sha256": q["package_sha256"], "build_command": ["bash", "build.sh"],
+            "exit_code": 0, "elapsed_seconds": 12.5,
+            "budget": {"seconds": 30, "basis": "explicitly-declared-local",
+                       "reference": {"reason": "bounded offline fixture"}},
+            "compiled_keys": sorted(json.loads(files["flags.json"])),
+            "inherited_keys": [], "initial_native_outputs": [],
+            "compiler_sha256": deepcopy(q["aot"]["compiler_sha256"]),
+            "environment": {"image_digest": "example/image@sha256:" + "1" * 64,
+                            "cpu_limit": 2, "memory_limit_bytes": 8 * 1024**3,
+                            "compiler_workers": 2, "network": "none", "fresh_container": True},
+            "output_wheel_sha256": "8" * 64,
+            "output_wheel_files_sha256": sha256(json.dumps(
+                q["aot"]["wheel_files"], sort_keys=True, separators=(",", ":"), allow_nan=False
+            ).encode()).hexdigest(),
+            "evidence_sha256": "9" * 64,
+        }
+        l1.smoke.save(self.run / "qualification.json", q)
+        return q
+
+    def test_full_build_receipt_keeps_numerical_binding_and_accepts_equal_wheel_members(self):
+        q = self.full_build_fixture()
+        binding = l1.aot_binding_sha256(q)
+        self.assertEqual(binding, q["host_adapter"]["binding_sha256"])
+        # Different wheel ZIP metadata is allowed; installed member bytes must match.
+        self.assertNotEqual(q["wheel_sha256"], q["source_build_validation"]["output_wheel_sha256"])
+        for budget in (
+            q["source_build_validation"]["budget"],
+            {"seconds": 40, "basis": "observed-service-runner",
+             "reference": {"job_id": "job_example", "compile_log_sha256": "a" * 64, "line": 4}},
+            {"seconds": 50, "basis": "verified-service-contract",
+             "reference": {"source": "retained contract version", "sha256": "b" * 64}},
+        ):
+            with self.subTest(budget=budget):
+                q["source_build_validation"]["budget"] = budget
+                l1.smoke.save(self.run / "qualification.json", q)
+                l1.require_source_aot_full_build(self.run)
+                self.assertEqual(l1.aot_binding_sha256(q), binding)
+
+    def test_full_build_rejects_partial_mismatched_and_unattributed_receipts(self):
+        q = self.full_build_fixture()
+        mutations = [
+            lambda p: p.update(schema_version=True),
+            lambda p: p.update(scope="incremental-rebuild"),
+            lambda p: p.update(status="failed"),
+            lambda p: p.update(package_sha256="0" * 64),
+            lambda p: p.update(build_command=["python3", "partial-build.py"]),
+            lambda p: p.update(exit_code=False),
+            lambda p: p.update(exit_code=1),
+            lambda p: p["compiled_keys"].pop(),
+            lambda p: p["compiled_keys"].append(p["compiled_keys"][0]),
+            lambda p: p["compiled_keys"].append("unrelated-key"),
+            lambda p: p["compiled_keys"].append({"key": "unhashable"}),
+            lambda p: p.update(inherited_keys=["exp-retained"]),
+            lambda p: p.update(initial_native_outputs=["old.whl"]),
+            lambda p: p["compiler_sha256"].update(bisheng="0" * 64),
+            lambda p: p["environment"].update(image_digest="mutable:latest"),
+            lambda p: p["environment"].update(cpu_limit=True),
+            lambda p: p["environment"].update(memory_limit_bytes=True),
+            lambda p: p["environment"].update(compiler_workers=0),
+            lambda p: p["environment"].update(fresh_container=False),
+            lambda p: p["environment"].update(network="host"),
+            lambda p: p.update(output_wheel_sha256="unbound"),
+            lambda p: p.update(output_wheel_files_sha256="0" * 64),
+            lambda p: p.update(evidence_sha256="unbound"),
+            lambda p: p["budget"].update(reference={}),
+            lambda p: p["budget"].update(basis="assumed-universal-service-limit"),
+            lambda p: p.update(budget={"seconds": 30, "basis": "observed-service-runner",
+                                      "reference": {"job_id": "job_example"}}),
+            lambda p: p.update(elapsed_seconds=30.1),
+        ]
+        for value in (True, 0, -1, float("nan"), float("inf"), "12"):
+            mutations.extend((lambda p, v=value: p.update(elapsed_seconds=v),
+                              lambda p, v=value: p["budget"].update(seconds=v)))
+        for index, mutate in enumerate(mutations):
+            changed = deepcopy(q)
+            mutate(changed["source_build_validation"])
+            l1.smoke.save(self.run / "qualification.json", changed)
+            with self.subTest(mutation=index), self.assertRaisesRegex(ValueError, "full cold build"):
+                l1.require_source_aot_full_build(self.run)
+
+    def test_full_build_can_stage_without_changing_its_qualification(self):
+        q = self.full_build_fixture()
+        base = self.run.parent / "staged"
+        with (patch.object(l1, "ci_client", return_value=self.q),
+              patch.dict(l1.os.environ, {"CANNBENCH_AGGREGATION_TOKEN": "example"}),
+              patch("sys.stdout", new_callable=io.StringIO) as output):
+            l1.stage(self.run, "private", base)
+        digest = output.getvalue().strip()
+        self.assertEqual(len(digest), 64)
+        self.assertEqual(json.loads((base / digest / "qualification.json").read_bytes()), q)
+        l1.require_source_aot_full_build(base / digest)
+
+    def test_missing_full_build_blocks_new_actions_but_not_historical_collect(self):
+        q = self.full_build_fixture()
+        del q["source_build_validation"]
+        l1.smoke.save(self.run / "qualification.json", q)
+        self.manifest["files"]["qualification.json"] = l1.smoke.sha(self.run / "qualification.json")
+        l1.smoke.save(self.run / "manifest.json", self.manifest)
+        digest = l1.smoke.sha(self.run / "manifest.json")
+        home = self.run.parent
+        staged = home / ".local/state/pyasc-cannbench-l1" / digest
+        staged.parent.mkdir(parents=True)
+        self.run.rename(staged)
+
+        def invoke(action):
+            value = str(staged) if action.startswith("stage-") else digest
+            with patch.object(l1.sys, "argv", ["prepared_l1", action, value]):
+                l1.main()
+
+        with (patch.object(l1.Path, "home", return_value=home),
+              patch.object(l1, "ci_client", return_value=self.q) as client,
+              patch.object(l1.smoke, "submit_once") as submit):
+            for action in ("stage-private", "stage-public", "submit-private", "submit-public", "retry-partial"):
+                with self.subTest(action=action), self.assertRaisesRegex(ValueError, "full cold build"):
+                    invoke(action)
+            client.assert_not_called()
+            submit.assert_not_called()
+            self.assertFalse((home / ".local/state/pyasc-cannbench-smoke").exists())
+            with (patch.object(l1.smoke, "collect", return_value=(0, {})) as collect,
+                  patch.object(l1, "result_receipt", return_value={"score": 150, "job": "job_example"})):
+                invoke("collect")
+            collect.assert_called_once()
+            submit.assert_not_called()
+            self.assertEqual(l1.smoke.sha(staged / "manifest.json"), digest)
+
+    def test_source_jit_does_not_acquire_aot_build_requirements(self):
+        l1.smoke.save(self.run / "qualification.json", {"packaging_mode": "source-jit"})
+        l1.require_source_aot_full_build(self.run)
+
     def test_private_qualification_never_becomes_public_by_dispatch(self):
         with self.assertRaisesRegex(ValueError, "visibility"):
             l1.smoke.submit_once(

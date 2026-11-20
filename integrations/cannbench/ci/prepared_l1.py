@@ -147,6 +147,94 @@ def require_target_dispatch(run):
         )
 
 
+def require_source_aot_full_build(run):
+    """Admit new uploads using a complete build receipt, not incremental provenance.
+
+    Historical collection deliberately does not call this helper. The receipt
+    attests the local build; it cannot predict an unknown service environment.
+    """
+    q = json.loads((run / "qualification.json").read_bytes())
+    if q.get("packaging_mode") != "source-aot-v1":
+        return
+
+    def require(condition, message):
+        if not condition:
+            raise ValueError("New source-AOT submission requires a full cold build: " + message)
+
+    def digest(value):
+        return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value)
+
+    def positive(value):
+        return (type(value) in (int, float) and value > 0
+                and (type(value) is int or math.isfinite(value)))
+
+    proof = q.get("source_build_validation")
+    require(isinstance(proof, dict), "missing source_build_validation; use collect for historical jobs")
+    require(type(proof.get("schema_version")) is int and proof["schema_version"] == 1
+            and proof.get("scope") == "full-source-cold-build"
+            and proof.get("status") == "passed", "missing successful full-build scope")
+    require(proof.get("package_sha256") == q.get("package_sha256")
+            == smoke.sha(run / "submission.zip"), "receipt describes another source ZIP")
+    require(proof.get("build_command") == ["bash", "build.sh"]
+            and type(proof.get("exit_code")) is int and proof["exit_code"] == 0,
+            "complete build.sh did not succeed")
+    budget = proof.get("budget")
+    require(isinstance(budget, dict) and positive(budget.get("seconds"))
+            and positive(proof.get("elapsed_seconds"))
+            and proof["elapsed_seconds"] <= budget["seconds"],
+            "invalid or exceeded whole-build wall-time budget")
+    reference = budget.get("reference")
+    require(isinstance(reference, dict), "missing build-budget attribution")
+    basis = budget.get("basis")
+    if basis == "observed-service-runner":
+        require(isinstance(reference.get("job_id"), str)
+                and re.fullmatch(r"job_[A-Za-z0-9]+", reference["job_id"])
+                and digest(reference.get("compile_log_sha256"))
+                and type(reference.get("line")) is int and reference["line"] > 0,
+                "observed budget needs its service job and log")
+    elif basis == "verified-service-contract":
+        require(isinstance(reference.get("source"), str) and reference["source"].strip()
+                and digest(reference.get("sha256")), "missing version-bound build contract")
+    else:
+        require(basis == "explicitly-declared-local"
+                and isinstance(reference.get("reason"), str) and reference["reason"].strip(),
+                "missing explicitly declared local build budget")
+    with ZipFile(run / "submission.zip") as archive:
+        flags = json.loads(archive.read("flags.json"))
+    keys = proof.get("compiled_keys")
+    require(isinstance(flags, dict) and bool(flags) and isinstance(keys, list)
+            and all(isinstance(key, str) for key in keys)
+            and len(keys) == len(set(keys)) and set(keys) == set(flags),
+            "compiled keys do not cover every submitted specialization exactly once")
+    require(proof.get("inherited_keys") == [] and proof.get("initial_native_outputs") == [],
+            "incremental or prepopulated builds cannot qualify the source ZIP")
+    aot = q.get("aot", {})
+    compilers = proof.get("compiler_sha256")
+    require(isinstance(compilers, dict) and compilers == aot.get("compiler_sha256")
+            and all(digest(compilers.get(tool)) for tool in ("bisheng", "ld.lld")),
+            "compiler identity differs from qualified binaries")
+    env = proof.get("environment")
+    require(isinstance(env, dict)
+            and isinstance(env.get("image_digest"), str)
+            and re.fullmatch(r"(?:[^@\s]+@)?sha256:[0-9a-f]{64}", env["image_digest"])
+            and positive(env.get("cpu_limit"))
+            and type(env.get("memory_limit_bytes")) is int and env["memory_limit_bytes"] > 0
+            and type(env.get("compiler_workers")) is int and env["compiler_workers"] > 0
+            and env.get("network") == "none" and env.get("fresh_container") is True,
+            "missing clean build environment and resource attribution")
+    wheel = aot.get("wheel_files")
+    require(isinstance(wheel, dict) and bool(wheel)
+            and all(isinstance(name, str) and digest(value) for name, value in wheel.items()),
+            "missing qualified wheel member inventory")
+    member_digest = hashlib.sha256(json.dumps(
+        wheel, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()).hexdigest()
+    require(digest(proof.get("output_wheel_sha256"))
+            and proof.get("output_wheel_files_sha256") == member_digest
+            and digest(proof.get("evidence_sha256")),
+            "rebuilt wheel members or detailed build receipt are unbound")
+
+
 def verify_aot(z, q):
     """Verify an attested source-only AOT build, separately from source numerics.
 
@@ -459,6 +547,7 @@ def stage(folder, visibility, base):
         # Check the retained copy in case the source changed during staging.
         check_upload_size(run / "submission.zip")
         require_target_dispatch(run)
+        require_source_aot_full_build(run)
         q = ci_client()
         catalog, tasks = smoke.group_snapshot(q, OPERATORS)
         smoke.save(run / "task.json", tasks)
@@ -520,6 +609,7 @@ def main():
     manifest = verify_package(run, args.input)
     if args.action != "collect":
         require_target_dispatch(run)
+        require_source_aot_full_build(run)
     ledger = base / "pyasc-cannbench-smoke"
     ledger.mkdir(exist_ok=True, parents=True, mode=0o700)
     q = ci_client()
