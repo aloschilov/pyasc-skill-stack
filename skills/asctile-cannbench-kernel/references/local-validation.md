@@ -55,6 +55,14 @@ For a full operator, a guard that rejects another legal input is a documented
 coverage limit, not a repair of its address arithmetic. Check the declared
 operator domain as well as the public examples before claiming full support.
 
+On a pin that lowers dimensions or pointer-add offsets to int32, a 64-bit
+typed C++ pointer does not make earlier scalar expressions safe. For a stream,
+widen the ceiling-division intermediate before adding the tile remainder;
+consider a bounded tile-relative GM view so the DMA stride uses that tile's
+valid extent instead of the whole tensor. Inspect emitted arithmetic and the
+launch ABI after the change. This does not establish support beyond the
+public API's representable element-offset range.
+
 This gate does not execute numerical code or prove device launch, correctness
 or speed. Data-dependent host reads are unsupported by its tensor stubs. Do
 not add candidate branches that detect the validator or catch its missing API
