@@ -44,7 +44,7 @@ packaging. Record whole-script wall time, the attributed budget, compiler and
 resource identities, and compare every output wheel member with the qualified
 inventory. Incremental rebuilds with inherited binaries remain provenance,
 not a full cold-build pass; summed per-object times are not elapsed wall time.
-Follow the [prepared-package receipt contract](../../../integrations/cannbench/README.md#evaluate-a-prepared-level-1-package).
+Follow the [prepared-package receipt contract](https://github.com/aloschilov/pyasc-skill-stack/blob/main/integrations/cannbench/README.md#evaluate-a-prepared-level-1-package).
 A locally successful build does not guarantee the same timing on an unknown
 service runner; a timeout in one job is not a universal service deadline.
 
