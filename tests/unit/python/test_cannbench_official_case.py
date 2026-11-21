@@ -47,7 +47,8 @@ class OfficialCaseTests(unittest.TestCase):
             self.assertEqual(evidence.read_bytes(), raw)
 
     def test_new_cases_select_the_same_official_revision(self):
-        for key in ('maximum/1', 'strided_slice/1', 'gather/1'):
+        for key in ('maximum/1', 'strided_slice/1', 'gather/1', 'maximum/7',
+                    'masked_scale/8', 'resize_bilinear/1', 'unsorted_segment_sum/1'):
             with self.subTest(key=key), tempfile.TemporaryDirectory() as tmp:
                 base = Path(tmp)
                 self.assertEqual(self.command(base, key).returncode, 1)
