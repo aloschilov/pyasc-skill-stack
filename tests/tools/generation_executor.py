@@ -288,6 +288,29 @@ def generate(attempt, plan, contract, context):
     return usage
 
 
+def retain_attempt_source(attempt, entry):
+    """Keep unfinished output distinct from the candidate submitted for qualification."""
+    if entry.get('candidate_sha256'):
+        return {'status': 'retained', 'sha256': entry['candidate_sha256']}
+    project = attempt/'project'
+    candidate = project/'candidate.py'
+    if project.is_symlink() or candidate.is_symlink():
+        return {'status': 'unavailable', 'reason': 'invalid-file'}
+    if not candidate.exists():
+        return {'status': 'unavailable', 'reason': 'no-file'}
+    if not candidate.is_file() or not 0 < candidate.stat().st_size <= 128 * 1024:
+        return {'status': 'unavailable', 'reason': 'invalid-file'}
+    data = candidate.read_bytes()
+    try:
+        text = data.decode('utf-8')
+    except UnicodeDecodeError:
+        return {'status': 'unavailable', 'reason': 'invalid-text'}
+    if not text.strip() or any(ord(c) < 32 and c not in '\r\n\t' for c in text):
+        return {'status': 'unavailable', 'reason': 'invalid-text'}
+    (attempt/'partial-candidate.py').write_bytes(data)
+    return {'status': 'incomplete', 'reason': 'generation-incomplete', 'sha256': digest(data)}
+
+
 def qualify(attempt, plan, contract, source):
     before = digest((attempt/'candidate.py').read_bytes())
     save(attempt/'static.json', static_check((attempt/'candidate.py').read_text(), contract))
@@ -379,6 +402,7 @@ def execute(plan, output, state_dir, *, _lease=None):
                         entry['status'] = cell['status'] = 'failed'
                         entry['error'] = str(exc)
                     finally:
+                        entry['source_availability'] = retain_attempt_source(attempt, entry)
                         entry['duration_seconds'] = time.monotonic()-before
                         if (attempt/'usage.json').is_file():
                             observed = json.loads((attempt/'usage.json').read_text())

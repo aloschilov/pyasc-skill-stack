@@ -135,9 +135,19 @@ def audit_trace(events, project, context, plan, *, source_context=None, allow_cl
         if not tool: continue
         state = part.get('state') or {}; data = state.get('input') or {}; meta = state.get('metadata') or {}
         if state.get('status') not in ('completed', 'error'): continue
-        if tool not in ('read', 'glob', 'grep', 'skill', 'write', 'edit'):
-            raise Blocked('Undeclared tool in paired generation')
         if meta.get('loaded'): raise Blocked('Unplanned automatic instruction load')
+        if tool not in ('read', 'glob', 'grep', 'skill', 'write', 'edit'):
+            # OpenCode 1.19 reports a rejected model request under its original
+            # name when it cannot dispatch the native 'invalid' pseudo-tool.
+            advertised = ['edit', 'read', 'skill', 'write']
+            rejection = "Model tried to call unavailable tool 'invalid'. Available tools: " + ', '.join(advertised) + '.'
+            requests = (usage or {}).get('requests', [])
+            if (tool == 'bash' and state['status'] == 'error' and state.get('error') == rejection
+                    and not state.get('output') and not meta and requests
+                    and all(r.get('audit', {}).get('tool_names') == advertised for r in requests)):
+                denied.append({'tool': tool, 'reason': 'unavailable-before-dispatch'})
+                continue
+            raise Blocked('Undeclared tool in paired generation: ' + str(tool))
         # This pinned native denial occurs before the requested tool access.
         # Retain the attempted access without pretending its contents were read.
         if state['status'] == 'error' and state.get('error', '').startswith(
