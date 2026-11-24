@@ -36,17 +36,24 @@ the `asc` import package. Use a dedicated virtualenv.
 ## Quick commands
 
 ```bash
+# Record the selected distribution before importing its runtime (published default).
+python3 -c "import importlib.metadata as m, sysconfig; \
+d = m.distribution('pyasc-dev'); \
+print(d.metadata['Name'], d.version, 'Requires-Dist:', d.requires); \
+print('Python SOABI:', sysconfig.get_config_var('SOABI'))"
+
 python3 -c "
-try:
-    from asc.experimental import asctile          # published wheel
-except ImportError:
-    import asctile                                # legacy source build
 import asc
+from importlib.util import find_spec
+modern = find_spec('asc.experimental') is not None and find_spec('asc.experimental.asctile') is not None
+if not modern and find_spec('asctile') is not None:
+    import asctile                                # legacy source build
+else:
+    from asc.experimental import asctile          # published wheel
 print(asc.__file__, asctile.__file__)
 "
 
 # Which runtime is this, and what was it built from?
-python3 -c "import importlib.metadata as m; print(m.version('pyasc-dev'))"
 python3 -c "import importlib.metadata as m, re; \
 d = m.metadata('pyasc-dev')['Description']; \
 print(re.search(r'Source: .([0-9a-f]{40}).', d).group(1))"
@@ -55,6 +62,11 @@ python3 --version
 test -x "$ASCEND_HOME_PATH/tools/bisheng_compiler/bin/bisheng"
 npu-smi info
 ```
+
+Select the distribution name from the wheel/source being checked; `pyasc-dev`
+is the published default. The import probe selects legacy only when the modern
+module is absent and a top-level `asctile` exists. Dependency or native-library
+import failures must remain visible; they do not establish a different layout.
 
 The import command only proves which installed runtime is visible. Compare it
 to the recorded wheel/source before using its output as evidence.

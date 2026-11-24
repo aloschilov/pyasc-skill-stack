@@ -7,13 +7,16 @@ echo ""
 ERRORS=0
 WARNINGS=0
 
-# asctile lives at asc.experimental.asctile in the published pyasc-dev wheel,
-# but older source builds expose it as a top-level module. Probe both.
+# Select legacy only when its module exists and the modern module is absent.
+# Import failures inside either runtime must remain diagnostic failures.
 ASCTILE_PROBE='
-try:
-    from asc.experimental import asctile
-except ImportError:
-    import asctile
+import asc
+from importlib.util import find_spec
+modern = find_spec("asc.experimental") is not None and find_spec("asc.experimental.asctile") is not None
+if not modern and find_spec("asctile") is not None:
+    import asctile                                # legacy source build
+else:
+    from asc.experimental import asctile          # published wheel
 '
 
 # Auto-detect the correct Python: prefer whichever has pyasc installed
@@ -25,7 +28,7 @@ if [ -z "${PYTHON:-}" ]; then
     # never dropped out of the matrix.
     for candidate in python3.11 python3.10 python3.12 python3.9 python3; do
         if command -v "$candidate" >/dev/null 2>&1 \
-           && "$candidate" -c "import asc; $ASCTILE_PROBE" 2>/dev/null; then
+           && "$candidate" -c "from importlib.util import find_spec; raise SystemExit(find_spec('asc') is None)" 2>/dev/null; then
             PYTHON="$candidate"
             break
         fi
@@ -56,22 +59,10 @@ else
     WARNINGS=$((WARNINGS + 1))
 fi
 
-# pyasc + asctile
-PYASC_VERSION=$($PYTHON -c "
-import asc
-$ASCTILE_PROBE
-print(getattr(asc, '__version__', 'installed'), asctile.__file__)
-" 2>/dev/null || echo "not installed")
-if [ "$PYASC_VERSION" = "not installed" ]; then
-    echo "[FAIL] no pyasc runtime with asctile (pip install --pre pyasc-dev)"
-    ERRORS=$((ERRORS + 1))
-else
-    echo "[PASS] pyasc: $PYASC_VERSION"
-fi
-
 # Which distribution and upstream commit is this?
 PYASC_DIST=$($PYTHON -c "
-import importlib.metadata as m, re
+import importlib.metadata as m, re, sysconfig
+print('Python SOABI:', sysconfig.get_config_var('SOABI'))
 v = m.version('pyasc-dev')
 try:
     d = m.metadata('pyasc-dev')['Description']
@@ -79,9 +70,21 @@ try:
 except Exception:
     sha = 'unknown'
 print(f'pyasc-dev {v} (source {sha})')
+print('Requires-Dist:', m.requires('pyasc-dev') or [])
 " 2>/dev/null || echo "")
 if [ -n "$PYASC_DIST" ]; then
     echo "[INFO] $PYASC_DIST"
+fi
+
+# pyasc + asctile: retain the original traceback on stderr.
+if PYASC_VERSION=$($PYTHON -c "
+$ASCTILE_PROBE
+print(getattr(asc, '__version__', 'installed'), asctile.__file__)
+"); then
+    echo "[PASS] pyasc: $PYASC_VERSION"
+else
+    echo "[FAIL] pyasc/asctile import failed; inspect the original traceback above"
+    ERRORS=$((ERRORS + 1))
 fi
 
 # pyasc and pyasc-dev both provide the 'asc' package and must not coexist.
