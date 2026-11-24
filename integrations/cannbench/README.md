@@ -459,6 +459,24 @@ requires reconciliation. An overlapping submit returns the accepted job ID
 and releases the runner for the other collector. Run `l1-collect` with the
 same manifest to obtain the hardware verdict and score.
 The paired worker gives transfer and collection a shared four-hour window.
+Each new submission intent links a private `http_response_receipt` under the
+external run directory's `upload-responses/`. The uploader reserves a unique
+file with mode `0600` before POST and retains every completed curl response
+before JSON parsing or job-ID validation: HTTP status, curl return code,
+uploaded multipart bytes, duration, original response-body byte count and
+SHA-256, plus redacted body/stderr text. JSON keys and values are decoded before
+credential and URL redaction; readable evidence may normalize JSON formatting;
+invalid UTF-8 is replaced only in the readable evidence, not in its byte digest
+or JSON validation. A missing or malformed curl trailer marks transport metadata
+unknown: the receipt retains all observed stdout as `body_source: curl_stdout`,
+with null status/counters, and the intent remains ambiguous without another POST.
+A permitted retry gets a separate receipt and keeps the previous intent's link.
+An empty reserved file means no completed response was recorded (for example,
+a process timeout); it does not authorize a retry. These private files stay out
+of Git and public reports. A receipt proves only the observed HTTP exchange,
+not job visibility, evaluation success or a hardware result. Historical attempts
+without receipts are not resubmitted to obtain one.
+
 On a curl failure the private diagnostic retains the HTTP code, uploaded
 multipart bytes and elapsed time. For an interrupted upload, `l1-retry-partial`
 looks up the original tag first. It can resend the same staged ZIP when the

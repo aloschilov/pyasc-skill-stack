@@ -18,6 +18,7 @@ import re
 import sys
 import time
 import zipfile
+from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
@@ -351,6 +352,9 @@ def submit_once(queue, run, ledger, *, retry_maintenance=False, selections=None,
              'manifest_sha256': sha(run/'manifest.json'), 'archive_sha256': digest,
              'benchmark_slug': queue.benchmark_slug, 'job_tag': 'pyasc-smoke-' + digest[:24],
              'job_id': None, 'previous_intents': previous}
+    receipts = external(run) / 'upload-responses'
+    receipts.mkdir(mode=0o700, exist_ok=True)
+    state['http_response_receipt'] = str(receipts / (uuid4().hex + '.json'))
     if other_jobs:
         state['other_submitted_jobs'] = other_jobs
     save(record, state); save(run/'state.json', state)
@@ -358,14 +362,14 @@ def submit_once(queue, run, ledger, *, retry_maintenance=False, selections=None,
     try:
         posted = queue._submit_streaming(str(run/'submission.zip'), [op['function_name'] for op in operators], state['job_tag'],
                                          aggregation_token=manifest['aggregation_token'],
-                                         benchmark_version=current['benchmark_version'], public=public)
+                                         benchmark_version=current['benchmark_version'], public=public,
+                                         receipt_path=Path(state['http_response_receipt']))
     except Exception as exc:
-        from evalqueue import SubmissionRejected
+        from evalqueue import SubmissionRejected, redact_response
         state['phase'] = 'rejected' if isinstance(exc, SubmissionRejected) else 'ambiguous'
         save(record, state); save(run/'state.json', state)
         # Retain diagnostics privately, redacting the credential even if an SDK echoes it.
-        detail = str(exc).replace(queue._client.token, '[REDACTED]')
-        detail = re.sub(r'https?://[^\s\"<>]+', '[URL]', detail)
+        detail = redact_response(str(exc), queue._client.token, manifest['aggregation_token'])
         save(run/'upload-error.json', {'at': now(), 'type': type(exc).__name__, 'detail': detail,
                                       'intent_created_at': state['created_at'], 'archive_sha256': digest})
         raise

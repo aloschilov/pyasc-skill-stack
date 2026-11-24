@@ -5,12 +5,17 @@ This helper never stages candidates, polls jobs or retries uploads.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
+from datetime import datetime, timezone
+import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import quote, quote_plus
 
 
 WORKERS_DIR = Path(__file__).resolve().parent
@@ -24,6 +29,54 @@ class RemoteError(RuntimeError):
 
 class SubmissionRejected(RemoteError):
     """An explicit HTTP 4xx rejected this upload before a job was accepted."""
+
+
+def redact_response(text: str, *secrets: str | None) -> str:
+    """Redact decoded JSON strings, including alternate escapes and nested keys."""
+    variants = set()
+    for secret in secrets:
+        if secret:
+            variants.update((secret, json.dumps(secret)[1:-1], quote(secret, safe=""), quote_plus(secret)))
+    sensitive_key = r"token|secret|password|authorization|api_key|credential"
+
+    def redact_text(value):
+        for secret in sorted(variants, key=len, reverse=True):
+            value = value.replace(secret, "[REDACTED]")
+        value = re.sub(r'(?i)Bearer\s+[^\s"<>]+', 'Bearer [REDACTED]', value)
+        return re.sub(r'https?://[^\s"<>]+', '[URL]', value)
+
+    def redact_json(value):
+        if isinstance(value, str):
+            return redact_text(value)
+        if isinstance(value, list):
+            return [redact_json(item) for item in value]
+        if isinstance(value, dict):
+            return {redact_text(key): "[REDACTED]" if re.search(sensitive_key, key, re.I) else redact_json(item)
+                    for key, item in value.items()}
+        return value
+
+    try:
+        decoded = json.loads(text)
+    except (ValueError, RecursionError):
+        # Partial JSON and plain error messages still need escaped credentials
+        # removed. Decode valid escape units even in an unterminated string.
+        text = re.sub(r'\\(?:u[0-9a-fA-F]{4}|["\\/bfnrt])',
+                      lambda match: json.loads('"' + match[0] + '"'), text)
+        text = redact_text(text)
+        return re.sub(r'(?i)("[^"\n]*(?:' + sensitive_key + r')[^"\n]*"\s*:\s*)"(?:\\.|[^"\\])*"',
+                      r'\1"[REDACTED]"', text)
+    # Serialize only the scrubbed structure, never the original escaped text.
+    return json.dumps(redact_json(decoded), ensure_ascii=True)
+
+
+def _open_response_receipt(path: Path | None):
+    if path is None:
+        return nullcontext(None)
+    path = Path(path).expanduser().resolve()
+    if path == REPO_ROOT or REPO_ROOT in path.parents or any((p / '.git').exists() for p in path.parents):
+        raise ValueError("Keep HTTP response receipts outside Git checkouts")
+    # Reserve before POST: an existing attempt receipt must never be replaced.
+    return os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w", encoding="utf-8")
 
 
 def load_credentials(path: Path) -> None:
@@ -87,7 +140,8 @@ class EvalQueue:
 
     def _submit_streaming(
         self, zip_path: str, ops: str | list[str], tag: str, aggregation_token: str | None = None,
-        *, benchmark_version: str | None = None, public: bool = False
+        *, benchmark_version: str | None = None, public: bool = False,
+        receipt_path: Path | None = None
     ) -> dict:
         """Upload without the adapter's fixed 120-second in-memory timeout.
 
@@ -99,7 +153,7 @@ class EvalQueue:
         """
         token = self._client.token
         selected_ops = [ops] if isinstance(ops, str) else list(ops)
-        with tempfile.NamedTemporaryFile(
+        with _open_response_receipt(receipt_path) as receipt, tempfile.NamedTemporaryFile(
             mode="w", prefix="cannbench-headers-", encoding="utf-8"
         ) as headers:
             headers.write(f"Authorization: Bearer {token}\n")
@@ -150,22 +204,54 @@ class EvalQueue:
                     "--resolve",
                     f"cannbench.com:443:{resolve_ip}",
                 ]
-            completed = subprocess.run(
-                command,
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=self.upload_timeout + 30,
-            )
-        body, _, transfer = completed.stdout.rpartition("\n")
-        status, _, counters = transfer.partition(" ")
+            try:
+                completed = subprocess.run(
+                    command,
+                    check=False,
+                    capture_output=True,
+                    timeout=self.upload_timeout + 30,
+                )
+            except subprocess.TimeoutExpired:
+                # TimeoutExpired embeds argv, including the aggregation credential.
+                raise RemoteError("CANNBench upload process timed out; delivery is unknown") from None
+            raw_body, separator, transfer = completed.stdout.rpartition(b"\n")
+            trailer = re.fullmatch(rb"([0-9]{3}) ([0-9]+) ([0-9]+(?:\.[0-9]+)?)", transfer) if separator else None
+            if trailer:
+                status, uploaded, seconds = (value.decode("ascii") for value in trailer.groups())
+            else:
+                # Without a valid curl trailer, no stdout bytes can safely be
+                # attributed to transport metadata rather than the response.
+                raw_body = completed.stdout
+                status = uploaded = seconds = None
+            body = raw_body.decode("utf-8", errors="replace")
+            safe_body = redact_response(body, token, aggregation_token)
+            safe_stderr = redact_response(completed.stderr.decode("utf-8", errors="replace"), token, aggregation_token)
+            if receipt is not None:
+                json.dump({"received_at": datetime.now(timezone.utc).isoformat(),
+                           "http_status": status, "curl_returncode": completed.returncode,
+                           "transfer_metadata": "valid" if trailer else "missing-or-malformed",
+                           "body_source": "http_body" if trailer else "curl_stdout",
+                           "multipart_bytes": uploaded, "duration_seconds": seconds,
+                           "body_bytes": len(raw_body), "body_sha256": hashlib.sha256(raw_body).hexdigest(),
+                           "body_redacted": safe_body, "stderr_redacted": safe_stderr}, receipt, indent=2)
+                receipt.write("\n")
+                receipt.flush()
+                os.fsync(receipt.fileno())
+                directory = os.open(Path(receipt_path).expanduser().resolve().parent, os.O_RDONLY)
+                try:
+                    os.fsync(directory)
+                finally:
+                    os.close(directory)
+        if not trailer:
+            raise RemoteError("CANNBench upload returned missing or malformed transfer metadata; delivery is unknown")
         if completed.returncode:
-            detail = (body or completed.stderr).strip()
+            detail = (safe_body or safe_stderr).strip()
             error = SubmissionRejected if completed.returncode == 22 and status in ("400", "401", "403", "413", "422") else RemoteError
-            uploaded, _, seconds = counters.partition(" ")
             stats = f", {uploaded} multipart bytes in {seconds}s" if seconds else ""
             raise error(f"CANNBench upload failed (HTTP {status}, curl rc={completed.returncode}{stats}): {detail[:800]}")
         try:
-            return json.loads(body)
-        except json.JSONDecodeError as exc:
-            raise RemoteError("CANNBench upload returned invalid JSON") from exc
+            return json.loads(raw_body)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            # Decode errors can include credential bytes; retain only redacted
+            # evidence in the receipt, not a raw exception chain on stdout.
+            raise RemoteError("CANNBench upload returned invalid JSON") from None

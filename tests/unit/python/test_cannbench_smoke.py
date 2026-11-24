@@ -347,7 +347,7 @@ class Smoke(unittest.TestCase):
         queue.upload_timeout=30; queue.target_hardware='950pr'; queue.benchmark_slug='official-tasks'
         for http, error in [('400', SubmissionRejected), ('500', RemoteError), ('408', RemoteError)]:
             with self.subTest(http=http), patch('evalqueue.subprocess.run', return_value=SimpleNamespace(
-                    returncode=22, stdout='{"detail":"rejected"}\n'+http+' 1048576 31.25', stderr='')) as call:
+                    returncode=22, stdout=('{"detail":"rejected"}\n'+http+' 1048576 31.25').encode(), stderr=b'')) as call:
                 with self.assertRaises(error):
                     queue._submit_streaming('/not-uploaded.zip', ['swi_glu'], 'tag', aggregation_token='agg_test')
                 command=call.call_args.args[0]
@@ -355,13 +355,13 @@ class Smoke(unittest.TestCase):
                 self.assertIn('is_private=true', command)
                 self.assertNotIn('test-secret', ' '.join(command))
                 self.assertEqual(command[command.index('--retry')+1], '0')
-        timeout = SimpleNamespace(returncode=28, stdout="\n000 1024 3600.000", stderr="Timeout")
+        timeout = SimpleNamespace(returncode=28, stdout=b"\n000 1024 3600.000", stderr=b"Timeout")
         with patch('evalqueue.subprocess.run', return_value=timeout):
             with self.assertRaisesRegex(RemoteError, "1024 multipart bytes in 3600.000s") as exc:
                 queue._submit_streaming('/unused', ['swi_glu'], 'tag')
             self.assertNotIsInstance(exc.exception, SubmissionRejected)
         with patch('evalqueue.subprocess.run', return_value=SimpleNamespace(
-                returncode=0, stdout='{"job_id":"job_test"}\n200 1048576 9.15', stderr='')):
+                returncode=0, stdout=b'{"job_id":"job_test"}\n200 1048576 9.15', stderr=b'')):
             self.assertEqual(queue._submit_streaming('/unused', ['swi_glu'], 'tag')['job_id'], 'job_test')
 
     def test_hardware_gate_requires_exact_cases_hardware_and_timings(self):
