@@ -77,6 +77,13 @@ reproduced implementations. Read their specific contracts before using them.
 
 ## Read the metrics without overclaiming
 
+- Attribute compiler UB to the candidate hash, specialization, runtime and
+  effective JIT options. If deriving a static extent from emitted local-tensor
+  offsets, report the maximum end byte and retain the emitted artifact; do not
+  call it measured device usage. Source buffer arithmetic is an estimate until
+  checked against lowering, including compiler temporaries and allocation reuse.
+  Smaller UB alone does not establish lower latency: qualify the changed route
+  and compare repeated timings at matched geometry.
 - Engine busy ratios can overlap. Do not add vec/scalar/MTE ratios to obtain
   total time, or report `1-sum(ratios)` as idle. Validate each counter's scope
   (one core vs aggregate, sampled vs all events) and denominator. Ratio sums
