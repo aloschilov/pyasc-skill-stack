@@ -178,11 +178,13 @@ in fresh processes; do not use a concrete-options adapter or monkeypatch.
 
 Flatten contiguous inputs to one logical dimension, grid-stride over tiles,
 promote sensitive f16/bf16 arithmetic to f32, and cast once before storing.
-Compare tile sizes using measured compiled UB, useful work per available block,
+Compare tile sizes using compiler-reported UB for the exact candidate, useful work per available block,
 DMA size, overlap, and scalar overhead. The largest fitting tile is not always
 fastest; UB fill is not the objective. Read
 [top-down tuning from CANN samples](references/cann-performance-tuning.md)
-before a performance iteration.
+before a performance iteration. Before compilation, label UB arithmetic as an
+estimate; a source comment or a reference kernel's footprint is not a measurement
+of the generated kernel.
 
 ### Choose a memory layout for split-half SwiGLU
 
