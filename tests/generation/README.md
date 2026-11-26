@@ -214,7 +214,22 @@ exact Release baseline and checksum are checked before any generation. The polic
 snapshot/hash and controller hash are retained separately from execution inputs;
 changing the enable flag does not silently requalify an incompatible executor.
 
-The integrated `asctile-*` context uses a separately reviewed baseline:
+The current policy selects [qualification-generation-45855210108](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-45855210108)
+on `03ec526`, archive SHA256
+`c1740d3cbb761982cea9a2d147dacf4d33164a8eff84007cca4a936aaabe835d`.
+[CI 45855210108](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45855210108)
+qualified **3/3** fresh GLM-5.3 candidates with OpenCode 1.19.0: nine real Model
+launches, 21 output/input checks and three rejecting suppressed-launch controls.
+All 236 indexed files and 105 execution-source hashes were verified. The executor
+took 177.89 s; 14 requests used 5,420 output tokens (including 3,968 reasoning)
+and 153,495 input tokens, with an observed 8,192-token response limit.
+This refresh addresses [scheduled run 45732623206](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45732623206):
+the complete `ci.yml` hash differed from the old baseline, so the compatibility
+gate correctly stopped before generation. No compatibility checks or numerical
+criteria were relaxed. Qualification alone does not establish an independent
+comparison or scheduled recovery; those need separate observed runs.
+
+The earlier integrated `asctile-*` baseline remains immutable historical evidence:
 [run 42237343185](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42237343185)
 on `e2f4c31`, OpenCode 1.19.0 / GLM-5.3 (reported `glm-5-3-260814`),
 **3/3** fresh add/reduce/broadcast candidates, nine Model launches,
@@ -269,9 +284,18 @@ by GET confirmation; unknown delivery is reconciled, never blindly repeated.
 `delivery.json` is evidence that GitHub stored the update, not proof a person read
 a notification. No model or CANNBench credential is available to the observer.
 
-Activation was authorized on 2026-11-06. The selected baseline remains compatible
-with the generation inputs; only policies, controller triggers, tests and docs
-change. Paired skills and model comparisons check daily at 17:47 and 18:47 UTC
+Activation was authorized on 2026-11-06. Baseline compatibility is checked
+against the current execution inputs, including the complete `ci.yml` and
+`generation-simulator.yml` bytes. A workflow edit can therefore invalidate an
+accepted baseline even when the model, runtime and task inventory are unchanged.
+Do not remove a source hash, reuse old results under new hashes, or skip the
+comparison to clear that failure. Qualify a fresh manual run with the current
+plan and all required gates, review and archive it as a new immutable Release,
+then update the explicit baseline locator/checksum in `nightly.json`. Keep the
+previous archive intact and verify a separate fresh comparison. Policy and
+controller records remain separately hashed; updating only the selected baseline
+does not change the execution protocol. Paired skills and model comparisons check
+daily at 17:47 and 18:47 UTC
 (20:47 and 21:47 Moscow), respectively, but execute no more often than every
 168 hours. Failed/cancelled attempts consume that interval; daily deferred checks
 do not. Their dedicated alert destinations are #38 and #39. The shared executor
