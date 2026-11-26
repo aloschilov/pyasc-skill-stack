@@ -70,6 +70,8 @@ reproduced implementations. Read their specific contracts before using them.
 - Hold runtime/image digest, platform, inputs, dtype, geometry and counter scope
   fixed across baseline and candidate. Record warm-up/cache policy and repeated
   samples; retain failures and report dispersion rather than selecting the best.
+  Counterbalance A/B series order, for example ABBA and BAAB, and report each
+  workload/specialization separately before choosing a JIT setting.
 - Keep numerical verification separate from the timed interval. Compare complete
   logical outputs under the task tolerances before accepting a timing result.
 - Record raw counters and exact collection commands outside checkout. API/JIT
@@ -84,6 +86,14 @@ reproduced implementations. Read their specific contracts before using them.
   checked against lowering, including compiler temporaries and allocation reuse.
   Smaller UB alone does not establish lower latency: qualify the changed route
   and compare repeated timings at matched geometry.
+  A controlled FP32 flat-SwiGLU comparison on PyASC `ed793e45`, Model target
+  `Ascend950PR_9599`, held grid=64 and tile=4096 fixed within each workload. VF fusion
+  reduced emitted UB by one third in both configurations; 48 warmed samples
+  across ABBA/BAAB orders gave 4.32% fewer ticks for unroll=1 on `[9,65518]` and only
+  0.18% for unroll=2 on `[19,65518]`. These separate workloads do not isolate an
+  unroll effect, establish a global VF default, or prove an NPU gain.
+  [Selected outcome and all samples](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-flat-vf-20261126)
+  (archive SHA256 `fa91834c828ae3885bf6a7c3e6d9a181191a3bccf3ec66f5cde7e7fefccc0708`).
 - Engine busy ratios can overlap. Do not add vec/scalar/MTE ratios to obtain
   total time, or report `1-sum(ratios)` as idle. Validate each counter's scope
   (one core vs aggregate, sampled vs all events) and denominator. Ratio sums
