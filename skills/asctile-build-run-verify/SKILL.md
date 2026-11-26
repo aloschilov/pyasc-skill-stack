@@ -121,6 +121,11 @@ Compare the full logical output, shape, dtype, and list arity. Use the task's
 atol/rtol, compare NaN/Inf positions, exercise runtime scalars and both sides
 of attribute dispatch, and inspect simulator diagnostics for invalid padded
 lane arithmetic. A finite random smoke is not enough for exp/GELU/norm/softmax.
+A numerical match does not override simulator illegal-address or DMA diagnostics;
+record that run as failed runtime qualification. Keep arithmetic diagnostics from
+intentional NaN/Inf probes separately attributed. For idle blocks, skip copies
+entirely rather than relying on a zero `real_shape` (see the
+[execution example](references/execution-example.md)).
 
 ## Remote evidence
 
