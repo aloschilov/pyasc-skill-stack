@@ -214,20 +214,35 @@ exact Release baseline and checksum are checked before any generation. The polic
 snapshot/hash and controller hash are retained separately from execution inputs;
 changing the enable flag does not silently requalify an incompatible executor.
 
-The current policy selects [qualification-generation-45855210108](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-45855210108)
-on `03ec526`, archive SHA256
-`c1740d3cbb761982cea9a2d147dacf4d33164a8eff84007cca4a936aaabe835d`.
-[CI 45855210108](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45855210108)
+The current policy selects [qualification-generation-45865783111](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-45865783111)
+on `a885e34`, archive SHA256
+`1129df7d48340f0072a6f6ff9a28a449619d90638c328eb26b86d655e3793d98`.
+[CI 45865783111](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45865783111)
 qualified **3/3** fresh GLM-5.3 candidates with OpenCode 1.19.0: nine real Model
 launches, 21 output/input checks and three rejecting suppressed-launch controls.
 All 236 indexed files and 105 execution-source hashes were verified. The executor
-took 177.89 s; 14 requests used 5,420 output tokens (including 3,968 reasoning)
-and 153,495 input tokens, with an observed 8,192-token response limit.
-This refresh addresses [scheduled run 45732623206](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45732623206):
-the complete `ci.yml` hash differed from the old baseline, so the compatibility
-gate correctly stopped before generation. No compatibility checks or numerical
-criteria were relaxed. Qualification alone does not establish an independent
-comparison or scheduled recovery; those need separate observed runs.
+took 166.83 s; 15 requests used 6,074 output tokens (including 4,700 reasoning)
+and 171,887 input tokens, with an observed 8,192-token response limit.
+The outer Model verifier now rejects the observed structured
+`mte_gdma_illegal_burst_len_t0` diagnostic even if the child exits successfully
+and numerics match; the original report and native log are retained. Such a
+diagnostic in a suppressed-launch control cannot prove numerics. Intentional
+nonfinite arithmetic diagnostics remain separate. This qualified run had no
+Model error diagnostics. The change does not claim a complete native-error
+taxonomy or standalone `execute_kernel.py` native-stream capture.
+
+The preceding [baseline 45855210108](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-45855210108)
+remains immutable, SHA256
+`c1740d3cbb761982cea9a2d147dacf4d33164a8eff84007cca4a936aaabe835d`.
+It repaired [scheduled run 45732623206](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45732623206):
+the complete `ci.yml` hash differed from the historical baseline, so compatibility
+correctly stopped before generation. Its independent
+[comparison 45859148113](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-comparison-45859148113)
+passed 3/3 with nine Model launches, 21 checks and three rejecting controls;
+[the observer](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45863312303)
+reported `verified-manual`. Updating the verifier requires the new baseline above;
+no source compatibility fields or numerical criteria were relaxed. Qualification
+alone does not establish a comparison on the new verifier or scheduled recovery.
 
 The earlier integrated `asctile-*` baseline remains immutable historical evidence:
 [run 42237343185](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42237343185)
