@@ -120,8 +120,9 @@ native build mode separately in hardware comparisons.
    the target operator section.
 3. Design host dispatch, kernel specializations, tails, dtype conversions, UB
    budget, and numerical behavior before writing code.
-   For optimization, read [CANN-sample top-down tuning](../asctile-api-patterns/references/cann-performance-tuning.md).
-   Identify one measured bottleneck; distinguish allocation capacity from
+   Before choosing initial compiler options or starting an optimization, read
+   [CANN-sample top-down tuning](../asctile-api-patterns/references/cann-performance-tuning.md).
+   When optimizing, identify one measured bottleneck; distinguish allocation capacity from
    bandwidth and generated unrolling from observed pipeline overlap.
 4. Implement the exact callable. Run `python3 -m py_compile candidate.py` and
    the worker static contract check.

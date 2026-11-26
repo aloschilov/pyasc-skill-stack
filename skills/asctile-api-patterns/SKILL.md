@@ -182,7 +182,8 @@ Compare tile sizes using compiler-reported UB for the exact candidate, useful wo
 DMA size, overlap, and scalar overhead. The largest fitting tile is not always
 fastest; UB fill is not the objective. Read
 [top-down tuning from CANN samples](references/cann-performance-tuning.md)
-before a performance iteration. Before compilation, label UB arithmetic as an
+when choosing initial compiler options or planning a performance iteration.
+Before compilation, label UB arithmetic as an
 estimate; a source comment or a reference kernel's footprint is not a measurement
 of the generated kernel.
 
