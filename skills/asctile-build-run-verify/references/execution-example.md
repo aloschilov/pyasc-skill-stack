@@ -29,14 +29,13 @@ def add_kernel(x_ptr: asctile.GlobalAddress, y_ptr: asctile.GlobalAddress,
     y_gm = asctile.global_tensor(y_ptr, [size])
     o_gm = asctile.global_tensor(out_ptr, [size])
 
-    per_core = asctile.ceildiv(asctile.ceildiv(size, asctile.block_num()), tile_size)
-    base = asctile.block_idx() * tile_size * per_core
-
-    for i in asctile.range(per_core):
-        off = base + i * tile_size
-        x = asctile.copy_in(x_gm, [off], [tile_size])
-        y = asctile.copy_in(y_gm, [off], [tile_size])
-        asctile.copy_out(x + y, o_gm, [off])
+    num_tiles = asctile.ceildiv(size, tile_size)
+    for t in asctile.range(asctile.block_idx(), num_tiles, asctile.block_num()):
+        off = t * tile_size
+        valid = min(size - off, tile_size)
+        x = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[valid], pad_value=0)
+        y = asctile.copy_in(y_gm, [off], [tile_size], real_shape=[valid], pad_value=0)
+        asctile.copy_out(x + y, o_gm, [off], real_shape=[valid])
 
 
 if __name__ == "__main__":
@@ -48,10 +47,11 @@ if __name__ == "__main__":
     y = rng.standard_normal(size, dtype=np.float32)
     out = np.zeros_like(x)
 
-    add_kernel[blocks](x, y, out, size, tile)
+    if size:
+        add_kernel[blocks](x, y, out, size, tile)
 
     expected = x + y
-    err = np.abs(out - expected).max()
+    err = np.abs(out - expected).max() if size else 0.0
     assert err == 0.0, f"max abs err {err}"
     print("PASSED max_abs_err", err)
 ```
@@ -72,7 +72,7 @@ The CANN root is installation-specific; adjust the example to its actual path.
 Confirm `$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/` is present before
 blaming the kernel. Retain the selected toolkit version during qualification.
 
-Historical verified output on `Ascend950PR_9599`, CANN 9.0.0, `pyasc-dev
+Historical output from the earlier evenly divided listing on `Ascend950PR_9599`, CANN 9.0.0, `pyasc-dev
 1.1.1.dev20261021205441`, 16 blocks:
 
 ```
@@ -86,12 +86,18 @@ and must never be reported as one — see [hardware.md](hardware.md).
 
 ## Tails
 
-This example divides evenly. When the size is not a multiple of the tile,
-allocate the full physical tile via `shape`, pass the logical extent through
-`real_shape`, and pad with an operation-neutral `pad_value`:
+The listing visits only live tiles, including when there are more blocks than
+tiles. Each copy has `0 < valid <= tile_size`; a block with no tile performs no
+copy. For an empty input the host skips the launch.
 
-```python
-valid = min(size - off, tile_size)
-a = asctile.copy_in(x_gm, [off], [tile_size], real_shape=[valid], pad_value=0)
-asctile.copy_out(a + b, z_gm, [off], real_shape=[valid])
-```
+A fixed `ceil(num_tiles / blocks)` iteration count for every block can leave
+extra iterations in the last wave. Clamping their extent to zero still issues
+a copy at the end of the allocation; an unclamped extent can become negative.
+Exclude those iterations before loading or storing. If contiguous per-block
+ownership is needed, guard the whole body with `off < size` instead of changing
+the ownership scheme just to handle the tail.
+
+Allocate the full physical tile via `shape`, bound both loads and the store with
+`real_shape`, and choose operation-neutral padding. Test a partial tile and more
+blocks than live tiles, with real numerical checks and a rejecting
+suppressed-launch control.
