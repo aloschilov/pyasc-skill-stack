@@ -147,9 +147,9 @@ class ModelEvidence(unittest.TestCase):
 
 
 class ModelController(unittest.TestCase):
-    def test_activated_model_policy_is_separate_and_can_still_be_disabled(self):
+    def test_held_model_policy_is_separate_and_does_not_query(self):
         import yaml
-        config=ops.policy(NOW,paired='models');self.assertTrue(config['enabled'])
+        config=ops.policy(NOW,paired='models');self.assertFalse(config['enabled'])
         self.assertEqual(config['alert_issue'],39)
         self.assertEqual(config['min_interval_hours'],168)
         self.assertNotEqual(ops.policy_path(True),ops.policy_path('models'))
@@ -159,7 +159,7 @@ class ModelController(unittest.TestCase):
         self.assertEqual(workflow['jobs']['paired']['with']['experiment'],'models')
         self.assertIn('plan --models',str(workflow['jobs']['prepare']))
         with tempfile.TemporaryDirectory() as d, patch.object(ops,'api',side_effect=AssertionError('Disabled policy must not query')):
-            report=ops.monitor(Path(d),dict(config,enabled=False),NOW,paired='models')
+            report=ops.monitor(Path(d),config,NOW,paired='models')
             self.assertEqual((report['status'],report['experiment']),('disabled','models'))
 
     def test_caller_and_plan_cannot_cross_model_and_context_lanes(self):

@@ -18,6 +18,63 @@ from run_artifacts import RunArtifacts, ROOT
 
 
 class Contract(unittest.TestCase):
+    # Retained Model diagnostic from the Exp12 empty-copy reproduction. Numeric
+    # output and process exit were both successful in that run.
+    DMA_ERROR = ('[error] [core31.veccore1] [mte_gdma_illegal_burst_len_t0] '
+                 '(PC: 0x10d0f368) MTE2     : (Binary: 0x74a6c595)')
+
+    def diagnostic_child(self, responses):
+        responses = iter(responses)
+        def run(argv, **kwargs):
+            code, payload, stdout, stderr = next(responses)
+            Path(argv[argv.index('--json-out')+1]).write_text(json.dumps(payload))
+            return subprocess.CompletedProcess(argv, code, stdout, stderr)
+        return run
+
+    def diagnostic_reports(self):
+        event = {'api':'torch.allclose','line':1,'after_launch':True,'passed':True}
+        real = {'status':'pass','exit_code':0,'launcher_calls':1,'numerical_checks':[event]}
+        control = {'status':'fail','exit_code':1,'mock_launch':True,'launcher_calls':1,
+                   'numerical_failure':dict(event, passed=False)}
+        return real, control
+
+    def test_model_dma_overrides_success_and_preserves_child_evidence(self):
+        real, _ = self.diagnostic_reports()
+        for stdout, stderr in [(self.DMA_ERROR, ''), ('', self.DMA_ERROR),
+                               ('no trailing newline', self.DMA_ERROR)]:
+            evidence = {}
+            with self.subTest(stream=bool(stderr)), patch.object(rv.subprocess, 'run',
+                    side_effect=self.diagnostic_child([(0,real,stdout,stderr)])) as run:
+                code, _, level, calls = rv._run_execute('unused','Model','p',evidence=evidence)
+            self.assertEqual((code,level,calls),(1,None,1))
+            self.assertEqual(run.call_count,1)  # No suppressed retry after runtime failure.
+            report = evidence['execution']['report']
+            self.assertEqual(report['child_exit_code'],0)
+            self.assertEqual(report['child_report'],real)
+            self.assertEqual(evidence['execution']['log'],stdout+stderr)
+            self.assertEqual(report['fatal_model_diagnostics']['count'],1)
+
+    def test_dma_in_control_cannot_prove_numerics_or_downgrade_to_executed(self):
+        real, control = self.diagnostic_reports()
+        self.assertTrue(proves_numerics(real, control, 1))
+        evidence = {}
+        with patch.object(rv.subprocess, 'run', side_effect=self.diagnostic_child([
+                (0,real,'',''),(1,control,'',self.DMA_ERROR)])):
+            result = rv._run_execute('unused','Model','p',evidence=evidence)
+        self.assertEqual((result[0],result[2]),(1,None))
+        self.assertEqual(evidence['control']['report']['child_report'],control)
+
+    def test_clean_and_nonfinite_only_model_logs_keep_numerical_proof(self):
+        real, control = self.diagnostic_reports()
+        arithmetic = '[error] [core0.veccore0] [vec_err_idata_inf_nan_t0] RV_VEXP Dtype: F32'
+        for raw in ['', arithmetic, 'Quoted text: '+self.DMA_ERROR]:
+            evidence = {}
+            with self.subTest(raw=raw), patch.object(rv.subprocess,'run',
+                    side_effect=self.diagnostic_child([(0,real,raw,''),(1,control,'','')])):
+                result=rv._run_execute('unused','Model','p',evidence=evidence)
+            self.assertEqual((result[0],result[2]),(0,'numerically_verified'))
+            self.assertEqual(evidence['execution']['log'],raw)
+
     def test_control_failures_do_not_prove_numerics(self):
         real = (0, {'status': 'pass', 'exit_code': 0, 'launcher_calls': 1}, '')
         for control in [(1, {}, 'timeout'), (1, {}, 'no report'),

@@ -39,6 +39,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -335,6 +336,27 @@ def _run_execute_once(
                 payload = json.loads(report.read_text())
             except (ValueError, OSError):
                 pass
+        # A Model launch can return normally and produce numerically correct
+        # output while reporting an illegal DMA on an idle tile. This boundary
+        # sees native stdout/stderr; execute_kernel's in-process report does not.
+        # Match the observed structured diagnostic, not every [error] line:
+        # intentional nonfinite arithmetic has a separate diagnostic class.
+        fatal_lines = [line for stream in (result.stdout or "", result.stderr or "")
+                       for line in stream.splitlines() if re.match(
+            r"^\[error\]\s+\[[^\]\r\n]+\]\s+\[mte_gdma_illegal_burst_len_t0\]", line
+        )] if backend == "Model" else []
+        if fatal_lines:
+            return 1, {
+                "status": "fail", "exit_code": 1,
+                "launcher_calls": int(payload.get("launcher_calls") or 0),
+                "verification_level": None,
+                "error": "Model reported illegal DMA burst length",
+                "fatal_model_diagnostics": {
+                    "code": "mte_gdma_illegal_burst_len_t0",
+                    "count": len(fatal_lines), "sample_lines": fatal_lines[:20],
+                },
+                "child_exit_code": result.returncode, "child_report": payload,
+            }, raw
         return result.returncode, payload, raw
 
 
@@ -397,6 +419,8 @@ def _run_execute(
 
     if evidence is not None:
         evidence["control"] = {"exit_code": ctl_code, "report": ctl_payload, "log": ctl_raw}
+    if ctl_payload.get("fatal_model_diagnostics"):
+        return 1, str(ctl_payload["error"]), None, calls
     if proves_numerics(payload, ctl_payload, ctl_code):
         reason = str(ctl_payload.get("error") or "control run failed")
         return 0, f"{detail}; numerics proven (suppressed launch -> {reason})", LEVEL_NUMERIC, calls

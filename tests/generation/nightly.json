@@ -2,8 +2,8 @@
   "schema_version": 1,
   "enabled": true,
   "enabled_since": "2026-11-06T16:33:00Z",
-  "baseline_ref": "release/qualification-generation-45855210108",
-  "baseline_sha256": "c1740d3cbb761982cea9a2d147dacf4d33164a8eff84007cca4a936aaabe835d",
+  "baseline_ref": "release/qualification-generation-45865783111",
+  "baseline_sha256": "1129df7d48340f0072a6f6ff9a28a449619d90638c328eb26b86d655e3793d98",
   "max_age_hours": 36,
   "max_run_hours": 2,
   "alert_issue": 37

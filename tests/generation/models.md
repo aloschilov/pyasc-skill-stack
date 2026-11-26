@@ -2,8 +2,12 @@
 
 This is the model axis of the [paired experiment](paired.md), using its executor,
 credential binding, session/context audit and numerical adapters. One complete
-manual comparison is qualified below. The periodic policy is enabled after authorization on 2026-11-06;
-the controller checks cadence daily and explicit manual execution requires plan approval.
+manual comparison is qualified below. Periodic execution is disabled as of
+2026-11-26 while development generation is restricted to GLM-5.3; this matrix
+also contains DeepSeek. The GitHub workflow is disabled too. Historical results
+and the explicit manual comparison remain available; re-enabling requires an
+authorized model choice and policy review. The single and paired GLM controllers
+are unchanged.
 
 ## Manual qualification, 2026-11-06
 
