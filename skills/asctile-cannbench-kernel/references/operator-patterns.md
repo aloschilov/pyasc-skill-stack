@@ -486,6 +486,13 @@ or slab route. Before adding more exact-width fast paths, replay the
 [non-public shape probes](local-validation.md#coverage-beyond-public-rows)
 through the shipped native lookup and numerically qualify its general routes.
 
+Measure both sides of a route threshold; a qualified specialization can lose
+to a generic fallback. In a pinned BF16 Model comparison at R=67 and an injected
+64-AIV capacity, H=16 slab used 33.37% more ticks than the older fallback;
+H=17 rows used 35.17% fewer. These package routes differ in several ways, so
+the comparison establishes neither an isolated cause nor NPU performance.
+[Measured routes and all samples](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-bf16-routes-model-20261126).
+
 Measure the grid separately at fixed geometry. With the parent's tile and
 the same inputs, 8 → 32 → 64 blocks took 1,294.781 → 307.247 → 162.471 µs
 on case 6 and 1,504.377 → 377.400 → 193.149 µs on case 19. The retained
