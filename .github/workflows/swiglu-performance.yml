@@ -1,5 +1,11 @@
 name: SwiGLU generated performance
 on:
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: Existing successful ci.yml SwiGLU generation run ID (no generation or submission)
+        required: true
+        type: string
   workflow_call:
     inputs:
       action:
@@ -26,7 +32,7 @@ permissions:
 
 jobs:
   generate:
-    if: inputs.action == 'performance' || inputs.action == 'performance-generate'
+    if: inputs.action != '' && (inputs.action == 'performance' || inputs.action == 'performance-generate')
     permissions:
       contents: read
       actions: read
@@ -81,7 +87,7 @@ jobs:
   evaluate:
     needs: generate
     if: >-
-      always() && !cancelled() &&
+      always() && !cancelled() && inputs.action != '' &&
       ((inputs.action == 'performance' && needs.generate.result == 'success') ||
        inputs.action == 'performance-evaluate' || inputs.action == 'performance-resume' || inputs.action == 'performance-submit-prepared')
     runs-on: cannbench-vm
@@ -189,3 +195,45 @@ jobs:
               --title "CI-generated SwiGLU · CANNBench $EVALUATION_RUN" --notes "CI generation, 19 generated compute cases and one packed template. Per-case service measurements and exact submitted source package are attached." \
               performance.json candidate.py submission.zip SHA256SUMS
           fi
+
+  qualify-only:
+    # Direct dispatch has no action input; workflow_call requires it. This job has
+    # no model/service secrets and no path to package, submit or publish metrics.
+    if: github.event_name == 'workflow_dispatch' && inputs.action == ''
+    runs-on: cannbench-vm
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      actions: read
+    env:
+      IMAGE: ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:1efdcc8585b769715f640e9c9078c2e03cdf2157082d05b0c4b87974beea7407
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Restore the original generation only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ORIGIN: ${{ inputs.origin }}
+        run: |
+          set -eu
+          [[ "$ORIGIN" =~ ^[1-9][0-9]*$ ]]
+          ROOT="$RUNNER_TEMP/swiglu-qualification-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "ROOT=$ROOT" >> "$GITHUB_ENV"
+          mkdir -m 700 "$ROOT"
+          python3 integrations/cannbench/ci/swiglu_performance/evaluate.py restore "$ROOT" --origin "$ORIGIN"
+      - name: Qualify unchanged bytes in CaModel without packaging or submission
+        run: |
+          set -eu
+          mkdir "$ROOT/qualification"
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
+            --user "$(id -u):$(id -g)" -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
+            -v "$GITHUB_WORKSPACE:/src:ro" -v "$ROOT/qualification:/result" \
+            -v "$ROOT/generation:/generation:ro" -w /tmp "$IMAGE" \
+            python3.12 /src/integrations/cannbench/ci/swiglu_performance/qualify.py /generation /result --numerics-only
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: swiglu-qualification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.ROOT }}
+          if-no-files-found: warn

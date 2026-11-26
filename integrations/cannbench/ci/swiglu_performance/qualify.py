@@ -7,22 +7,27 @@ import os
 from pathlib import Path
 import sys
 
-import asc
-import torch
-from asc import DataType
-from asc._C import ir
-from asc.codegen.specialization import Specialization
-from asc.lib.utils import get_ascend_path
-from asc.runtime import config
-from asc.runtime.jit import MockTensor
-
 from geometry import DTYPES, all_specs, full_row_probes, key, layout, slab_indices, validate
+from qualification_control import dispatch_counted, require_no_dry_run, unchanged, source_hashes
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parents[1]/'workers'))
-from local_compile_gate import prepare_specialization
-sys.path.insert(0, str(HERE.parents[3]/'tests/tools'))
-from execute_kernel import _install_launch_spy
+
+def initialize():
+    global asc, torch, DataType, ir, Specialization, get_ascend_path, config, MockTensor
+    global prepare_specialization, _install_launch_spy
+    import asc
+    import torch
+    from asc import DataType
+    from asc._C import ir
+    from asc.codegen.specialization import Specialization
+    from asc.lib.utils import get_ascend_path
+    from asc.runtime import config
+    from asc.runtime.jit import MockTensor
+    here = Path(__file__).resolve().parent
+    sys.path.insert(0, str(here.parents[1]/'workers'))
+    from local_compile_gate import prepare_specialization
+    sys.path.insert(0, str(here.parents[3]/'tests/tools'))
+    from execute_kernel import _install_launch_spy
+
 
 PACKED = Path('context/skills/asctile-api-patterns/templates/packed-bf16-swiglu.py')
 NAMES = {'rows':7,'slab':8,'flat':6}
@@ -101,14 +106,18 @@ def lower(kernel, dtype, route, const, folder):
     return commands, {str(k):int(v) for k,v in memory.items()}
 
 
-def check(kernels, dtype, shape, axis, seed, policy):
+def tensor_hash(tensor):
+    return sha256(tensor.detach().contiguous().view(torch.uint8).numpy().tobytes()).hexdigest()
+
+
+def check(kernels, dtype, shape, axis, seed, policy, capacity=3, receipts=None):
     print('CaModel', dtype, shape, axis, seed, flush=True)
     torch.manual_seed(seed)
     x = torch.randn(shape, dtype=getattr(torch,dtype))
     x.flatten()[:7] = torch.tensor([float('inf'),-float('inf'),float('nan'),-100.,0.,1.,100.])
     a,b = x.float().chunk(2,axis)
     expected = (torch.nn.functional.silu(a)*b).to(x.dtype)
-    shape, rows, half, route, const, blocks = layout(shape,axis,dtype,policy,3)
+    shape, rows, half, route, const, blocks = layout(shape,axis,dtype,policy,capacity)
     out = torch.full(shape, float('nan'),dtype=x.dtype)
     kwargs = [x,out]
     if route == 'slab':
@@ -117,15 +126,23 @@ def check(kernels, dtype, shape, axis, seed, policy):
     else:
         kwargs.extend([rows,(rows+const[0]-1)//const[0] if route=='_swiglu_pair_groups' else half])
 
+    inputs = [x] + (indices if route == 'slab' else [])
+    before = [tensor_hash(t) for t in inputs]
     def dispatch(suppress):
-        cls, original, count = _install_launch_spy(asc, suppress)
+        from asc.lib import runtime
+        result = None
         try:
-            kernels[route][blocks](*kwargs,*const)
+            result = dispatch_counted(lambda: kernels[route][blocks](*kwargs,*const),
+                                      asc, runtime, _install_launch_spy, suppress)
         finally:
-            cls.run = original
-        if count['calls'] != 1:
-            raise ValueError(f'Expected one CaModel launch request for {route}, got {count["calls"]}')
-        return count['calls']
+            after = [tensor_hash(t) for t in inputs]
+            if receipts is not None:
+                with receipts.open('a') as stream:
+                    stream.write(json.dumps({'dtype':dtype,'shape':list(x.shape),'axis':axis,
+                        'seed':seed,'route':route,'capacity_assumption':capacity,'suppressed':suppress,
+                        'input_sha256_before':before,'input_sha256_after':after,'launch_evidence':result})+'\n')
+        unchanged(before, after, 'Kernel input')
+        return result
 
     suppressed = dispatch(True)
     try:
@@ -138,10 +155,30 @@ def check(kernels, dtype, shape, axis, seed, policy):
     torch.testing.assert_close(out,expected,equal_nan=True)
     return {'shape':list(x.shape),'dim':axis,'dtype':dtype,'route':route,'seed':seed,
             'blocks':blocks,'constexprs':const,'positive':True,'suppressed_rejected':True,
-            'real_launches':real,'intercepted_launches':suppressed}
+            'capacity_assumption':capacity, 'input_sha256_before':before,
+            'input_sha256_after':[tensor_hash(t) for t in inputs], 'output_sha256':tensor_hash(out),
+            'real_launch_requests':real['requests'], 'real_launches':real['runtime_calls'],
+            'intercepted_launches':suppressed['requests'],
+            'suppressed_runtime_calls':suppressed['runtime_calls']}
 
 
-def main(root, output):
+def probe_cases(policy, numerics_only):
+    for dtype in DTYPES:
+        for shape,axis in [((131,14),1),((129,2),1),((3,128,8),1),((1,65538),1)]:
+            for seed in (19,23):
+                yield dtype,shape,axis,seed,3
+    for shape in full_row_probes(policy):
+        for seed in (19,23):
+            yield 'float32',shape,1,seed,3
+    if numerics_only:
+        for half in (17,257):
+            for seed in (19,23):
+                yield 'bfloat16',(67,2*half),1,seed,64
+
+
+def main(root, output, numerics_only=False):
+    require_no_dry_run(os.environ)
+    initialize()
     config.set_platform(config.Backend.Model,config.Platform.Ascend950PR_9599,check=False)
     candidate = root/'project/candidate.py'
     digest = sha256(candidate.read_bytes()).hexdigest()
@@ -153,28 +190,46 @@ def main(root, output):
         raise ValueError('Generation policy changed')
     policy = validate(json.loads(raw_policy))
     template_path = root/PACKED
+    before = source_hashes(root)
+    manifest = json.loads((root/'generation.json').read_bytes())
+    expected_template = manifest['context_hashes'][str(PACKED.relative_to('context'))]
+    if before['template'] != expected_template:
+        raise ValueError('Generation template changed')
     kernels = load_kernels(candidate, template_path)
     checks = []
-    for dtype in DTYPES:
-        for shape,axis in [((131,14),1),((129,2),1),((3,128,8),1),((1,65538),1)]:
-            for seed in (19,23):
-                checks.append(check(kernels,dtype,shape,axis,seed,policy))
-    for shape in full_row_probes(policy):
-        for seed in (19,23):
-            checks.append(check(kernels,'float32',shape,1,seed,policy))
-    project = output/'package-source'
-    folder = project/'csrc/ops/swi_glu/op_kernel'
-    folder.mkdir(parents=True)
-    flags, allocations = {}, {}
-    for dtype,r,c in all_specs(policy):
-        name = key(dtype,r,c)
-        flags[name],allocations[name] = lower(kernels[r],dtype,r,c,folder)
-    (project/'flags.json').write_text(json.dumps(flags,sort_keys=True))
-    (output/'camodel.json').write_text(json.dumps({'backend':'Model','candidate_sha256':digest,
+    for dtype,shape,axis,seed,capacity in probe_cases(policy,numerics_only):
+        checks.append(check(kernels,dtype,shape,axis,seed,policy,capacity,
+                            receipts=output/'input-launch-receipts.jsonl'))
+        (output/'partial-checks.json').write_text(json.dumps(checks, indent=2))
+    flags, allocations, sources = {}, {}, {}
+    if not numerics_only:
+        project = output/'package-source'
+        folder = project/'csrc/ops/swi_glu/op_kernel'
+        folder.mkdir(parents=True)
+        for dtype,r,c in all_specs(policy):
+            name = key(dtype,r,c)
+            flags[name],allocations[name] = lower(kernels[r],dtype,r,c,folder)
+        (project/'flags.json').write_text(json.dumps(flags,sort_keys=True))
+        sources = {p.name:sha256(p.read_bytes()).hexdigest() for p in sorted(folder.iterdir())}
+    after = source_hashes(root)
+    unchanged(before, after, 'Generation sources')
+    (output/'camodel.json').write_text(json.dumps({'backend':'Model','status':'passed','numerics_only':numerics_only,'candidate_sha256':digest,
+        'source_sha256_before':before,'source_sha256_after':after,
         'template_sha256':sha256(template_path.read_bytes()).hexdigest(), 'checks':checks,'policy_sha256':policy_hash,'allocations':allocations,
-        'sources':{p.name:sha256(p.read_bytes()).hexdigest() for p in sorted(folder.iterdir())}},indent=2))
+        'sources':sources},indent=2))
     print('Qualified',len(checks),'numerical/control pairs and',len(flags),'vector specializations')
 
 
 if __name__ == '__main__':
-    main(Path(sys.argv[1]), Path(sys.argv[-1]))
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument('root', type=Path)
+    ap.add_argument('output', type=Path)
+    ap.add_argument('--numerics-only', action='store_true')
+    ap.add_argument('--worker', action='store_true', help=argparse.SUPPRESS)
+    args = ap.parse_args()
+    if args.worker:
+        main(args.root, args.output, args.numerics_only)
+    else:
+        from qualification_control import supervise
+        raise SystemExit(supervise(args.root, args.output, args.numerics_only))

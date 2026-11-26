@@ -17,6 +17,7 @@ import time
 import zipfile
 
 from geometry import DTYPES, all_specs, full_row_probes, key
+from qualification_control import accept, source_hashes, unchanged
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -67,6 +68,15 @@ def package(root):
     package.mkdir()
     src = root/'qualification/package-source'
     checks = load(root/'qualification/camodel.json')
+    # A retained numerical PASS is insufficient: the native log boundary can
+    # reject an exit-zero run after detecting illegal DMA.
+    require(checks.get('status') == 'passed' and checks.get('child_exit_code') == 0
+            and checks.get('diagnostics', {}).get('illegal_dma') == 0
+            and checks.get('numerics_only') is False, 'Missing clean full-bank CaModel qualification')
+    current = source_hashes(gen)
+    unchanged(checks.get('source_sha256_before'), current, 'Qualified generation sources')
+    unchanged(checks.get('source_sha256_after'), current, 'Qualified generation sources')
+    accept(checks, checks['child_exit_code'], checks['diagnostics'], current, current)
     probes = full_row_probes(load(gen/'project/policy.json'))
     for shape in probes:
         require({c['seed'] for c in checks['checks'] if c['dtype']=='float32' and c['shape']==list(shape)}=={19,23},
