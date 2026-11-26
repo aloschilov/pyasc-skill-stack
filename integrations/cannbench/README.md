@@ -289,6 +289,31 @@ Three generated kernels implement 19 official cases. The packed BF16 template im
 
 The compute turn uses GLM-5.3 high reasoning and freezes the written Python. The policy turn uses the GLM-5.3-low profile with the same native output limit. A confirmed length stop permits one bounded continuation for the missing file. If a CI generation exhausts both policy responses, or its CaModel evaluation reports a UB overflow before submission, pass its run ID as `origin_run` with `performance`. CI checks the original model write and context, then generates only the policy. After an overflow the model receives the rejected table and the compiler diagnostic. The receipt identifies the original kernel run and the failed policy.
 
+For simulator-only qualification without CANNBench submissions, first retain a fresh
+`performance-generate` run, then dispatch the **SwiGLU generated performance** workflow
+itself with its required `origin`:
+
+```sh
+gh workflow run swiglu-performance.yml --ref main -f origin=GENERATION_RUN_ID
+```
+
+This direct entry cannot generate, build a submission or publish service metrics. It
+restores the original successful `ci.yml` generation artifact and checks its source
+hashes before a network-isolated CaModel run. The `swiglu-qualification-RUN-ATTEMPT`
+artifact retains full native logs, partial checks on failure, input/source hashes,
+launcher requests and actual runtime launch-call counts. Structured illegal-DMA
+errors fail qualification even if the process exits zero and outputs match;
+arithmetic NaN/Inf diagnostics from the intentional special-value tests are recorded
+separately. `PYASC_DRY_RUN` must be unset. Numerical qualification keeps the existing
+probes and adds synthetic BF16 `R=67, H=17/257` boundaries with a 64-vector-capacity
+assumption; this is not a statement about physical device capacity. It skips the
+full AOT specialization bank. It qualifies the generated rows/slab/flat routes
+and separate packed-BF16 template, not the older separately packaged generic
+fallback implementation. These simulator results are neither hardware timing
+nor official/hidden CANNBench coverage. The generation-only action still reads the
+current service task/catalog; the qualification-only entry uses the retained snapshot
+and makes no CANNBench requests.
+
 For a split run, `performance-generate` produces the generation artifact. Use `performance-evaluate` with `-f origin_run=GENERATION_RUN_ID` to qualify and submit its bytes. If the service is still pending, `performance-resume` takes the **evaluation** run ID and only collects the existing submission. After a confirmed service-maintenance rejection, `performance-submit-prepared` takes the evaluation run ID, verifies the saved GitHub Actions package and checks that submissions have reopened before sending it. For a SwiGLU package qualified on retired catalog 2.0.0, add `-f prepared_catalog_version=2.1.0` to that dispatch. CI checks that the public cases and golden source match and that the only contract change makes the existing input-to-output dtype relation explicit. It submits the archived ZIP under the requested version. The receipt records the qualification and service versions. Each successful evaluation publishes a release with `performance.json`, the submitted ZIP, the generated source and their SHA-256 checksums. GitHub Pages reads that release.
 ## Evaluate a prepared Level 1 package
 

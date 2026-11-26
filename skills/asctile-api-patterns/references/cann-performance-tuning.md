@@ -94,6 +94,15 @@ reproduced implementations. Read their specific contracts before using them.
   unroll effect, establish a global VF default, or prove an NPU gain.
   [Selected outcome and all samples](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-flat-vf-20261126)
   (archive SHA256 `fa91834c828ae3885bf6a7c3e6d9a181191a3bccf3ec66f5cde7e7fefccc0708`).
+  Test the actual fallback separately from the fast path. On the same runtime,
+  changing only VF fusion in a bounded BF16 fallback at tile=256, unroll=1,
+  grid=64 reduced compiler UB from 3072 to 2560 bytes. For synthetic R=67,
+  H=17 and H=257, the counterbalanced comparison gave 8.39% and 14.28% fewer
+  Model ticks, respectively; both orders agreed. Two-seed finite-input checks and
+  suppressed-launch controls passed. This supports testing fusion on that body,
+  not a global setting, hidden-shape coverage or an NPU speed claim.
+  [Sources, fixed ELFs, checks and all samples](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-swiglu-fallback-vf-model-20261127)
+  (timing archive SHA256 `6ab665f2305141e4dcd5c54f6276ee736c029af3317d925206314fd9f4ddb667`).
 - Engine busy ratios can overlap. Do not add vec/scalar/MTE ratios to obtain
   total time, or report `1-sum(ratios)` as idle. Validate each counter's scope
   (one core vs aggregate, sampled vs all events) and denominator. Ratio sums
