@@ -243,6 +243,11 @@ class WorkflowBoundary(unittest.TestCase):
             self.assertEqual(enabled(blocks['generate'],action),action in ('performance','performance-generate'))
             self.assertEqual(enabled(blocks['evaluate'],action),action!='performance-generate')
         q=blocks['qualify-only']
+        # Runner context is unavailable in job-level env; resolve its directory
+        # in the running step and export it for subsequent steps/artifacts.
+        self.assertNotIn('runner.', q.split('    steps:', 1)[0])
+        self.assertIn('ROOT="$RUNNER_TEMP/swiglu-qualification-', q)
+        self.assertIn('echo "ROOT=$ROOT" >> "$GITHUB_ENV"', q)
         self.assertIn("github.event_name == 'workflow_dispatch' && inputs.action == ''",q)
         self.assertIn('evaluate.py restore "$ROOT" --origin "$ORIGIN"',q)
         self.assertIn('qualify.py /generation /result --numerics-only',q)

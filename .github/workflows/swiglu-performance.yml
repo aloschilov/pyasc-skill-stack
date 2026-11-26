@@ -207,7 +207,6 @@ jobs:
       actions: read
     env:
       IMAGE: ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:1efdcc8585b769715f640e9c9078c2e03cdf2157082d05b0c4b87974beea7407
-      ROOT: ${{ runner.temp }}/swiglu-qualification-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -219,6 +218,8 @@ jobs:
         run: |
           set -eu
           [[ "$ORIGIN" =~ ^[1-9][0-9]*$ ]]
+          ROOT="$RUNNER_TEMP/swiglu-qualification-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "ROOT=$ROOT" >> "$GITHUB_ENV"
           mkdir -m 700 "$ROOT"
           python3 integrations/cannbench/ci/swiglu_performance/evaluate.py restore "$ROOT" --origin "$ORIGIN"
       - name: Qualify unchanged bytes in CaModel without packaging or submission
