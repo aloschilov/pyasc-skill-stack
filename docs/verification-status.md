@@ -20,6 +20,7 @@ prerequisites or resource blocks do not count as successful coverage.
 | Generation regression comparison | **Passed** for scheduled run `45920011665` against the selected immutable baseline `45865783111`: compatible inputs, 3/3 candidates, no lost PASS or coverage gaps. Scheduled recovery notification remains unconfirmed. [Result](../tests/generation/README.md#scheduled-single-generation-recovery-2026-11-27). |
 | Paired context experiment | **Passed** for complete manual measurement: 24 auditable trials; P6 4/6, P2/P3/P4 each 0/6, all failures retained. Conditional intervals include zero; no general skills benefit. Hosted recovery confirmed. [Result and archive](../tests/generation/README.md#manual-controller-acceptance-2026-11-06). |
 | Targeted SwiGLU fallback guidance | **Passed** for a four-session GLM-5.3 comparison and separately measured CaModel candidates. B used fewer ticks on six fixed shapes; the paragraph's causal benefit and hardware performance remain unestablished. [Protocols, outcomes and checksums](#fallback-guidance-comparison-2026-11-27). |
+| Exp empty-slot guidance | B **passed** eight numerical pairs and eight rejecting controls; A **failed** lowering before its first launch. One fresh session per arm; no repair or general benefit claim. [Original outcomes and checksum](#exp-empty-slot-comparison-2026-11-27). |
 | Multiple models | **Passed** for current 24-trial manual comparison with two actual response identities on one gateway; 7 qualified candidates and all failures retained. Hosted recovery confirmed; no general benefit, model ranking or scheduled claim. [Results and archive](../tests/generation/README.md#manual-controller-acceptance-2026-11-06). |
 | Public evidence dashboard | **Passed** for manual publication of five retained records, with public bytes matching the Pages artifact. [Publication identity, archive and limitations](../dashboard/README.md#public-publication-qualification-2026-11-06). This is a view of existing qualifications, not new numerical coverage or continuous monitoring. |
 
@@ -61,6 +62,28 @@ predict NPU latency and CANNBench scores.
 |---|---|
 | [Generation and both qualification protocols](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-vf-entry-study-20261127/vf-entry-study-public-20261127-01.tar.gz) | `5ea2c6a8bf74dcb7759435b727182c8f44659de02576bda2e9bd8ad9266ba97d` |
 | [Timing, actual geometry and compiler UB](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-vf-entry-study-20261127/vf-entry-timing-supplement-20261127-02.tar.gz) | `a3cf4341b2d0801d63882774e4866ce86a18b957a88c53ea3f37d9ed8497fa42` |
+
+## Exp empty-slot comparison — 2026-11-27
+
+Two fresh GLM-5.3-low/OpenCode 1.19.0 sessions compared `69c19624` with
+`c9fc70ca`, differing only in the Exp ownership paragraph. Both used the same
+prompt, four skills and profile-native output limit of 32,768. All 13 responses
+are accounted for: 15,965 completion tokens, with no retry or candidate repair.
+
+The fixed exercise used contiguous FP16 inputs of 64, 513, 2,048 and 2,049
+elements, seeds 19/47, base 2, scale 0.5 and shift 0.25. B passed all eight
+CaModel numerical checks and eight rejecting controls without DMA errors;
+the observed eight-block, 256-element-tile loop excludes empty iterations.
+A attempted the same exclusion but reassigned a runtime `PlainValue` to Python
+integer `0`, failing lowering before any launch. Its seven remaining pairs
+are unrun. There is no matched timing or hardware result, and this single pair
+does not isolate the paragraph's causal effect or establish general skill gains.
+
+The syntax reference now records the observed type error and B's qualified
+bounded-loop form. That addition is post-study learning, not part of the
+tested treatment. [Both unchanged sources, original failure and all outcomes](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-exp-empty-slots-study-20261127/exp-empty-slot-study-public-20261127-01.tar.gz)
+are archived with SHA256
+`408880faf79639eb34572cdd5ae922727c57b5e4cd8b5d169862ee8f2251f7c5`.
 
 ## CANNBench CaModel pilot
 

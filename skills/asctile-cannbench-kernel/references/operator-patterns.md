@@ -89,15 +89,21 @@ transfer. Pass three as the short loop's actual `unroll_factor`.
 Inspect both the fully unrolled and remainder bodies when blocks receive
 different tile counts. In retained Exp cases 7 and 12, 212 tiles over 72
 blocks gave 68 grid-stride blocks three tiles and four blocks two tiles.
-Those four blocks used the emitted remainder loop. The contiguous control
-scheduled three slots per block, bounding excess slots to zero valid lanes.
-Both sources kept the same FP32 arithmetic, tile/grid/unroll, cache policy
-and UB allocation for these cases. Times changed from 4.94 to 5.91 µs and
+Those four blocks used the emitted remainder loop. The historical contiguous
+control scheduled three slots per block and clamped excess slots to zero valid
+lanes. That clamp is not a safe copy guard: skip the whole load/arithmetic/store
+body when `off >= N` (or `valid <= 0`), including idle blocks. A numerical match
+does not excuse an illegal DMA diagnostic. Follow the
+[empty-tile execution example](../../asctile-build-run-verify/references/execution-example.md)
+and test partial tails and more blocks than live tiles.
+
+The two historical sources kept the same FP32 arithmetic, tile/grid/unroll,
+cache policy and UB allocation for these cases. Times changed from 4.94 to 5.91 µs and
 4.97 to 5.62 µs on different service runners. Runner variation prevents causal
 attribution from those timings. Test the suspected remainder-path cost by
 comparing the two schedules in one package on the same runner with matched
 compiler options and repeated measurements, preserving
-bounded tails and checking zero-valid slots. Select ownership from that
+bounded tails and excluding empty copies. Select ownership from that
 controlled comparison for the affected shape family.
 [Retained sources, lowering and terminal results](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-l1-performance-44170410287)
 
