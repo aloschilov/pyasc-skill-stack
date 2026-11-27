@@ -90,6 +90,14 @@ allowing the next request. It cannot cancel remote computation or guarantee a
 provider's billing behavior; missing/over-limit usage is retained as unknown and
 stops subsequent work. No blind request retries or automatic recovery are allowed.
 
+Provider completion and client delivery are recorded separately. A failed local
+response write stops the gate while preserving measured provider usage; even a
+successful socket write is not an application acknowledgement. Identical requests
+(after output-limit normalization and canonical JSON ordering) cannot be sent to
+the provider twice within an attempt. OpenCode's local `headerTimeout` covers the
+existing session deadline because the gate buffers the complete response before
+returning headers; this does not extend the watchdog or change model budgets.
+
 The process-group watchdog kills local children on deadline or cancellation;
 Docker cleanup is separately confirmed. All attempts, failed candidates, usage
 reservations, commands, hashes, timings and partial cell states stay outside Git.
@@ -215,7 +223,26 @@ exact Release baseline and checksum are checked before any generation. The polic
 snapshot/hash and controller hash are retained separately from execution inputs;
 changing the enable flag does not silently requalify an incompatible executor.
 
-The current policy selects [qualification-generation-45865783111](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-45865783111)
+The current policy selects [qualification-generation-45936861357](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-45936861357)
+on `b7706fd`, archive SHA256
+`4a39e4e437c0feec7d0a4afd45e71996cc6ca62c88d24d2496e2aa211c4f0138`.
+[CI 45936861357](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45936861357)
+qualified **3/3** fresh GLM-5.3 candidates with the client-delivery guard:
+nine real Model launches, 21 output/input checks and three rejecting suppressed-launch
+controls. All 240 archive members, 236 Bundle files and 105 execution-source hashes
+were verified. Executor time was 145.90 s; 13 unique requests used 5,317 output
+and 136,314 input tokens. Every response had complete provider usage and a recorded
+successful client write; this is not an application-level acknowledgement.
+The observed response cap remained 8,192, and the local client header timeout was
+301,000 ms, above the unchanged 300-second session deadline. No structured Model
+error diagnostics occurred. The earlier [45935029260](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45935029260)
+stopped in an offline test before generation; its final usage-save race was fixed
+and covered by a deterministic delivery-barrier test before this new run.
+This qualification does not establish an independent comparison or a scheduled
+result on the new helper revision. The code and compatible pointer are delivered
+together; execution compatibility and numerical criteria remain strict.
+
+The preceding baseline [qualification-generation-45865783111](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-generation-45865783111)
 on `a885e34`, archive SHA256
 `1129df7d48340f0072a6f6ff9a28a449619d90638c328eb26b86d655e3793d98`.
 [CI 45865783111](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45865783111)
