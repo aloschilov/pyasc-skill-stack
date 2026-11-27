@@ -133,7 +133,8 @@ of the adapters/executor, **not** newly generated-kernel or hardware qualificati
 
 The controller and independent alert/recovery path passed the revised manual
 acceptance on 2026-11-06; see the [retained results](#manual-controller-acceptance-2026-11-06).
-Actual cron delivery remains unverified. The controller and health observer are
+[Actual scheduled single-generation recovery](#scheduled-single-generation-recovery-2026-11-27)
+was verified on 2026-11-27; its recovery notification remains unconfirmed. The controller and health observer are
 described below. #23 skills-effect comparisons and #24 model diversity
 reuse these contracts; #20 owns separate reviewer/tuner handoffs.
 
@@ -242,7 +243,42 @@ passed 3/3 with nine Model launches, 21 checks and three rejecting controls;
 [the observer](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45863312303)
 reported `verified-manual`. Updating the verifier requires the new baseline above;
 no source compatibility fields or numerical criteria were relaxed. Qualification
-alone does not establish a comparison on the new verifier or scheduled recovery.
+alone does not establish a comparison on the new verifier or scheduled recovery;
+the later scheduled result below supplies that evidence for the single-generation lane.
+
+### Scheduled single-generation recovery, 2026-11-27
+
+[Run 45920011665](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/45920011665)
+is an actual `schedule` event for `generation-nightly.yml`, attempt 1 on
+`e4fb754f`. It executed three fresh GLM-5.3 candidates (add/reduce/broadcast):
+**3/3 passed**, nine unsuppressed Launcher calls, 21 post-launch assertions and
+three rejecting suppressed-launch controls. No structured Model errors or
+hardware evaluation occurred. The comparison with the selected `45865783111`
+baseline passed with compatible inputs, no lost PASS and no coverage gaps.
+All 241 indexed archive members and 105 execution-source snapshots were verified.
+The retained `generation.tar.gz` SHA256 is
+`24db179b0beb3277fdf827878fa7a344a650f2a80f85384792533318e58b6f4d`.
+A [durable selected subset](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-scheduled-generation-45920011665)
+retains the candidates, sanitized result/comparison and original archive index;
+its distinct SHA256 is
+`a9311c24b9f2d93dbcf55903944b05caaea9f1e5fe509b77a0b472dcf6afb77b`.
+The subset is not the full generation archive.
+
+Executor time was 161.82 s (qualify job 182 s); 14 completed requests used
+6,492 output tokens, including 5,251 reasoning tokens. GitHub recorded the
+schedule event at 01:00:12 UTC despite the declared 17:17 UTC cron. This proves
+execution from a schedule event, not punctual delivery or coverage of the
+paired/model-diversity lanes.
+
+A separate local GET-only observer check at 01:47:45 UTC reported `healthy`
+for `scheduled-coverage`, selected this run as `last_qualified`, and found no
+alerts. It sent no notification and does not establish issue closure.
+
+**Recovery notification remains unconfirmed.** The prior observer and issue #37
+still recorded the older failure. A later explicit observer dispatch returned
+HTTP 500; its outcome is **UNKNOWN**, retained for reconciliation without a
+retry. This run does not establish notification recovery, improved performance
+or broader generator correctness. Earlier manual evidence remains historical.
 
 The earlier integrated `asctile-*` baseline remains immutable historical evidence:
 [run 42237343185](https://github.com/aloschilov/pyasc-skill-stack/actions/runs/42237343185)
@@ -389,7 +425,9 @@ fresh coverage without recorded completion time. This tool produces alert record
 and nonzero exits; it does not itself monitor a schedule, send notifications or
 prove that a scheduled job ran. The health observer implements the independent
 checks and explicit issue-update path. Subsequent manual controller and live
-alert/recovery acceptance is recorded below; actual cron delivery remains unverified.
+alert/recovery acceptance is recorded below; the later
+[scheduled single-generation result](#scheduled-single-generation-recovery-2026-11-27)
+qualifies that lane, with notification recovery still unconfirmed.
 
 ## Manual pilot, 2026-11-06
 
@@ -473,7 +511,9 @@ The user accepted manual dispatch instead of waiting for cron for #22/#23/#24.
 Single and paired production controllers ran on `ab28634`; the model controller
 used `42b2e84` with explicit low reasoning for both arms. Hosted recovery
 retains each observer's exact revision in the archive. Schedules remain enabled,
-but actual cron delivery is **unverified**.
+but actual cron delivery was **unverified at that acceptance**. The later
+[scheduled single-generation result](#scheduled-single-generation-recovery-2026-11-27)
+is separate evidence; it does not qualify the other lanes or their notifications.
 The hourly observer retains missing/stale scheduled-coverage checks.
 
 | Experiment | Run | Complete inventory | Qualified candidates | Qualified Model launches / numerical checks / rejecting controls | Executor time |
