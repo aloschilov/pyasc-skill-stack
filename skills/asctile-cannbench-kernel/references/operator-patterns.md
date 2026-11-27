@@ -363,6 +363,14 @@ generated candidates. The passing repair does not isolate the original NaN
 mismatch's cause. Avoid host copy fallbacks; independently qualify short rows,
 tails and NaN/Inf positions for every new candidate.
 
+For an FP16/BF16 pointwise fallback with FP32 intermediates, consider a
+separate `vf_fusion=False/True` comparison after choosing the copy layout.
+Keep arithmetic, tile, grid and other JIT options fixed; inspect emitted
+code and compiler UB, then recheck tails and native NaN/Inf masks for each
+dtype before comparing warmed timings. The [measured fallback controls](../../asctile-api-patterns/references/cann-performance-tuning.md#read-the-metrics-without-overclaiming)
+justify testing this option on that body, not enabling it globally: the
+retained gains are manual CaModel results, not hardware or generation gains.
+
 For SwiGLU, normalize the split axis first. When the contiguous BF16 input
 is split on its final axis of length two, each row is a neighbor pair
 `(gate, value)`. Select the implementation for the active build using the
