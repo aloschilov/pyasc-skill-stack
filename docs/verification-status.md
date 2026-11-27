@@ -19,6 +19,7 @@ prerequisites or resource blocks do not count as successful coverage.
 | Manual generation CI | **Passed** on `ab28634`: 3/3 fresh GLM-5.3 candidates, nine Model launches, 21 numerical checks, three rejecting controls, 253.91 s executor. [Current run and archive](../tests/generation/README.md#manual-controller-acceptance-2026-11-06). No NPU or scheduled claim. |
 | Generation regression comparison | **Passed** for scheduled run `45920011665` against the selected immutable baseline `45865783111`: compatible inputs, 3/3 candidates, no lost PASS or coverage gaps. Scheduled recovery notification remains unconfirmed. [Result](../tests/generation/README.md#scheduled-single-generation-recovery-2026-11-27). |
 | Paired context experiment | **Passed** for complete manual measurement: 24 auditable trials; P6 4/6, P2/P3/P4 each 0/6, all failures retained. Conditional intervals include zero; no general skills benefit. Hosted recovery confirmed. [Result and archive](../tests/generation/README.md#manual-controller-acceptance-2026-11-06). |
+| Targeted SwiGLU fallback guidance | **Passed** for a four-session GLM-5.3 comparison and separately measured CaModel candidates. B used fewer ticks on six fixed shapes; the paragraph's causal benefit and hardware performance remain unestablished. [Protocols, outcomes and checksums](#fallback-guidance-comparison-2026-11-27). |
 | Multiple models | **Passed** for current 24-trial manual comparison with two actual response identities on one gateway; 7 qualified candidates and all failures retained. Hosted recovery confirmed; no general benefit, model ranking or scheduled claim. [Results and archive](../tests/generation/README.md#manual-controller-acceptance-2026-11-06). |
 | Public evidence dashboard | **Passed** for manual publication of five retained records, with public bytes matching the Pages artifact. [Publication identity, archive and limitations](../dashboard/README.md#public-publication-qualification-2026-11-06). This is a view of existing qualifications, not new numerical coverage or continuous monitoring. |
 
@@ -34,6 +35,32 @@ qualified fixed Add experiment: canonical Ascend C versus PyASC with fusion
 off/on, matching runtime bytes, per-launch ticks, numerics and negative controls.
 Its descriptive ratios are not NPU performance claims; fusion emitted an
 identical binary in this sample.
+
+## Fallback guidance comparison — 2026-11-27
+
+Four fresh GLM-5.3-low/OpenCode 1.19.0 sessions compared `3f489799` with
+`fca9806a`, differing only in eight lines directing fallback tuning to existing
+measured controls. All final candidate bytes and outcomes are retained: 38
+completed requests and 82,198 output tokens, with no retries in this study.
+
+The original checker qualified 3/4 candidates and rejected baseline FP16 before
+execution for `torch.is_tensor`. A separate common checker allowing that pure
+type predicate qualified all four unchanged sources: 24 real numerical calls
+and 24 rejecting suppressed controls across three shapes per dtype and two
+seeds. This does not replace the original result.
+
+Separate counterbalanced timing retained 192 real calls, 144 warmed samples
+and 12 rejecting controls. B used fewer Model ticks on all six fixed shapes
+(A/B ratios 1.046669–1.542978); both orders agreed. Layouts, tiles and some grids
+differed. Both B sessions read the paragraph but not the linked guide and used
+VF off; baseline FP16 read the guide and used VF on. These candidate outcomes
+do not isolate the paragraph or VF, establish general skill improvement, or
+predict NPU latency and CANNBench scores.
+
+| Immutable evidence | SHA256 |
+|---|---|
+| [Generation and both qualification protocols](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-vf-entry-study-20261127/vf-entry-study-public-20261127-01.tar.gz) | `5ea2c6a8bf74dcb7759435b727182c8f44659de02576bda2e9bd8ad9266ba97d` |
+| [Timing, actual geometry and compiler UB](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-vf-entry-study-20261127/vf-entry-timing-supplement-20261127-02.tar.gz) | `a3cf4341b2d0801d63882774e4866ce86a18b957a88c53ea3f37d9ed8497fa42` |
 
 ## CANNBench CaModel pilot
 
