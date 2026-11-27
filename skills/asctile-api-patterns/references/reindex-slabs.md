@@ -13,8 +13,15 @@ It also covers contiguous BF16 pairs (`H=1`, normalized final axis of length
 two). On this public build with cached int32 indices, let dense pairs reach
 the same gather selector as other short BF16 halves. An early return for
 the legacy transpose specialization would hide the eligible gather. For a new module, define a public slab kernel and call it from the
-host selector. View input and output as rank-one descriptors. Build reusable
-integer lane metadata on the host with `k = torch.arange(T*H, dtype=torch.int32,
+host selector. View input and output as rank-one descriptors.
+
+The `arange` recipe below uses Torch tensor arithmetic even though its
+indices depend only on geometry. If the task forbids that arithmetic,
+use a bounded list of scalar integers with an explicitly permitted tensor
+constructor, or choose a nonindexed row/chunk route. Keep every dispatch
+branch within the contract, including branches not selected by current checks.
+
+Build reusable integer lane metadata on the host with `k = torch.arange(T*H, dtype=torch.int32,
 device=input.device)`, `gate_idx = 2*H*(k//H) + k%H` and
 `value_idx = gate_idx + H`. Cache by device, H and T. This metadata
 is independent of input values. Pass the index tensors as kernel arguments
