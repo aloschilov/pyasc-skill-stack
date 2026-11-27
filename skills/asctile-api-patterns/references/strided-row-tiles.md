@@ -38,6 +38,17 @@ padding. The copy's real shape still uses H.
   the height at unroll 1. Launch min(available AIVs, ceil(rows/T)) blocks.
   The grid-stride loop owns the final partial tile.
 
+For positive row count R and runtime-reported positive AIV count N, if
+`ceil(R/T) < N`, also compare `T_alt = min(T, ceil_pow2(ceil(R/N)))`,
+where `ceil_pow2` rounds up to a power of two. Recompute the launch grid
+as `min(N, ceil(R/T_alt))`. Keep the row route, physical width W, math,
+cache policy, JIT options and unroll=1 fixed. This jointly compares tile
+height and launch parallelism; it does not isolate a grid-only effect.
+Record the reported N, actual grid and emitted UB for both choices, and
+bound copies by the true row count. Retain the old choice until both
+variants pass numerical checks and paired timing qualification. This is
+a comparison candidate, not a universal height default.
+
 For positive row count R, compare the UB-qualified power-of-two height T
 with `min(T, ceil_pow2(R))`, where `ceil_pow2(R)` is the smallest power of
 two at least R. If the cap changes T, both heights cover R in one tile;
