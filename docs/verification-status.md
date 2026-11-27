@@ -19,7 +19,7 @@ prerequisites or resource blocks do not count as successful coverage.
 | Manual generation CI | **Passed** on `ab28634`: 3/3 fresh GLM-5.3 candidates, nine Model launches, 21 numerical checks, three rejecting controls, 253.91 s executor. [Current run and archive](../tests/generation/README.md#manual-controller-acceptance-2026-11-06). No NPU or scheduled claim. |
 | Generation regression comparison | **Passed** for scheduled run `45920011665` against the selected immutable baseline `45865783111`: compatible inputs, 3/3 candidates, no lost PASS or coverage gaps. Scheduled recovery notification remains unconfirmed. [Result](../tests/generation/README.md#scheduled-single-generation-recovery-2026-11-27). |
 | Paired context experiment | **Passed** for complete manual measurement: 24 auditable trials; P6 4/6, P2/P3/P4 each 0/6, all failures retained. Conditional intervals include zero; no general skills benefit. Hosted recovery confirmed. [Result and archive](../tests/generation/README.md#manual-controller-acceptance-2026-11-06). |
-| Targeted SwiGLU fallback guidance | **Passed** for a four-session GLM-5.3 comparison and separately measured CaModel candidates. B used fewer ticks on six fixed shapes; the paragraph's causal benefit and hardware performance remain unestablished. [Protocols, outcomes and checksums](#fallback-guidance-comparison-2026-11-27). |
+| Targeted SwiGLU fallback guidance | **Correctness passed; timing mixed across cohorts.** The original B candidates used fewer CaModel ticks on six shapes. A separate four-session replication improved BF16 but regressed FP16 on all three shapes each. No general skill-benefit or hardware claim. [Protocols, outcomes and checksums](#fallback-guidance-comparison-2026-11-27). |
 | Exp empty-slot guidance | Original B **passed** and A **failed** lowering; the A → B replication **passed both arms**, each with eight real checks and eight rejecting controls. Predeclared tie/nonreplication; no general benefit claim. [All four outcomes and checksums](#exp-empty-slot-comparison-2026-11-27). |
 | Multiple models | **Passed** for current 24-trial manual comparison with two actual response identities on one gateway; 7 qualified candidates and all failures retained. Hosted recovery confirmed; no general benefit, model ranking or scheduled claim. [Results and archive](../tests/generation/README.md#manual-controller-acceptance-2026-11-06). |
 | Public evidence dashboard | **Passed** for manual publication of five retained records, with public bytes matching the Pages artifact. [Publication identity, archive and limitations](../dashboard/README.md#public-publication-qualification-2026-11-06). This is a view of existing qualifications, not new numerical coverage or continuous monitoring. |
@@ -58,10 +58,43 @@ VF off; baseline FP16 read the guide and used VF on. These candidate outcomes
 do not isolate the paragraph or VF, establish general skill improvement, or
 predict NPU latency and CANNBench scores.
 
+A separate four-session replication reversed the generation order within each
+dtype, retaining the same arm revisions, prompts, profile and common checker.
+All four unchanged sources passed 24 real numerical checks and 24 rejecting
+controls. Its 30 completed requests account for 67,192 completion tokens; every
+request used the profile-native output limit of 32,768. No source was repaired,
+replaced or selected from an earlier write.
+
+The replication retained another 192 real timing calls, 144 warmed samples and
+12 rejecting controls. Both counterbalanced orders agreed per shape:
+
+| Dtype | R / H | Replication A/B Model ticks | B compared with A |
+| --- | --- | ---: | --- |
+| FP16 | 7 / 47 | 0.883959 | 13.13% more ticks |
+| FP16 | 35 / 127 | 0.612197 | 63.35% more ticks |
+| FP16 | 71 / 511 | 0.529667 | 88.80% more ticks |
+| BF16 | 9 / 79 | 1.137578 | 12.09% fewer ticks |
+| BF16 | 37 / 383 | 1.667380 | 40.03% fewer ticks |
+| BF16 | 73 / 1025 | 1.511688 | 33.85% fewer ticks |
+
+All replication kernels used VF off and `reuse_alloc=2`. FP16 B chose larger
+row tiles and fewer blocks; BF16 B chose flat chunks instead of A's row tiles.
+The original FP16 advantage did not replicate. These results do not isolate
+the guidance paragraph, tile height, grid or VF as the cause, and are not pooled
+into an overall improvement claim. Qualification remains limited to the six
+finite, contiguous synthetic shapes and two seeds, not the CANNBench domain.
+
+The first timing attempt stopped on a stale adapter binding for the candidates'
+native resource caches. Its five real calls, two controls and three samples are
+preserved and excluded. Corrected complete schedules changed only those cache
+bindings; 18 guard checks retained rejection of other global/JIT changes and
+post-warmup cache mutations. Candidate bytes and numerical checks stayed fixed.
+
 | Immutable evidence | SHA256 |
 |---|---|
 | [Generation and both qualification protocols](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-vf-entry-study-20261127/vf-entry-study-public-20261127-01.tar.gz) | `5ea2c6a8bf74dcb7759435b727182c8f44659de02576bda2e9bd8ad9266ba97d` |
 | [Timing, actual geometry and compiler UB](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-vf-entry-study-20261127/vf-entry-timing-supplement-20261127-02.tar.gz) | `a3cf4341b2d0801d63882774e4866ce86a18b957a88c53ea3f37d9ed8497fa42` |
+| [Replication: all four sources, outcomes and samples](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-vf-entry-study-20261127/vf-entry-replication-public-20261127-02.tar.gz) | `83a08c8c767a3feea448cca7fbb3f810725083edb7918fca17ed7b262a1a8f9a` |
 
 ## Exp empty-slot comparison — 2026-11-27
 
