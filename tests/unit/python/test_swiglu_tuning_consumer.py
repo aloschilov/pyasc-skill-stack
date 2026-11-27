@@ -50,7 +50,7 @@ class NativePreflightTests(unittest.TestCase):
         self.assertEqual(len(errors),1);self.assertTrue(gate.failed);gate.release()
         with self.assertRaises(ValueError):gate.reserve({'id':3})
     def test_documented_timeouts_exact(self):
-        for action,timeout in [('baseline',300000),('variant',300000),('compare',600000),('decision',300000)]:
+        for action,timeout in [('baseline',300000),('variant',300000),('compare-1',600000),('compare-2',600000),('compare-3',600000),('decision',300000)]:
             command=commands('/recipe')[action]
             self.assertEqual(validate_bash({'command':command,'timeout':timeout},'/recipe','/project'),action)
             for wrong in (None,1000,120000,timeout-1,timeout+1,570000):

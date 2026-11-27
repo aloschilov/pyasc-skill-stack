@@ -4,7 +4,8 @@ import json
 import os
 from pathlib import Path
 
-ACTIONS = ('baseline', 'variant', 'compare', 'decision')
+COMPARE_ACTIONS = ('compare-1', 'compare-2', 'compare-3')
+ACTIONS = ('baseline', 'variant', *COMPARE_ACTIONS, 'decision')
 LIMITS = dict(rounds_per_attempt=12, generation_seconds_per_attempt=2700,
               max_output_tokens=200000, output_tokens_per_response=32768)
 
@@ -35,7 +36,7 @@ def validate_bash(data, recipe, project):
         raise ValueError('Different tool workdir')
     timeout = data.get('timeout')
     action = next(a for a,c in rows.items() if c == command)
-    expected = {'baseline':300000, 'variant':300000, 'compare':600000, 'decision':300000}[action]
+    expected = 600000 if action in COMPARE_ACTIONS else 300000
     if type(timeout) is not int or timeout != expected:
         raise ValueError('Explicit native timeout insufficient or outside OpenCode cap')
     return action

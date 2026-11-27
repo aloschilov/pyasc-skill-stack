@@ -13,9 +13,9 @@ from non_tool_budget import gate_type
 class DeliveryTests(unittest.TestCase):
     def body(self,arguments,name='bash'):
         return {'choices':[{'index':0,'message':{'tool_calls':[{'id':'call_1','type':'function','function':{'name':name,'arguments':json.dumps(arguments)}}]}}]}
-    def arguments(self):return {'command':commands('/recipe')['compare'],'timeout':600000}
+    def arguments(self):return {'command':commands('/recipe')['compare-1'],'timeout':600000}
     def check(self,body):return audit(json.dumps(body).encode(),False,{'bash','read','write','edit','skill'},'/recipe','/consumer')
-    def test_valid_nonstream(self):self.assertEqual(self.check(self.body(self.arguments()))['tool_calls'][0]['action'],'compare')
+    def test_valid_nonstream(self):self.assertEqual(self.check(self.body(self.arguments()))['tool_calls'][0]['action'],'compare-1')
     def test_default_timeout_blocked_before_delivery(self):
         args=self.arguments();del args['timeout']
         with self.assertRaises(ValueError):self.check(self.body(args))
@@ -31,7 +31,7 @@ class DeliveryTests(unittest.TestCase):
     def test_fragmented_stream(self):
         args=json.dumps(self.arguments());parts=[{'choices':[{'index':0,'delta':{'tool_calls':[{'index':0,'id':'call_1','type':'function','function':{'name':'bash','arguments':args[:20]}}]}}]},{'choices':[{'index':0,'delta':{'tool_calls':[{'index':0,'function':{'arguments':args[20:]}}]}}]}]
         raw=('\n\n'.join('data: '+json.dumps(p)for p in parts)+'\n\ndata: [DONE]\n').encode()
-        self.assertEqual(audit(raw,True,{'bash'},'/recipe','/consumer')['tool_calls'][0]['action'],'compare')
+        self.assertEqual(audit(raw,True,{'bash'},'/recipe','/consumer')['tool_calls'][0]['action'],'compare-1')
     def test_incomplete_stream(self):
         with self.assertRaises(ValueError):audit(b'data: {}\n',True,{'bash'},'/recipe','/consumer')
     def test_rejected_tool_never_delivered_raw_retained(self):

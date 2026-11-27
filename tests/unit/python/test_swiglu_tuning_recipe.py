@@ -42,7 +42,7 @@ class SelectionTests(unittest.TestCase):
         with self.assertRaises(ValueError):select(self.result([(float('nan'),1)]*3),['0','1','2'])
 
 class InterfaceTests(unittest.TestCase):
-    def test_exact_command(self):self.assertEqual(validate_bash({'command':commands('/trusted/recipe')['compare'],'timeout':600000},'/trusted/recipe','/consumer'),'compare')
+    def test_exact_command(self):self.assertEqual(validate_bash({'command':commands('/trusted/recipe')['compare-1'],'timeout':600000},'/trusted/recipe','/consumer'),'compare-1')
     def test_shell_and_timeout_rejected(self):
         good=commands('/trusted/recipe')['baseline']
         for command in (good+'; id',good+' && id',good+'\nid',good+' ',good.replace('baseline','baseline --retry'),'docker run image','python3 /tmp/tool.py baseline'):
@@ -53,7 +53,7 @@ class InterfaceTests(unittest.TestCase):
         with self.assertRaises(ValueError):validate_bash({'command':commands('/trusted/recipe')['baseline'],'timeout':300000,'workdir':'/tmp'},'/trusted/recipe','/consumer')
     def test_permissions(self):
         c=tool_config({'permission':{'read':{'*':'deny'},'external_directory':{'*':'deny'}}},'/trusted/recipe','/consumer')
-        self.assertEqual(c['permission']['bash']['*'],'deny');self.assertEqual(len(c['permission']['bash']),5)
+        self.assertEqual(c['permission']['bash']['*'],'deny');self.assertEqual(len(c['permission']['bash']),7)
         self.assertEqual(c['permission']['edit'].get('baseline.py'),'deny' if 'baseline.py' in c['permission']['edit'] else None)
     def test_provider_schema(self):
         body={'tools':[{'function':{'name':'bash','parameters':{'properties':{'command':{},'timeout':{}}}}}]}
@@ -92,31 +92,31 @@ class TimingResourceBudgetTests(unittest.TestCase):
     def test_exact_native_fit(self):
         from tool import comparison_wait_seconds
         from non_tool_budget import CAPS
-        self.assertEqual(comparison_wait_seconds(100,105),585)
-        self.assertEqual(5+585+5,CAPS['compare'])
-        self.assertLess(CAPS['compare'],600)
+        self.assertEqual(comparison_wait_seconds(100,120),370)
+        self.assertEqual(20+370+10,CAPS['compare-1'])
+        self.assertLess(CAPS['compare-1'],600)
     def test_delayed_preparation_stops_before_model_dispatch(self):
         from tool import invoke_owned,TimingBudgetExceeded
-        with patch('tool.time.monotonic',return_value=105.001),patch('tool.subprocess.run') as launch:
-            with self.assertRaises(TimingBudgetExceeded):invoke_owned(Path('/owned'),580,'compare',100)
+        with patch('tool.time.monotonic',return_value=120.001),patch('tool.subprocess.run') as launch:
+            with self.assertRaises(TimingBudgetExceeded):invoke_owned(Path('/owned'),360,'compare-1',100)
             launch.assert_not_called()
-    def test_exact_remaining_budget_uses_585_wait(self):
+    def test_exact_remaining_budget_uses_370_wait(self):
         from tool import invoke_owned
-        with patch('tool.time.monotonic',return_value=105),patch('tool.subprocess.run') as launch:
-            invoke_owned(Path('/owned'),580,'compare',100)
-            self.assertEqual(launch.call_count,1);self.assertEqual(launch.call_args.kwargs['timeout'],585)
+        with patch('tool.time.monotonic',return_value=120),patch('tool.subprocess.run') as launch:
+            invoke_owned(Path('/owned'),360,'compare-1',100)
+            self.assertEqual(launch.call_count,1);self.assertEqual(launch.call_args.kwargs['timeout'],370)
     def test_compare_owner_client_and_baseline_remain_bounded(self):
         import tool
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);fixture=root/'recipe';fixture.mkdir();(fixture/'engine/probe').mkdir(parents=True)
             (fixture/'engine/probe/qualification-plan.json').write_text(json.dumps({'runtime':json.loads((RECIPE/'engine-lock.json').read_text())['runtime']}))
             (fixture/'supervisor-template.py.txt').write_bytes((RECIPE/'supervisor-template.py.txt').read_bytes())
-            scope=root/'compare';scope.mkdir()
-            with patch.object(tool,'ROOT',fixture):prepare_command(scope,[],['timeout','-k','5','560','true'],580,96)
+            scope=root/'compare-1';scope.mkdir()
+            with patch.object(tool,'ROOT',fixture):prepare_command(scope,[],['timeout','-k','5','330','true'],360,32)
             code=(scope/'owned-invocation.py').read_text()
-            self.assertIn('deadline=start+580',code);self.assertIn('timeout=bounded(560,reserve=20)',code)
+            self.assertIn('deadline=start+360',code);self.assertIn('timeout=bounded(335,reserve=25)',code)
             self.assertFalse((scope/'run-intent.json').exists())
-        with patch('tool.time.monotonic',return_value=105),patch('tool.subprocess.run') as launch:
+        with patch('tool.time.monotonic',return_value=120),patch('tool.subprocess.run') as launch:
             tool.invoke_owned(Path('/owned'),240,'baseline',100)
             self.assertEqual(launch.call_args.kwargs['timeout'],250)
 

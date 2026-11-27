@@ -6,7 +6,7 @@ import math
 import time
 import threading
 
-CAPS={'baseline':270,'variant':270,'compare':595,'decision':10}
+CAPS={'baseline':270,'variant':270,'compare-1':400,'compare-2':400,'compare-3':400,'decision':10}
 
 def remaining(start,whole,now,receipts,active=()):
     intervals=[];pins=[];live_pins=[]

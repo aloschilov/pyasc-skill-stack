@@ -95,7 +95,7 @@ def run_once(checkout, recipe, attempt, context, ledger, plan, profile_config):
             assert row['request_settings']['output_limit_fields']=={'max_tokens':32768}
             rounds.append({'usage':row['usage'],'wire_output_limit_fields':row['request_settings']['output_limit_fields'],'request_sha256':row['request_sha256'],'response_sha256':row['response_sha256']})
         performed={r['action']:r['status']for r in receipts if 'action'in r}
-        procedure={'baseline_qualified':performed.get('baseline')=='passed','variant_attempt_recorded':'variant'in performed,'comparison_completed':performed.get('compare')=='passed','model_decision_bound':performed.get('decision')=='passed'}
+        procedure={'baseline_qualified':performed.get('baseline')=='passed','variant_attempt_recorded':'variant'in performed,'comparison_completed':all(performed.get(a)=='passed'for a in ('compare-1','compare-2','compare-3')),'model_decision_bound':performed.get('decision')=='passed'}
         procedure['completed']=procedure['baseline_qualified'] and procedure['variant_attempt_recorded'] and procedure['model_decision_bound'] and (procedure['comparison_completed'] or performed.get('variant')=='failed')
         save(attempt/'tuning-accounting.json',{'rounds':rounds,'procedure':procedure,'native_trace':trace,'tool_receipts':receipts,'native_source_binding':source_binding,'native_events_sha256':sha(attempt/'generation.stdout'),'usage_sha256':sha(attempt/'usage.json'),'latch_retained_for_original_dispatcher_cleanup':True})
         assert json.loads(lease.read_text())['run_dir']==str(attempt)

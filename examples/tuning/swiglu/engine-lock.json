@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "artifact": "swiglu-row-tuning-engine-v2.tar.gz",
-  "sha256": "85979448d3b0d1a77e9c4b36c4f167fd90249089f332d1df732bfe61cf404f1d",
-  "bytes": 55375,
-  "source_index_sha256": "b1b6f5f770c55ab1478f86cb4aba4064798e4ae18cdc65fe24dec2859bcef807",
-  "publication": "Published source-only v2 dependency; not a qualification result",
+  "artifact": "swiglu-row-tuning-engine-v3.tar.gz",
+  "sha256": "eaec7a2e81fcdb1abd4a6477d47cc89508ffc8aa9ae5c3a62ca9c83b946b4a86",
+  "bytes": 55674,
+  "source_index_sha256": "c8bf746b314533e55f672befba8cd9adf0074cd96a10f5ae6d2a5c91e2cdfa0c",
+  "publication": "Published source-only v3 dependency; complete clean qualification still required",
   "runtime": {
     "image": "ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:1efdcc8585b769715f640e9c9078c2e03cdf2157082d05b0c4b87974beea7407",
     "pyasc_revision": "ed793e45763498a0becc71f33cadca86ab94bda5",
@@ -51,10 +51,10 @@
     "engine/probe/trusted-fixture-draft.py": "1e6f68bcb71a45474eaf8eaccbbc5d224dadb799f98fd2b44361dcb6f7de3cd9",
     "engine/protocol.py": "a409eb027447276bb7cbc8dc7f1d5294920a5f522c4ece103c25edeca5f1655f",
     "engine/qualification_observe.py": "45593492a5f64915fe1ef1db2657490557e49f275411a86d2b968785eded3dd4",
-    "engine/run_timing.py": "47db2b1ba1e56f59df8e1d335a0ac000b5a3255618fdc5f8cd56b64058da275e",
+    "engine/run_timing.py": "b7d2c06a7278aeff0ba436185ef98f958572cf7f4a531642e3766412242fd83d",
     "engine/runtime_gate.py": "be5abe8612bd4a7d5db259c4f606464dc4142710079071f5daed310cd826f716",
     "engine/series_control.py": "ec17f957e0ba1e79ab44d4d0e69ccc469104639aeb1a625cf642e4f684f1ad14",
     "engine/telemetry.py": "b2256c2a3368355498965db0089ddf82507d8140e3d58b758da58d75ec161237"
   },
-  "url": "https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-vf-entry-study-20261127/swiglu-row-tuning-engine-v2.tar.gz"
+  "url": "https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-vf-entry-study-20261127/swiglu-row-tuning-engine-v3.tar.gz"
 }

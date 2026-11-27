@@ -41,10 +41,10 @@ class WatchdogTests(unittest.TestCase):
         watch=self.watch();self.now=500;self.assertIsNone(watch())
         self.now=999;self.assertIsNone(watch());self.now=1000;self.assertTrue(watch())
     def test_live_compare_gets_only_bounded_actual_elapsed_credit(self):
-        self.live('compare');watch=self.watch();self.now=1300
+        self.live('compare-1');watch=self.watch();self.now=1200
         self.assertIsNone(watch());self.assertFalse(self.reports)
-        self.now=1445;self.assertIsNone(watch())  # exactly 595 seconds credited
-        self.now=1445.001;self.assertIn('invalid',watch())
+        self.now=1250;self.assertIsNone(watch())  # exactly 400 seconds credited
+        self.now=1250.001;self.assertIn('invalid',watch())
     def test_active_pid_mismatch_stops(self):
         self.live();self.identities[123]='different';self.now=900
         self.assertIn('invalid',self.watch()())
@@ -89,10 +89,10 @@ class WatchdogTests(unittest.TestCase):
         (self.work/'baseline-clock.json').unlink()
         with self.assertRaises(ValueError):read_intervals(self.work,self.owner,allow_live=True,identity=self.identities.get)
     def test_whole_deadline_never_extended_by_live_tool(self):
-        self.live('compare',900);watch=self.watch(100,1200);self.now=1200
+        self.live('compare-1',900);watch=self.watch(100,1200);self.now=1200
         self.assertIn('Whole session',watch())
     def test_two_active_or_overlapping_completed_tools_rejected(self):
-        self.live('baseline',800);self.live('compare',850);self.now=900
+        self.live('baseline',800);self.live('compare-1',850);self.now=900
         self.assertIn('invalid',self.watch()())
     def test_foreign_clock_not_credited(self):
         self.live();path=self.work/'baseline-clock.json';row=json.loads(path.read_text());row['attempt']='/other'

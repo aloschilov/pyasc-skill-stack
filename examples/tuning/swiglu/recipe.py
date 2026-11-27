@@ -302,7 +302,7 @@ def preflight(directory):
         save(directory/'execution-intent.json',{'mode':'zero-model-native-preflight','readiness':readiness,'no_retry':True})
         try:
             cpu=owned_cpu(directory,helper)
-            config=configure_owned(directory,prepared,attempt,cpu,1650)
+            config=configure_owned(directory,prepared,attempt,cpu,2700)
             baseline=(directory/'recipe/baseline.py').read_text()
             old='    T = max(T, 1)\n'
             new='    T = min(T, _pow2_ceil((R - 1) // aiv + 1))\n'+old
@@ -313,12 +313,12 @@ def preflight(directory):
             (attempt/'retained-variant.py').write_text(variant)
             spec=importlib.util.spec_from_file_location('native_swiglu_preflight',directory/'recipe/native_preflight.py')
             native=importlib.util.module_from_spec(spec);spec.loader.exec_module(native)
-            result=native.run(CHECKOUT,directory/'recipe',Path(config['project']),Path(prepared['context']),Path(config['work']),attempt,time.monotonic()+1500)
+            result=native.run(CHECKOUT,directory/'recipe',Path(config['project']),Path(prepared['context']),Path(config['work']),attempt,time.monotonic()+2600)
             retire_owned(directory,prepared,attempt,lease)
             report={'status':'passed','synthetic_native_fixture':True,'model_calls':0,'service_submissions':0,
                     'recipe_index_sha256':prepared['recipe_index_sha256'],'engine_sha256':prepared['engine_sha256'],
                     'cpu_receipt_sha256':sha(cpu),'cpu_receipt':str(cpu),'native_proof_sha256':sha(attempt/'native-preflight-proof.json'),
-                    'owner_cleanup_sha256':sha(directory/'owner-cleanup.json'),'actual_outcomes':{a:load(directory/'evaluation'/a/'public-receipt.json')for a in ('baseline','variant','compare','decision')}}
+                    'owner_cleanup_sha256':sha(directory/'owner-cleanup.json'),'actual_outcomes':{a:load(directory/'evaluation'/a/'public-receipt.json')for a in ('baseline','variant','compare-1','compare-2','compare-3','decision')}}
             save(directory/'preflight.json',report)
             return report
         except BaseException as exc:
