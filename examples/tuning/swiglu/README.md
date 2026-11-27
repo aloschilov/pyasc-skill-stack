@@ -2,9 +2,9 @@
 
 This checkout recipe lets OpenCode qualify a supplied SwiGLU baseline, propose one parameter change, compare the unchanged snapshots in CaModel, and select from actual measurements. It uses the existing installer, generation executor and numerical verifier. The skills-only archive does not include this evaluator.
 
-**Readiness:** source and offline checks are available. The clean Linux/native OpenCode preflight below must pass before a model session is admitted. No new hardware result is claimed by this recipe or its source dependency archive.
+**Readiness:** source and offline checks are available; the v2 source dependency is published. The clean Linux/native OpenCode preflight below must pass before a model session is admitted. No new hardware result is claimed by this recipe or its source dependency archive.
 
-The public [source dependency](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-vf-entry-study-20261127/swiglu-row-tuning-engine-v1.tar.gz) contains the pinned CaModel qualification/timing helpers and official CANN comparator sources. Its SHA256 is `dc3839abb8fc2d4ca4fc9dae0d16c7b18c53e6bc2b81f92e424893eb794745e2`. The entry checks every source member against [engine-lock.json](engine-lock.json), rejects links and unexpected members, and copies the existing checkout checker by hash. Source licenses and provenance accompany the dependency; no runtime wheel, result tensor or provider transcript is included.
+The public [source dependency](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-vf-entry-study-20261127/swiglu-row-tuning-engine-v2.tar.gz) contains the pinned CaModel qualification/timing helpers and official CANN comparator sources. Its SHA256 is `85979448d3b0d1a77e9c4b36c4f167fd90249089f332d1df732bfe61cf404f1d`. Version 2 changes only the aggregate timing budget and its diagnostics; version 1 remains preserved. The entry checks every source member against [engine-lock.json](engine-lock.json), rejects links and unexpected members, and copies the existing checkout checker by hash. Source licenses and provenance accompany the dependency; no runtime wheel, result tensor or provider transcript is included.
 
 ## Prerequisites
 
@@ -43,6 +43,8 @@ There is one evaluated variant. The model must record its hypothesis and intende
 ## Evidence and limits
 
 Every qualified snapshot must pass six numerical checks and six rejecting suppressed-launch controls, input canaries, unchanged-input checks and native-error gates. The comparison performs 24 warm series in both ABBA and BAAB order: **96 real invocations, 72 retained samples and six suppressed controls**. It uses the same module/JIT objects within each series, with actual resource queries, grids, effective compiler options, UB and CPP/ELF/source bindings. Each complete session is bounded by 108 real invocations and 18 controls; actual counts remain in the receipts.
+
+The comparison resource chain is fixed: 540 seconds of aggregate measurement time, a 560-second inner/client bound, 580 seconds for the owned supervisor, a 585-second subprocess wait, a 595-second full action cap and the unchanged 600,000 ms native bash timeout. Before dispatch, actual preparation plus the 585-second wait and five seconds of postprocessing reserve must fit the action cap. Delayed preparation therefore stops before Model work. Resource-budget failure or incomplete timing does not classify a numerically qualified candidate as incorrect. Series counts and correctness checks are unchanged.
 
 The baseline is retained on a tie, ambiguity, incomplete comparison or material per-shape regression. To select the variant, no shape may regress by more than 1% in either order, both orders must agree in direction for every shape, and at least one shape must improve by more than 1% in both orders. The 1% engineering margin comes from retained simulator variability; it is not a confidence interval or hardware-noise estimate.
 

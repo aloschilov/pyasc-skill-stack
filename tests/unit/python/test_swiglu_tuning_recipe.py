@@ -88,4 +88,36 @@ class PreparationTests(unittest.TestCase):
             with self.assertRaises(AssertionError):cpu_gate(p,[{'id':'x','seeds':[19]}])
 
 
+class TimingResourceBudgetTests(unittest.TestCase):
+    def test_exact_native_fit(self):
+        from tool import comparison_wait_seconds
+        from non_tool_budget import CAPS
+        self.assertEqual(comparison_wait_seconds(100,105),585)
+        self.assertEqual(5+585+5,CAPS['compare'])
+        self.assertLess(CAPS['compare'],600)
+    def test_delayed_preparation_stops_before_model_dispatch(self):
+        from tool import invoke_owned,TimingBudgetExceeded
+        with patch('tool.time.monotonic',return_value=105.001),patch('tool.subprocess.run') as launch:
+            with self.assertRaises(TimingBudgetExceeded):invoke_owned(Path('/owned'),580,'compare',100)
+            launch.assert_not_called()
+    def test_exact_remaining_budget_uses_585_wait(self):
+        from tool import invoke_owned
+        with patch('tool.time.monotonic',return_value=105),patch('tool.subprocess.run') as launch:
+            invoke_owned(Path('/owned'),580,'compare',100)
+            self.assertEqual(launch.call_count,1);self.assertEqual(launch.call_args.kwargs['timeout'],585)
+    def test_compare_owner_client_and_baseline_remain_bounded(self):
+        import tool
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);fixture=root/'recipe';fixture.mkdir();(fixture/'engine/probe').mkdir(parents=True)
+            (fixture/'engine/probe/qualification-plan.json').write_text(json.dumps({'runtime':json.loads((RECIPE/'engine-lock.json').read_text())['runtime']}))
+            (fixture/'supervisor-template.py.txt').write_bytes((RECIPE/'supervisor-template.py.txt').read_bytes())
+            scope=root/'compare';scope.mkdir()
+            with patch.object(tool,'ROOT',fixture):prepare_command(scope,[],['timeout','-k','5','560','true'],580,96)
+            code=(scope/'owned-invocation.py').read_text()
+            self.assertIn('deadline=start+580',code);self.assertIn('timeout=bounded(560,reserve=20)',code)
+            self.assertFalse((scope/'run-intent.json').exists())
+        with patch('tool.time.monotonic',return_value=105),patch('tool.subprocess.run') as launch:
+            tool.invoke_owned(Path('/owned'),240,'baseline',100)
+            self.assertEqual(launch.call_args.kwargs['timeout'],250)
+
 if __name__=='__main__':unittest.main()

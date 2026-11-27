@@ -125,7 +125,7 @@ def prepare_comparison(scope,work,cpu):
                 manifest['schedule'].append(dict(dtype='float16',fixture_id=fixture['id'],shape=fixture['shape'],seed=19,order=order,position=pos,arm=arm,suppressed_before_warmup=arm not in controlled,warmups=1,samples=3));controlled.add(arm)
     write(bundle/'manifest.json',manifest)
     write(bundle/'input-hashes.json',{str(p.relative_to(bundle)):sha(p)for p in sorted(bundle.rglob('*'))if p.is_file()})
-    return ['/bundle:/bundle:ro'],['timeout','-k','5','510','bash','-c','unset PYASC_DRY_RUN; exec python3.12 /bundle/run_timing.py float16']
+    return ['/bundle:/bundle:ro'],['timeout','-k','5','560','bash','-c','unset PYASC_DRY_RUN; exec python3.12 /bundle/run_timing.py float16']
 
 def prepare_command(scope,mounts,inner,whole,launches):
     name='row-tune-'+hashlib.sha256(str(scope).encode()).hexdigest()[:20]
@@ -137,8 +137,25 @@ def prepare_command(scope,mounts,inner,whole,launches):
     write(scope/'command.json',{'argv':argv,'whole_seconds':whole,'launches_maximum':launches})
     write(scope/'input-hashes.json',{str(p.relative_to(scope)):sha(p)for p in sorted(scope.rglob('*'))if p.is_file()})
     template=(ROOT/'supervisor-template.py.txt').read_text()
-    for k,v in {'__WHOLE__':str(whole),'__CLIENT__':str(whole-25),'__LAUNCHES__':str(launches),'__COMMAND_SHA__':sha(scope/'command.json'),'__INPUT_SHA__':sha(scope/'input-hashes.json')}.items():template=template.replace(k,v)
+    for k,v in {'__WHOLE__':str(whole),'__CLIENT__':str(whole-20 if launches==96 else whole-25),'__CLEANUP_RESERVE__':str(20 if launches==96 else 25),'__LAUNCHES__':str(launches),'__COMMAND_SHA__':sha(scope/'command.json'),'__INPUT_SHA__':sha(scope/'input-hashes.json')}.items():template=template.replace(k,v)
     compile(template,'prepared-supervisor','exec');(scope/'owned-invocation.py').write_text(template)
+
+class TimingBudgetExceeded(ValueError):
+    """Operational time bound, never a candidate numerical failure."""
+
+
+def comparison_wait_seconds(started,now):
+    # Native600 > action595 >= actual preparation + wait585 + postprocessing5.
+    # The580-second owner includes the560-second client and20-second cleanup.
+    if now<started or now+585+5>started+CAPS['compare']:
+        raise TimingBudgetExceeded('Comparison preparation left insufficient native timeout; no Model dispatch')
+    return 585
+
+
+def invoke_owned(scope,whole,action,started):
+    wait=comparison_wait_seconds(started,time.monotonic()) if action=='compare' else whole+10
+    return subprocess.run([sys.executable,'-B',str(scope/'owned-invocation.py')],capture_output=True,text=True,timeout=wait)
+
 
 def gates(config):
     verify_index(ROOT,read(ROOT/'recipe-input-hashes.json'))
@@ -215,14 +232,14 @@ def main(action):
                         shutil.copyfile(project/'decision.json',scope/'hypothesis-before-evaluation.json')
                         (project/'candidate.py').chmod(0o444)
                 else:
-                    mounts,inner=prepare_comparison(scope,work,config['cpu_receipt']);whole=540;launches=96
+                    mounts,inner=prepare_comparison(scope,work,config['cpu_receipt']);whole=580;launches=96
                 assert time.time()+whole+10<admission['deadline_epoch'],'No time for bounded command plus cleanup'
                 clock=read(Path(config['attempt'])/'session-clock.json')
                 assert time.monotonic()+whole+10<clock['deadline_monotonic'],'Evaluator would cross actual native session deadline'
                 prepare_command(scope,mounts,inner,whole,launches)
                 # The independently pinned supervisor owns CID/PID cleanup. Its
                 # timeout exceeds the inner workload and precedes bash timeout.
-                done=subprocess.run([sys.executable,'-B',str(scope/'owned-invocation.py')],capture_output=True,text=True,timeout=whole+10)
+                done=invoke_owned(scope,whole,action,tool_started)
                 (scope/'supervisor.stdout').write_text(done.stdout);(scope/'supervisor.stderr').write_text(done.stderr)
                 terminal=read(scope/'terminal.json');assert terminal['original_container_absent'] is True and terminal['original_client_reaped'] is True and not terminal['errors'],'Unknown cleanup; no subsequent action'
                 if action in ('baseline','variant'):
@@ -238,12 +255,20 @@ def main(action):
                         assert all(type(v)in(int,float)and math.isfinite(v)and v>0 for v in r['samples'])
                     for r in result['controls']:assert r['code']==1 and r['report']['mock_launch'] is True and r['report'].get('numerical_failure')
                     report.update(status='passed',selection=select(result,fixture_ids),analysis=result['analysis'],bindings=[{'fixture':r['series']['fixture_id'],'arm':r['series']['arm'],'binding':r['binding']}for r in result['series'] if r['series']['order']=='ABBA' and r['series']['position']<2],real_passes=actual_real,rejecting_controls=len(result['controls']),samples=actual_samples,result_sha256=sha(scope/'out/result.json'),manifest_sha256=sha(scope/'bundle/manifest.json'),sources={name:sha(scope/'bundle/candidates'/name/'candidate.py')for name in ('baseline','variant')})
+            if action=='compare' and time.monotonic()>tool_started+CAPS['compare']:
+                raise TimingBudgetExceeded('Comparison postprocessing exceeded native timeout reserve; retained measurements are not accepted')
         except BaseException as exc:
             if not scope.exists():scope.mkdir()
             terminal=read(scope/'terminal.json') if (scope/'terminal.json').exists() else {}
             dispatched=(scope/'run-intent.json').exists()
             cleaned=terminal.get('original_container_absent') is True and terminal.get('original_client_reaped') is True and not terminal.get('errors')
             report.update(status='unknown' if dispatched and not cleaned else 'failed', error=type(exc).__name__+': '+str(exc),no_replay=True)
+            if isinstance(exc,TimingBudgetExceeded):report['failure_kind']='timing_resource_budget'
+            if action=='compare' and (scope/'out/result.json').is_file():
+                budget_failure=read(scope/'out/result.json').get('budget_failure')
+                if budget_failure:
+                    report.update(failure_kind='timing_resource_budget',timing_budget_failure=budget_failure)
+
         report.update(tool_monotonic_start=tool_started,tool_monotonic_end=time.monotonic())
         publish(scope/'public-receipt.json',report);print((scope/'public-receipt.json').read_text(),end='');print('RECEIPT_SHA256 '+sha(scope/'public-receipt.json'))
         if report['status']!='passed':raise SystemExit(1)

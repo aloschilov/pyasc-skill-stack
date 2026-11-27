@@ -33,7 +33,7 @@ try:
   child=subprocess.Popen(argv,stdout=log,stderr=subprocess.STDOUT)
   ticks=Path('/proc/'+str(child.pid)+'/stat').read_text().rsplit(')',1)[1].split()[19]
   write('process.json',{'pid':child.pid,'startticks':ticks,'owner_pid':os.getpid()})
-  r['exit_code']=child.wait(timeout=bounded(__CLIENT__,reserve=25))
+  r['exit_code']=child.wait(timeout=bounded(__CLIENT__,reserve=__CLEANUP_RESERVE__))
 except BaseException as e:
  errors.append({'stage':'original','error':repr(e)})
 finally:

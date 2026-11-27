@@ -43,8 +43,8 @@ class WatchdogTests(unittest.TestCase):
     def test_live_compare_gets_only_bounded_actual_elapsed_credit(self):
         self.live('compare');watch=self.watch();self.now=1300
         self.assertIsNone(watch());self.assertFalse(self.reports)
-        self.now=1420;self.assertIsNone(watch())  # exactly 570 seconds credited
-        self.now=1420.001;self.assertIn('invalid',watch())
+        self.now=1445;self.assertIsNone(watch())  # exactly 595 seconds credited
+        self.now=1445.001;self.assertIn('invalid',watch())
     def test_active_pid_mismatch_stops(self):
         self.live();self.identities[123]='different';self.now=900
         self.assertIn('invalid',self.watch()())
