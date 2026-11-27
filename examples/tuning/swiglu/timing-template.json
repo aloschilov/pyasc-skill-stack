@@ -1,0 +1,36 @@
+{
+  "runtime": {
+    "image": "ghcr.io/compiler-team-ru/pyasc-sim-dev@sha256:1efdcc8585b769715f640e9c9078c2e03cdf2157082d05b0c4b87974beea7407",
+    "pyasc_revision": "ed793e45763498a0becc71f33cadca86ab94bda5",
+    "python": "python3.12",
+    "platform": "Ascend950PR_9599",
+    "extension_sha256": "9ca0a3895e6bac0a9639d420d3bd0126d117ff9fef0b3cfbdc864409a5bf01b3",
+    "network": "none",
+    "cpus": 2,
+    "memory": "8GiB",
+    "PYASC_DRY_RUN": "absent"
+  },
+  "runtime_source_hashes": {
+    "asc/runtime/kernel_meta.py": "d012db7a1a40aacbe5f21ebef34a1794c75bf106cf0e5e47da4644ded2a785fe",
+    "asc/runtime/compiler.py": "1f8d13210659cfb831b1d0e44b850c6a6150cb7418673a4e0aa35cfc4049f680",
+    "asc/runtime/jit.py": "10eea2308dad45011284e801eee8c2c9be3696f4a1579935f71903e3673445e9",
+    "asc/runtime/launcher.py": "309c3285c39f2dfd370a74e6c450325060fba2bd53db0d13b6045ec86148acc6",
+    "asc/lib/runtime/interface.py": "bcc9209c4eefed46b326a40c7cca2ad88059574a3fec7b6b46970aade59a2420",
+    "asc/lib/runtime/state.py": "53afcc45fad8ac6e856bd8ce98c94c5a535ce769bdf758d810b703b45b17adb2",
+    "asc/experimental/asctile/runtime/compiler.py": "d57e9e343ab9065520d726e0c3c817641f03809a9c72b057039959969b6bc99f",
+    "asc/experimental/asctile/runtime/jit.py": "c87e7567681b8ac0ecbd4cd0cb9c90125de959695cbd03d4415312828f035233",
+    "asc/language/core/constexpr.py": "4f76c2b26e2714b00b17fcf65224c41e1b79a63b67d9bb73b40b73ac1a1e3a2b"
+  },
+  "bridge_sha256": "660a51a61669a0538e96bbc7a42931c54ae7fee33701561a10a0d9877d4aa302",
+  "fixture_wrapper_sha256": "1e6f68bcb71a45474eaf8eaccbbc5d224dadb799f98fd2b44361dcb6f7de3cd9",
+  "measurement": {
+    "boundary": "Pinned runtime_gate.measure_one around original rt.launch_kernel: pre-drain, tick-before, one original call, synchronize, tick-after. Metadata, candidate selector, host allocations/transfers, JIT, registration and serialization remain outside ticks.",
+    "call_path": "Invoke unchanged candidate through the same corrected trusted wrapper; do not hand-reconstruct grid, runtime argument ABI or fake resource counts. Pass-through telemetry wraps JITFunction._compile_and_cache, Launcher.run, rt.device_info and rt.launch_kernel.",
+    "warmup": "First invocation in each fresh series warms Model and cache. After warmup prohibit kernel recompilation; every sample must bind identical candidate/CPP/ELF, constexprs, compiler-reported UB, effective options and actual grid. No claim that fresh process flushes physical caches. Retained API inspection confirms _compile_and_cache occurs before the memory cache fast path; local mocked pure source returned two cache hits without compilation.",
+    "numerics": "Reuse secondary trusted wrapper, native/FP64 published comparator, exact native IEEE masks, NaN output poison, canaries and unchanged-input checks on every invocation. Retain original execute_kernel launch-count and structured/unstructured fatal Model error gates.",
+    "negative": "Same trusted checker under original --mock-launch path in a separate process before first warmup for each arm/shape. Require numerical rejection; no synthesized negative result and no copied zero-launch acceptance.",
+    "telemetry": "Requested decorator settings and merged effective CompilePrereqs options are separate. Observe actual resource query value/type/exception and actual grid at rt.launch_kernel; do not substitute defaults. Record compiled binary, CPP/IR hashes and compiler UB. No raw tensor inspection by telemetry.",
+    "unknown_values": "Opaque query results remain unchanged with explicit unobserved scalar value; exact runtime source may justify narrow decoding. Missing API/schema/grid/UB/binary binding rejects diagnostic eligibility, not retroactively the candidate correctness outcome."
+  },
+  "aggregation": "Per shape: median of three retained samples per series, GM(two A-series medians)/GM(two B-series medians) within each order, then GM(ABBA ratio,BAAB ratio). Report raw samples, ranges, both order ratios and disagreement. No aggregate across shapes/dtypes as a skill improvement claim."
+}

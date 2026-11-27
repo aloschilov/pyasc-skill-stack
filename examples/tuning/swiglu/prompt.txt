@@ -1,0 +1,8 @@
+Use the four installed skills to tune the supplied baseline.py for the finite contiguous 2D FP16 SwiGLU workload described in TUNING_TASK.md. Keep tensor arithmetic and the kernel unchanged. Qualify the baseline first, identify one specific opportunity from its returned measurements, record a hypothesis and intended parameter change in decision.json, and write one parameter-only candidate.py. Qualify that candidate once. If it qualifies, compare the two exact snapshots and select using the documented conservative rule. If it does not improve, keep the baseline. Preserve failures; do not repair or propose a second candidate after evaluation.
+
+Use native bash only for these exact synchronous commands, in this project directory:
+python3 -B @RECIPE@/tool.py baseline (timeout 300000 ms)
+python3 -B @RECIPE@/tool.py variant (timeout 300000 ms)
+python3 -B @RECIPE@/tool.py compare (timeout 600000 ms)
+python3 -B @RECIPE@/tool.py decision (timeout 300000 ms)
+The parenthesized timeout is a bash tool argument, not part of the command. Use the returned receipts as evidence. Do not invoke any other shell command. Write the final decision.json with the selected hash, evidence hashes and your rationale; finish with a short explanation of the outcome and limitations. These are simulator ticks, not hardware performance.

@@ -1,0 +1,61 @@
+{
+  "small-tail": [
+    {
+      "id": "row-parallelism-float16-R5-H61",
+      "shape": [
+        5,
+        122
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -1.0,
+        1.0
+      ],
+      "seeds": [
+        19,
+        47
+      ]
+    },
+    {
+      "id": "row-parallelism-float16-R29-H191",
+      "shape": [
+        29,
+        382
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -1.0,
+        1.0
+      ],
+      "seeds": [
+        19,
+        47
+      ]
+    },
+    {
+      "id": "row-parallelism-float16-R47-H509",
+      "shape": [
+        47,
+        1018
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "dim": -1
+      },
+      "value_range": [
+        -1.0,
+        1.0
+      ],
+      "seeds": [
+        19,
+        47
+      ]
+    }
+  ]
+}
