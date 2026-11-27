@@ -194,7 +194,8 @@ class ProviderContracts(unittest.TestCase):
                     raw = ('data: '+json.dumps(test.payload)+'\n\ndata: [DONE]\n\n').encode()
                 else: raw = json.dumps(test.payload).encode()
                 if getattr(test, 'truncate_stream', False): raw = raw.removesuffix(b'data: [DONE]\n\n')
-                self.send_response(200); self.send_header('Content-Type', 'text/event-stream' if body.get('stream') else 'application/json')
+                self.send_response(getattr(test, 'http_status', 200)); self.send_header('Content-Type', 'text/event-stream' if body.get('stream') else 'application/json')
+                for name, value in getattr(test, 'response_headers', {}).items(): self.send_header(name, value)
                 if getattr(test, 'missing_http_trailer', False) or getattr(test, 'truncated_http_chunk', False):
                     self.send_header('Transfer-Encoding', 'chunked'); self.end_headers()
                     truncated = getattr(test, 'truncated_http_chunk', False)
@@ -378,6 +379,71 @@ class ProviderContracts(unittest.TestCase):
             self.assertEqual(exc.exception.code,400)
             exc.exception.close()
         self.assertEqual(len(self.requests),1)  # No retry reaches the provider.
+
+    def test_http_401_captures_private_body_and_safe_ids_without_usage_or_retry(self):
+        self.http_status = 401
+        # Even completion-shaped JSON must not turn an HTTP rejection into usage.
+        self.payload['error'] = {'message': 'private-response-secret'}
+        self.response_headers = {'x-request-id': 'fixture-request-401',
+            'x-tt-logid': 'unsafe/private-secret', 'Authorization': 'Bearer private-header-secret'}
+        captured, delivered = [], []
+        self.gate.capture_response = lambda number, raw: captured.append((number, raw))
+        with self.assertRaisesRegex(BudgetError, '^HTTPError: HTTPError$'):
+            self.gate.dispatch({'model': 'test-model'}, deliver=lambda *args: delivered.append(args))
+        record = self.gate.records[0]
+        raw = json.dumps(self.payload).encode()
+        self.assertEqual(captured, [(1, raw)]); self.assertEqual(delivered, [])
+        self.assertEqual(record['http_status'], 401); self.assertTrue(record['http_body_complete'])
+        self.assertEqual(record['response_ids'], {'x-request-id': 'fixture-request-401'})
+        self.assertEqual(record['response_sha256'], planner.digest(raw)); self.assertEqual(record['response_bytes'], len(raw))
+        self.assertEqual(record['status'], 'unknown'); self.assertNotIn('usage', record)
+        self.assertFalse(self.gate.snapshot()['usage_complete']); self.assertIsNone(known_budget_exhaustion(self.gate.snapshot(), self.gate.limits))
+        self.assertEqual(record['client_delivery']['status'], 'pending')
+        for secret in ('private-response-secret', 'private-header-secret', 'unsafe/private-secret', 'fixture-key'):
+            self.assertNotIn(secret, json.dumps(self.saves))
+        with self.assertRaisesRegex(BudgetError, 'Earlier request'):
+            self.gate.dispatch({'model': 'test-model', 'messages': [{'role': 'user', 'content': 'different'}]})
+        self.assertEqual(len(self.requests), 1)
+
+    def test_partial_http_401_body_is_retained_and_stays_unknown(self):
+        self.http_status = 401; self.short_content_length = True
+        self.payload = {'error': {'message': 'private-partial-error'}}
+        captured = []; self.gate.capture_response = lambda number, raw: captured.append((number, raw))
+        with self.assertRaisesRegex(BudgetError, '^HTTPError: HTTPError$'):
+            self.gate.dispatch({'model': 'test-model'})
+        record = self.gate.records[0]; raw = json.dumps(self.payload).encode()
+        self.assertEqual(captured, [(1, raw)]); self.assertEqual(record['response_sha256'], planner.digest(raw))
+        self.assertEqual(record['http_status'], 401); self.assertFalse(record['http_body_complete'])
+        self.assertEqual(record['transport_error'], 'IncompleteRead'); self.assertEqual(record['status'], 'unknown')
+        self.assertNotIn('usage', record); self.assertFalse(self.gate.snapshot()['usage_complete'])
+        self.assertNotIn('private-partial-error', json.dumps(self.saves))
+        with self.assertRaisesRegex(BudgetError, 'Earlier request'): self.gate.dispatch({'model': 'test-model'})
+        self.assertEqual(len(self.requests), 1)
+
+    def test_oversize_http_error_retains_only_bounded_prefix_and_blocks_retry(self):
+        self.http_status = 401; self.payload = {'error': {'message': 'x' * 1024}}
+        captured = []; self.gate.capture_response = lambda number, raw: captured.append((number, raw))
+        with patch('generation_provider.MAX_RESPONSE', 64), self.assertRaisesRegex(BudgetError, 'Provider response too large'):
+            self.gate.dispatch({'model': 'test-model'})
+        record = self.gate.records[0]; raw = json.dumps(self.payload).encode()[:65]
+        self.assertEqual(captured, [(1, raw)]); self.assertEqual(record['response_bytes'], 65)
+        self.assertEqual(record['response_sha256'], planner.digest(raw)); self.assertEqual(record['http_status'], 401)
+        self.assertFalse(record['http_body_complete']); self.assertEqual(record['status'], 'unknown')
+        self.assertNotIn('usage', record); self.assertFalse(self.gate.snapshot()['usage_complete'])
+        with self.assertRaisesRegex(BudgetError, 'Earlier request'): self.gate.dispatch({'model': 'test-model'})
+        self.assertEqual(len(self.requests), 1)
+
+    def test_http_error_capture_failure_blocks_retry_without_leaking_exception(self):
+        self.http_status = 401
+        def fail_capture(number, raw): raise OSError('private-capture-secret')
+        self.gate.capture_response = fail_capture
+        with self.assertRaisesRegex(BudgetError, '^OSError: OSError$'): self.gate.dispatch({'model': 'test-model'})
+        record = self.gate.records[0]
+        self.assertEqual(record['http_status'], 401); self.assertEqual(record['status'], 'unknown')
+        self.assertNotIn('usage', record); self.assertFalse(self.gate.snapshot()['usage_complete'])
+        self.assertNotIn('private-capture-secret', json.dumps(self.saves))
+        with self.assertRaisesRegex(BudgetError, 'Earlier request'): self.gate.dispatch({'model': 'test-model'})
+        self.assertEqual(len(self.requests), 1)
 
     def test_complete_sse_before_missing_http_trailer_keeps_exact_usage_without_retry(self):
         self.missing_http_trailer = True
