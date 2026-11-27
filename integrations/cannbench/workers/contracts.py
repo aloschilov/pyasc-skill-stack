@@ -58,7 +58,9 @@ def load_contract(task_dir: Path):
     return yaml.safe_load((task_dir / "proto.yaml").read_text())
 
 
-ALLOWED_TORCH_CALLS = {"empty", "empty_like", "zeros", "zeros_like", "tensor"}
+# is_tensor is a type predicate (isinstance(obj, Tensor)), not tensor math.
+# Its arguments still pass through the same recursive AST checks below.
+ALLOWED_TORCH_CALLS = {"empty", "empty_like", "zeros", "zeros_like", "tensor", "is_tensor"}
 BANNED_TORCH_SUBMODULES = {"nn", "ops", "functional", "linalg", "special",
                            "fft", "cuda", "npu"}
 def _dotted(node: ast.AST) -> str | None:

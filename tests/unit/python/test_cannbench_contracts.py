@@ -46,6 +46,27 @@ class CandidateContracts(unittest.TestCase):
             candidate.write_text(source.replace('axis=1', 'axis=0'))
             self.assertEqual(static_check(candidate, 'new_op', task), [])
 
+    def test_tensor_type_validation_does_not_allow_nested_host_math(self):
+        source = (ROOT / 'integrations/cannbench/smoke-kernel/swi_glu.py').read_text()
+        task = ROOT / 'integrations/cannbench/tasks/swi_glu'
+        with tempfile.TemporaryDirectory() as tmp:
+            candidate = Path(tmp) / 'candidate.py'
+            candidate.write_text(source + '\ndef validate(x):\n'
+                                 '    if not torch.is_tensor(x):\n'
+                                 '        raise TypeError("expected tensor")\n')
+            self.assertEqual(static_check(candidate, 'swi_glu', task), [])
+            for expression, forbidden in (
+                ('torch.is_tensor(torch.exp(x))', 'banned torch call: torch.exp()'),
+                ('torch.is_tensor(torch.isfinite(x))', 'banned torch call: torch.isfinite()'),
+                ('torch.is_tensor(torch.nn.functional.silu(x))', 'banned torch usage: torch.nn'),
+                ('torch.is_tensor(x.copy_(x))', 'banned host Tensor.copy_()'),
+            ):
+                with self.subTest(expression=expression):
+                    candidate.write_text(source + '\ndef validate(x):\n'
+                                         '    return ' + expression + '\n')
+                    self.assertTrue(any(forbidden in problem for problem in
+                                        static_check(candidate, 'swi_glu', task)))
+
     def test_tensor_lists_optional_slots_and_conflicting_attrs(self):
         proto = {'operator': {'inputs': [{'name': 'xs'}, {'name': 'bias', 'optional': True}]}}
         case = {'input_shape': [[[2, 3], None, [4]], None],
