@@ -20,7 +20,7 @@ prerequisites or resource blocks do not count as successful coverage.
 | Generation regression comparison | **Passed** for scheduled run `45920011665` against the selected immutable baseline `45865783111`: compatible inputs, 3/3 candidates, no lost PASS or coverage gaps. Scheduled recovery notification remains unconfirmed. [Result](../tests/generation/README.md#scheduled-single-generation-recovery-2026-11-27). |
 | Paired context experiment | **Passed** for complete manual measurement: 24 auditable trials; P6 4/6, P2/P3/P4 each 0/6, all failures retained. Conditional intervals include zero; no general skills benefit. Hosted recovery confirmed. [Result and archive](../tests/generation/README.md#manual-controller-acceptance-2026-11-06). |
 | Targeted SwiGLU fallback guidance | **Passed** for a four-session GLM-5.3 comparison and separately measured CaModel candidates. B used fewer ticks on six fixed shapes; the paragraph's causal benefit and hardware performance remain unestablished. [Protocols, outcomes and checksums](#fallback-guidance-comparison-2026-11-27). |
-| Exp empty-slot guidance | B **passed** eight numerical pairs and eight rejecting controls; A **failed** lowering before its first launch. One fresh session per arm; no repair or general benefit claim. [Original outcomes and checksum](#exp-empty-slot-comparison-2026-11-27). |
+| Exp empty-slot guidance | Original B **passed** and A **failed** lowering; the A → B replication **passed both arms**, each with eight real checks and eight rejecting controls. Predeclared tie/nonreplication; no general benefit claim. [All four outcomes and checksums](#exp-empty-slot-comparison-2026-11-27). |
 | Multiple models | **Passed** for current 24-trial manual comparison with two actual response identities on one gateway; 7 qualified candidates and all failures retained. Hosted recovery confirmed; no general benefit, model ranking or scheduled claim. [Results and archive](../tests/generation/README.md#manual-controller-acceptance-2026-11-06). |
 | Public evidence dashboard | **Passed** for manual publication of five retained records, with public bytes matching the Pages artifact. [Publication identity, archive and limitations](../dashboard/README.md#public-publication-qualification-2026-11-06). This is a view of existing qualifications, not new numerical coverage or continuous monitoring. |
 
@@ -65,25 +65,44 @@ predict NPU latency and CANNBench scores.
 
 ## Exp empty-slot comparison — 2026-11-27
 
-Two fresh GLM-5.3-low/OpenCode 1.19.0 sessions compared `69c19624` with
-`c9fc70ca`, differing only in the Exp ownership paragraph. Both used the same
-prompt, four skills and profile-native output limit of 32,768. All 13 responses
-are accounted for: 15,965 completion tokens, with no retry or candidate repair.
+The original pair and a separate replication used GLM-5.3-low/OpenCode 1.19.0
+with the same prompt, four skills, checker and pinned runtime. Both compared
+A `69c19624` with B `c9fc70ca`, differing only in the Exp ownership paragraph.
+The original 13 responses account for 15,965 completion tokens; the replication
+adds 17 complete responses and 9,876 completion tokens. Each request used
+the profile-native output limit of 32,768. Provider retries were zero and no
+candidate was repaired.
 
 The fixed exercise used contiguous FP16 inputs of 64, 513, 2,048 and 2,049
-elements, seeds 19/47, base 2, scale 0.5 and shift 0.25. B passed all eight
-CaModel numerical checks and eight rejecting controls without DMA errors;
-the observed eight-block, 256-element-tile loop excludes empty iterations.
-A attempted the same exclusion but reassigned a runtime `PlainValue` to Python
-integer `0`, failing lowering before any launch. Its seven remaining pairs
-are unrun. There is no matched timing or hardware result, and this single pair
-does not isolate the paragraph's causal effect or establish general skill gains.
+elements, seeds 19/47, base 2, scale 0.5 and shift 0.25, with eight blocks and
+256-element tiles. The four unchanged final sources had these CaModel outcomes:
+
+| Cohort and generation order | A | B |
+|---|---|---|
+| Original, B → A | Failed lowering before first launch; seven pairs unrun | Passed eight real checks and eight rejecting controls |
+| Replication, A → B | Passed eight real checks and eight rejecting controls | Passed eight real checks and eight rejecting controls |
+
+Original A reassigned a runtime `PlainValue` to Python integer `0`. Both new
+sources passed: 16 real checks and 16 rejecting controls in total, with zero
+unexpected Model or DMA errors. This is the predeclared tie/nonreplication of
+the original pass-versus-failure outcome. Keep the cohorts separate; they do
+not establish a causal or general benefit from the guidance. There is no
+matched timing or hardware result.
+
+The experiment controller initially supplied a `host-review.json` with the
+wrong schema, stopping setup before candidate import or launch. Corrected
+metadata was used in separate qualification scopes; candidate, checker and
+runtime bytes were unchanged. The failed setup remains retained and is not
+counted as a candidate failure.
 
 The syntax reference now records the observed type error and B's qualified
-bounded-loop form. That addition is post-study learning, not part of the
-tested treatment. [Both unchanged sources, original failure and all outcomes](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-exp-empty-slots-study-20261127/exp-empty-slot-study-public-20261127-01.tar.gz)
-are archived with SHA256
-`408880faf79639eb34572cdd5ae922727c57b5e4cd8b5d169862ee8f2251f7c5`.
+bounded-loop form. That addition is post-study learning and was not part of
+either study's treatment.
+
+| Immutable evidence | SHA256 |
+|---|---|
+| [Original sources, failure and outcomes](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-exp-empty-slots-study-20261127/exp-empty-slot-study-public-20261127-01.tar.gz) | `408880faf79639eb34572cdd5ae922727c57b5e4cd8b5d169862ee8f2251f7c5` |
+| [Replication and all four outcomes](https://github.com/aloschilov/pyasc-skill-stack/releases/download/qualification-exp-empty-slots-study-20261127/exp-empty-slot-replication-public-20261127-01.tar.gz) | `7e704192984784aa4bb2b4ffd9e0e38d1fd3031b7148fab7d058eebe25fb7149` |
 
 ## CANNBench CaModel pilot
 
