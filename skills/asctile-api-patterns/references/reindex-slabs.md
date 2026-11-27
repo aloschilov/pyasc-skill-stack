@@ -21,6 +21,28 @@ use a bounded list of scalar integers with an explicitly permitted tensor
 constructor, or choose a nonindexed row/chunk route. Keep every dispatch
 branch within the contract, including branches not selected by current checks.
 
+When that constructor is permitted, build the same two vectors without host
+tensor arithmetic:
+
+```python
+# Positive H and T have already been bounded by the tile/UB calculation.
+# Check 2*T*H - 1 fits int32; do not construct indices for the whole input.
+n = T * H
+gate_list = [2 * H * (k // H) + k % H for k in range(n)]
+value_list = [g + H for g in gate_list]
+gate_idx = torch.tensor(gate_list, dtype=torch.int32, device=input.device)
+value_idx = torch.tensor(value_list, dtype=torch.int32, device=input.device)
+```
+
+Cache the pair by device, H and T with bounded cache growth, and treat it as
+immutable. Both lists depend only on tile geometry, never input values. The
+same scalar-index construction was exercised by the saved GLM kernel on
+BF16 `[128,32]` at two seeds: two CaModel launches and two rejecting suppressed
+controls. The later cache-format verifier failed; its separate retained-data
+audit confirms the emitted slab route and int32 arguments. This is narrow
+simulator evidence, not a completed generation comparison or hardware timing.
+[Retained slab diagnostic](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-host-contract-transfer-20261127)
+
 Build reusable integer lane metadata on the host with `k = torch.arange(T*H, dtype=torch.int32,
 device=input.device)`, `gate_idx = 2*H*(k//H) + k%H` and
 `value_idx = gate_idx + H`. Cache by device, H and T. This metadata
