@@ -206,7 +206,14 @@ class BudgetGate:
                     headers={'Authorization': 'Bearer '+self.key, 'Content-Type': 'application/json'})
                 record['dispatch_started'] = True
                 self.checkpoint()
-                with urllib.request.build_opener(NoRedirect).open(request, timeout=max(.01, self.deadline-time.monotonic())) as response:
+                http_error = None
+                try:
+                    response = urllib.request.build_opener(NoRedirect).open(request, timeout=max(.01, self.deadline-time.monotonic()))
+                except urllib.error.HTTPError as exc:
+                    # HTTPError owns the original response body. Capture it with
+                    # the same bounds before retaining the unresolved rejection.
+                    response = http_error = exc
+                with response:
                     record['http_status'] = response.status
                     record['response_ids'] = {name: value for name in ('x-request-id', 'x-requestid', 'x-tt-logid')
                         if (value := response.headers.get(name)) and re.fullmatch(r'[A-Za-z0-9_.:-]{1,256}', value)}
@@ -234,7 +241,11 @@ class BudgetGate:
                 record['response_bytes'] = len(raw)
                 if self.capture_response:
                     self.capture_response(len(self.records), raw)
+                if http_error is not None:
+                    record['http_body_complete'] = read_error is None and len(raw) <= MAX_RESPONSE
                 if len(raw) > MAX_RESPONSE: raise BudgetError('Provider response too large')
+                if http_error is not None:
+                    raise http_error  # HTTP status never supplies model usage.
                 if read_error is not None and not isinstance(read_error, IncompleteRead): raise read_error
                 if record.get('transport_error') and not body.get('stream'):
                     raise BudgetError('Incomplete non-streaming HTTP response')
