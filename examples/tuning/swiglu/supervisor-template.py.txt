@@ -1,0 +1,66 @@
+from pathlib import Path
+import json,hashlib,subprocess,time,os,datetime
+P=Path(__file__).resolve().parent;start=time.monotonic();deadline=start+__WHOLE__
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+if not __debug__:raise RuntimeError('Assertions must remain enabled')
+assert os.getuid()!=0,'Ordinary Linux caller required'
+assert sha(P/'command.json')=='__COMMAND_SHA__'
+assert sha(P/'input-hashes.json')=='__INPUT_SHA__'
+assert all(sha(P/n)==h for n,h in json.loads((P/'input-hashes.json').read_text()).items())
+c=json.loads((P/'command.json').read_text());argv=c['argv'];name=argv[argv.index('--name')+1]
+owner='consumer-row-tuning';scope=P.name
+for f in ['out','container.cid','run-intent.json','terminal.json','run.log']:assert not (P/f).exists(),f
+observations=[];errors=[]
+def bounded(cap,reserve=1):
+ left=deadline-time.monotonic()-reserve
+ if left<=0:raise TimeoutError('Whole scope deadline; no further command')
+ return min(cap,left)
+def inspect(identity):
+ r=subprocess.run(['docker','inspect',identity],capture_output=True,text=True,timeout=bounded(5))
+ observations.append({'identity':identity,'rc':r.returncode,'stdout':r.stdout,'stderr':r.stderr})
+ if r.returncode==1 and r.stdout.strip()=='[]' and r.stderr.strip() in ('Error: No such object: '+identity,'error: no such object: '+identity):return None
+ if r.returncode!=0:raise RuntimeError('Unexpected inspect result; retain original observation')
+ data=json.loads(r.stdout);assert len(data)==1
+ return data[0]
+def write(n,x):
+ with (P/n).open('x') as f:json.dump(x,f,indent=2);f.write('\n')
+assert inspect(name) is None,'Existing or unknown container name; no replay'
+(P/'out').mkdir()
+write('run-intent.json',{'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'argv':argv,'no_retry':True,'owner_pid':os.getpid(),'kernel_launches_permitted':__LAUNCHES__})
+r={};child=None;cid=None
+try:
+ with (P/'run.log').open('x') as log:
+  child=subprocess.Popen(argv,stdout=log,stderr=subprocess.STDOUT)
+  ticks=Path('/proc/'+str(child.pid)+'/stat').read_text().rsplit(')',1)[1].split()[19]
+  write('process.json',{'pid':child.pid,'startticks':ticks,'owner_pid':os.getpid()})
+  r['exit_code']=child.wait(timeout=bounded(__CLIENT__,reserve=__CLEANUP_RESERVE__))
+except BaseException as e:
+ errors.append({'stage':'original','error':repr(e)})
+finally:
+ try:
+  if (P/'container.cid').exists():
+   cid=(P/'container.cid').read_text().strip();assert len(cid)==64 and all(x in '0123456789abcdef' for x in cid)
+   r['container_id']=cid;current=inspect(cid)
+   if current is not None:
+    assert current['Id']==cid and current['Name']=='/'+name
+    assert current['Config']['Labels']['pyasc.owner']==owner and current['Config']['Labels']['pyasc.scope']==scope
+    stopped=subprocess.run(['docker','stop','--time','2',cid],capture_output=True,text=True,timeout=bounded(7))
+    r['owned_cleanup']={'exit':stopped.returncode,'stdout':stopped.stdout,'stderr':stopped.stderr}
+  else:errors.append({'stage':'identity','error':'NO_CID_ISSUED'})
+ except BaseException as e:errors.append({'stage':'container_cleanup','error':repr(e)})
+ try:
+  if child is not None and child.poll() is None:
+   child.terminate()
+   try:child.wait(timeout=bounded(2))
+   except subprocess.TimeoutExpired:child.kill();child.wait(timeout=bounded(2))
+  r['original_client_reaped']=child is not None and child.poll() is not None
+ except BaseException as e:
+  errors.append({'stage':'client_reap','error':repr(e)})
+  if child is not None and child.poll() is None:child.kill()
+ for label,identity in [('original_container_absent',cid),('name_absent',name)]:
+  try:r[label]=identity is not None and inspect(identity) is None
+  except BaseException as e:r[label]=None;errors.append({'stage':label,'error':repr(e)})
+ r['seconds']=time.monotonic()-start;r['errors']=errors;r['inspect_observations']=observations
+ r['status']='TERMINAL_SCOPED_MODEL_RECIPE' if not errors else 'UNRESOLVED_OR_FAILED_NO_REPLAY'
+ write('terminal.json',r);print(json.dumps({k:v for k,v in r.items() if k!='inspect_observations'}),flush=True)
+raise SystemExit(0 if not errors and r.get('exit_code')==0 and r.get('original_container_absent') is True and r.get('name_absent') is True and r.get('original_client_reaped') is True and r['seconds']<=__WHOLE__ else 1)

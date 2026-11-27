@@ -78,6 +78,8 @@ See the [verification contract](docs/verification-contract.md).
 
 For an official CANNBench case, follow the [OpenCode and CaModel walkthrough](integrations/cannbench/README.md#verify-an-official-case-in-camodel). It checks the generated file against the benchmark's original inputs and golden output.
 
+For a supplied-baseline tuning task, see the [bounded SwiGLU example](examples/tuning/swiglu/README.md). Its clean OpenCode/CaModel preflight must pass before a fresh model session can qualify, measure and select one parameter variant.
+
 ## Develop your own kernel
 
 Keep the checkout available: the skills use its references and verification
