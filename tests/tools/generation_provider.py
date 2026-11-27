@@ -7,6 +7,7 @@ records contain hashes and safe diagnostics, never credentials. This is a budget
 """
 from contextlib import contextmanager
 import hashlib
+import copy
 from http.client import IncompleteRead
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -142,6 +143,7 @@ class BudgetGate:
         self.records = []
         self.error = None
         self.lock = threading.Lock()
+        self.closed = False
         self.token = secrets.token_urlsafe(32)
 
     def snapshot(self):
@@ -157,10 +159,19 @@ class BudgetGate:
             self.error = 'Evidence persistence failed: ' + type(exc).__name__
             raise EvidenceError(self.error) from None
 
+    def finish(self):
+        # Wait for the original dispatch/delivery checkpoint, then seal ownership.
+        # Queued HTTP handlers must not change the terminal usage snapshot.
+        with self.lock:
+            self.closed = True
+            self.checkpoint()
+            return copy.deepcopy(self.snapshot())
+
     def dispatch(self, body, deliver=None):
         # Keep client delivery inside the same lock as provider dispatch. A
         # queued SDK retry cannot race a failed downstream write.
         with self.lock:
+            if self.closed: raise BudgetError('Generation gate closed; no retry')
             if self.error: raise BudgetError('Earlier request is unresolved; no retry')
             if time.monotonic() >= self.deadline: raise BudgetError('Generation deadline exhausted')
             if body.get('model') != self.model or body.get('n', 1) != 1:

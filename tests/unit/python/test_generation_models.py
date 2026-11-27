@@ -145,6 +145,12 @@ class ProfileBindings(unittest.TestCase):
                 executor.provider_credentials(plan)
 
     def test_selected_provider_receives_only_its_credential_through_actual_gate(self):
+        self.selected_provider_fixture()
+
+    def test_final_usage_waits_for_delivery_checkpoint_and_seals_gate(self):
+        self.selected_provider_fixture(delivery_race=True)
+
+    def selected_provider_fixture(self, delivery_race=False):
         received = []
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, *args): pass
@@ -161,6 +167,28 @@ class ProfileBindings(unittest.TestCase):
             root = Path(d); config = profile(); plan = self.local_plan(root, config)
             attempt = root/'attempt'; attempt.mkdir(); project = attempt/'project'; project.mkdir()
             original_command = executor.command
+            original_save = executor.save
+            original_finish = executor.BudgetGate.finish
+            checkpoint_waiting = threading.Event(); finishing = threading.Event(); release = threading.Event()
+            saved = []; gates = []; worker_errors = []
+            def checkpoint(path, value):
+                if path.name == 'usage.json' and value['requests']:
+                    row = value['requests'][0]
+                    if delivery_race and row['client_delivery']['status'] == 'written' and not checkpoint_waiting.is_set():
+                        checkpoint_waiting.set()
+                        if not release.wait(5): raise AssertionError('Finalizer never reached delivery barrier')
+                    saved.append(json.loads(json.dumps(value)))
+                original_save(path, value)
+            def finish(gate):
+                gates.append(gate); finishing.set()
+                return original_finish(gate)
+            def unblock():
+                try:
+                    self.assertTrue(finishing.wait(5)); self.assertTrue(checkpoint_waiting.is_set())
+                except BaseException as exc: worker_errors.append(exc)
+                finally: release.set()
+            if delivery_race:
+                worker = threading.Thread(target=unblock); worker.start()
             def client(argv, directory, name, seconds, env=None, abort=None, cwd=None):
                 if name == 'project-init': return original_command(argv, directory, name, seconds)
                 self.assertNotIn('SELECTED_API_KEY', env); self.assertNotIn('OPENCODE_API_KEY', env)
@@ -169,13 +197,25 @@ class ProfileBindings(unittest.TestCase):
                 request = urllib.request.Request(route['baseURL']+'/chat/completions', data=canonical({'model': 'model-v1'}),
                     headers={'Authorization': 'Bearer '+env['PYASC_GATE_TOKEN']})
                 with urllib.request.urlopen(request) as response: response.read()
+                if delivery_race: self.assertTrue(checkpoint_waiting.wait(5))
                 return {'exit_code': 0}
             with patch.object(executor, 'ROOT', root), patch.dict(os.environ, {
                     'SELECTED_BASE_URL': 'http://127.0.0.1:'+str(server.server_port), 'SELECTED_API_KEY': 'chosen-secret',
                     'OPENCODE_BASE_URL': 'http://127.0.0.1:1', 'OPENCODE_API_KEY': 'wrong-secret'}), \
-                    patch.object(executor, 'command', side_effect=client):
+                    patch.object(executor, 'command', side_effect=client), \
+                    patch.object(executor, 'save', side_effect=checkpoint), \
+                    patch.object(executor.BudgetGate, 'finish', finish):
                 result, usage = executor.run_session(attempt, plan, project, config, 'offline provider routing fixture')
+            if delivery_race:
+                worker.join(6); self.assertFalse(worker.is_alive()); self.assertEqual(worker_errors, [])
+                self.assertTrue(checkpoint_waiting.is_set()); self.assertTrue(finishing.is_set())
             self.assertEqual(result['exit_code'], 0); self.assertTrue(usage['usage_complete'])
+            self.assertEqual(usage['requests'][0]['client_delivery']['status'], 'written')
+            self.assertEqual(json.loads((attempt/'usage.json').read_text()), usage)
+            self.assertEqual(saved[-1], usage)
+            with self.assertRaisesRegex(executor.BudgetError, 'closed'):
+                gates[0].dispatch({'model': 'model-v1', 'messages': ['different input']})
+            self.assertEqual(json.loads((attempt/'usage.json').read_text()), usage)
             self.assertEqual(len(received), 1); self.assertEqual(received[0][0], 'Bearer chosen-secret')
             self.assertEqual(received[0][1]['model'], 'model-v1')
             for path in (attempt/'usage.json', attempt/'model-config.json'):

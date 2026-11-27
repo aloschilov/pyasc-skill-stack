@@ -145,7 +145,7 @@ class PairedDesign(unittest.TestCase):
                  patch.object(executor, 'budget_server', return_value=nullcontext('http://127.0.0.1/v1')), \
                  patch.object(executor, 'native_trace', return_value={}), patch.object(protocols, 'audit_trace', return_value={}), \
                  patch.dict(os.environ, OPENCODE_API_KEY='offline', OPENCODE_BASE_URL='http://127.0.0.1'):
-                factory.return_value.error = None;factory.return_value.token = 'offline';factory.return_value.snapshot.return_value = usage
+                factory.return_value.error = None;factory.return_value.token = 'offline';factory.return_value.snapshot.return_value = usage; factory.return_value.finish.return_value = usage
                 executor.generate(attempt, plan, task_contract(ROOT, plan['cells'][0]), context)
                 attempt = root/'capped';attempt.mkdir()
                 usage['error'] = 'BudgetError: Model completion truncated at output-token cap'
@@ -179,7 +179,7 @@ class PairedDesign(unittest.TestCase):
             with patch.object(executor,'BudgetGate') as factory, patch.object(executor,'command',side_effect=client), \
                  patch.object(executor,'budget_server',return_value=nullcontext('http://127.0.0.1/v1')), \
                  patch.dict(os.environ,OPENCODE_API_KEY='offline',OPENCODE_BASE_URL='http://127.0.0.1'):
-                factory.return_value.error=usage['error'];factory.return_value.token='offline';factory.return_value.snapshot.return_value=usage
+                factory.return_value.error=usage['error'];factory.return_value.token='offline';factory.return_value.snapshot.return_value=usage; factory.return_value.finish.return_value=usage
                 with self.assertRaisesRegex(ValueError,'Generation budget exhausted'):
                     executor.generate(attempt,plan,task_contract(ROOT,plan['cells'][0]),context)
             self.assertEqual(pairs.read(attempt/'attribution.json')['session_source'],'private-db-empty-session')

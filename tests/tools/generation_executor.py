@@ -204,8 +204,7 @@ def run_session(attempt, plan, project, config, prompt, observe_request=None):
             usage = gate.snapshot()
             if not known_budget_exhaustion(usage, limits): raise
         finally:
-            save(attempt/'usage.json', gate.snapshot())
-    usage = gate.snapshot()
+            usage = gate.finish()
     return result, usage
 
 
