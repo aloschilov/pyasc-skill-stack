@@ -13,7 +13,8 @@ padding. The copy's real shape still uses H.
 - Start with the smallest power-of-two height T giving at least 8 KiB of
   useful half-tile payload. A whole row is the minimum. This gives less
   than 16 KiB when a row is smaller than 8 KiB. Halve T until it fits the
-  row count and the single-iteration UB budget. If a single row exceeds
+  single-iteration UB budget. The payload target is not a minimum padded
+  height when few rows exist. If a single row exceeds
   the budget, report that the row kernel cannot fit. A column-chunk
   fallback needs its own UB-qualified chunk size.
 - Widen the two FP16 inputs to FP32. Compute the denominator from the
@@ -36,6 +37,29 @@ padding. The copy's real shape still uses H.
   supplies at least two tiles per active AIV on average. Otherwise keep
   the height at unroll 1. Launch min(available AIVs, ceil(rows/T)) blocks.
   The grid-stride loop owns the final partial tile.
+
+For positive row count R, compare the UB-qualified power-of-two height T
+with `min(T, ceil_pow2(R))`, where `ceil_pow2(R)` is the smallest power of
+two at least R. If the cap changes T, both heights cover R in one tile;
+keep the row route, grid=1, physical width, unroll=1, math and JIT options
+fixed in this comparison, and bound copies by the true row count.
+
+A manual derivative of retained control `310b1577` changed only this cap
+on PyASC `ed793e45763498a0becc71f33cadca86ab94bda5`, requested Model
+`Ascend950PR_9599` / observed driver stub `Ascend950PR_9589` (not a physical
+chip identity), `reuse_alloc=2`. Two finite BF16 shapes passed two-seed
+published-comparator/native-mask checks and suppressed-launch rejection.
+
+| R / H | T, control → capped | Compiler UB, bytes | Fewer Model ticks, ABBA / BAAB | Primary fewer ticks |
+| --- | --- | --- | --- | --- |
+| 1 / 1 | 512 → 1 | 98,304 → 192 | 28.7098% / 28.7035% | 28.7067% |
+| 65 / 31 | 256 → 128 | 98,304 → 49,152 | 10.4197% / 10.4187% | 10.4192% |
+
+The primary uses median-of-three ticks per fresh series, geometric arm
+ratios per order, then their geometric mean; all 48 warmed samples were
+retained. These fixed-leaf Model intervals exclude host dispatch and do
+not establish hardware speed or improved generation from skills.
+[Control, manual derivative and all samples](https://github.com/aloschilov/pyasc-skill-stack/releases/tag/qualification-row-useful-cap-model-20261127).
 
 Exercise the selector with a smaller UB that fits only one iteration, a
 smaller UB that forces a shorter height, and short grids. Compare warmed
