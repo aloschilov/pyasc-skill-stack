@@ -4,6 +4,7 @@ from contextlib import contextmanager, nullcontext
 from datetime import datetime, timezone
 import fcntl
 import json
+import math
 import os
 from pathlib import Path
 import shutil
@@ -188,7 +189,11 @@ def run_session(attempt, plan, project, config, prompt, observe_request=None):
         XDG_CACHE_HOME=str(state/'cache'), OPENCODE_DISABLE_EXTERNAL_SKILLS='1',
         OPENCODE_DISABLE_CLAUDE_CODE_SKILLS='1', OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX=str(limits['output_tokens_per_response']))
     with budget_server(gate) as endpoint:
-        config['provider'][provider]['options'] = {'baseURL': endpoint, 'apiKey': '{env:PYASC_GATE_TOKEN}'}
+        # OpenCode 1.19 supports this local fetch option (default 300000ms).
+        # The gate buffers the full response before returning headers. Let the
+        # existing session watchdog/deadline win, without changing model limits.
+        config['provider'][provider]['options'] = {'baseURL': endpoint, 'apiKey': '{env:PYASC_GATE_TOKEN}',
+            'headerTimeout': math.ceil(limits['generation_seconds_per_attempt'] * 1000) + 1000}
         save(attempt/'model-config.json', config)
         env.update(PYASC_GATE_TOKEN=gate.token, OPENCODE_CONFIG_CONTENT=json.dumps(config))
         result = None

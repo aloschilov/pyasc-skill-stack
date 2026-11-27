@@ -90,6 +90,14 @@ allowing the next request. It cannot cancel remote computation or guarantee a
 provider's billing behavior; missing/over-limit usage is retained as unknown and
 stops subsequent work. No blind request retries or automatic recovery are allowed.
 
+Provider completion and client delivery are recorded separately. A failed local
+response write stops the gate while preserving measured provider usage; even a
+successful socket write is not an application acknowledgement. Identical requests
+(after output-limit normalization and canonical JSON ordering) cannot be sent to
+the provider twice within an attempt. OpenCode's local `headerTimeout` covers the
+existing session deadline because the gate buffers the complete response before
+returning headers; this does not extend the watchdog or change model budgets.
+
 The process-group watchdog kills local children on deadline or cancellation;
 Docker cleanup is separately confirmed. All attempts, failed candidates, usage
 reservations, commands, hashes, timings and partial cell states stay outside Git.

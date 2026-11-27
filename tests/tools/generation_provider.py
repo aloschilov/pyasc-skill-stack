@@ -27,6 +27,10 @@ class BudgetError(ValueError):
     pass
 
 
+class EvidenceError(BudgetError):
+    """Persistence failed; the in-memory stop flag must still block dispatch."""
+
+
 def known_budget_exhaustion(usage, limits):
     """A measured cap is a failure outcome; uncertain delivery is never one."""
     rows = usage.get('requests', [])
@@ -146,12 +150,18 @@ class BudgetGate:
                 'observed_output_tokens': sum(r.get('usage', {}).get('completion_tokens', 0) for r in self.records),
                 'provider_cost': None, 'usage_complete': bool(self.records) and all(r['status'] in ('complete', 'rejected') and 'usage' in r for r in self.records)}
 
-    def dispatch(self, body):
+    def checkpoint(self):
+        try:
+            self.save(self.snapshot())
+        except Exception as exc:
+            self.error = 'Evidence persistence failed: ' + type(exc).__name__
+            raise EvidenceError(self.error) from None
+
+    def dispatch(self, body, deliver=None):
+        # Keep client delivery inside the same lock as provider dispatch. A
+        # queued SDK retry cannot race a failed downstream write.
         with self.lock:
             if self.error: raise BudgetError('Earlier request is unresolved; no retry')
-            if len(self.records) >= self.limits['rounds_per_attempt']:
-                self.error = 'Request budget exhausted'; self.save(self.snapshot())
-                raise BudgetError(self.error)
             if time.monotonic() >= self.deadline: raise BudgetError('Generation deadline exhausted')
             if body.get('model') != self.model or body.get('n', 1) != 1:
                 raise BudgetError('Unapproved model or response count')
@@ -161,20 +171,30 @@ class BudgetGate:
             if body.get('stream'):
                 body['stream_options'] = {'include_usage': True}
             payload = json.dumps(body).encode()
+            normalized = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+            if any(r['normalized_request_sha256'] == normalized for r in self.records):
+                self.error = 'Duplicate provider request blocked; no replay'
+                self.checkpoint()
+                raise BudgetError(self.error)
+            if len(self.records) >= self.limits['rounds_per_attempt']:
+                self.error = 'Request budget exhausted'; self.checkpoint()
+                raise BudgetError(self.error)
             record = {'status': 'dispatched', 'request_sha256': hashlib.sha256(payload).hexdigest(),
+                      'normalized_request_sha256': normalized, 'dispatch_started': False,
+                      'client_delivery': {'status': 'pending' if deliver else 'not_requested'},
                       'model': self.model, 'max_tokens': cap, 'stream': bool(body.get('stream'))}
             self.records.append(record)
-            self.save(self.snapshot())  # durable reservation BEFORE network input
+            self.checkpoint()  # durable reservation BEFORE network input
             try:
                 record['dispatch_started'] = False
                 record['request_settings'] = request_settings(body)
                 if self.observe_request:
                     record['audit'] = self.observe_request(len(self.records), body, payload)
-                    self.save(self.snapshot())
+                    self.checkpoint()
                 request = urllib.request.Request(self.url, data=payload,
                     headers={'Authorization': 'Bearer '+self.key, 'Content-Type': 'application/json'})
                 record['dispatch_started'] = True
-                self.save(self.snapshot())
+                self.checkpoint()
                 with urllib.request.build_opener(NoRedirect).open(request, timeout=max(.01, self.deadline-time.monotonic())) as response:
                     record['http_status'] = response.status
                     record['response_ids'] = {name: value for name in ('x-request-id', 'x-requestid', 'x-tt-logid')
@@ -212,8 +232,9 @@ class BudgetGate:
                 if usage['completion_tokens'] > cap: raise BudgetError('Provider exceeded output-token cap')
                 if usage['finish_reason'] == 'length': raise BudgetError('Model completion truncated at output-token cap')
                 record['status'] = 'complete'
-                self.save(self.snapshot())
-                return raw, content_type
+                self.checkpoint()
+            except EvidenceError:
+                raise  # Do not relabel known provider usage as a provider error.
             except Exception as exc:
                 record['status'] = 'rejected' if 'usage' in record else 'unknown' if record['dispatch_started'] else 'not-sent'
                 # Only our fixed validation messages are safe to persist. External
@@ -222,8 +243,22 @@ class BudgetGate:
                     record['http_status'] = exc.code
                 record['validation_error'] = str(exc) if isinstance(exc, BudgetError) else type(exc).__name__
                 self.error = type(exc).__name__ + ': ' + record['validation_error']
-                self.save(self.snapshot())
+                self.checkpoint()
                 raise BudgetError(self.error) from None
+            if deliver:
+                try:
+                    deliver(raw, content_type)
+                except Exception as exc:
+                    # Complete provider usage does not prove client delivery.
+                    # Never persist exception text: it may contain private data.
+                    record['client_delivery'] = {'status': 'failed', 'error_type': type(exc).__name__}
+                    self.error = 'Client response delivery failed: ' + type(exc).__name__
+                    self.checkpoint()
+                    raise BudgetError(self.error) from None
+                # A successful socket write is not an application-level ACK.
+                record['client_delivery'] = {'status': 'written', 'application_acknowledged': False}
+                self.checkpoint()
+            return raw, content_type
 
 
 @contextmanager
@@ -236,17 +271,20 @@ def budget_server(gate):
                     raise BudgetError('Unexpected endpoint or client')
                 size = int(self.headers.get('Content-Length', '0'))
                 if not 0 < size <= MAX_BODY: raise BudgetError('Invalid request size')
-                raw, kind = gate.dispatch(json.loads(self.rfile.read(size)))
-                self.send_response(200); self.send_header('Content-Type', kind)
-                self.send_header('Content-Length', str(len(raw))); self.end_headers(); self.wfile.write(raw)
+                def deliver(raw, kind):
+                    self.connection.settimeout(max(.01, gate.deadline-time.monotonic()))
+                    self.send_response(200); self.send_header('Content-Type', kind)
+                    self.send_header('Content-Length', str(len(raw))); self.end_headers()
+                    self.wfile.write(raw); self.wfile.flush()
+                gate.dispatch(json.loads(self.rfile.read(size)), deliver=deliver)
             except Exception:
                 # A retryable 429 makes OpenCode sleep/retry after a permanent
                 # rejection. The executor also watches gate.error and cancels it.
                 raw = b'{"error":{"type":"budget_gate_rejected","message":"Generation budget gate rejected request; inspect usage.json"}}'
-                self.send_response(400); self.send_header('Content-Type', 'application/json')
-                self.send_header('Content-Length', str(len(raw))); self.end_headers()
-                try: self.wfile.write(raw)
-                except (BrokenPipeError, ConnectionResetError): pass
+                try:
+                    self.send_response(400); self.send_header('Content-Type', 'application/json')
+                    self.send_header('Content-Length', str(len(raw))); self.end_headers(); self.wfile.write(raw)
+                except OSError: pass  # Headers can fail too, after a disconnected client.
     server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
     server.daemon_threads = True
     thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()

@@ -1,5 +1,6 @@
 """Offline executor contracts. Provider/qualification doubles never claim real generation."""
 import copy
+import http.client
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -235,6 +236,98 @@ class ProviderContracts(unittest.TestCase):
         self.assertEqual(record['status'], 'not-sent');self.assertFalse(record['dispatch_started'])
         self.assertIsNotNone(self.gate.error)
 
+    def test_identical_normalized_request_is_not_replayed_after_socket_write(self):
+        self.gate.limits['rounds_per_attempt'] = 1
+        delivered = []
+        self.gate.dispatch({'model': 'test-model', 'stream': True, 'max_tokens': 100},
+                           deliver=lambda raw, kind: delivered.append(raw))
+        # Different key order and client cap still normalize to the same wire request.
+        with self.assertRaisesRegex(BudgetError, 'Duplicate provider request'):
+            self.gate.dispatch({'max_tokens': 200, 'stream': True, 'model': 'test-model'})
+        self.assertEqual(len(self.requests), 1); self.assertEqual(len(delivered), 1)
+        self.assertTrue(self.gate.snapshot()['usage_complete'])
+        self.assertEqual(self.gate.records[0]['client_delivery'],
+                         {'status': 'written', 'application_acknowledged': False})
+        self.assertIsNone(known_budget_exhaustion(self.gate.snapshot(), self.gate.limits))
+
+    def test_queued_duplicate_after_reset_or_broken_pipe_never_reaches_provider(self):
+        # Exercise the real local HTTP Handler and the provider fixture. Only
+        # its final downstream header write is faulted; no external service.
+        for fault in (ConnectionResetError, BrokenPipeError):
+            with self.subTest(fault=fault.__name__):
+                self.requests.clear(); self.saves.clear()
+                self.gate.records = []; self.gate.error = None
+                delivering = threading.Event(); queued = threading.Event(); release = threading.Event()
+                original_headers = BaseHTTPRequestHandler.end_headers
+                original_dispatch = self.gate.dispatch
+                entered = []
+                def observed_dispatch(body, deliver=None):
+                    entered.append(True)
+                    if len(entered) == 2: queued.set()
+                    return original_dispatch(body, deliver)
+                def broken_headers(handler):
+                    if handler.server is self.server: return original_headers(handler)
+                    if b' 200 ' in handler._headers_buffer[0]:
+                        delivering.set()
+                        if not release.wait(3): raise AssertionError('Test delivery barrier timed out')
+                        raise fault('private downstream detail')
+                    # The attempted 400 error headers can also fail, as in the
+                    # retained failure. This must not leak an uncaught traceback.
+                    raise BrokenPipeError('private downstream detail')
+                errors = []
+                with patch.object(self.gate, 'dispatch', side_effect=observed_dispatch), \
+                     patch.object(BaseHTTPRequestHandler, 'end_headers', broken_headers), \
+                     budget_server(self.gate) as endpoint:
+                    def client():
+                        request = urllib.request.Request(endpoint+'/chat/completions',
+                            data=json.dumps({'model': 'test-model', 'stream': True}).encode(),
+                            headers={'Authorization': 'Bearer '+self.gate.token})
+                        try:
+                            with urllib.request.urlopen(request, timeout=4) as response: response.read()
+                        except (OSError, http.client.HTTPException) as exc: errors.append(type(exc).__name__)
+                    first = threading.Thread(target=client); second = threading.Thread(target=client)
+                    first.start()
+                    try:
+                        self.assertTrue(delivering.wait(3)); second.start()
+                        self.assertTrue(queued.wait(3)); self.assertEqual(len(self.requests), 1)
+                    finally:
+                        release.set(); first.join(4)
+                        if second.ident is not None: second.join(4)
+                    self.assertFalse(first.is_alive()); self.assertFalse(second.is_alive())
+                self.assertEqual(len(errors), 2); self.assertEqual(len(self.requests), 1)
+                row = self.gate.records[0]
+                self.assertEqual(row['status'], 'complete')
+                self.assertEqual(row['client_delivery'], {'status': 'failed', 'error_type': fault.__name__})
+                self.assertTrue(self.gate.snapshot()['usage_complete'])
+                self.assertEqual(self.gate.snapshot()['observed_output_tokens'], 7)
+                self.assertIn('Client response delivery failed', self.gate.error)
+                self.assertNotIn('private downstream detail', json.dumps(self.saves))
+                self.assertIsNone(known_budget_exhaustion(self.gate.snapshot(), self.gate.limits))
+
+    def test_persistence_failure_stops_before_further_requests_at_each_boundary(self):
+        for phase in ('reservation', 'provider_complete', 'client_written'):
+            with self.subTest(phase=phase):
+                self.requests.clear(); self.gate.records = []; self.gate.error = None
+                delivered = []
+                def failing_save(snapshot):
+                    row = snapshot['requests'][0]
+                    hit = (phase == 'reservation'
+                           or phase == 'provider_complete' and row['status'] == 'complete'
+                           or phase == 'client_written' and row['client_delivery']['status'] == 'written')
+                    if hit: raise OSError('private storage detail')
+                self.gate.save = failing_save
+                with self.assertRaisesRegex(BudgetError, 'Evidence persistence failed: OSError'):
+                    self.gate.dispatch({'model': 'test-model'}, deliver=lambda *args: delivered.append(True))
+                expected = 0 if phase == 'reservation' else 1
+                self.assertEqual(len(self.requests), expected)
+                self.assertEqual(len(delivered), int(phase == 'client_written'))
+                with self.assertRaisesRegex(BudgetError, 'Earlier request'):
+                    self.gate.dispatch({'model': 'test-model', 'messages': [{'role': 'user', 'content': 'new'}]})
+                self.assertEqual(len(self.requests), expected)
+                self.assertEqual(self.gate.snapshot()['usage_complete'], phase != 'reservation')
+                if phase != 'reservation': self.assertEqual(self.gate.records[0]['status'], 'complete')
+                self.assertNotIn('private storage detail', self.gate.error)
+
     def test_actual_gate_retains_capped_wire_settings_before_provider_dispatch(self):
         body = {'model': 'test-model', 'temperature': 0.2, 'reasoning_effort': 'high',
             'thinking': {'type': 'enabled', 'budget_tokens': 8}, 'max_tokens': 10000}
@@ -383,6 +476,10 @@ class ProviderContracts(unittest.TestCase):
                 config = json.loads(env['OPENCODE_CONFIG_CONTENT'])
                 options = config['provider']['gateway']['options']
                 self.assertEqual(options['apiKey'], '{env:PYASC_GATE_TOKEN}')
+                self.assertEqual(options['headerTimeout'], plan['limits']['generation_seconds_per_attempt'] * 1000 + 1000)
+                self.assertLessEqual(seconds, plan['limits']['generation_seconds_per_attempt'])
+                self.assertEqual(config['provider']['gateway']['models'][plan['model']['requested'].split('/')[1]]['limit']['output'],
+                                 plan['limits']['output_tokens_per_response'])
                 request = urllib.request.Request(options['baseURL']+'/chat/completions',
                     data=json.dumps({'model':plan['model']['requested'].split('/')[1], 'stream':True}).encode(),
                     headers={'Authorization':'Bearer '+env['PYASC_GATE_TOKEN']})
@@ -414,7 +511,7 @@ class ProviderContracts(unittest.TestCase):
         self.assertEqual(self.gate.records[-1]['usage']['observed_model'],'test-model-revision-20261106')
         self.payload['model'] = 'unapproved-revision'
         with self.assertRaisesRegex(BudgetError,'different observed model'):
-            self.gate.dispatch({'model':'test-model'})
+            self.gate.dispatch({'model':'test-model', 'messages': [{'role': 'user', 'content': 'next round'}]})
 
     def test_usage_requires_model_completion_integer_counts_and_consistency(self):
         self.assertEqual(response_usage(json.dumps(self.payload).encode(),False,'test-model')['completion_tokens'],7)
