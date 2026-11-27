@@ -17,6 +17,27 @@ from consumer_interface import LIMITS, tool_config, request_audit, audit_events,
 
 if not __debug__:raise RuntimeError('Assertions must remain enabled')
 
+def accounted_rounds(attempt, usage, response_usage):
+    """Validate retained responses against the provider's actual settings schema."""
+    attempt=Path(attempt);rounds=[]
+    for i,row in enumerate(usage['requests'],1):
+        raw=attempt/'private'/f'provider-response-{i}.bin'
+        assert row['status']=='complete' and row['client_delivery']['status']=='written' and hashlib.sha256(raw.read_bytes()).hexdigest()==row['response_sha256']
+        assert response_usage(raw.read_bytes(),row['stream'],'glm-5-3-260814')==row['usage']
+        settings=row['request_settings']
+        assert type(settings.get('schema_version'))is int and settings['schema_version']==1
+        assert type(settings.get('max_tokens'))is int and settings['max_tokens']==32768
+        rounds.append({'usage':row['usage'],'wire_output_limit_fields':{'max_tokens':settings['max_tokens']},'request_sha256':row['request_sha256'],'response_sha256':row['response_sha256']})
+    return rounds
+
+
+def procedure_status(receipts):
+    performed={r['action']:r['status']for r in receipts if 'action'in r}
+    procedure={'baseline_qualified':performed.get('baseline')=='passed','variant_attempt_recorded':'variant'in performed,'comparison_completed':all(performed.get(a)=='passed'for a in ('compare-1','compare-2','compare-3')),'model_decision_bound':performed.get('decision')=='passed'}
+    procedure['completed']=procedure['baseline_qualified'] and procedure['variant_attempt_recorded'] and procedure['model_decision_bound'] and (procedure['comparison_completed'] or performed.get('variant')=='failed')
+    return procedure
+
+
 def run_once(checkout, recipe, attempt, context, ledger, plan, profile_config):
     checkout,recipe,attempt,context,ledger=map(lambda p:Path(p).resolve(),(checkout,recipe,attempt,context,ledger))
     # Caller pins this checkout and full recipe in the immutable admission.
@@ -87,16 +108,8 @@ def run_once(checkout, recipe, attempt, context, ledger, plan, profile_config):
         trace=native_trace((attempt/'generation.stdout').read_text(),skillmap,allow_client_error=False)
         receipts=audit_events(events,recipe,project,local['work'])
         source_binding=native_source_binding(events,project,local['work'])
-        rounds=[]
-        for i,row in enumerate(usage['requests'],1):
-            raw=attempt/'private'/f'provider-response-{i}.bin'
-            assert row['status']=='complete' and row['client_delivery']['status']=='written' and sha(raw)==row['response_sha256']
-            assert response_usage(raw.read_bytes(),row['stream'],'glm-5-3-260814')==row['usage']
-            assert row['request_settings']['output_limit_fields']=={'max_tokens':32768}
-            rounds.append({'usage':row['usage'],'wire_output_limit_fields':row['request_settings']['output_limit_fields'],'request_sha256':row['request_sha256'],'response_sha256':row['response_sha256']})
-        performed={r['action']:r['status']for r in receipts if 'action'in r}
-        procedure={'baseline_qualified':performed.get('baseline')=='passed','variant_attempt_recorded':'variant'in performed,'comparison_completed':all(performed.get(a)=='passed'for a in ('compare-1','compare-2','compare-3')),'model_decision_bound':performed.get('decision')=='passed'}
-        procedure['completed']=procedure['baseline_qualified'] and procedure['variant_attempt_recorded'] and procedure['model_decision_bound'] and (procedure['comparison_completed'] or performed.get('variant')=='failed')
+        rounds=accounted_rounds(attempt,usage,response_usage)
+        procedure=procedure_status(receipts)
         save(attempt/'tuning-accounting.json',{'rounds':rounds,'procedure':procedure,'native_trace':trace,'tool_receipts':receipts,'native_source_binding':source_binding,'native_events_sha256':sha(attempt/'generation.stdout'),'usage_sha256':sha(attempt/'usage.json'),'latch_retained_for_original_dispatcher_cleanup':True})
         assert json.loads(lease.read_text())['run_dir']==str(attempt)
         # Intentionally no latch unlink. Existing dispatcher owns original

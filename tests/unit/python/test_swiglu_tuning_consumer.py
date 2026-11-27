@@ -1,6 +1,7 @@
 """Offline public-entry safety: no Docker, model, server or network calls."""
 from pathlib import Path
 import hashlib
+import copy
 import importlib.util
 import io
 import json
@@ -20,7 +21,66 @@ from consumer_interface import installed_context_permissions, tool_config, comma
 from native_preflight import ReplayReservations, permission_proof
 from terminal_usage import classify
 sys.path.insert(0,str(RECIPE.parents[2]/'tests/tools'))
-from generation_provider import response_usage
+from generation_provider import response_usage, request_settings
+from session_driver import accounted_rounds, procedure_status
+
+
+class SessionAccountingTests(unittest.TestCase):
+    def response(self, root):
+        (root/'private').mkdir()
+        raw=json.dumps({'model':'glm-5-3-260814','choices':[{'index':0,'finish_reason':'stop'}],
+            'usage':{'prompt_tokens':10,'completion_tokens':8,'total_tokens':18}}).encode()
+        (root/'private/provider-response-1.bin').write_bytes(raw)
+        # Use the real emitter; its schema has max_tokens, not output_limit_fields.
+        settings=request_settings({'max_tokens':32768,'reasoning_effort':'low','thinking':{'type':'enabled'}})
+        return {'requests':[{'status':'complete','client_delivery':{'status':'written'},'stream':False,
+            'request_settings':settings,'request_sha256':'a'*64,'response_sha256':hashlib.sha256(raw).hexdigest(),
+            'usage':response_usage(raw,False,'glm-5-3-260814')}]}
+
+    def test_real_provider_settings_schema_reaches_accounted_round(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);usage=self.response(root);original=copy.deepcopy(usage)
+            self.assertNotIn('output_limit_fields',usage['requests'][0]['request_settings'])
+            rows=accounted_rounds(root,usage,response_usage)
+            self.assertEqual(rows,[{'usage':usage['requests'][0]['usage'],'wire_output_limit_fields':{'max_tokens':32768},
+                'request_sha256':'a'*64,'response_sha256':usage['requests'][0]['response_sha256']}])
+            self.assertEqual(usage,original)
+
+    def test_missing_wrong_or_untyped_settings_are_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);usage=self.response(root)
+            for settings in ({}, {'schema_version':1,'output_limit_fields':{'max_tokens':32768}},
+                    {'schema_version':True,'max_tokens':32768}, {'schema_version':2,'max_tokens':32768},
+                    {'schema_version':1,'max_tokens':32768.0}, {'schema_version':1,'max_tokens':True},
+                    {'schema_version':1,'max_tokens':65536}):
+                with self.subTest(settings=settings),self.assertRaises(AssertionError):
+                    bad=copy.deepcopy(usage);bad['requests'][0]['request_settings']=settings
+                    accounted_rounds(root,bad,response_usage)
+
+    def test_raw_usage_and_delivery_checks_are_preserved(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);usage=self.response(root)
+            for field,value in [('status','unknown'),('client_delivery',{'status':'pending'}),
+                    ('response_sha256','0'*64),('usage',{})]:
+                with self.subTest(field=field),self.assertRaises(AssertionError):
+                    bad=copy.deepcopy(usage);bad['requests'][0][field]=value
+                    accounted_rounds(root,bad,response_usage)
+            (root/'private/provider-response-1.bin').write_bytes(b'changed')
+            with self.assertRaises(AssertionError):accounted_rounds(root,usage,response_usage)
+
+    def test_complete_accounting_and_comparison_do_not_replace_decision_tool(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);usage=self.response(root)
+            self.assertEqual(len(accounted_rounds(root,usage,response_usage)),1)
+            # A written model decision is not the trusted decision-tool receipt.
+            (root/'decision.json').write_text(json.dumps({'selected_candidate_sha256':'a'*64}))
+            receipts=[{'action':a,'status':'passed'}for a in ('baseline','variant','compare-1','compare-2','compare-3')]
+            status=procedure_status(receipts)
+            self.assertTrue(status['comparison_completed']);self.assertFalse(status['model_decision_bound'])
+            self.assertFalse(status['completed'])
+            for bad in ('failed','unknown'):
+                self.assertFalse(procedure_status(receipts+[{'action':'decision','status':bad}])['completed'])
+            self.assertTrue(procedure_status(receipts+[{'action':'decision','status':'passed'}])['completed'])
 
 class NativePreflightTests(unittest.TestCase):
     def event(self,tool,data,status='completed',error=None):
